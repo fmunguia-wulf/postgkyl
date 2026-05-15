@@ -28,6 +28,7 @@ try:
     from postgkyl import sim
     from postgkyl import interfaces
     from postgkyl import configs
+    from postgkyl.configs import LorentzianMirrorConfig
 except Exception:
     pass
 
