@@ -49,6 +49,10 @@ classifiers = [
 [project.optional-dependencies]
 adios = ["adios2>=2.9.0,<2.10.0"]
 test = ["pytest>=7.4.0"]
+sim = ["h5py", "imageio", "freeqdsk"]
+interfaces = ["h5py", "netCDF4"]
+trame = ["trame", "trame-vtk", "trame-vuetify"]
+all = ["adios2>=2.9.0,<2.10.0", "h5py", "imageio", "freeqdsk", "netCDF4", "trame", "trame-vtk", "trame-vuetify"]
 
 [project.urls]
 Documentation = "https://gkeyll.readthedocs.io/"

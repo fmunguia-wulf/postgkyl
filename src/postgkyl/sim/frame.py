@@ -1,0 +1,664 @@
+import numpy as np
+from scipy.interpolate import RegularGridInterpolator
+# NumPy >= 2.0 renamed trapz to trapezoid; support both
+if hasattr(np, 'trapezoid'):
+    _trapz = np.trapezoid
+else:
+    _trapz = np.trapz
+from postgkyl.tools import math_tools as mt
+import copy
+from postgkyl.interfaces import pgkyl_interface as pgkyl_
+try:
+    from postgkyl.interfaces import flan as flan_
+except ImportError:
+    flan_ = None
+from postgkyl.tools import DG_tools, fig_tools
+from postgkyl.utils import file_utils
+
+class Frame:
+    """
+    Frame
+    -----
+    Manages the loading, slicing, and normalization of simulation data frames.
+
+    Methods:
+    --------
+    - __init__: Initializes the Frame object with the required parameters.
+    - process_field_name: Processes the field name and sets up the composition and filenames.
+    - load: Loads the data from the file and interpolates it.
+    - load_DG: Loads the data from the file without interpolation.
+    - refresh: Refreshes the grids and values.
+    - normalize: Normalizes the time, grids, and values.
+    - rename: Renames the slice title and time title.
+    - select_slice: Selects a slice of the data along a specified direction.
+    - slice_1D: Slices the data to 1D along the specified direction and coordinates.
+    - slice_2D: Slices the data to 2D along the specified plane and coordinate.
+    - compute_volume_integral: Computes the volume integral of the data.
+    - compute_surface_integral: Computes the surface integral of the data.
+    - free_values: Frees the values to save memory.
+    - fourier_y: Applies FFT along the y dimension and updates the frame data.
+    - info: Prints out key information about the frame.
+
+    """
+    def __init__(self, simulation, fieldname, tf, load=False, fourier_y=False,
+                 polyorder=1, normalize=True):
+        """
+        Initialize a Frame instance with all attributes set to None.
+        """
+        self.simulation = simulation
+        self.name = fieldname
+        self.tf = tf
+        self.polyorder = polyorder
+        self.datanames = []
+        self.filenames = []
+        self.comp = []
+        self.gnames = None
+        self.gsymbols = None
+        self.gunits = None
+        self.vsymbol = None
+        self.vunits = None
+        self.composition = []
+        self.polytype = None
+        self.dimensionality = None
+        self.DG_basis = None
+        self.velmap_file = None
+        self.exist = True
+        self.process_field_name()  # this initializes the above attributes
+
+        self.time = None
+        self.tsymbol = ''
+        self.tunits = ''
+        self.Gdata = []
+        self.dims = None
+        self.ndims = None
+        self.cells = None
+        self.grids = None # physical grids (get normalized)
+        self.cgrids = None # computational grids
+        self.vpar = None # to store non uniform velocity grids
+        self.mu = None # to store non uniform velocity grids
+        self.values = None
+        self.DG_data = None
+        self.is_DG_loaded = False
+        self.Jacobian = simulation.geom_param.Jacobian
+        self.vol_int = None
+        self.vol_avg = None
+
+        # attribute to handle slices
+        self.dim_idx = None
+        self.new_grids = []
+        self.new_gnames = []
+        self.new_gsymbols = []
+        self.new_gunits = []
+        self.new_dims = []
+        self.mgrids = []
+        self.sliceddim = []
+        self.slicecoords = {}
+        self.sliceindex = {}
+        self.slicetitle = ''
+        self.timetitle = ''
+        self.fulltitle = ''
+        
+        if simulation.code == 'gyacomo':
+            self.load = self.load_gyac
+            self.get_cells = self.get_cells_gyac
+        elif 'flan' in fieldname:
+            self.load = self.load_flan
+            self.get_cells = self.get_cells_flan
+        else: # Gkeyll by default
+            self.load = self.load_gkyl
+            self.get_cells = self.get_cells_pgkyl
+
+        if load:
+            self.load(normalize=normalize, fourier_y=fourier_y)
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.free_values()
+    
+    def process_field_name(self):
+        """
+        Process the field name and set up the composition and filenames.
+        """
+        try:
+            self.composition = self.simulation.data_param.field_info_dict[self.name + 'compo']
+        except KeyError as e:
+            raise KeyError(f"Cannot find receipe for '{self.name}'. "
+                           f"You can check available field names with simulation.data_param.info()")
+        self.receipe = self.simulation.data_param.field_info_dict[self.name + 'receipe']
+        for subname in self.composition:
+            subdataname = self.simulation.data_param.file_info_dict[subname + 'file']
+            self.datanames.append(subdataname)
+            if subname in self.simulation.data_param.time_independent_fields \
+                        or 'Jacobvel' in subname:
+                name_tf = subdataname
+            else:
+                name_tf = '%s_%d' % (subdataname, self.tf)
+            filename = "%s-%s.gkyl" % (self.simulation.data_param.fileprefix, name_tf)
+            self.filenames.append(filename)
+            self.exist = self.exist and file_utils.does_file_exist(filename)
+            self.comp.append(self.simulation.data_param.file_info_dict[subname + 'comp'])
+            self.gnames = copy.deepcopy(self.simulation.data_param.file_info_dict[subname + 'gnames'])
+        self.gsymbols = [self.simulation.normalization.dict[key + 'symbol'] for key in self.gnames]
+        self.gunits = [self.simulation.normalization.dict[key + 'units'] for key in self.gnames]
+        self.vsymbol = self.simulation.normalization.dict[self.name + 'symbol']
+        self.vunits = self.simulation.normalization.dict[self.name + 'units']
+        self.dimensionality = len(self.gnames)
+        if self.dimensionality > 3: # phase space
+            self.polytype = 'gkhyb'
+            self.DG_basis = DG_tools.DGBasis(self.simulation.ndim)
+            species = 'ion' if self.name[-1] == 'i' else 'elc'
+            self.velmap_file = self.simulation.data_param.fileprefix + '-'+species+'_mapc2p_vel.gkyl'
+        else:
+            self.polytype = 'ms'
+            self.DG_basis = DG_tools.DGBasis(self.simulation.cdim)
+            self.velmap_file = None
+
+    def get_DG_coeff(self):
+        """
+        Get the DG coefficients.
+        """
+        Gdata_list = []
+        for (f_, c_) in zip(self.filenames, self.comp):
+            _, gdata_ = pgkyl_.get_dg_and_gdata(f_, polyorder=self.polyorder, polytype=self.polytype)
+            # Dynamically determine the number of basis functions from the last dimension
+            n_basis = self.DG_basis.num_basis()
+            start = c_ * n_basis
+            end = (c_ + 1) * n_basis
+            gdata_.values = gdata_.values[..., start:end]
+            Gdata_list.append(gdata_)
+        values = copy.deepcopy(self.receipe(Gdata_list))
+        Gdata_out = copy.deepcopy(Gdata_list[0])
+        # remove the y dimension if 2x or 2x2v  
+        if self.dimensionality > 3:
+            if len(Gdata_out.grid) == 4:
+                values = values[:,0,:,:]
+            elif len(Gdata_out.grid) == 3:
+                values = values[0,0,:,:]
+            Gdata_out.grid[-2] = self.vpar
+            Gdata_out.grid[-1] = self.mu
+        elif self.dimensionality <= 3:
+            if len(Gdata_out.grid) == 2:
+                values = values[:,0,:]
+            elif len(Gdata_out.grid) == 1:
+                values = values[0,0,:]
+        Gdata_out.values = values
+        
+        return Gdata_out
+    
+    def load_DG(self):
+        if not self.is_DG_loaded:
+            self.DG_data = self.get_DG_coeff()
+            self.is_DG_loaded = True
+
+    def eval_DG_proj(self, coords):
+        """
+        Evaluate the projection of the DG field according to a list of normalized coordinates.
+        """
+        self.load_DG()
+        
+        if not isinstance(coords[0], list):
+            coords = [coords]
+            
+        projection = np.zeros(len(coords))
+        for i in range(len(coords)):
+            c_ = self.denormalize_grid_coord(coords[i])
+            projection[i] = self.DG_basis.eval_proj(self.DG_data, c_)
+        return projection
+    
+    def eval_interp(self, coords):
+        """
+        Evaluate the field on the given coordinates using interpolation of the projected values.
+
+        Parameters:
+        - coords: array-like of shape (N, ndim) or a single coordinate of length ndim.
+
+        Returns:
+        - interpolated values at the requested coordinates (scalar or 1-D array).
+        """
+        coords = np.asarray(coords, dtype=float)
+        single = coords.ndim == 1
+        if single:
+            coords = coords[np.newaxis, :]
+        interp = RegularGridInterpolator(
+            tuple(g for g in self.new_grids),
+            self.values,
+            method='linear',
+            bounds_error=False,
+            fill_value=np.nan,
+        )
+        result = interp(coords)
+        return result[0] if single else result
+    
+    def load_gkyl(self,normalize=True, fourier_y=False):
+        """
+        Load the data from the file and interpolate it.
+        """
+        self.Gdata = []
+        for (f_, c_) in zip(self.filenames, self.comp):
+            dg, Gdata = pgkyl_.get_dg_and_gdata(f_, polyorder=self.polyorder, polytype=self.polytype)
+            # this is dumb but I can't figure out how to avoid the double interpolation
+            # without messing up the xNodal attribute
+            self.xNodal, _ = dg.interpolate(c_, overwrite=False)
+            dg.interpolate(c_, overwrite=True)
+            self.Gdata.append(Gdata)
+            if Gdata.ctx['time']:
+                self.time = Gdata.ctx['time']
+            
+        #.Centered mesh creation
+        gridsN = self.xNodal # nodal grids
+        mesh = []
+        for i in range(len(gridsN)):
+            nNodes  = len(gridsN[i])
+            mesh.append(np.multiply(0.5,gridsN[i][0:nNodes-1]+gridsN[i][1:nNodes]))
+        self.cgrids = [m for m in mesh]
+        self.grids = [g for g in pgkyl_.get_grid(Gdata) if len(g) > 2]
+        # Remove almost 0 grid points
+        for i in range(len(self.grids)):
+            vmax = np.max(np.abs(self.grids[i]))
+            mask = np.abs(self.grids[i]) < 1e-12*vmax
+            self.grids[i][mask] = 0.0
+        self.cells = Gdata.ctx['cells']
+        self.ndims = len(self.cells)
+        self.dim_idx = list(range(self.ndims))
+        if not self.time: self.time = 0
+        self.refresh()
+        if normalize: self.normalize()
+        if fourier_y: self.fourier_y()
+        if self.velmap_file: self.load_velmap()
+        
+    def get_cells_pgkyl(self):
+        return pgkyl_.get_cells(self.Gdata[0])
+
+    def load_flan(self, normalize=True, fourier_y=False):
+        flan = flan_.FlanInterface(self.simulation.flandatapath)
+        self.time, self.grids, self.Jacobian, self.values = flan.load_data(self.name, self.tf, xyz= not fourier_y)
+        self.cgrids = [g for g in self.grids]
+        if normalize: self.normalize(values=False)
+        
+    def get_cells_flan(self):
+        return [len(grid) for grid in self.grids]
+    
+    def load_gyac(self, normalize=True, fourier_y=False):
+        self.grids, self.time, self.values = self.simulation.gyac.load_data(self.name, self.tf, xyz= not fourier_y)
+        _, _, _, symbols = self.simulation.gyac.field_map[self.name]
+        self.gsymbols = [self.simulation.normalization.dict[key + 'symbol'] for key in self.gnames]
+        self.gunits = [self.simulation.normalization.dict[key + 'units'] for key in self.gnames]
+        self.vsymbol = self.simulation.normalization.dict[self.name + 'symbol']
+        self.vunits = self.simulation.normalization.dict[self.name + 'units']
+        self.Jacobian = np.ones_like(self.values)
+        self.xNodal = self.grids.copy()
+        self.cgrids = self.grids.copy()
+        if normalize: self.normalize()
+        self.refresh(values=False)
+        
+    def get_cells_gyac(self):
+        return [len(grid) for grid in self.grids]
+
+    def refresh(self, values=True):
+        """
+        Refresh the grids and values.
+        """
+        self.new_cells = self.get_cells()
+        self.new_grids = []
+        self.new_gnames = []
+        self.new_gsymbols = []
+        self.new_gunits = []
+        self.new_dims = [c_ for c_ in self.new_cells if c_ > 1]
+        self.dim_idx = [d_ for d_ in range(self.dimensionality) if d_ not in self.sliceddim]
+        for idx in self.dim_idx:
+            Ngidx = len(self.grids[idx])
+            self.new_grids.append(mt.adapt_size(self.grids[idx], Ngidx - 1))
+            self.new_gnames.append(self.gnames[idx])
+            self.new_gsymbols.append(self.gsymbols[idx])
+            self.new_gunits.append(self.gunits[idx])
+        if values:
+            self.values = copy.deepcopy(self.receipe(self.Gdata))
+            self.values = self.values.reshape(self.new_dims)
+            self.values = np.squeeze(self.values)
+            if self.dimensionality > 3:
+                # extend Jacobian to match phase-space dimensions
+                new_jac = np.ones_like(self.values)
+                new_jac[:,:,:,0,0] = self.Jacobian[:,:,:]
+                self.Jacobian = new_jac
+                
+
+        # This a test case where we replace the values by 0 everywhere except at a given index
+        #self.values = np.zeros_like(self.values)
+        #self.values[:,0,:] = 1
+        #self.values[:,1,:] = 1
+        #self.values[:,2,:] = 1
+        #self.values[:,3,:] = 1
+        #self.values[10,:,:] = 1
+        
+    def normalize(self, values=True, time=True, grid=True):
+        """
+        Normalize the time, grids, and values.
+        """
+        if time:
+            self.time /= self.simulation.normalization.dict['tscale']
+            self.tsymbol = self.simulation.normalization.dict['tsymbol']
+            self.tunits = self.simulation.normalization.dict['tunits']
+        if grid:
+            for ig in range(len(self.grids)):
+                s = '' if self.gnames[ig] in ['x','y','z'] else file_utils.find_species(self.filenames[0])[0]
+                self.grids[ig] /= self.simulation.normalization.dict[self.gnames[ig] + s + 'scale']
+                self.grids[ig] -= self.simulation.normalization.dict[self.gnames[ig] + s + 'shift']
+                self.gsymbols[ig] = self.simulation.normalization.dict[self.gnames[ig] + s + 'symbol']
+                self.gunits[ig] = self.simulation.normalization.dict[self.gnames[ig] + s + 'units']
+        if values:
+            self.values /= self.simulation.normalization.dict[self.name + 'scale']
+            self.values -= self.simulation.normalization.dict[self.name + 'shift']
+            self.vsymbol = self.simulation.normalization.dict[self.name + 'symbol']
+            self.vunits = self.simulation.normalization.dict[self.name + 'units']
+
+    def denormalize_grid_coord(self, coord):
+        """
+        Denormalize a grid coordinate.
+        """
+        c_out = copy.deepcopy(coord)
+        for i in range(len(coord)):
+            if isinstance(coord[i], int):
+                c_out[i] = coord[i]
+            else:
+                s = '' if self.gnames[i] in ['x','y','z'] else file_utils.find_species(self.filenames[0])[0]
+                c_out[i] += self.simulation.normalization.dict[self.gnames[i] + s + 'shift']
+                c_out[i] *= self.simulation.normalization.dict[self.gnames[i] + s + 'scale']
+        return c_out
+
+    def refresh_title(self):
+        """
+        Refresh the slice title and time title.
+        """
+        slicetitle = ''
+        norm = self.simulation.normalization.dict
+        for k_, c_ in self.slicecoords.items():
+            # to handle species wise phase space coordinates
+            s = '' if k_ in ['x','y','z'] else file_utils.find_species(self.filenames[0])[0]
+            # skip y in 2x2v since we always slice at y=0
+            if self.simulation.dimensionality == '2x2v' and k_ == 'y':
+                continue
+            if isinstance(c_, float):
+                fmt = fig_tools.optimize_str_format(c_)
+                slicetitle += norm[k_+s+'symbol'] + '=' + fmt%c_ + norm[k_+s+'units'] + ', '
+            else:
+                slicetitle += c_ + ', '
+
+        self.slicetitle = slicetitle
+        if self.name in self.simulation.data_param.time_independent_fields:
+            self.timetitle = ''
+            self.slicetitle = self.slicetitle[:-2] if len(self.slicetitle) > 2 else self.slicetitle
+        else:
+            self.timetitle = self.tsymbol + '=%2.2f' % self.time + self.tunits
+        self.fulltitle = self.slicetitle + self.timetitle
+        
+    def get_slice(self, direction, cut):
+        """
+        Get a slice of the data along a specified direction.
+        """
+        direction_map = {'x': 0, 'y': 1, 'z': 2, 'vpar': 3, 'mu': 4}
+
+        if direction not in direction_map:
+            raise ValueError("Invalid direction '" + direction + "': must be 'x', 'y', 'z', 'vpar', or 'mu'")
+
+        ic = direction_map[direction]
+
+        cut_index = -1
+        if cut in ['avg', 'int']:
+            cut_coord = direction + '-' + cut
+            grid = self.cgrids[ic][:]
+            values = _trapz(self.values * self.Jacobian, grid, axis=ic)
+            Jacobian = _trapz(self.Jacobian, grid, axis=ic)
+            if cut == 'avg':
+                values /= Jacobian
+        elif cut == 'max':
+            cut_coord = direction + '-max'
+            values = np.max(self.values, axis=ic)
+            Jacobian = np.max(self.Jacobian, axis=ic)
+        elif cut == 'mean':
+            cut_coord = direction + '-mean'
+            values = np.mean(self.values, axis=ic)
+            Jacobian = np.mean(self.Jacobian, axis=ic)
+        else:
+            if isinstance(cut, int):
+                cut_index = np.minimum(cut, len(self.grids[ic]) - 2)
+            else:
+                cut_index = (np.abs(self.grids[ic] - cut)).argmin()
+                cut_index = np.minimum(cut_index, len(self.grids[ic]) - 2)
+            cut_coord = self.grids[ic][cut_index] # This will give a coordinate of the interpolated grid.
+            values = np.take(np.copy(self.values), cut_index, axis=ic)
+            Jacobian = np.take(np.copy(self.Jacobian), cut_index, axis=ic)
+
+        values = np.expand_dims(values, axis=ic)
+        Jacobian = np.expand_dims(Jacobian, axis=ic)
+
+        return values, Jacobian, ic, cut_coord, cut_index
+
+    def select_slice(self, direction, cut):
+        """
+        Reduce the data dimensionality by selecting a slice along a specified direction.
+        """
+        self.values, self.Jacobian, ic, cut_coord, cut_index = self.get_slice(direction, cut)
+        self.sliceddim.append(ic)
+        self.slicecoords[direction] = cut_coord
+        self.sliceindex[direction] = cut_index
+        self.refresh_title()
+
+    def slice(self, axs, ccoord):
+        """
+        Slice the data along specified axes and coordinates.
+        1. axs: string of axes to slice along (e.g., 'xy', 'yz', 'xz', 'scalar')
+        2. ccoord: list of coordinates to slice at (e.g., [x, y, z])
+        """
+        ccoord = [ccoord] if not isinstance(ccoord, list) else ccoord
+        axs_short = axs.replace('vpar','v').replace('mu','m')
+            
+        if axs in ['fluxsurf','phitheta', 'fs']:
+            self.flux_surface_projection(xcut=ccoord[0])
+        else:
+            if self.simulation.dimensionality == '2x2v':
+                if len(axs_short) + len(ccoord) == self.ndims: ccoord.insert(1, 0.0)
+            ax_to_cut = 'xyz' if self.dimensionality == 3 else 'xyzvm'
+            if not axs == 'scalar':
+                for i_ in range(len(axs_short)): ax_to_cut = ax_to_cut.replace(axs_short[i_], '')
+            # check if the ccoord is consistent with the number of axes to cut
+            if len(ccoord) < len(ax_to_cut):
+                raise ValueError(f"Number of cut coordinates {len(ccoord)} does not match number of axes to cut {len(ax_to_cut)}")    
+            
+            for i_ in range(len(ax_to_cut)):
+                direction = ax_to_cut[i_].replace('v','vpar').replace('m','mu')
+                self.select_slice(direction=direction, cut=ccoord[i_])
+        self.refresh(values=False)
+        
+    def get_value(self, coords):
+        """
+        Get the value at specified coordinates.
+        """
+        if len(coords) != self.dimensionality:
+            raise ValueError(f"Coordinates length {len(coords)} does not match dimensionality {self.dimensionality}")
+        
+        idx = []
+        for i, coord in enumerate(coords):
+            if isinstance(coord, (float)):
+                index = (np.abs(self.new_grids[i] - coord)).argmin()
+                idx.append(index)
+            elif isinstance(coord, int):
+                index = np.minimum(coord, len(self.new_grids[i]) - 2)
+                idx.append(index)
+            elif coord == 'all':
+                idx.append(slice(0, len(self.new_grids[i])))
+            else:
+                raise ValueError(f"Invalid coordinate '{coord}' for dimension {i}")
+        
+        return self.values[tuple(idx)]
+        
+    def compute_volume_integral(self, jacob_squared=False, average=False,
+                                integral_bounds =[None, None, None], volume_only=False):
+        """
+        Compute the volume integral of the data.
+        """
+        [x, y, z] = self.simulation.geom_param.grids
+        Jac = self.simulation.geom_param.Jacobian**2 if jacob_squared else self.simulation.geom_param.Jacobian
+        # Allow for bounds specification
+        for i, b in enumerate(integral_bounds):
+            if b is not None:
+                il = np.argmin(np.abs(self.simulation.geom_param.grids[i] - b[0]))
+                iu = np.argmin(np.abs(self.simulation.geom_param.grids[i] - b[1]))
+                if i == 0:
+                    x = x[il:iu+1]
+                    Jac = Jac[il:iu+1,:,:]
+                    self.values = self.values[il:iu+1,:,:]
+                elif i == 1:
+                    y = y[il:iu+1]
+                    Jac = Jac[:,il:iu+1,:]
+                    self.values = self.values[:,il:iu+1,:]
+                elif i == 2:
+                    z = z[il:iu+1]
+                    Jac = Jac[:,:,il:iu+1]
+                    self.values = self.values[:,:,il:iu+1]
+        if volume_only:
+            self.vol_int = mt.integral_vol(x, y, z, Jac)
+            return self.vol_int
+        self.vol_int = mt.integral_vol(x, y, z, self.values * Jac)
+        if average:
+            self.vol_int /= self.simulation.geom_param.intJac
+        return self.vol_int
+
+    def compute_surface_integral(self, direction='yz', ccoord=0, integrant_filter="all",
+                                 int_bounds=['all', 'all'], surf_coord='all'):
+        """
+        Compute the surface integral of the data.
+
+        Parameters:
+        - direction: string of axes to slice along (e.g., 'xy', 'yz', 'xz')
+        - ccoord: list of coordinates to slice at (e.g., [x, y, z])
+        - integrant_filter: string to filter the integrant ('all', 'pos', 'neg')
+        - int_bounds: list of bounds for the integration (e.g., [[x1, x2], [y1, y2]])
+        - surf_coord: coordinate for the surface integral (e.g., 'x', 'y', 'z')
+        """
+        [x, y, z] = self.simulation.geom_param.grids
+        dir_dict = {'x': [0, x], 'y': [1, y], 'z': [2, z]}
+
+        if len(direction) != 2 or any(d not in dir_dict for d in direction):
+            raise ValueError("Direction must be a two-character string from 'x', 'y', 'z'")
+
+        [dir1, grid1] = dir_dict[direction[0]]
+        [dir2, grid2] = dir_dict[direction[1]]
+        il1, iu1 = 0, len(grid1)
+        il2, iu2 = 0, len(grid2)
+
+        if isinstance(int_bounds[0], list):
+            il1 = np.argmin(np.abs(grid1 - int_bounds[0][0]))
+            iu1 = np.argmin(np.abs(grid1 - int_bounds[0][1]))
+        if isinstance(int_bounds[1], list):
+            il2 = np.argmin(np.abs(grid2 - int_bounds[1][0]))
+            iu2 = np.argmin(np.abs(grid2 - int_bounds[1][1]))
+        
+        self.slice(axs=direction, ccoord=ccoord)
+
+        integrant = self.values * self.Jacobian
+
+        slices = [slice(None)] * 3
+        for bound, dir in zip([[il1, iu1], [il2, iu2]], [dir1, dir2]):
+            slices[dir] = slice(None, bound[0])
+            integrant[tuple(slices)] = 0
+            slices[dir] = slice(bound[1] + 1, None)
+            integrant[tuple(slices)] = 0
+            slices[dir] = slice(None)
+
+        if integrant_filter == "pos":
+            integrant[integrant < 0.0] = 0.0
+        elif integrant_filter == "neg":
+            integrant[integrant > 0.0] = 0.0
+
+        surf_int_z = _trapz(integrant, x=grid1, axis=dir1)
+        surf_int_z = np.expand_dims(surf_int_z, axis=dir1)
+        surf_int = _trapz(surf_int_z, x=grid2, axis=dir2)
+        self.surf_int = surf_int.squeeze()
+
+        return self.surf_int
+
+    def free_values(self):
+        """
+        Free the values to save memory.
+        """
+        self.values = None
+
+    def fourier_y(self):
+        """
+        Apply FFT along the y dimension and update the frame data.
+        """
+        fft_ky = np.fft.rfft(self.values, axis=1)
+        Ny = self.values.shape[1]
+        y = self.grids[1]
+        dy = (y[1] - y[0]) * self.simulation.normalization.dict['yscale']
+        Ly = (y[-1] - y[0]) * self.simulation.normalization.dict['yscale']
+        Nky = Ny // 2 + 1
+        kymin = 2 * np.pi / Ly
+        kymax = Nky * 2 * np.pi / Ly
+        ky =  np.linspace(kymin, kymax, Nky)
+        ky = mt.adapt_size(ky, Nky + 1)
+        ky = ky[1:]
+        fft_ky = fft_ky[:, 1:, :] # remove the zero frequency component
+
+        self.values = np.abs(fft_ky)
+        # update the field labels
+        self.vunits = 'a.u.'
+        
+        gname = 'ky'
+        self.grids[1] = ky/self.simulation.normalization.dict[gname + 'scale']
+        self.gnames[1] = gname
+        self.gsymbols[1] = self.simulation.normalization.dict[gname + 'symbol']
+        self.gunits[1] = self.simulation.normalization.dict[gname + 'units']
+        
+        # We average the jacobian in the y direction
+        self.Jacobian = np.mean(self.Jacobian, axis=1)
+        # And replicate it to match the new shape of values
+        self.Jacobian = np.repeat(self.Jacobian[:, np.newaxis, :],
+                                  self.values.shape[1], axis=1)
+
+        self.refresh(values=False)
+        
+    def load_velmap(self):
+        _, velmap = pgkyl_.get_dg_and_gdata(self.velmap_file)
+        vparc = velmap.values[:,0,0]
+        vpar = np.zeros(len(vparc)+1)
+        vpar = [vparc[0] - (vparc[1]-vparc[0])/2] + list((vparc[1:]+vparc[:-1])/2) + [vparc[-1] + (vparc[-1]-vparc[-2])/2]
+        muc = velmap.values[0,:,2]
+        mu = np.zeros(len(muc)+1)
+        mu = [0] + list((muc[1:]+muc[:-1])/2) + [muc[-1] + (muc[-1]-muc[-2])/2]
+        self.vpar = np.array(vpar)
+        self.mu = np.array(mu)
+
+    def copy(self):
+        """
+        Copy the frame.
+        """
+        return copy.deepcopy(self)
+
+    def info(self):
+        """
+        Print out key information about the frame.
+        """
+        print(f"Frame Name: {self.name}")
+        print(f"Simulation: {self.simulation}")
+        print(f"Time Frame: {self.tf}")
+        print(f"Time: {self.time}")
+        print(f"Dimensions: {self.ndims}")
+        print(f"Grid Names: {self.gnames}")
+        print(f"Grid Symbols: {self.gsymbols}")
+        print(f"Grid Units: {self.gunits}")
+        print(f"Value Symbol: {self.vsymbol}")
+        print(f"Value Units: {self.vunits}")
+        print(f"Composition: {self.composition}")
+        print(f"Data Names: {self.datanames}")
+        print(f"File Names: {self.filenames}")
+        print(f"Jacobian: {self.Jacobian}")
+        print(f"Volume Integral: {self.vol_int}")
+        print(f"Surface Integral: {self.surf_int}")
+        print(f"Sliced Dimensions: {self.sliceddim}")
+        print(f"Slice Coordinates: {self.slicecoords}")
+        print(f"Slice Title: {self.slicetitle}")
+        print(f"Time Title: {self.timetitle}")
+        print(f"Full Title: {self.fulltitle}")

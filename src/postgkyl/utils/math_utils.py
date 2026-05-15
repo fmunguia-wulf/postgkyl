@@ -1,0 +1,89 @@
+"""
+math_utils.py
+
+This module provides various mathematical utilities.
+
+Functions:
+- func_time_ave: Computes the time average of a list of arrays.
+- func_calc_norm_fluc: Calculates normalized fluctuations.
+- integral_xyz: Computes the volume integral over x, y, and z.
+- integral_yz: Computes the integral over y and z.
+- custom_meshgrid: Creates a custom meshgrid with natural orientation (x, y, z).
+
+"""
+
+import numpy as np
+# NumPy >= 2.0 renamed trapz to trapezoid; support both
+if hasattr(np, 'trapezoid'):
+    _trapz = np.trapezoid
+else:
+    _trapz = np.trapz
+def func_time_ave(listIn):
+    arrayOut = np.array(listIn)
+    arrayOut = np.mean(arrayOut,axis=0)
+    return arrayOut
+
+def func_calc_norm_fluc(data2d, dataAve, dataNorm, Nt, Ny, Nx):
+    data2dTot = np.reshape(data2d, (Nt*Ny,Nx))
+    dataAve2d = np.array([dataAve,]*(Nt*Ny))
+    delt = data2dTot - dataAve2d
+
+    sigma = np.sqrt(np.mean(delt**2,axis=0)) # rms of density fluctuations
+    delt_norm = sigma/dataNorm
+    return delt, delt_norm
+
+def integral_xyz(x,y,z,integrant_xyz):
+    # Compute the volume integral (jacobian included in the integrand)
+    integrant_xz  = _trapz(integrant_xyz, x=x, axis=0)
+    integrant_z   = _trapz(integrant_xz,  x=y, axis=0)
+    integral      = _trapz(integrant_z,   x=z, axis=0)
+    return integral
+
+def integral_yz(y,z,integrant_yz):
+    # Compute the volume integral (jacobian included in the integrand)
+    integrant_z   = _trapz(integrant_yz, x=y, axis=0)
+    integral      = _trapz(integrant_z,  x=z, axis=0)
+    return integral
+
+def custom_meshgrid(x,y,z=0):
+    # custom meshgrid function to have natural orientation (x,y,z)
+    if np.isscalar(z):
+        Y,X = np.meshgrid(y,x)
+        return [X,Y]
+    else:
+        Y,X,Z = np.meshgrid(y,x,z)
+        return [X,Y,Z]
+    
+def simplify_units(units):
+    return simplify_multiplication(simplify_division(units))
+
+def simplify_division(units):
+    # split at the first slash
+    num, denom = units.split('/', 1)
+    
+    # check if there is a slash left somewhere
+    if '/' in denom: denom = simplify_division(denom)
+    if '/' in num: num = simplify_division(num)
+    
+    for n in num:
+        for d in denom:
+            if n == d:
+                num = num.replace(n,'')
+                denom = denom.replace(d,'')
+                return simplify_division(num + '/' + denom)
+            
+    return num + '/' + denom
+
+def simplify_multiplication(units):
+    if '/' in units:
+        num, denom = units.split('/', 1)
+        num = simplify_multiplication(num)
+        denom = simplify_multiplication(denom)
+        return num + '/' + denom
+    else:
+        for n in units:
+            for m in units.replace(n,''):
+                if n == m:
+                    units = units.replace(n,n+'^2')
+                    return simplify_multiplication(units)
+        return units
