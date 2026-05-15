@@ -1,8 +1,17 @@
 import numpy as np
 from postgkyl.sim import Simulation, Species
-from postgkyl.output.projections.poloidalprojection import Inset
-from postgkyl.interfaces.gyacomo import get_gyacomo_sim_config
-from postgkyl.interfaces.pgkyl_interface import get_dimensionality
+try:
+    from postgkyl.output.projections.poloidalprojection import Inset
+except Exception:
+    Inset = None
+try:
+    from postgkyl.interfaces.gyacomo import get_gyacomo_sim_config
+except ImportError:
+    get_gyacomo_sim_config = None
+try:
+    from postgkyl.interfaces.pgkyl_interface import get_dimensionality
+except Exception:
+    get_dimensionality = None
 from postgkyl.configs.vessel_data import tcv_vessel_data, d3d_vessel_data, \
     sparc_vessel_data, nstxu_vessel_data, west_vessel_data
 
