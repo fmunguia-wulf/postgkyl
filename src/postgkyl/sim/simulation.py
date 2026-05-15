@@ -70,7 +70,34 @@ class Simulation:
     - plot_all_sources: Plots the profiles of all sources in the sources dictionary.
     - source_info: Combines get_source_particle, get_source_power, and plot_sources to provide comprehensive source information.
     """
-    def __init__(self,dimensionality='3x2v',porder=1,ptype='ser',code='gkeyll', flandatapath=None):
+    def __init__(self, dimensionality: str = '3x2v', porder: int = 1,
+                 ptype: str = 'ser', code: str = 'gkeyll',
+                 flandatapath: str | None = None):
+        """
+        Parameters
+        ----------
+        dimensionality : str
+            Phase-space dimensionality string, e.g. ``'3x2v'`` (3 config + 2 velocity dims),
+            ``'2x2v'``, or ``'1x2v'``.  The first digit sets ``cdim``; the third sets the
+            number of velocity dimensions.
+        porder : int
+            DG polynomial order (default 1).
+        ptype : str
+            DG basis type: ``'ser'`` (serendipity, default), ``'gkhyb'`` (gk-hybrid),
+            or ``'ten'`` (tensor).
+        code : str
+            Source code producing the data.  ``'gkeyll'`` (default) or ``'gyacomo'``.
+        flandatapath : str or None
+            Path to a FLAN NetCDF file.  Required only when loading FLAN fields.
+
+        Examples
+        --------
+        >>> import postgkyl as pg
+        >>> sim = pg.Simulation(dimensionality='3x2v')
+        >>> sim.set_phys_param(me=9.109e-31, mp=1.673e-27)
+        >>> elc = pg.Species('elc', m=9.109e-31, q=-1.602e-19, T0=500*1.602e-19, n0=3e19)
+        >>> sim.add_species(elc)
+        """
         self.dimensionality = dimensionality # Dimensionality of the simulation (e.g., 3x2v, 2x2v)
         self.cdim = int(dimensionality[0])  # Configuration space dimension
         self.ndim = int(dimensionality[0]) + int(dimensionality[2])  # Total dimension

@@ -11,6 +11,79 @@ of analytical and visualization tools.
 Full documentation of the Gkeyll project is available at
 [ReadTheDocs](http://gkeyll.rtfd.io).
 
+## Quick Start
+
+Postgkyl has two usage modes: a **low-level data API** for direct file access, and a
+**high-level simulation API** (``postgkyl.Simulation``) for physics-aware workflows.
+
+### Low-level API
+
+```python
+import postgkyl as pg
+
+# Load a Gkeyll output file
+data = pg.GData("run-elc_10.gkyl")
+
+# DG interpolation from basis coefficients to nodal values
+dg = pg.GInterpModal(data, poly_order=1, basis_type="ms")
+dg.interpolate(overwrite=True)
+
+# Access the result
+grid = data.get_grid()    # list of 1-D arrays, one per dimension
+vals = data.get_values()  # N-D numpy array
+```
+
+### Command-line interface
+
+```bash
+# Load, interpolate, and plot in one pipeline
+pgkyl run-elc_10.gkyl interpolate plot
+
+# Select a component and slice before plotting
+pgkyl run-field_5.gkyl select --comp 0 plot --xlabel 'x (m)'
+```
+
+### High-level simulation API
+
+```python
+import postgkyl as pg
+
+# 1. Describe the simulation geometry and species
+sim = pg.Simulation(dimensionality='3x2v')
+sim.set_phys_param()
+sim.set_geom_param(R_axis=0.9, B_axis=1.4, x_LCFS=0.05, a_shift=0.0,
+                   kappa=1.4, delta=0.4)
+
+elc = pg.Species('elc', m=9.109e-31, q=-1.602e-19,
+                 T0=500*1.602e-19, n0=3e19, Bref=1.4)
+ion = pg.Species('ion', m=2*1.673e-27, q=1.602e-19,
+                 T0=500*1.602e-19, n0=3e19, Bref=1.4)
+sim.add_species(elc)
+sim.add_species(ion)
+
+# 2. Point to the data directory
+sim.set_data_param(simdir='/path/to/run/', fileprefix='run')
+
+# 3. Load a field at a specific time frame
+frame = pg.Frame(sim, 'ni', tf=10, load=True)
+print(frame.values.shape)  # (Nx, Ny, Nz)
+
+# 4. Slice to 2D and inspect
+frame.slice('z', 0.0)          # cut at z = 0
+print(frame.new_grids[0])      # radial grid after normalization
+```
+
+### Optional extras
+
+Install optional dependency groups to unlock additional features:
+
+```bash
+pip install postgkyl[sim]        # h5py, imageio, freeqdsk
+pip install postgkyl[interfaces] # h5py, netCDF4 (FLAN reader)
+pip install postgkyl[adios]      # ADIOS2 (bp file reader)
+pip install postgkyl[all]        # everything above
+```
+
 ## Dependencies and Installation
 
 Postgkyl requires the following packages:

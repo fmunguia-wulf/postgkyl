@@ -40,10 +40,38 @@ class Frame:
     - info: Prints out key information about the frame.
 
     """
-    def __init__(self, simulation, fieldname, tf, load=False, fourier_y=False,
-                 polyorder=1, normalize=True):
+    def __init__(self, simulation, fieldname: str, tf: int,
+                 load: bool = False, fourier_y: bool = False,
+                 polyorder: int = 1, normalize: bool = True):
         """
-        Initialize a Frame instance with all attributes set to None.
+        Parameters
+        ----------
+        simulation : Simulation
+            The parent ``Simulation`` object that owns this frame.
+        fieldname : str
+            Name of the field to load (e.g. ``'ni'``, ``'phi'``, ``'Ti'``).
+            Must be a key in ``simulation.data_param.field_info_dict``.
+        tf : int
+            Time frame index.  Corresponds to the integer suffix in the
+            Gkeyll output filename, e.g. ``5`` for ``prefix-ni_5.gkyl``.
+        load : bool
+            If ``True``, call ``self.load()`` immediately after construction.
+        fourier_y : bool
+            If ``True`` (and ``load=True``), apply an FFT along *y* after loading
+            so the binormal axis becomes wavenumber :math:`k_y`.
+        polyorder : int
+            DG polynomial order used during interpolation (default 1).
+        normalize : bool
+            If ``True`` (and ``load=True``), apply ``simulation.normalization``
+            to grids and values immediately after loading.
+
+        Examples
+        --------
+        >>> frame = pg.Frame(sim, 'ni', tf=10, load=True)
+        >>> print(frame.values.shape)
+        >>> frame2 = pg.Frame(sim, 'phi', tf=10)
+        >>> frame2.load()
+        >>> frame2.slice('xy', [0.0])
         """
         self.simulation = simulation
         self.name = fieldname
