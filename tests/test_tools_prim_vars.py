@@ -1,4 +1,4 @@
-"""Comprehensive tests for tools.prim_vars — all primitive variable functions."""
+"""Tests for tools.prim_vars — all primitive variable functions."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import pytest
 import postgkyl as pg
 import postgkyl.tools as tools
 from postgkyl.data.gdata import GData
+from postgkyl.tools import prim_vars as pv
 
 
 # ---------------------------------------------------------------------------
@@ -15,7 +16,6 @@ from postgkyl.data.gdata import GData
 # ---------------------------------------------------------------------------
 
 # 5-moment Euler fluid: [rho, rho*vx, rho*vy, rho*vz, E]
-# rho=1, vx=0.5, vy=0.25, vz=0.1, p_thermal=0.6, gamma=5/3
 _RHO = 1.0
 _VX, _VY, _VZ = 0.5, 0.25, 0.1
 _P_THERMAL = 0.6
@@ -25,7 +25,6 @@ _E_5 = _P_THERMAL / (_GAMMA - 1) + 0.5 * _RHO * (_VX**2 + _VY**2 + _VZ**2)
 _MOM5 = np.array([[_RHO, _RHO * _VX, _RHO * _VY, _RHO * _VZ, _E_5]])
 
 # 10-moment fluid: [rho, mx, my, mz, Pxx, Pxy, Pxz, Pyy, Pyz, Pzz]
-# thermal pij = 0.4 on diagonal, off-diagonal = 0
 _P_T = 0.4
 _Pxx = _P_T + _RHO * _VX**2
 _Pxy = 0.0 + _RHO * _VX * _VY
@@ -37,13 +36,13 @@ _Pzz = _P_T + _RHO * _VZ**2
 _MOM10 = np.array([[_RHO, _RHO * _VX, _RHO * _VY, _RHO * _VZ,
                     _Pxx, _Pxy, _Pxz, _Pyy, _Pyz, _Pzz]])
 
-# MHD: [rho, mx, my, mz, E, Bx, By, Bz]  (mu_0=1)
+# MHD: [rho, mx, my, mz, E, Bx, By, Bz]
 _BX, _BY, _BZ = 1.0, 0.0, 0.0
 _MAG_P = 0.5 * (_BX**2 + _BY**2 + _BZ**2)
 _E_MHD = 0.5 * _RHO * _VX**2 + _P_THERMAL / (_GAMMA - 1) + _MAG_P
 _MHD8 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0, _E_MHD, _BX, _BY, _BZ]])
 
-_GRID1D = [np.array([0.0, 1.0])]  # nodal
+_GRID1D = [np.array([0.0, 1.0])]
 
 
 def _gdata(values: np.ndarray) -> GData:
@@ -69,6 +68,30 @@ def _tup_mhd():
     return _GRID1D, _MHD8
 
 
+def _make_5mom(rho=2.0, vx=0.5, vy=0.0, vz=0.0, p=0.8):
+    E = p / (_GAMMA - 1) + 0.5 * rho * (vx**2 + vy**2 + vz**2)
+    values = np.array([[rho, rho * vx, rho * vy, rho * vz, E]])
+    d = GData()
+    d.push(_GRID1D, values)
+    return d
+
+
+def _make_10mom(rho=2.0, vx=0.5, p=0.8):
+    Pxx = p + rho * vx**2
+    values = np.array([[rho, rho * vx, 0.0, 0.0, Pxx, 0.0, 0.0, p, 0.0, p]])
+    d = GData()
+    d.push(_GRID1D, values)
+    return d
+
+
+def _make_mhd(rho=2.0, vx=0.5, p=0.8, bx=3.0, by=4.0, bz=0.0):
+    E = p / (_GAMMA - 1) + 0.5 * rho * vx**2 + 0.5 * (bx**2 + by**2 + bz**2)
+    values = np.array([[rho, rho * vx, 0.0, 0.0, E, bx, by, bz]])
+    d = GData()
+    d.push(_GRID1D, values)
+    return d
+
+
 # ---------------------------------------------------------------------------
 # Density
 # ---------------------------------------------------------------------------
@@ -91,6 +114,12 @@ class TestGetDensity:
         out = GData()
         tools.get_density(_dat5, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _RHO)
+
+    def test_get_density_out_mom(self):
+        dat = _make_5mom()
+        out = GData()
+        pv.get_density(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 2.0, rtol=1e-10)
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +154,31 @@ class TestGetVelocity:
         out = GData()
         tools.get_vx(_dat5, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _VX)
+
+    def test_get_vx_out_mom(self):
+        dat = _make_5mom(rho=2.0, vx=0.5)
+        out = GData()
+        pv.get_vx(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.5, rtol=1e-10)
+
+    def test_get_vy_out_mom(self):
+        dat = _make_5mom(vy=0.3)
+        out = GData()
+        pv.get_vy(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.3, rtol=1e-10)
+
+    def test_get_vz_out_mom(self):
+        dat = _make_5mom(vz=0.2)
+        out = GData()
+        pv.get_vz(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.2, rtol=1e-10)
+
+    def test_get_vi_out_mom(self):
+        dat = _make_5mom(vx=0.5, vy=0.3)
+        out = GData()
+        pv.get_vi(dat, out_mom=out)
+        assert out.get_values() is not None
+        assert out.get_values().shape[-1] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +231,49 @@ class TestGetPressureTensorComponents:
         tools.get_pxx(_dat10, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _P_T, rtol=1e-10)
 
+    def test_get_pxx_out_mom(self):
+        dat = _make_10mom(rho=2.0, vx=0.5, p=0.8)
+        out = GData()
+        pv.get_pxx(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_pxy_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_pxy(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.0, atol=1e-10)
+
+    def test_get_pxz_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_pxz(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_pyy_out_mom(self):
+        dat = _make_10mom(p=0.8)
+        out = GData()
+        pv.get_pyy(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.8, atol=1e-10)
+
+    def test_get_pyz_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_pyz(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_pzz_out_mom(self):
+        dat = _make_10mom(p=0.8)
+        out = GData()
+        pv.get_pzz(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.8, atol=1e-10)
+
+    def test_get_pij_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_pij(dat, out_mom=out)
+        assert out.get_values() is not None
+        assert out.get_values().shape[-1] == 6
+
 
 # ---------------------------------------------------------------------------
 # Scalar pressure
@@ -210,6 +307,18 @@ class TestGetPressure:
         tools.get_p(_dat5, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _P_THERMAL, rtol=1e-10)
 
+    def test_get_p_5mom_out_mom(self):
+        dat = _make_5mom(p=0.8)
+        out = GData()
+        pv.get_p(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 0.8, rtol=1e-6)
+
+    def test_get_p_10mom_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_p(dat, num_moms=10, out_mom=out)
+        assert out.get_values() is not None
+
 
 # ---------------------------------------------------------------------------
 # Kinetic energy
@@ -231,6 +340,18 @@ class TestGetKineticEnergy:
         d.push(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
         with pytest.raises(ValueError):
             tools.get_ke(d)
+
+    def test_get_ke_out_mom(self):
+        dat = _make_5mom()
+        out = GData()
+        pv.get_ke(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_ke_10mom_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_ke(dat, num_moms=10, out_mom=out)
+        assert out.get_values() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +382,42 @@ class TestGetTempSoundMach:
         out = GData()
         tools.get_temp(_dat5, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _P_THERMAL / _RHO, rtol=1e-10)
+
+    def test_get_temp_out_mom(self):
+        dat = _make_5mom()
+        out = GData()
+        pv.get_temp(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_sound_out_mom(self):
+        dat = _make_5mom()
+        out = GData()
+        pv.get_sound(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mach_out_mom(self):
+        dat = _make_5mom()
+        out = GData()
+        pv.get_mach(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_temp_10mom_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_temp(dat, num_moms=10, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_sound_10mom_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_sound(dat, num_moms=10, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mach_10mom_out_mom(self):
+        dat = _make_10mom()
+        out = GData()
+        pv.get_mach(dat, num_moms=10, out_mom=out)
+        assert out.get_values() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -317,14 +474,66 @@ class TestGetMhdFields:
         tools.get_mhd_Bx(_dat_mhd, out_mom=out)
         np.testing.assert_allclose(out.get_values()[0, 0], _BX)
 
+    def test_get_mhd_Bx_out_mom(self):
+        dat = _make_mhd(bx=3.0)
+        out = GData()
+        pv.get_mhd_Bx(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 3.0, atol=1e-10)
+
+    def test_get_mhd_By_out_mom(self):
+        dat = _make_mhd(by=4.0)
+        out = GData()
+        pv.get_mhd_By(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 4.0, atol=1e-10)
+
+    def test_get_mhd_Bz_out_mom(self):
+        dat = _make_mhd(bz=1.0)
+        out = GData()
+        pv.get_mhd_Bz(dat, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 1.0, atol=1e-10)
+
+    def test_get_mhd_Bi_out_mom(self):
+        dat = _make_mhd(bx=3.0, by=4.0, bz=0.0)
+        out = GData()
+        pv.get_mhd_Bi(dat, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mhd_mag_p_out_mom(self):
+        dat = _make_mhd(bx=3.0, by=4.0)
+        out = GData()
+        pv.get_mhd_mag_p(dat, mu_0=1.0, out_mom=out)
+        np.testing.assert_allclose(out.get_values().flat[0], 12.5, atol=1e-10)
+
+    def test_get_mhd_p_out_mom(self):
+        dat = _make_mhd()
+        out = GData()
+        pv.get_mhd_p(dat, gas_gamma=_GAMMA, mu_0=1.0, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mhd_temp_out_mom(self):
+        dat = _make_mhd()
+        out = GData()
+        pv.get_mhd_temp(dat, gas_gamma=_GAMMA, mu_0=1.0, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mhd_sound_out_mom(self):
+        dat = _make_mhd()
+        out = GData()
+        pv.get_mhd_sound(dat, gas_gamma=_GAMMA, mu_0=1.0, out_mom=out)
+        assert out.get_values() is not None
+
+    def test_get_mhd_mach_out_mom(self):
+        dat = _make_mhd()
+        out = GData()
+        pv.get_mhd_mach(dat, gas_gamma=_GAMMA, mu_0=1.0, out_mom=out)
+        assert out.get_values() is not None
+
 
 # ---------------------------------------------------------------------------
-# Multi-cell array tests (ensure no cell-mixing)
+# Multi-cell array tests
 # ---------------------------------------------------------------------------
 
 class TestMultiCellPrimVars:
-    """Ensure prim_vars work correctly element-wise on multi-cell arrays."""
-
     def test_density_multi_cell(self):
         grid = [np.linspace(0.0, 1.0, 4)]
         rho_vals = np.array([[1.0], [2.0], [3.0]])
@@ -335,7 +544,6 @@ class TestMultiCellPrimVars:
         np.testing.assert_allclose(rho[:, 0], [1.0, 2.0, 3.0])
 
     def test_pressure_5mom_multi_cell(self):
-        # Two cells each with known p
         grid = [np.linspace(0.0, 1.0, 3)]
         v0 = np.array([_MOM5[0]])
         v1 = np.array([_MOM5[0] * 2.0])
@@ -343,7 +551,5 @@ class TestMultiCellPrimVars:
         d = GData()
         d.push(grid, values)
         _, p = tools.get_p(d, num_moms=5)
-        # For cell 1: doubling all moments keeps vx,vy,vz same,
-        # rho->2, E->2*E_5, p = (gamma-1)*(2*E_5 - 0.5*2*KE) = 2*(gamma-1)*(E_5-0.5*KE) = 2*p_thermal
         np.testing.assert_allclose(p[0, 0], _P_THERMAL, rtol=1e-9)
         np.testing.assert_allclose(p[1, 0], 2.0 * _P_THERMAL, rtol=1e-9)

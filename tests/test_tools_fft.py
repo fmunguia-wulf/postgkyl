@@ -1,4 +1,4 @@
-"""Comprehensive tests for tools.fft."""
+"""Tests for tools.fft."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import pytest
 
 import postgkyl.tools as tools
 from postgkyl.data.gdata import GData
+from postgkyl.tools.fft import fft
 
 
 def _make(grid, values):
@@ -32,7 +33,6 @@ class TestFft1D:
         values = np.ones((N, 1))
         d = _make(grid, values)
         freq, ft = tools.fft(d)
-        # DC component (index 0) should be N (unnormalized FFT of all-ones)
         np.testing.assert_allclose(np.abs(ft[0, 0]), float(N))
 
     def test_psd_halves_spectrum(self):
@@ -63,13 +63,11 @@ class TestFft1D:
         assert ft.shape[-1] == 2
 
     def test_dummy_dimension_squeezed(self):
-        # 2D with one dummy axis (size 1)
         N = 16
         grid = [np.linspace(0.0, 1.0, N + 1), np.array([0.0, 1.0])]
         values = np.ones((N, 1, 1))
         d = _make(grid, values)
         freq, ft = tools.fft(d)
-        # dummy dimension should be dropped → 1D FFT
         assert len(freq) == 1
 
     def test_stack_parameter_alias(self):
@@ -108,6 +106,14 @@ class TestFft2D:
         freq, ft = tools.fft(d, overwrite=False)
         assert freq is not None
 
+    def test_2d_psd_shape(self):
+        Nx, Ny = 8, 8
+        grid = [np.linspace(0.0, 1.0, Nx + 1), np.linspace(0.0, 1.0, Ny + 1)]
+        values = np.ones((Nx, Ny, 1))
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True)
+        assert ft.shape == (Nx // 2, Ny // 2, 1)
+
 
 class TestFft3D:
     def test_3d_fft_runs(self):
@@ -133,3 +139,83 @@ class TestFft3D:
         d = _make(grid, values)
         freq, ft = tools.fft(d, psd=True)
         assert ft.shape == (Nx // 2, Ny // 2, Nz // 2, 1)
+
+    def test_3d_psd_no_iso(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        values = np.random.rand(Nx, Ny, Nz, 1)
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True, iso=False)
+        assert ft.shape == (Nx // 2, Ny // 2, Nz // 2, 1)
+
+    def test_3d_overwrite(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        values = np.ones((Nx, Ny, Nz, 1))
+        dat = _make(grid, values)
+        fft(dat, overwrite=True)
+        assert dat.get_values() is not None
+
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
+    def test_3d_multi_comp(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        values = np.random.rand(Nx, Ny, Nz, 3)
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True, iso=True)
+        assert ft.shape[-1] == 3
+
+
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
+class TestFftIsotropic:
+    def test_fft_3d_psd_iso(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        values = np.random.rand(Nx, Ny, Nz, 1)
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True, iso=True)
+        assert isinstance(freq, list)
+        assert len(freq) == 1
+        assert ft.ndim == 2
+
+    def test_fft_3d_psd_iso_positive(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        np.random.seed(42)
+        values = np.ones((Nx, Ny, Nz, 1))
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True, iso=True)
+        finite_vals = ft[np.isfinite(ft)]
+        assert np.all(finite_vals >= 0)
+
+    def test_fft_3d_psd_iso_overwrite(self):
+        Nx, Ny, Nz = 4, 4, 4
+        grid = [
+            np.linspace(0.0, 1.0, Nx + 1),
+            np.linspace(0.0, 1.0, Ny + 1),
+            np.linspace(0.0, 1.0, Nz + 1),
+        ]
+        values = np.random.rand(Nx, Ny, Nz, 1)
+        dat = _make(grid, values)
+        freq, ft = fft(dat, psd=True, iso=True, overwrite=True)
+        assert ft is not None
