@@ -10,6 +10,8 @@ import postgkyl.tools as tools
 from postgkyl.data.gdata import GData
 from postgkyl.tools import prim_vars as pv
 
+from conftest import make_gdata, GRID1D
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -42,13 +44,8 @@ _MAG_P = 0.5 * (_BX**2 + _BY**2 + _BZ**2)
 _E_MHD = 0.5 * _RHO * _VX**2 + _P_THERMAL / (_GAMMA - 1) + _MAG_P
 _MHD8 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0, _E_MHD, _BX, _BY, _BZ]])
 
-_GRID1D = [np.array([0.0, 1.0])]
-
-
 def _gdata(values: np.ndarray) -> GData:
-    d = GData()
-    d.push(_GRID1D, values)
-    return d
+    return make_gdata(GRID1D, values)
 
 
 _dat5 = _gdata(_MOM5)
@@ -57,39 +54,33 @@ _dat_mhd = _gdata(_MHD8)
 
 
 def _tup5():
-    return _GRID1D, _MOM5
+    return GRID1D, _MOM5
 
 
 def _tup10():
-    return _GRID1D, _MOM10
+    return GRID1D, _MOM10
 
 
 def _tup_mhd():
-    return _GRID1D, _MHD8
+    return GRID1D, _MHD8
 
 
 def _make_5mom(rho=2.0, vx=0.5, vy=0.0, vz=0.0, p=0.8):
     E = p / (_GAMMA - 1) + 0.5 * rho * (vx**2 + vy**2 + vz**2)
     values = np.array([[rho, rho * vx, rho * vy, rho * vz, E]])
-    d = GData()
-    d.push(_GRID1D, values)
-    return d
+    return make_gdata(GRID1D, values)
 
 
 def _make_10mom(rho=2.0, vx=0.5, p=0.8):
     Pxx = p + rho * vx**2
     values = np.array([[rho, rho * vx, 0.0, 0.0, Pxx, 0.0, 0.0, p, 0.0, p]])
-    d = GData()
-    d.push(_GRID1D, values)
-    return d
+    return make_gdata(GRID1D, values)
 
 
 def _make_mhd(rho=2.0, vx=0.5, p=0.8, bx=3.0, by=4.0, bz=0.0):
     E = p / (_GAMMA - 1) + 0.5 * rho * vx**2 + 0.5 * (bx**2 + by**2 + bz**2)
     values = np.array([[rho, rho * vx, 0.0, 0.0, E, bx, by, bz]])
-    d = GData()
-    d.push(_GRID1D, values)
-    return d
+    return make_gdata(GRID1D, values)
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +289,7 @@ class TestGetPressure:
 
     def test_wrong_num_comps_raises(self):
         d = GData()
-        d.push(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
+        d.push(GRID1D, np.array([[1.0, 2.0, 3.0]]))
         with pytest.raises(ValueError, match="num_moms"):
             tools.get_p(d)
 
@@ -337,7 +328,7 @@ class TestGetKineticEnergy:
 
     def test_wrong_num_comps_raises(self):
         d = GData()
-        d.push(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
+        d.push(GRID1D, np.array([[1.0, 2.0, 3.0]]))
         with pytest.raises(ValueError):
             tools.get_ke(d)
 

@@ -4,3 +4,4 @@ dist/
 postgkyl.egg-info/
 src/postgkyl/version.py
 .DS_Store
+tests/test_data/generated/

@@ -15,41 +15,10 @@ import postgkyl.commands as cmd
 from postgkyl.data.gdata import GData
 from postgkyl.pgkyl import cli
 
+from conftest import ctx_with_datasets as _ctx_with_datasets, make_gdata as _make, GRID1D
+
 
 dir_path = f"{os.path.dirname(__file__)}/test_data"
-
-# ---------------------------------------------------------------------------
-# Context factory helpers
-# ---------------------------------------------------------------------------
-
-def _ctx_with_datasets(*datasets):
-    ctx = click.core.Context(cli)
-    ctx.obj = {
-        "verbose": False,
-        "compgrid": None,
-        "global_var_names": None,
-        "global_cuts": (None,) * 7,
-        "global_c2p": None,
-        "global_c2p_vel": None,
-        "rcParams": {},
-        "fig": "",
-        "ax": "",
-        "in_data_strings": [],
-        "in_data_strings_loaded": 0,
-    }
-    data = cmd.DataSpace()
-    for dat in datasets:
-        data.add(dat)
-    ctx.obj["data"] = data
-    return ctx
-
-
-def _make(grid, values, tag="default", ctx_extra=None):
-    d = GData(tag=tag)
-    d.push(grid, values)
-    if ctx_extra:
-        d.ctx.update(ctx_extra)
-    return d
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +29,6 @@ _GAMMA = 5.0 / 3.0
 _RHO, _VX, _P = 2.0, 0.5, 0.8
 _E5 = _P / (_GAMMA - 1) + 0.5 * _RHO * _VX**2
 _MOM5 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0, _E5]])
-_GRID1D = [np.array([0.0, 1.0])]
 
 _Pxx = _P + _RHO * _VX**2
 _MOM10 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0, _Pxx, 0.0, 0.0, _P, 0.0, _P]])
@@ -71,25 +39,25 @@ _MHD8 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0,
 
 
 def _euler_data():
-    return _make(_GRID1D, _MOM5)
+    return _make(GRID1D, _MOM5)
 
 
 def _10m_data():
-    return _make(_GRID1D, _MOM10)
+    return _make(GRID1D, _MOM10)
 
 
 def _field_data():
-    d = _make(_GRID1D, _FIELD)
+    d = _make(GRID1D, _FIELD)
     d.ctx.update({"epsilon_0": 1.0, "mu_0": 1.0, "mass": None, "charge": None})
     return d
 
 
 def _vec3_data(tag="default"):
-    return _make(_GRID1D, _VEC3, tag=tag)
+    return _make(GRID1D, _VEC3, tag=tag)
 
 
 def _mhd_data():
-    return _make(_GRID1D, _MHD8)
+    return _make(GRID1D, _MHD8)
 
 
 # ---------------------------------------------------------------------------
@@ -398,7 +366,7 @@ class TestWriteCommand:
         assert os.path.exists(f"{out_stem}.gkyl")
 
     def test_write_txt(self, tmp_path):
-        dat = _make(_GRID1D, _MOM5)
+        dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
         out_name = str(tmp_path / "out.txt")
         ctx.invoke(cmd.write, filename=out_name, mode="txt")
@@ -406,7 +374,7 @@ class TestWriteCommand:
 
     def test_write_no_outname(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        dat = _make(_GRID1D, _MOM5)
+        dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
         ctx.invoke(cmd.write, filename="gdata.gkyl", mode="gkyl")
         assert os.path.exists(tmp_path / "gdata.gkyl")
@@ -486,24 +454,24 @@ class TestParrotatePerprotateCommands:
     def test_parrotate_command(self):
         u = np.array([[1.0, 0.0, 0.0]])
         v = np.array([[1.0, 0.0, 0.0]])
-        dat_u = _make(_GRID1D, u, tag="array")
-        dat_v = _make(_GRID1D, v, tag="rotator")
+        dat_u = _make(GRID1D, u, tag="array")
+        dat_v = _make(GRID1D, v, tag="rotator")
         ctx = _ctx_with_datasets(dat_u, dat_v)
         ctx.invoke(cmd.parrotate)
 
     def test_perprotate_command(self):
         u = np.array([[0.0, 1.0, 0.0]])
         v = np.array([[1.0, 0.0, 0.0]])
-        dat_u = _make(_GRID1D, u, tag="array")
-        dat_v = _make(_GRID1D, v, tag="rotator")
+        dat_u = _make(GRID1D, u, tag="array")
+        dat_v = _make(GRID1D, v, tag="rotator")
         ctx = _ctx_with_datasets(dat_u, dat_v)
         ctx.invoke(cmd.perprotate)
 
     def test_bparrotate(self):
         u = np.array([[1.0, 0.0, 0.0]])
         field = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]])
-        dat_u = _make(_GRID1D, u, tag="array")
-        dat_f = _make(_GRID1D, field, tag="field")
+        dat_u = _make(GRID1D, u, tag="array")
+        dat_f = _make(GRID1D, field, tag="field")
         ctx = _ctx_with_datasets(dat_u, dat_f)
         ctx.invoke(cmd.bparrotate)
         result = ctx.obj["data"].get_dataset(0, tag="arrayBpar")
@@ -512,8 +480,8 @@ class TestParrotatePerprotateCommands:
     def test_bperprotate(self):
         u = np.array([[0.0, 1.0, 0.0]])
         field = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]])
-        dat_u = _make(_GRID1D, u, tag="array")
-        dat_f = _make(_GRID1D, field, tag="field")
+        dat_u = _make(GRID1D, u, tag="array")
+        dat_f = _make(GRID1D, field, tag="field")
         ctx = _ctx_with_datasets(dat_u, dat_f)
         ctx.invoke(cmd.bperprotate)
         result = ctx.obj["data"].get_dataset(0, tag="arrayBperp")
@@ -546,16 +514,16 @@ class TestDifferentiateCommand:
 
 class TestRelchangeCommand:
     def test_relchange_basic(self):
-        d1 = _make(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
-        d2 = _make(_GRID1D, np.array([[2.0, 4.0, 6.0]]))
+        d1 = _make(GRID1D, np.array([[1.0, 2.0, 3.0]]))
+        d2 = _make(GRID1D, np.array([[2.0, 4.0, 6.0]]))
         ctx = _ctx_with_datasets(d1, d2)
         ctx.invoke(cmd.relchange, tag="rel_change")
         result = ctx.obj["data"].get_dataset(0, tag="rel_change")
         assert result is not None
 
     def test_relchange_zero_relative_change(self):
-        d1 = _make(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
-        d2 = _make(_GRID1D, np.array([[1.0, 2.0, 3.0]]))
+        d1 = _make(GRID1D, np.array([[1.0, 2.0, 3.0]]))
+        d2 = _make(GRID1D, np.array([[1.0, 2.0, 3.0]]))
         ctx = _ctx_with_datasets(d1, d2)
         ctx.invoke(cmd.relchange, index=0, tag="rc")
         result = ctx.obj["data"].get_dataset(0, tag="rc")
@@ -588,8 +556,8 @@ class TestVelocityCommand:
     def test_velocity_basic(self):
         density = np.array([[2.0]])
         momentum = np.array([[1.0]])
-        dat_den = _make(_GRID1D, density, tag="density")
-        dat_mom = _make(_GRID1D, momentum, tag="momentum")
+        dat_den = _make(GRID1D, density, tag="density")
+        dat_mom = _make(GRID1D, momentum, tag="momentum")
         ctx = _ctx_with_datasets(dat_den, dat_mom)
         ctx.invoke(cmd.velocity)
         result = ctx.obj["data"].get_dataset(0, tag="velocity")
@@ -641,11 +609,11 @@ class TestGridCommand:
 class TestAgyroCommand:
     def _make_pij_data(self, pxx=1.0, pyy=1.0, pzz=1.0, pxy=0.5, pxz=0.0, pyz=0.0):
         pij = np.array([[pxx, pxy, pxz, pyy, pyz, pzz]])
-        return _make(_GRID1D, pij, tag="pressure")
+        return _make(GRID1D, pij, tag="pressure")
 
     def _make_bfield(self, bx=1.0, by=0.0, bz=0.0):
         b = np.array([[bx, by, bz]])
-        return _make(_GRID1D, b, tag="field")
+        return _make(GRID1D, b, tag="field")
 
     def test_agyro_frobenius(self):
         p = self._make_pij_data(pxy=0.5)
@@ -724,13 +692,13 @@ class TestEnergeticsCommand:
     def _make_species(self, rho=1.0, vx=0.3, p=0.5, tag="elc"):
         E = p / (_GAMMA - 1) + 0.5 * rho * vx**2
         mom = np.array([[rho, rho * vx, 0.0, 0.0, E]])
-        d = _make(_GRID1D, mom, tag=tag)
+        d = _make(GRID1D, mom, tag=tag)
         d.ctx.update({"charge": -1.0, "mass": 1.0, "epsilon_0": 1.0, "mu_0": 1.0})
         return d
 
     def _make_em_field(self):
         field = np.array([[0.0, 0.0, 0.0, 3.0, 4.0, 0.0]])
-        d = _make(_GRID1D, field, tag="field")
+        d = _make(GRID1D, field, tag="field")
         d.ctx.update({"epsilon_0": 1.0, "mu_0": 1.0})
         return d
 
@@ -825,7 +793,7 @@ class TestLaguerrecomposeCommand:
 class TestVerbPrint:
     def test_verbose_mode_euler(self, capsys):
         import time
-        dat = _make(_GRID1D, _MOM5)
+        dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
         ctx.obj["verbose"] = True
         ctx.obj["start_time"] = time.time()
@@ -833,7 +801,7 @@ class TestVerbPrint:
 
     def test_integrate_verbose(self):
         import time
-        dat = _make(_GRID1D, _MOM5)
+        dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
         ctx.obj["verbose"] = True
         ctx.obj["start_time"] = time.time()
@@ -847,26 +815,26 @@ class TestVerbPrint:
 class TestDataSpace:
     def test_add_and_get(self):
         ds = cmd.DataSpace()
-        dat = _make(_GRID1D, _MOM5)
+        dat = _make(GRID1D, _MOM5)
         ds.add(dat)
         assert ds.get_dataset(0) is dat
 
     def test_get_num_datasets(self):
         ds = cmd.DataSpace()
-        ds.add(_make(_GRID1D, _MOM5))
-        ds.add(_make(_GRID1D, _MOM5))
+        ds.add(_make(GRID1D, _MOM5))
+        ds.add(_make(GRID1D, _MOM5))
         assert ds.get_num_datasets() == 2
 
     def test_clean(self):
         ds = cmd.DataSpace()
-        ds.add(_make(_GRID1D, _MOM5))
+        ds.add(_make(GRID1D, _MOM5))
         ds.clean()
         assert ds.get_num_datasets() == 0
 
     def test_iterator_only_active(self):
         ds = cmd.DataSpace()
-        dat1 = _make(_GRID1D, _MOM5)
-        dat2 = _make(_GRID1D, _MOM5)
+        dat1 = _make(GRID1D, _MOM5)
+        dat2 = _make(GRID1D, _MOM5)
         dat2.deactivate()
         ds.add(dat1)
         ds.add(dat2)
@@ -875,8 +843,8 @@ class TestDataSpace:
 
     def test_iterator_tag_filter(self):
         ds = cmd.DataSpace()
-        d1 = _make(_GRID1D, _MOM5, tag="a")
-        d2 = _make(_GRID1D, _MOM5, tag="b")
+        d1 = _make(GRID1D, _MOM5, tag="a")
+        d2 = _make(GRID1D, _MOM5, tag="b")
         ds.add(d1)
         ds.add(d2)
         a_only = list(ds.iterator(tag="a"))
@@ -885,23 +853,23 @@ class TestDataSpace:
 
     def test_deactivate_all(self):
         ds = cmd.DataSpace()
-        ds.add(_make(_GRID1D, _MOM5))
-        ds.add(_make(_GRID1D, _MOM5))
+        ds.add(_make(GRID1D, _MOM5))
+        ds.add(_make(GRID1D, _MOM5))
         ds.deactivate_all()
         assert ds.get_num_datasets(only_active=True) == 0
 
     def test_tag_iterator(self):
         ds = cmd.DataSpace()
-        ds.add(_make(_GRID1D, _MOM5, tag="t1"))
-        ds.add(_make(_GRID1D, _MOM5, tag="t2"))
+        ds.add(_make(GRID1D, _MOM5, tag="t1"))
+        ds.add(_make(GRID1D, _MOM5, tag="t2"))
         tags = list(ds.tag_iterator())
         assert set(tags) == {"t1", "t2"}
 
     def test_select_iterator_int(self):
         ds = cmd.DataSpace()
-        d0 = _make(_GRID1D, _MOM5)
-        d1 = _make(_GRID1D, _MOM5)
-        d2 = _make(_GRID1D, _MOM5)
+        d0 = _make(GRID1D, _MOM5)
+        d1 = _make(GRID1D, _MOM5)
+        d2 = _make(GRID1D, _MOM5)
         ds.add(d0)
         ds.add(d1)
         ds.add(d2)
@@ -912,15 +880,15 @@ class TestDataSpace:
     def test_select_iterator_slice_string(self):
         ds = cmd.DataSpace()
         for _ in range(5):
-            ds.add(_make(_GRID1D, _MOM5))
+            ds.add(_make(GRID1D, _MOM5))
         result = list(ds.iterator(select="1:3"))
         assert len(result) == 2
 
     def test_select_iterator_comma_string(self):
         ds = cmd.DataSpace()
-        d0 = _make(_GRID1D, _MOM5)
-        d1 = _make(_GRID1D, _MOM5)
-        d2 = _make(_GRID1D, _MOM5)
+        d0 = _make(GRID1D, _MOM5)
+        d1 = _make(GRID1D, _MOM5)
+        d2 = _make(GRID1D, _MOM5)
         ds.add(d0)
         ds.add(d1)
         ds.add(d2)
