@@ -40,12 +40,12 @@ num_nodeshybrid = np.array([1, 6, 12, 24, 48])
 def _get_basis_p(num_dim, num_comp):
   basis, poly_order = None, None
   idx = np.argwhere(num_nodesSerendipity[num_dim - 1, :] == num_comp).squeeze()
-  if idx:
+  if idx.ndim == 0 and idx:
     basis = "serendipity"
     poly_order = idx
   # end
   idx = np.argwhere(num_nodesTensor[num_dim - 1, :] == num_comp).squeeze()
-  if idx:
+  if idx.ndim == 0 and idx:
     basis = "tensor"
     poly_order = idx + 1
   # end
