@@ -69,7 +69,7 @@ class GkylAdiosReader(object):
       return False
     # end
     try:
-      fh = adios2.open(self._file_name, "rra")
+      fh = adios2.FileReader(self._file_name)
       for vn in fh.available_variables():
         if "TimeMesh" in vn:
           self.is_diagnostic = True
@@ -88,9 +88,7 @@ class GkylAdiosReader(object):
       self.is_frame = True
       fh.close()
       return True
-    except ModuleNotFoundError:
-      return False
-    except TypeError:
+    except (ModuleNotFoundError, TypeError, AttributeError, RuntimeError, FileNotFoundError):
       return False
     # end
 
@@ -137,7 +135,7 @@ class GkylAdiosReader(object):
     # end
 
   def _preload_frame(self) -> None:
-    fh = adios2.open(self._file_name, "rra")
+    fh = adios2.FileReader(self._file_name)
 
     # Postgkyl conventions require the attributes to be
     # narrays even for 1D data
@@ -145,24 +143,24 @@ class GkylAdiosReader(object):
     self.upper = np.atleast_1d(fh.read_attribute("upperBounds"))
     self.cells = np.atleast_1d(fh.read_attribute("numCells"))
     if "changeset" in fh.available_attributes().keys():
-      self.ctx["changeset"] = fh.read_attribute_string("changeset")[0]
+      self.ctx["changeset"] = fh.read_attribute_string("changeset")
     # end
     if "builddate" in fh.available_attributes().keys():
-      self.ctx["builddate"] = fh.read_attribute_string("builddate")[0]
+      self.ctx["builddate"] = fh.read_attribute_string("builddate")
     # end
     if "polyOrder" in fh.available_attributes().keys():
-      self.ctx["poly_order"] = fh.read_attribute("polyOrder")[0]
+      self.ctx["poly_order"] = int(fh.read_attribute("polyOrder"))
       self.ctx["is_modal"] = True
     # end
     if "basisType" in fh.available_attributes().keys():
-      self.ctx["basis_type"] = fh.read_attribute_string("basisType")[0]
+      self.ctx["basis_type"] = fh.read_attribute_string("basisType")
       self.ctx["is_modal"] = True
     # end
     if "charge" in fh.available_attributes().keys():
-      self.ctx["charge"] = fh.read_attribute("charge")[0]
+      self.ctx["charge"] = float(fh.read_attribute("charge"))
     # end
     if "mass" in fh.available_attributes().keys():
-      self.ctx["mass"] = fh.read_attribute("mass")[0]
+      self.ctx["mass"] = float(fh.read_attribute("mass"))
     # end
     if "time" in fh.available_variables():
       self.ctx["time"] = fh.read("time")
@@ -174,7 +172,7 @@ class GkylAdiosReader(object):
     fh.close()
 
   def _load_frame(self) -> Tuple[list, np.ndarray]:
-    fh = adios2.open(self._file_name, "rra")
+    fh = adios2.FileReader(self._file_name)
 
     if self.var_name not in fh.available_variables():
       if self.click_mode:
@@ -199,7 +197,10 @@ class GkylAdiosReader(object):
     var_shape = fh.available_variables()[self.var_name]["Shape"]
     num_elems = np.array([v for v in var_shape.split(",")], dtype=np.int32)
     offset, count = self._create_offset_count(num_elems, self.axes, self.comp, grid)
-    data = fh.read(self.var_name, start=offset, count=count)
+    if offset:
+      data = fh.read(self.var_name, start=offset, count=count)
+    else:
+      data = fh.read(self.var_name)
 
     # Adjust boundaries for 'offset' and 'count'
     dz = (self.upper - self.lower) / self.cells
@@ -233,11 +234,14 @@ class GkylAdiosReader(object):
 
     # Check for mapped grid ...
     if self.c2p:
-      grid_fh = adios2.open(self.c2p, "rra")
+      grid_fh = adios2.FileReader(self.c2p)
       grid_dims = grid_fh.available_variables()["CartGridField"]["Shape"]
       grid_dims = [int(v) for v in grid_dims.split(",")]
       offset, count = self._create_offset_count(grid_dims, self.axes, None)
-      tmp = grid_fh.read("CartGridField", start=offset, count=count)
+      if offset:
+        tmp = grid_fh.read("CartGridField", start=offset, count=count)
+      else:
+        tmp = grid_fh.read("CartGridField")
       num_comps = tmp.shape[-1]
       num_coeff = num_comps / num_dims
       grid = [
@@ -274,7 +278,7 @@ class GkylAdiosReader(object):
 
   def _load_diagnostic(self) -> Tuple[list, np.ndarray]:
 
-    fh = adios2.open(self._file_name, "rra")
+    fh = adios2.FileReader(self._file_name)
 
     def natural_sort(l):
       convert = lambda text: int(text) if text.isdigit() else text.lower()

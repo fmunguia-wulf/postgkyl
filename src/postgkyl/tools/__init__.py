@@ -49,6 +49,7 @@ from .pressure_diagnostics import get_gkyl_10m_agyro
 from .accumulate_current import accumulate_current
 from .calc_enstrophy import calc_enstrophy
 from .calc_ke_dke import calc_ke_dke
+from .mag_sq import mag_sq
 from .energetics import energetics
 from .fft import fft
 from .fit import fit
@@ -71,7 +72,6 @@ from .fit import tanh_transition
 from .growth import exp2
 from .growth import fit_growth
 from .init_polar import init_polar
-from .mag_sq import mag_sq
 from .parrotate import parrotate
 from .perprotate import perprotate
 from .polar_isotropic import polar_isotropic

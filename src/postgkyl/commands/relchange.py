@@ -22,7 +22,7 @@ def relchange(ctx, **kwargs):
     reference = data.get_dataset(kwargs["index"], tag)
     for dat in data.iterator(tag):
       if kwargs["tag"]:
-        out = GData(tag=kwargs["tag"], compgrid=ctx.obj["compgrid"], ctx=dat.ctx)
+        out = GData(tag=kwargs["tag"], comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
         grid, values = postgkyl.tools.rel_change(reference, dat, kwargs["comp"])
         dat.deactivate()
         out.push(grid, values)

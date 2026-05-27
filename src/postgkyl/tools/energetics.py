@@ -40,7 +40,7 @@ def energetics(data_elc: GData, data_ion: GData, data_field: GData) -> Tuple[lis
   #   5) Electric
   #   6) Magnetic
   #   7) Total
-  out = np.zeros(values_field[..., :7].shape)
+  out = np.zeros(values_field.shape[:-1] + (7,))
 
   grid, pre = get_p(data_elc)
   grid, kee = get_ke(data_elc)

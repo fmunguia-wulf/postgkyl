@@ -225,7 +225,7 @@ def animate(ctx, **kwargs):
 
 
   set_figure = False
-  min_size = np.NAN
+  min_size = np.nan
   yset = False
 
   if kwargs["grouptags"]:

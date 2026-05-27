@@ -5,8 +5,8 @@ from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d, expand_4d,
 
 
 def interpolate(data, poly_order=None, nodes=None, externalGrid=None):
-  if poly_order is None and data.poly_order is not None:
-    poly_order = data.poly_order
+  if poly_order is None and data.ctx.get("poly_order") is not None:
+    poly_order = data.ctx.get("poly_order")
   else:
     # Something bad happened :D
     pass
@@ -35,7 +35,8 @@ def interpolate(data, poly_order=None, nodes=None, externalGrid=None):
 
   # Set up array for interp node values
   values = data.get_values()
-  intValues = np.zeros(np.int32(numCells * len(nodes)))
+  intShape = tuple(int(c) * len(nodes) for c in numCells)
+  intValues = np.zeros(intShape)
   intValues = intValues[..., np.newaxis]
 
   # Iterating through the node list, calculate value at each node for each element
@@ -126,9 +127,7 @@ def interpolate(data, poly_order=None, nodes=None, externalGrid=None):
     # end
   # end
 
-  # Hardcoded stack
-  data.pushGrid(intGrid)
-  data.pushValues(intValues)
+  data.push(intGrid, intValues)
 
 
 # end

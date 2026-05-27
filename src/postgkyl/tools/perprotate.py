@@ -35,8 +35,8 @@ def perprotate(data: GData, rotator: GData, rotate_coords: str = "0:3",
   grid = data.get_grid()
   values = data.get_values()
 
-  outrot = np.zeros_like(values)
-  outrot = values - parrotate(data, rotator, rotate_coords)
+  _, par = parrotate(data, rotator, rotate_coords)
+  outrot = values - par
   if overwrite:
     data.push(grid, outrot)
   #end
