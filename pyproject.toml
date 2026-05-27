@@ -11,16 +11,16 @@ authors = [
 ]
 description = "Python library and command-line tool for postprocessing (not only) Gkeyll data"
 dependencies = [
-  "click>=8.1.7",
-  "matplotlib>=3.7.0",
-  "msgpack>=1.0.3",
-  "numpy>=1.24.4,<2",
-  "scipy>=1.10.1",
-  "sympy>=1.12",
-  "tables>=3.8.0",
-  "plotly>=6.6.0",
-  "kaleido>=0.2.1",
-  "pyvista>=0.48.0",
+  "click>=8.4.1",
+  "matplotlib>=3.10.9",
+  "msgpack>=1.1.2",
+  "numpy>=2.4.6",
+  "scipy>=1.17.1",
+  "sympy>=1.14.0",
+  "tables>=3.11.1",
+  "plotly>=6.7.0",
+  "kaleido>=1.3.0",
+  "pyvista>=0.48.4",
 ]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -47,8 +47,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-adios = ["adios2>=2.9.0,<2.10.0"]
-test = ["pytest>=7.4.0"]
+adios = ["adios2>=2.12.1.1001"]
+test = ["pytest>=9.0.3"]
 
 [project.urls]
 Documentation = "https://gkeyll.readthedocs.io/"
