@@ -8,8 +8,11 @@ import glob
 from postgkyl.data import GInterpModal
 from postgkyl.data import GData
 from postgkyl.utils import verb_print
+import postgkyl.utils.gkeyll_enums as gkenums
 
 max_num_blocks = 10000 # Maximum number of blocks.
+
+file_fmt = '.gkyl' # File format assumed.
 
 # Labels used to identify boundary flux files.
 edges = ["lower","upper"]
@@ -31,9 +34,13 @@ def set_tick_font_size(axIn,fontSizeIn):
   offset_txt = axIn.xaxis.get_offset_text() # Get the text object
   offset_txt.set_size(fontSizeIn) # Set the size.
 
-def read_gfile(file_name):
+def read_gfile(file_name, **kwargs):
   # Read a Gkeyll file.
-  pgData = GData(file_name) # Read data with pgkyl.
+  c2p_file = None
+  if "mapc2p" in kwargs.keys():
+    c2p_file = kwargs["mapc2p"]
+
+  pgData = GData(file_name, mapc2p_name=c2p_file) # Read data with pgkyl.
   grid = pgData.get_grid() # Time stamps of the simulation.
   vals = pgData.get_values() # Data values.
   if isinstance(grid, np.ndarray):
@@ -45,11 +52,11 @@ def read_gfile(file_name):
 
   return grid_out, np.squeeze(vals), pgData
 
-def read_gfile_if_present(file_name):
+def read_gfile_if_present(file_name, **kwargs):
   # Check if a Gkeyll file exists. If it does, read it and return
   # its grid, data and GData object. If it doesn't, return None.
   if os.path.exists(file_name):
-    grid, vals, pgdat = read_gfile(file_name)
+    grid, vals, pgdat = read_gfile(file_name, kwargs)
     return True, np.squeeze(grid), np.squeeze(vals), pgdat
   else:
     verb_print(ctx, "  -> File "+file_name+" not found. Proceeding w/o it.")
@@ -128,6 +135,112 @@ def get_block_indices(multib, file_path_name):
         raise NameError("Blocks given to --multib -m must be a comma separated list or slice.")
 
   return blocks
+
+def is_gdata_geo_mapc2p(gdata):
+  # Determine whether the GData object, gdata, is from a simulation with MAPC2P
+  # geometry. If geometry_type is missing from the metadata, default to true.
+  gdata_meta = gdata.get_ctx()
+  is_mapc2p = True
+  if ("geometry_type" in gdata_meta):
+    if "geometry_type" in gdata_meta.keys():
+      mc2p_idx = gkenums.enum_key_to_idx(gkenums.gkyl_geometry_id,"GKYL_GEOMETRY_MAPC2P")
+      is_mapc2p = mc2p_idx == gdata_meta["geometry_type"]
+    # end
+  #end
+  return is_mapc2p
+
+#quant_attributes = {
+#  "den"    : {
+#    "files"      : [["M0"],["MaxwellianMoments"],["BiMaxwellianMoments"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c0, fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$n_%s$ (m$^{-3}$)'
+#  },
+#  "upar"   : {
+#    "files"      : [["MaxwellianMoments"],["BiMaxwellianMoments"],["M0","M1"],],
+#    "fetch_func" : [fccq_get_c1, fccq_get_c1, fccq_get_f1Df0,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$u_{\parallel %s}$ (m$^{-3}$)'
+#  },
+#  "tpar"   : {
+#    "files"      : [["BiMaxwellianMoments"],],
+#    "fetch_func" : [fccq_get_c2,],
+#    "scale_func" : [fccq_scale_mDe,],
+#    "label"      : r'$T_{\parallel %s}$ (eV)'
+#  },
+#  "tperp"  : {
+#    "files"      : [["BiMaxwellianMoments"],],
+#    "fetch_func" : [fccq_get_c3, ],
+#    "scale_func" : [fccq_scale_mDe,],
+#    "label"      : r'$T_{\perp %s}$ (eV)'
+#  },
+#  "temp"   : {
+#    "files"      : [["MaxwellianMoments"],["BiMaxwellianMoments"],],
+#    "fetch_func" : [fccq_get_c2, fccq_2c3Pc2D3],
+#    "scale_func" : [fccq_scale_mDe,],
+#    "label"      : r'$T_{%s}$ (eV)'
+#  },
+#  "m0"     : {
+#    "files"      : [["M0"],["M0M1M2"],["M0M1M2PARM2PERP"],["MaxwellianMoments"],["BiMaxwellianMoments"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c0, fccq_get_c0, fccq_get_c0, fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{0 %s}$ (m$^{-3}$)'
+#  },
+#  "m1"     : {
+#    "files"      : [["M1"],["M0M1M2"],["M0M1M2PARM2PERP"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c1, fccq_get_c1,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{1 %s}$ (m$^{-2}$ s^{-1})'
+#  },
+#  "m2par"  : {
+#    "files"      : [["M2PAR"],["M0M1M2PARM2PERP"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c2,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{2\parallel %s}$ (m$^{-1}$ s^{-2})'
+#  },
+#  "m2perp" : {
+#    "files"      : [["M2PERP"],["M0M1M2PARM2PERP"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c3,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{2\perp %s}$ (m$^{-1}$ s^{-2})'
+#  },
+#  "m2"     : {
+#    "files"      : [["M2"],["M0M1M2"],["M0M1M2PARM2PERP"],["M2PAR","M2PERP"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_c2, fccq_get_c2Pc3, fccq_get_f0Pf1,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{2 %s}$ (m$^{-1}$ s^{-2})'
+#  },
+#  "m3par"  : {
+#    "files"      : [["M3PAR"],],
+#    "fetch_func" : [fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled,],
+#    "label"      : r'$M_{3\parallel %s}$ (s^{-3})'
+#  },
+#  "m3perp" : {
+#    "files"      : [["M3PERP"],],
+#    "fetch_func" : [fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled,],
+#    "label"      : r'$M_{3\perp %s}$ (s^{-3})'
+#  },
+#  "m3"     : {
+#    "files"      : [["M3"],["M3PAR","M3PERP"],],
+#    "fetch_func" : [fccq_get_c0, fccq_get_f0Pf1,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$M_{3 %s}$ (s^{-3})'
+#  },
+#  "phi"    : {
+#    "files"      : [["field"],],
+#    "fetch_func" : [fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$\phi$ (V)'
+#  },
+#  "bmag"   : {
+#    "files"      : [["bmag"],],
+#    "fetch_func" : [fccq_get_c0,],
+#    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "label"      : r'$B$ (T)'
+#  },
+#}
 
 #
 # End of hardcoded parameters and auxiliary functions.

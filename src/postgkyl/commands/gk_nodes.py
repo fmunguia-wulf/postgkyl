@@ -13,19 +13,6 @@ import postgkyl.utils.gk_utils as gku
 import postgkyl.utils.gkeyll_enums as gkenums
 
 
-def is_geo_mapc2p(gdata):
-  # Determine whether the GData object, gdata, is from a simulation with MAPC2P
-  # geometry. If geometry_type is missing from the metadata, default to true.
-  gdata_meta = gdata.get_ctx()
-  is_mapc2p = True
-  if ("geometry_type" in gdata_meta):
-    if "geometry_type" in gdata_meta.keys():
-      mc2p_idx = gkenums.enum_key_to_idx(gkenums.gkyl_geometry_id,"GKYL_GEOMETRY_MAPC2P")
-      is_mapc2p = mc2p_idx == gdata_meta["geometry_type"]
-    # end
-  #end
-  return is_mapc2p
-
 def nodes_to_RZ(nodes, is_mapc2p):
   # Given the nodes array with data, compute the R-Z variables.
   yidx = 0 #[ Index in the y direction to select 3D nodes at.
@@ -177,7 +164,7 @@ def gk_nodes(ctx, **kwargs):
     # Load nodes.
     grid, nodes, gdat = gku.read_gfile(nodes_file.replace("*",str(bI)))
 
-    is_mapc2p = is_geo_mapc2p(gdat)
+    is_mapc2p = gku.is_gdata_geo_mapc2p(gdat)
     majorR, vertZ = nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
 
     majorR_ex = [min([majorR_ex[0],np.amin(majorR)]), max([majorR_ex[1],np.amax(majorR)])] 
@@ -217,7 +204,7 @@ def gk_nodes(ctx, **kwargs):
     # Load nodes.
     grid, nodes, gdat = gku.read_gfile(nodes_file.replace("*",str(bI)))
 
-    is_mapc2p = is_geo_mapc2p(gdat)
+    is_mapc2p = gku.is_gdata_geo_mapc2p(gdat)
     majorR, vertZ = nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
 
     # Plot each node.
