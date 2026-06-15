@@ -262,7 +262,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   else:
     if squeeze:  # Plotting into 1 panel
-      plt.subplots(1, 1, num=fig.number)
+      fig.subplots(1, 1)
       ax = fig.axes
       ax[0].set_xlabel(xlabel)
       ax[0].set_ylabel(ylabel)
@@ -291,9 +291,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       # end
 
       if num_dims == 1 or lineouts is not None:
-        plt.subplots(num_rows, num_cols, sharex=True, num=fig.number)
+        fig.subplots(num_rows, num_cols, sharex=True)
       else:  # In 2D, share y-axis as well
-        plt.subplots(num_rows, num_cols, sharex=True, sharey=True, num=fig.number)
+        fig.subplots(num_rows, num_cols, sharex=True, sharey=True)
       # end
       ax = fig.axes
       # Removing extra axes
