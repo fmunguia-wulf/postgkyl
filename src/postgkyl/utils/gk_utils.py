@@ -136,6 +136,38 @@ def get_block_indices(multib, file_path_name):
 
   return blocks
 
+def nodes_to_RZ(nodes, is_mapc2p):
+  """Extract 2D R and Z node arrays from a nodes.gkyl data array.
+
+  For 3D config space, the phi=0 slice is used.
+  """
+  nx_nod = np.shape(nodes)
+  cdim = np.size(nx_nod) - 1
+  cart_dim = 3
+  lo_idx = [[0] * cdim + [cd] for cd in range(cart_dim)]
+  up_idx = [[nx_nod[d] for d in range(cdim)] + [cd + 1] for cd in range(cart_dim)]
+
+  if cdim == 3:
+    yidx = 0
+    for cd in range(cart_dim):
+      lo_idx[cd][1] = yidx
+      up_idx[cd][1] = yidx + 1
+  # end
+
+  slices = [[slice(lo_idx[cd][d], up_idx[cd][d]) for d in range(cdim + 1)] for cd in range(cart_dim)]
+
+  if is_mapc2p:
+    cartX = [np.squeeze(nodes[tuple(slices[d])]) for d in range(cart_dim)]
+    majorR = np.sqrt(cartX[0] ** 2 + cartX[1] ** 2)
+    vertZ = cartX[2]
+  else:
+    majorR = np.squeeze(nodes[tuple(slices[0])])
+    vertZ = np.squeeze(nodes[tuple(slices[1])])
+  # end
+
+  return majorR, vertZ
+
+
 def is_gdata_geo_mapc2p(gdata):
   # Determine whether the GData object, gdata, is from a simulation with MAPC2P
   # geometry. If geometry_type is missing from the metadata, default to true.
@@ -154,6 +186,7 @@ def is_gdata_geo_mapc2p(gdata):
 #    "files"      : [["M0"],["MaxwellianMoments"],["BiMaxwellianMoments"],],
 #    "fetch_func" : [fccq_get_c0, fccq_get_c0, fccq_get_c0,],
 #    "scale_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
+#    "norm_func" : [fccq_scale_disabled, fccq_scale_disabled, fccq_scale_disabled,],
 #    "label"      : r'$n_%s$ (m$^{-3}$)'
 #  },
 #  "upar"   : {

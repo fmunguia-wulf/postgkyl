@@ -13,40 +13,6 @@ import postgkyl.utils.gk_utils as gku
 import postgkyl.utils.gkeyll_enums as gkenums
 
 
-def nodes_to_RZ(nodes, is_mapc2p):
-  # Given the nodes array with data, compute the R-Z variables.
-  yidx = 0 #[ Index in the y direction to select 3D nodes at.
-
-  nx_nod = np.shape(nodes)
-  cdim = np.size(nx_nod)-1
-
-  cart_dim = 3
-  lo_idx = [[0 for d in range(cdim)] + [cd] for cd in range(cart_dim)]
-  up_idx = [[nx_nod[d] for d in range(cdim)] + [cd+1] for cd in range(cart_dim)]
-    
-  if (cdim == 3):
-    for cd in range(cart_dim):
-      lo_idx[cd][1] = yidx
-      up_idx[cd][1] = yidx+1
-    # end
-  # end
-
-  slices = [[slice(lo_idx[cd][d], up_idx[cd][d]) for d in range(cdim+1)] for cd in range(cart_dim)]
-
-  if is_mapc2p:
-    # Nodes in Cartesian coordinates.
-    cartX = [np.squeeze(nodes[tuple(slices[d])]) for d in range(cart_dim)] # X, Y, Z
-
-    torPhi = np.arctan2(cartX[1],cartX[0]) # Toroidal angle.
-    majorR = np.sqrt(np.power(cartX[0],2) + np.power(cartX[1],2)) # Major radius.
-    vertZ = cartX[2] # Vertical location.
-  else:
-    # Nodes in R, Z, Phi coordinates.
-    majorR = np.squeeze(nodes[tuple(slices[0])]) # Major radius.
-    vertZ  = np.squeeze(nodes[tuple(slices[1])]) # Vertical location.
-  # end
-
-  return majorR, vertZ
 
 def str_append_multib_suffix_mb(str_in, suffix, bidx):
   # Append the suffix to the input string str_in and format it with the block
@@ -165,7 +131,7 @@ def gk_nodes(ctx, **kwargs):
     grid, nodes, gdat = gku.read_gfile(nodes_file.replace("*",str(bI)))
 
     is_mapc2p = gku.is_gdata_geo_mapc2p(gdat)
-    majorR, vertZ = nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
+    majorR, vertZ = gku.nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
 
     majorR_ex = [min([majorR_ex[0],np.amin(majorR)]), max([majorR_ex[1],np.amax(majorR)])] 
     vertZ_ex = [min([vertZ_ex[0],np.amin(vertZ)]), max([vertZ_ex[1],np.amax(vertZ)])] 
@@ -205,7 +171,7 @@ def gk_nodes(ctx, **kwargs):
     grid, nodes, gdat = gku.read_gfile(nodes_file.replace("*",str(bI)))
 
     is_mapc2p = gku.is_gdata_geo_mapc2p(gdat)
-    majorR, vertZ = nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
+    majorR, vertZ = gku.nodes_to_RZ(nodes, is_mapc2p) # Major radius and vertical location.
 
     # Plot each node.
     pl_nodes_h.append(ax_h.plot(majorR,vertZ,marker=".", color="k", linestyle="none"))
