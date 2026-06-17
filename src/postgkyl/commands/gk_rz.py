@@ -140,11 +140,11 @@ def gk_rz(ctx, **kwargs):
   data = ctx.obj["data"]
 
   # Locate the geometry files from the prefix of the first processed dataset.
-  first = next(data.iterator(kwargs["use"]), None)
-  if first is None:
+  first_data = next(data.iterator(kwargs["use"]), None)
+  if first_data is None:
     return
 
-  prefix = _file_prefix(getattr(first, "_file_name", None))
+  prefix = _file_prefix(getattr(first_data, "_file_name", None))
 
   mapc2p_path = kwargs["mapc2p"]
   if mapc2p_path is None and prefix is not None:
@@ -153,9 +153,7 @@ def gk_rz(ctx, **kwargs):
   if not os.path.exists(mapc2p_path):
     raise click.ClickException("Could not find a mapc2p file; pass it with -n.")
 
-  is_3d = first.get_num_dims() == 3
-
-  if not is_3d:
+  if first_data.get_num_dims() == 2:
     # ---- 2D: direct map onto R-Z using mapc2p. ----
 
     verb_print(ctx, "Mapping stack data to R-Z using " + mapc2p_path)
