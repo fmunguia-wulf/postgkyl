@@ -61,21 +61,17 @@ def _centers(nodes):
   return [0.5 * (n[:-1] + n[1:]) for n in nodes]
 
 
-def _regrid(values, src_centers, dst_centers):
-  """Linearly interpolate `values` from one computational grid onto another.
+def _sample(values, src_coords, dst_coords):
+  """Linearly interpolate `values` onto the tensor grid spanned by `dst_coords`.
 
-  `src_centers` and `dst_centers` are lists of 1D cell-center arrays (one per
-  axis). Returns `values` unchanged when the two grids already coincide, so the
-  geometry (mapc2p/nodes) and the field may be defined on different resolutions.
+  `values` is defined on the tensor grid `src_coords` (a list of 1D arrays, one
+  per axis); `dst_coords` is the list of 1D arrays to evaluate at. This both
+  lets the geometry live on a different resolution than the field and lets it be
+  evaluated at the field's cell corners (so pcolormesh receives proper edges).
   """
-  if len(src_centers) == len(dst_centers) and all(
-      s.shape == d.shape and np.allclose(s, d)
-      for s, d in zip(src_centers, dst_centers)):
-    return values
-
-  mesh = np.meshgrid(*dst_centers, indexing="ij")
+  mesh = np.meshgrid(*dst_coords, indexing="ij")
   return RegularGridInterpolator(
-    tuple(src_centers), values, bounds_error=False, fill_value=None
+    tuple(src_coords), values, bounds_error=False, fill_value=None
   )(tuple(mesh))
 
 
@@ -109,7 +105,7 @@ def _binormal_project(vals, phi_uw, phi_tor):
 
 @click.command()
 @click.option("--mapc2p", "-n", default=None, type=click.STRING,
-  help="Path to the mapc2p.gkyl file. If omitted, '<prefix>-mapc2p.gkyl' is looked up from "
+  help="Path to the geo_int_mapc2p.gkyl file. If omitted, '<prefix>-geo_int_mapc2p.gkyl' is looked up from "
        "the first processed dataset's prefix.")
 @click.option("--nodes", "-N", default=None, type=click.STRING,
   help="Path to the -nodes.gkyl file (default geometry source for 3D data; its full [-pi, pi] "
@@ -153,10 +149,8 @@ def gk_rz(ctx, **kwargs):
   mapc2p_path = kwargs["mapc2p"]
   if mapc2p_path is None and prefix is not None:
     mapc2p_path = prefix + "-geo_int_mapc2p.gkyl"
-    if not os.path.exists(mapc2p_path):
-      mapc2p_path = prefix + "-mapc2p.gkyl"
 
-  if mapc2p_path is None or not os.path.exists(mapc2p_path):
+  if not os.path.exists(mapc2p_path):
     raise click.ClickException("Could not find a mapc2p file; pass it with -n.")
 
   is_3d = first.get_num_dims() == 3
@@ -170,9 +164,10 @@ def gk_rz(ctx, **kwargs):
     loaded_count = 0
     for dat in data.iterator(kwargs["use"]):
       field_grid, vals = _interp(dat)
-      field_centers = _centers(field_grid)
-      R = _regrid(majorR, geo_centers, field_centers)
-      Z = _regrid(vertZ, geo_centers, field_centers)
+      # Evaluate R, Z at the field cell corners (its node arrays) so pcolormesh
+      # gets explicit cell edges, not non-monotonic curvilinear cell centers.
+      R = _sample(majorR, geo_centers, field_grid)
+      Z = _sample(vertZ, geo_centers, field_grid)
       out = GData(tag=kwargs["tag"], label=kwargs["label"], ctx=dat.ctx)
       out.push([R, Z], vals[..., np.newaxis])
       data.add(out)
@@ -198,20 +193,22 @@ def gk_rz(ctx, **kwargs):
                   "(no nodes file: surfaces will not close at z = +/- pi)." % (phi_tor, mapc2p_path))
   geo_grid, majorR, vertZ, phi = _mapc2p_geometry(mapc2p_path)
   gx, gy, gz = _centers(geo_grid)
-  zf = np.linspace(zc[0], zc[-1], nz_interp * Nz)
 
-  # Interpolate the geometry, on its own (possibly coarser/finer) grid, onto the
-  # field's x and the up-sampled z, and phi onto the field's (x, y, z). Using the
-  # geometry's own coordinates is what lets it live on a different resolution
-  # than the field (e.g. a 48x32x32 mapc2p with a 48x32x16 field).
-  XX, ZZ = np.meshgrid(xc, zf, indexing="ij")
-  rgi_xz = lambda d: RegularGridInterpolator((gx, gz), d, bounds_error=False, fill_value=None)
-  Rrz = rgi_xz(majorR[:, 0, :])((XX, ZZ))
-  Zrz = rgi_xz(vertZ[:, 0, :])((XX, ZZ))
-  GX, GY, GZ = np.meshgrid(xc, yc, zf, indexing="ij")
-  phi_grid = RegularGridInterpolator(
-    (gx, gy, gz), np.unwrap(phi, axis=1), bounds_error=False, fill_value=None
-  )((GX, GY, GZ))
+  # Up-sampled z: edges (zf_edges) for the plotting grid, centers (zf) for the
+  # field reconstruction.
+  xn = fine_grid[0]
+  zf_edges = np.linspace(zc[0], zc[-1], nz_interp * Nz + 1)
+  zf = 0.5 * (zf_edges[:-1] + zf_edges[1:])
+
+  # Interpolate the geometry (on its own, possibly coarser/finer grid) onto the
+  # field grid. R, Z are evaluated at the cell corners (x nodes, z edges) so
+  # pcolormesh receives explicit cell edges rather than non-monotonic curvilinear
+  # cell centers; phi at the cell centers for the binormal field reconstruction.
+  # Using the geometry's own coordinates is what lets it live on a different
+  # resolution than the field (e.g. a 48x32x32 mapc2p with a 48x32x16 field).
+  Rrz = _sample(majorR[:, 0, :], [gx, gz], [xn, zf_edges])
+  Zrz = _sample(vertZ[:, 0, :], [gx, gz], [xn, zf_edges])
+  phi_grid = _sample(np.unwrap(phi, axis=1), [gx, gy, gz], [xc, yc, zf])
 
   loaded_count = 0
   for dat in data.iterator(kwargs["use"]):
