@@ -8,7 +8,7 @@ import os
 import click
 
 from postgkyl.data import GData
-from postgkyl.util.gk_quantities import gk_quant_registry
+from postgkyl.utils.gk_quantities.registry import gk_quant_registry
 from postgkyl.utils import verb_print
 
 def choose_file_set(frame_inp: str, name: str, species: str, path: str, quantity: str,) -> list[int]:
@@ -70,7 +70,7 @@ def choose_file_set(frame_inp: str, name: str, species: str, path: str, quantity
   upper = int(parts[1]) if parts[1] else frames_avail_sorted[-1] + 1
   step  = int(parts[2]) if len(parts) == 3 and parts[2] else 1
   frame_list = [f for f in frames_avail_sorted if lower <= f < upper and (f - lower) % step == 0]
-  return qcombo, frame_list
+  return frame_list
 
 def load_gk_quantity(quantity: str, species: str, name: str, frame: int, path: str = "./",
   tag: str = "default", label: str | None = None,) -> GData:
@@ -124,7 +124,8 @@ def load_gk_quantity(quantity: str, species: str, name: str, frame: int, path: s
                           f"frame {frame}). Tried:\n" + "\n".join(tried))
 
 @click.command(name="gk-load-quantity")
-@click.argument("quantity")
+@click.option("--quantity", "-q", required=True, type=click.STRING,
+    help="Quantity to plot.")
 @click.option("--name", "-n", required=True, type=click.STRING,
     help="Simulation name prefix (e.g. gk_sheath_2x2v_p1).")
 @click.option("--species", "-s", required=True, type=click.STRING,
@@ -144,12 +145,13 @@ def gk_load_quantity(ctx, **kwargs):
 
   \b
   Accepted quantities are:
-    n, upar, Tpar, Tperp, p
+    den, upar, Tpar, Tperp, press
 
   \b
   Command line example:
-    pgkyl gk-load-quantity n -s ion -n gk_sheath_2x2v_p1 -f 9 interp plot
+    pgkyl gk-load-quantity den -s ion -n gk_sheath_2x2v_p1 -f 9 interp plot
 
+  \b
   Script example:
     from postgkyl.commands.gk_load_quantity import load_gk_quantity
     gdat = load_gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
@@ -157,8 +159,8 @@ def gk_load_quantity(ctx, **kwargs):
   data = ctx.obj["data"]
   verb_print(ctx, f"Loading quantity '{kwargs['quantity']}' for {kwargs['name']}")
 
-  qset, frames = choose_file_set(kwargs["frame"], kwargs["name"], kwargs["species"],
-                                 kwargs["path"], kwargs["quantity"])
+  frames = choose_file_set(kwargs["frame"], kwargs["name"], kwargs["species"],
+                           kwargs["path"], kwargs["quantity"])
 
   verb_print(ctx, f"Frames: {frames}")
 
