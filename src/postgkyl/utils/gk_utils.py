@@ -169,8 +169,10 @@ def nodes_to_RZ(nodes, is_mapc2p):
 
 
 def is_gdata_geo_mapc2p(gdata):
-  # Determine whether the GData object, gdata, is from a simulation with MAPC2P
-  # geometry. If geometry_type is missing from the metadata, default to true.
+  '''
+  Determine whether the GData object, gdata, is from a simulation with MAPC2P
+  geometry. If geometry_type is missing from the metadata, default to true.
+  '''
   gdata_meta = gdata.get_ctx()
   is_mapc2p = True
   if ("geometry_type" in gdata_meta):
