@@ -103,7 +103,7 @@ def _binormal_project(vals, phi_uw, phi_tor):
       val_ext = np.concatenate([val_y, val_y, val_y])
       order = np.argsort(phi_ext)
       out[ix, iz] = np.interp(phi_tor, phi_ext[order], val_ext[order])
-      
+
   return out
 
 
@@ -152,20 +152,18 @@ def gk_rz(ctx, **kwargs):
 
   mapc2p_path = kwargs["mapc2p"]
   if mapc2p_path is None and prefix is not None:
-    mapc2p_path = prefix + "-mapc2p.gkyl"
+    mapc2p_path = prefix + "-geo_int_mapc2p.gkyl"
+    if not os.path.exists(mapc2p_path):
+      mapc2p_path = prefix + "-mapc2p.gkyl"
 
-  nodes_path = kwargs["nodes"]
-  if nodes_path is None and prefix is not None:
-    candidate = prefix + "-nodes.gkyl"
-    nodes_path = candidate if os.path.exists(candidate) else None
+  if mapc2p_path is None or not os.path.exists(mapc2p_path):
+    raise click.ClickException("Could not find a mapc2p file; pass it with -n.")
 
   is_3d = first.get_num_dims() == 3
 
   if not is_3d:
     # ---- 2D: direct map onto R-Z using mapc2p. ----
-    if mapc2p_path is None or not os.path.exists(mapc2p_path):
-      raise click.ClickException("Could not find a mapc2p file; pass it with -n.")
-  
+
     verb_print(ctx, "Mapping stack data to R-Z using " + mapc2p_path)
     geo_grid, majorR, vertZ, _ = _mapc2p_geometry(mapc2p_path)
     geo_centers = _centers(geo_grid)
@@ -195,9 +193,6 @@ def gk_rz(ctx, **kwargs):
   fine_grid, _ = _interp(first)
   xc, yc, zc = _centers(fine_grid)
   Nz = zc.size
-
-  if mapc2p_path is None or not os.path.exists(mapc2p_path):
-    raise click.ClickException("Could not find a nodes or mapc2p file; pass one with -N or -n.")
 
   verb_print(ctx, "3D data: projecting onto phi = %g rad using mapc2p %s "
                   "(no nodes file: surfaces will not close at z = +/- pi)." % (phi_tor, mapc2p_path))
