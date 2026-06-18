@@ -27,10 +27,10 @@ def _update(frame, data, fig, kwargs):
   for i, dat in enumerate(data[frame]):
     kwargs["title"] = ""
     if not kwargs["notitle"]:
-      if dat.ctx.get("frame"):
+      if dat.ctx.get("frame") is not None:
         kwargs["title"] = f"{kwargs['title']:s} frame: {dat.ctx['frame']:d} "
       # end
-      if dat.ctx.get("time"):
+      if dat.ctx.get("time") is not None:
         kwargs["title"] = f"{kwargs['title']:s} time: {dat.ctx['time']:.4e}"
       # end
     # end
