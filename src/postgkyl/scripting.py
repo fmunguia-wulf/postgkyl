@@ -35,6 +35,10 @@ class _Session:
   stack (a ``DataSpace``), exactly as they would when chaining commands on the
   command line. Drop to ``session.data`` to reach the underlying ``GData``
   objects and their raw NumPy arrays.
+
+  This class is inherited by ``PgkylSession`` in ``postgkyl.api``. Since 
+  ``PgkylSession`` is generated automatically, this class is a space where one 
+  can add stable, hand-written features to the session API.
   """
 
   def __init__(self, verbose: bool = False, batch_mode: bool = False,
@@ -84,11 +88,17 @@ class _Session:
     (e.g. ``tag``, ``label``, ``mapc2p_name``).
 
     Args:
-      files: One or more paths to Gkeyll output files.
+      files: One or more paths to Gkeyll output files. e.g.
+          ``pg.load("file1.gkyl", "file2.gkyl")``
     """
     self.ctx.obj["in_data_strings"].extend(files)
-    return self._run(cmd.load, **kwargs)
-
+    # The ``load`` command loads a single file per invocation (it consumes one
+    # entry of ``in_data_strings`` and advances the counter), mirroring how each
+    # file on the CLI triggers its own ``load`` call. Invoke it once per file.
+    result = None
+    for _ in files:
+      result = self._run(cmd.load, **kwargs)
+    return result
   @property
   def data(self) -> DataSpace:
     """The ``DataSpace`` stack holding all loaded/processed datasets."""
