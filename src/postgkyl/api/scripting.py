@@ -16,7 +16,9 @@ file holds the stable runtime core they build on. See ``postgkyl._api_gen`` for
 the generator that keeps ``api.py`` in sync with the click commands.
 """
 
+import glob
 import os
+import re
 import time
 
 import click
@@ -99,6 +101,34 @@ class _Session:
     for _ in files:
       result = self._run(cmd.load, **kwargs)
     return result
+  
+  def get_framelist(self, name: str, simprefix: str, path: str = ".") -> list[int]:
+    """List the available frame numbers for a given output in a directory.
+
+    Scans ``path`` for files named ``{simprefix}-{name}_{frame}.gkyl`` and
+    returns the sorted frame numbers. For example, files
+    ``rt_gk_alfven_1x2v-apar_0.gkyl``, ``..._1.gkyl``, ``..._2.gkyl`` yield
+    ``[0, 1, 2]``.
+
+    Args:
+      name: The output name (e.g. ``"apar"``).
+      simprefix: The simulation prefix (e.g. ``"rt_gk_alfven_1x2v"``).
+      path: The directory to search (default is the current directory).
+
+    Returns:
+      The sorted list of frame numbers found for the specified output.
+    """
+    pattern = os.path.join(path, f"{simprefix}-{name}_*.gkyl")
+    regex = re.compile(rf"{re.escape(simprefix)}-{re.escape(name)}_(\d+)\.gkyl$")
+    frames = []
+    for fn in glob.glob(pattern):
+      match = regex.search(os.path.basename(fn))
+      if match:
+        frames.append(int(match.group(1)))
+    return sorted(frames)
+
+
+
   @property
   def data(self) -> DataSpace:
     """The ``DataSpace`` stack holding all loaded/processed datasets."""
