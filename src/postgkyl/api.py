@@ -772,13 +772,15 @@ energy.
     return self._run(_cmd("laguerrecompose"), distribution=distribution, tm=tm, tag=tag, label=label)
 
   def listoutputs(self,
-      extensions: str = 'bp,gkyl'):
+      extensions: str = 'bp,gkyl',
+      path: str = '.'):
     """List Gkeyll filename stems in the current directory.
 
     Args:
       extensions: (--extensions, -e) Output file extension(s)
+      path: (--path, -p) Path to search for outputs
     """
-    return self._run(_cmd("listoutputs"), extensions=extensions)
+    return self._run(_cmd("listoutputs"), extensions=extensions, path=path)
 
   def magsq(self,
       use: str | None = None,
