@@ -183,7 +183,7 @@ def gk_rz(ctx, **kwargs):
   nz_interp = max(1, kwargs["nz_interp"])
 
   # Field cell-center coordinates (from the field's own DG grid).
-  fine_grid, _ = _interp(first)
+  fine_grid, _ = _interp(first_data)
   xc, yc, zc = _centers(fine_grid)
   Nz = zc.size
 
