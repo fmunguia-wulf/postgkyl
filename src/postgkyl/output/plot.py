@@ -80,11 +80,17 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     linewidth: float | None = None, linestyle: float | None = None,
     figsize: tuple | None = None,
     jet: bool = False, cmap: str | None = None,
+    cval: float | None = None, cval_min: float | None = None, cval_max: float | None = None,
     **kwargs):
   """Plots Gkeyll data.
 
   Unifies the plotting across a wide range of Gkyl applications. Can
   be used for both 1D an 2D data. Uses a proper colormap by default.
+
+  For 1D data, passing ``cmap`` together with ``cval`` colors the line by mapping
+  ``cval`` onto the colormap. ``cval_min``/``cval_max`` set the normalization
+  range (typically the min/max of the ``cval`` values across all curves), so that
+  several curves drawn into the same axes share a consistent color scale.
   """
 
   # ---- Set style and process inputs ----
@@ -343,7 +349,26 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       nodal_grid = _get_nodal_grid(grid, cells)
       x = (nodal_grid[0] + xshift)*xscale
       y = (values[..., comp] + yshift)*yscale
-      im = cax.plot(x, y, *args, color=color, label=label, markersize=markersize)
+      # Color the line from the colormap when a 'cval' is given (1D only).
+      line_color = color
+      if bool(cmap) and cval is not None:
+        if cval_max is not None and cval_min is not None and cval_max != cval_min:
+          t = (cval - cval_min)/(cval_max - cval_min)
+        else:
+          t = 0.5
+        # end
+        line_color = plt.get_cmap(cmap)(t)
+      # end
+      im = cax.plot(x, y, *args, color=line_color, label=label, markersize=markersize)
+      # Add a colorbar describing the cval-to-color mapping once per axes.
+      if (bool(cmap) and cval is not None and colorbar
+          and cval_max is not None and cval_min is not None and cval_max != cval_min
+          and not getattr(cax, "_pgkyl_cval_cbar", False)):
+        mappable = cm.ScalarMappable(
+            norm=colors.Normalize(vmin=cval_min, vmax=cval_max), cmap=plt.get_cmap(cmap))
+        pgkyl_colorbar(mappable, fig, cax, label=clabel)
+        cax._pgkyl_cval_cbar = True
+      # end
 
     elif num_dims == 2:
       extend = None

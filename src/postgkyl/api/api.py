@@ -938,6 +938,7 @@ agyrotropic pressure tensor.
       saveframes: str | None = None,
       jet: bool = False,
       cmap: str | None = None,
+      cval: str | None = None,
       multiblock: bool = False):
     """Plot active datasets, optionally displaying the plot and/or saving it to PNG files.
 
@@ -1012,10 +1013,11 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       figsize: (--figsize) Comma-separated values for x and y size.
       saveframes: (--saveframes) Save individual frames as PNGS instead of an opening them
       jet: (--jet) Turn colormap to jet for comparison with literature.
-      cmap: (--cmap) Override default colormap with a valid matplotlib cmap.
+      cmap: (--cmap, --colormap) Override default colormap with a valid matplotlib cmap.
+      cval: (--cval) For 1D plots, comma-separated values mapping each curve onto the colormap (e.g. '0,1'). Requires --cmap; defaults to the dataset index if omitted.
       multiblock: (-m, --multiblock)
     """
-    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, xkcd=xkcd, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, multiblock=multiblock)
+    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, xkcd=xkcd, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
 
   def pr(self,
       use: str | None = None,

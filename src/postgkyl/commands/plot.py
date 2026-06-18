@@ -97,8 +97,11 @@ import postgkyl.output.plot
 @click.option("--saveframes", type=click.STRING,
     help="Save individual frames as PNGS instead of an opening them")
 @click.option("--jet", is_flag=True, help="Turn colormap to jet for comparison with literature.")
-@click.option("--cmap", type=click.STRING, default=None,
+@click.option("--cmap", "--colormap", type=click.STRING, default=None,
     help="Override default colormap with a valid matplotlib cmap.")
+@click.option("--cval", type=click.STRING, default=None,
+    help="For 1D plots, comma-separated values mapping each curve onto the colormap "
+    "(e.g. '0,1'). Requires --cmap; defaults to the dataset index if omitted.")
 @click.option("-m", "--multiblock", is_flag=True, default=False)
 @click.pass_context
 def plot(ctx, **kwargs):
@@ -222,6 +225,26 @@ def plot(ctx, **kwargs):
   kwargs["legend"] = show_legend
   del kwargs["no_legend"]
 
+  # ---- Colormap-based line coloring (1D) ----
+  # Parse the per-curve colormap values. If a colormap is requested without
+  # explicit values, fall back to the dataset index so multiple 1D curves spread
+  # across the colormap.
+  cval_list = None
+  if kwargs["cval"]:
+    cval_list = [float(v) for v in kwargs["cval"].split(",")]
+  elif kwargs["cmap"]:
+    num_datasets = sum(1 for _ in ctx.obj["data"].iterator(kwargs["use"]))
+    cval_list = list(range(num_datasets))
+  # end
+  del kwargs["cval"]
+  if cval_list:
+    kwargs["cval_min"] = min(cval_list)
+    kwargs["cval_max"] = max(cval_list)
+  else:
+    kwargs["cval_min"] = None
+    kwargs["cval_max"] = None
+  # end
+
   file_name = ""
 
   # ---- Loop over all the datasets ----
@@ -241,6 +264,13 @@ def plot(ctx, **kwargs):
       label = dat.get_label()
     else:
       label = ""
+    # end
+
+    # Pick this curve's colormap value (1D coloring).
+    if cval_list is not None and i < len(cval_list):
+      kwargs["cval"] = cval_list[i]
+    else:
+      kwargs["cval"] = None
     # end
 
     # ---- Plot ----
