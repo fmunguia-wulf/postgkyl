@@ -2,18 +2,18 @@
 import os
 
 import postgkyl as pg
-from postgkyl import _api_gen
+from postgkyl.api import _api_gen
 
 
 class TestApiGeneration:
   """The generated ``api.py`` must stay in sync with the click commands."""
 
   def test_api_in_sync(self):
-    path = os.path.join(os.path.dirname(pg.__file__), "api.py")
+    path = _api_gen._target_path()
     with open(path, "r") as fh:
       current = fh.read()
     assert current == _api_gen.render(), (
-        "postgkyl/api.py is stale; run 'python -m postgkyl._api_gen'.")
+        "postgkyl/api/api.py is stale; run 'python -m postgkyl.api._api_gen'.")
 
 
 class TestApiSession:
