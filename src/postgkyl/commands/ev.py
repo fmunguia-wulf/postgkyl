@@ -154,7 +154,7 @@ def _command(ctx, grid_stack, value_stack, ctx_stack, str_in):
 
 
 @click.command(
-    help=f"Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN).\n Supported operators are: {help_str[:-1]}"
+    help=f"Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN), e.g., 'f[0] f[1] +'.\n Supported operators are: {help_str[:-1]}"
 )
 @click.argument("chain", nargs=1, type=click.STRING)
 @click.option("--tag", "-t", help="Tag for the result")
