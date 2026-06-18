@@ -330,7 +330,7 @@ from fluid conserved variables.
       tag: str | None = None,
       label: str | None = None,
       all: bool = False):
-    """Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN).
+    """Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN), e.g., 'f[0] f[1] +'.
  Supported operators are:  '+', '-', '*', '/', 'dot', 'sqrt', 'sin', 'cos', 'tan', 'abs', 'avg', 'log', 'log10', 'max', 'min', 'max2', 'min2', 'mean', 'len', 'pow', 'sq', 'exp', 'grad', 'grad2', 'int', 'div', 'curl', 'scale_comp', 'scale_zi_axis'
 
     Args:
