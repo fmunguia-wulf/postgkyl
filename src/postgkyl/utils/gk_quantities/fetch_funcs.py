@@ -5,13 +5,25 @@ gk_quantities registry.
 Each fetch function takes a list of loaded GData objects (matching the
 corresponding 'files' entry in the registry) and returns (grid, values) for
 the derived quantity.
+
+Naming keys for some fetch functions below:
+  s#: source #
+  c#: component #
+  add: plus
+  sub: minus
+  mul: times
+  div: divided by
+  pow#: raised to the power of #
+
 """
 import numpy as np
+import operator
 
 from postgkyl.data import GData
+from postgkyl.data.dg import get_num_basis
 from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
 
-def get_num_basis_from_gdata(gdata) -> int:
+def _get_num_basis_from_gdata(gdata) -> int:
   from postgkyl.data.dg import get_num_basis
   ndim = gdata.get_num_dims()
   poly_order = int(gdata.ctx["poly_order"])
@@ -28,74 +40,255 @@ def _make_fetch_comp(comp: int):
   """Return a fetch function that extracts the comp-th physical component."""
   def fetch(gdatas, **kw):
     g = gdatas[0].get_grid()
-    nb = get_num_basis_from_gdata(gdatas[0])
+    nb = _get_num_basis_from_gdata(gdatas[0])
     v = gdatas[0].get_values()[..., comp*nb:(comp+1)*nb].copy()
-    out = _empty_gdata_from_gdata(gdatas[0])
+    out = GData(ctx=gdatas[0].ctx)
     out.push(g, v)
     return out
   # end
   fetch.__name__ = f"fetch_comp{comp}"
   return fetch
 
-# Functions to extract specific components.
-fetch_comp0 = _make_fetch_comp(0)
-fetch_comp1 = _make_fetch_comp(1)
-fetch_comp2 = _make_fetch_comp(2)
-fetch_comp3 = _make_fetch_comp(3)
+def _make_fetch_sick_addsub_sjcl(si: int, ck: int, sj: int, cl: int, op):
+  """
+  Return a fetch function that does:
+    (k-th component of the i-th source) op (l-th component of the j-th source)
+  """
+  def fetch(gdatas, **kwargs):
+    gd_l = gdatas[si]
+    gd_r = gdatas[sj]
 
-def fetch_upar_from_M0M1(gdatas):
+    nb_l = _get_num_basis_from_gdata(gd_l)
+    nb_r = _get_num_basis_from_gdata(gd_r)
+    if not nb_l == nb_r:
+      raise ValueError(f"Datasets have different basis")
+
+    vals_l = gd_l.get_values()
+    vals_r = gd_r.get_values()
+  
+    out = GData(ctx=gdl.ctx)
+    out.push(gd_l.get_grid(), op(vals_l,vals_r))
+  
+    return out
+  # end
+  fetch.__name__ = f"fetch_s{si}c{ck}_mul_s{sj}c{cl}"
+  return fetch
+
+def _make_fetch_sick_mul_sjcl(si: int, ck: int, sj: int, cl: int):
   """
-    Parallel drift speed upar = M1 / M0.
-    gdatas = [M0, M1].
+  Return a fetch function that multiplies the k-th component of the i-th
+  source/dataset by the l-th component of the j-th source.
   """
-  M0, M1 = gdatas
+  def fetch(gdatas, **kwargs):
+    gd_l = gdatas[si]
+    gd_r = gdatas[sj]
+
+    nb_l = _get_num_basis_from_gdata(gd_l)
+    nb_r = _get_num_basis_from_gdata(gd_r)
+    if not nb_l == nb_r:
+      raise ValueError(f"Datasets have different basis")
+
+    vals_l = gd_l.get_values()
+    out_shape = list(vals_l.shape)
+    out_shape[-1] = nb_l
+  
+    out = GData(ctx=gd_l.ctx)
+    out.push(gd_l.get_grid(), np.zeros(out_shape, dtype=vals_l.dtype))
+  
+    dgops = GkeyllDGops()
+    dgops.multiply(0, out, ck, gd_l, cl, gd_r)
+  
+    return out
+  # end
+  fetch.__name__ = f"fetch_s{si}c{ck}_mul_s{sj}c{cl}"
+  return fetch
+
+def _make_fetch_sick_div_sjcl(si: int, ck: int, sj: int, cl: int):
+  """
+  Return a fetch function that divides the k-th component of the i-th
+  source/dataset by the l-th component of the j-th source.
+  """
+  def fetch(gdatas, **kwargs):
+    gd_l = gdatas[si]
+    gd_r = gdatas[sj]
+
+    nb_l = _get_num_basis_from_gdata(gd_l)
+    nb_r = _get_num_basis_from_gdata(gd_r)
+    if not nb_l == nb_r:
+      raise ValueError(f"Datasets have different basis")
+
+    vals_l = gd_l.get_values()
+    out_shape = list(vals_l.shape)
+    out_shape[-1] = nb_l
+  
+    out = GData(ctx=gd_l.ctx)
+    out.push(gd_l.get_grid(), np.zeros(out_shape, dtype=vals_l.dtype))
+
+    dgops = GkeyllDGops()
+    dgops.invert(0, out, cl, gd_r)
+    dgops.multiply(0, out, ck, gd_l, 0, out)
+  
+    return out
+  # end
+  fetch.__name__ = f"fetch_s{si}c{ck}_div_s{sj}c{cl}"
+  return fetch
+
+# Functions to extract a components.
+fetch_s0c0 = _make_fetch_comp(0)
+fetch_s0c1 = _make_fetch_comp(1)
+fetch_s0c2 = _make_fetch_comp(2)
+fetch_s0c3 = _make_fetch_comp(3)
+
+# Functions to add two components.
+fetch_s0c0_add_s1c0 = _make_fetch_sick_addsub_sjcl(0,0,1,0,operator.add)
+fetch_s0c2_add_s0c3 = _make_fetch_sick_addsub_sjcl(0,2,0,3,operator.add)
+
+# Functions to subtract two components.
+fetch_s0c0_sub_s1c0 = _make_fetch_sick_addsub_sjcl(0,0,1,0,operator.sub)
+
+# Functions to multiply two components.
+fetch_s0c0_mul_s0c0 = _make_fetch_sick_mul_sjcl(0,0,0,0)
+fetch_s0c0_mul_s0c1 = _make_fetch_sick_mul_sjcl(0,0,0,1)
+
+# Functions to divide two components.
+fetch_s1c0_div_s0c0 = _make_fetch_sick_div_sjcl(1,0,0,0)
+
+def fetch_M1_from_H(gdatas, **kwargs):
+  """
+  M1 from the Hamiltonian moments (Hmom).
+  """
+  hmom = gdatas[0]
+  mass = hmom.ctx["mass"]
+  nb = _get_num_basis_from_gdata(hmom)
+  vals = hmom.get_values()
+
+  m1 = GData(ctx=hmom.ctx)
+  m1.push(hmom.get_grid(), np.zeros_like(vals[..., :nb]))
+
   dgops = GkeyllDGops()
+  dgops.multiply(0, m1, 0, hmom, 1, hmom)
 
-  M0_inv = _empty_gdata_from_gdata(M0)
-  upar   = _empty_gdata_from_gdata(M0)
+  m1.set_values(m1.get_values() / mass)
+  return m1
 
-  dgops.invert(0, M0_inv, 0, M0)
-  dgops.multiply(0, upar, 0, M1, 0, M0_inv)
-
-  return upar
-
-def fetch_press_from_maxwellian(gdatas):
+def fetch_Tpar_from_BiMax(gdatas, **kwargs):
   """
-    Pressure p = n * T.
-    gdatas = [n, upar, temp].
+  Tpar from BiMaxwellian moments.
   """
+  Tpar = fetch_s0c2(gdatas)
+
   bimax = gdatas[0]
-  nb = get_num_basis_from_gdata(bimax)
-  vals = bimax.get_values()
+  mass = bimax.ctx["mass"]
+  Tpar.set_values(mass * Tpar.get_values())
+  return Tpar
 
-  # Build intermediate GData objects for n and T_combo
-  press = GData(ctx=bimax.ctx)
-  press.push(bimax.get_grid(), np.zeros_like(vals[..., :nb]))
+def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
+  """
+  upar*M1 + M0*Tpar/m = M2par.
+  Tpar = m * (M2par - upar*M1) / M0.
+  """
+  m0, m1, m2par = gdatas
+  dgops = GkeyllDGops()
+
+  m0_inv = _empty_gdata_from_gdata(m0)
+  upar   = _empty_gdata_from_gdata(m0)
+  Tpar   = _empty_gdata_from_gdata(m0)
+
+  dgops.invert(0, m0_inv, 0, m0)
+  dgops.multiply(0, upar, 0, m1, 0, m0_inv)
+  dgops.multiply(0, upar, 0, upar, 0, m1)
+
+  m2par_val = m2par.get_values()
+  um1_val = upar.get_values()
+  
+  mass = m0.ctx["mass"]
+  Tpar.set_values(mass * (m2par_val - um1_val))
+  dgops.multiply(0, Tpar, 0, Tpar, 0, m0_inv)
+  return Tpar
+
+def fetch_Tperp_from_BiMax(gdatas, **kwargs):
+  """
+  Tperp from BiMaxwellian moments.
+  """
+  Tperp = fetch_s0c3(gdatas)
+
+  bimax = gdatas[0]
+  mass = bimax.ctx["mass"]
+  Tperp.set_values(mass * Tperp.get_values())
+  return Tperp
+
+def fetch_Tperp_from_M0_M2perp(gdatas, **kwargs):
+  """
+  Tperp = 0.5 * mass * (M2perp / M0).
+  """
+  Tperp = fetch_s1c0_div_s0c0(gdatas)
+
+  m0 = gdatas[0]
+  mass = m0.ctx["mass"]
+  Tperp.set_values(0.5 * mass * Tperp.get_values())
+  return Tperp
+
+def fetch_temp_from_Max(gdatas, **kwargs):
+  """
+  temp from Maxwellian moments.
+  """
+  temp = fetch_s0c2(gdatas)
+
+  maxmom = gdatas[0]
+  mass = maxmom.ctx["mass"]
+  temp.set_values(mass * temp.get_values())
+  return temp
+
+def fetch_temp_from_Tpar_Tperp(gdatas, **kwargs):
+  """
+  temp = (Tpar + 2*Tperp) / 3.
+  """
+  Tpar, Tperp = gdatas
+
+  temp = _empty_gdata_from_gdata(Tpar)
+
+  Tpar_val  = Tpar.get_values()
+  Tperp_val = Tperp.get_values()
+  
+  temp.set_values((Tpar_val + 2.0*Tperp_val)/3.0)
+  return temp
+
+def fetch_press_from_Max(gdatas, **kwargs):
+  """
+  Pressure from Maxwellian moments.
+  press = den * temp.
+  """
+  maxmom = gdatas[0]
+  nb = _get_num_basis_from_gdata(bimax)
+  vals = maxmom.get_values()[..., :nb]
+  
+  press = GData(ctx=gd.ctx)
+  press.push(maxmom.get_grid(), np.zeros_like(vals))
 
   dgops = GkeyllDGops()
-  dgops.multiply(0, press, 0, bimax, 2, bimax)
+  dgops.multiply(0, press, 0, maxmom, 2, maxmom)
 
+  mass = maxmom.ctx["mass"]
+  press.set_values(mass * press.get_values())
   return press
 
-def fetch_press_from_bimaxwellian(gdatas):
+def fetch_press_from_BiMax(gdatas, **kwargs):
   """
-    Pressure p = n * (Tpar + 2*Tperp) / 3.
-    gdatas = [n, upar, Tpar, Tperp].
+  Pressure from BiMaxwellian moments.
+  press = den * (Tpar + 2*Tperp) / 3.
   """
   bimax = gdatas[0]
-  nb = get_num_basis_from_gdata(bimax)
+  nb = _get_num_basis_from_gdata(bimax)
   vals = bimax.get_values()
 
   Tpar_vals  = vals[..., 2*nb:3*nb]
   Tperp_vals = vals[..., 3*nb:4*nb]
-  temp_vals = (Tpar + 2.0 * Tperp)/3.0
+  temp_vals  = (Tpar + 2.0 * Tperp)/3.0
 
-  # Build intermediate GData objects for n and T_combo
-  temp = GData(ctx=gd.ctx)
-  temp.push(bimax.get_grid(), temp_vals.copy())
+  press = GData(ctx=gd.ctx)
+  press.push(bimax.get_grid(), temp_vals.copy())
 
   dgops = GkeyllDGops()
-  press = _empty_gdata_from_gdata(temp)
-  dgops.multiply(0, press, 0, bimax, 0, temp)
+  dgops.multiply(0, press, 0, bimax, 0, press)
 
   return press

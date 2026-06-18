@@ -1,22 +1,23 @@
-"""Default gkylsoft path, baked in at install time or edited post-install.
+"""
+Default gkylsoft path, baked in at install time or edited post-install.
 
-Resolution order (highest priority wins):
-  1. --gkylsoft CLI flag (per invocation)
-  2. GKYLSOFT environment variable
-  3. ~/.postgkyl/gkylsoft_path  (one-line text file, easy to change without reinstalling)
-  4. GKYLSOFT_PATH below        (set at install time, or edit this file directly)
+Ways to specify gkylsoft path (from highest to lowest priority):
+  1. Manually specified.
+  2. GKYLSOFT_DIR environment variable.
+  3. GKYLSOFT_DIR=... in ~/.postgkyl/gkylsoft_path.
+  4. GKYLSOFT_DIR below (set at install time, or edit this file directly).
 """
 
-GKYLSOFT_PATH = ""
+GKYLSOFT_DIR = ""
 
-def resolve_gkylsoft_path(cli_override: str | None = None) -> str | None:
+def resolve_gkylsoft_path(alt_gkylsoft_dir: str | None = None) -> str | None:
   """Return the gkylsoft directory path, or None if not configured."""
   import os
 
-  if cli_override:
-    return cli_override
+  if alt_gkylsoft_dir:
+    return alt_gkylsoft_dir
 
-  env = os.environ.get("GKYLSOFT")
+  env = os.environ.get("GKYLSOFT_DIR")
   if env:
     return env
 
@@ -24,6 +25,6 @@ def resolve_gkylsoft_path(cli_override: str | None = None) -> str | None:
   if os.path.isfile(cfg):
     text = open(cfg).read().strip()
     if text:
-      return text
+      return text.split("=")[1]
 
   return GKYLSOFT_PATH if GKYLSOFT_PATH else None
