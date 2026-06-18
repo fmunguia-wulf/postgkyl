@@ -8,14 +8,17 @@ from postgkyl.utils import verb_print
 @click.command()
 @click.option("--extensions", "-e", type=click.STRING,  default="bp,gkyl",
     show_default=True, help="Output file extension(s)")
+@click.option("--path", "-p", type=click.Path(exists=True, file_okay=False),
+    default=".", show_default=True, help="Path to search for outputs")
 @click.pass_context
 def listoutputs(ctx, **kwargs):
   """List Gkeyll filename stems in the current directory."""
   verb_print(ctx, "Starting listoutputs")
 
   extensions = kwargs["extensions"].split(",")
+  path = kwargs["path"]
   for ext in extensions:
-    files = glob(f"*.{ext:s}")
+    files = glob(f"{path}/*.{ext:s}")
     unique = []
     for fn in files:
       # remove extension
