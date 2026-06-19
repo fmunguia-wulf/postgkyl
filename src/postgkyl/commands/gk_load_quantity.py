@@ -25,7 +25,8 @@ def _get_avail_frames_qfile(path, name, species, qname, **kwargs):
   """
   frames_avail: set[int] = set()
   stem = f"{path}{name}-{species}_{qname}_"
-  if "frames" in kwargs:
+
+  if kwargs.get('frames'):
     frame_iter = _iter_existing_files(stem, iter(kwargs["frames"]))
   else:
     frame_iter = glob.glob(f"{glob.escape(stem)}*.gkyl")
