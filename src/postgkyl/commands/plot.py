@@ -18,6 +18,17 @@ import postgkyl.output.plot
     help="Manually set the number of columns for subplots.")
 @click.option("--transpose", is_flag=True, help="Transpose axes.")
 @click.option("-c", "--contour", is_flag=True, help="Make contour plot.")
+@click.option("--surface", "--surf", "surface", is_flag=True,
+    help="Make a 3D surface plot for 2D data (auto-enabled when overlaying "
+    "multiple 2D datasets).")
+@click.option("--alpha", type=click.FLOAT, default=None,
+    help="Surface transparency (0-1); useful when overlaying surfaces.")
+@click.option("--multi2d-mode", "multi2d_mode",
+    type=click.Choice(["surface", "contour"]), default="surface", show_default=True,
+    help="Mode to switch to when overlaying multiple 2D datasets for comparison.")
+@click.option("--no-multi2d", "no_multi2d", is_flag=True,
+    help="Disable the automatic switch to surface/contour when overlaying "
+    "multiple 2D datasets (keep overlapping pcolormesh).")
 @click.option("--clevels", type=click.STRING,
     help="Specify levels for contours: comma-separated level values or start:end:nlevels.")
 @click.option("--cnlevels", type=click.INT, help="Specify the number of levels for contours.")
@@ -172,7 +183,37 @@ def plot(ctx, **kwargs):
   if kwargs["multiblock"] and kwargs["cutoffglobalrange"] is None:
     kwargs["globalrange"] = True
   # end
-  
+
+  # ---- Auto-switch when overlaying multiple 2D datasets ----
+  # Overlapping pcolormesh plots are unreadable, so when several 2D datasets are
+  # drawn into the same figure we switch to a 3D surface (default) or a
+  # multi-color contour plot. 'comparison' tells the backend to use distinct
+  # colors and a legend so the datasets can be told apart.
+  num_datasets = sum(1 for _ in ctx.obj["data"].iterator(kwargs["use"]))
+  first_dat = next(ctx.obj["data"].iterator(kwargs["use"]), None)
+  is_2d = first_dat is not None and first_dat.get_num_dims(squeeze=True) == 2
+  enable_multi2d = not kwargs["no_multi2d"]
+  overlay_2d = (
+      is_2d and num_datasets > 1 and enable_multi2d and not dataset_fignum
+      and not kwargs["subplots"] and kwargs["lineouts"] is None
+      and not kwargs["quiver"] and not kwargs["streamline"]
+  )
+  if overlay_2d and not kwargs["surface"] and not kwargs["contour"]:
+    if kwargs["multi2d_mode"] == "contour":
+      kwargs["contour"] = True
+    else:
+      kwargs["surface"] = True
+    # end
+  # end
+  kwargs["comparison"] = overlay_2d and (kwargs["surface"] or kwargs["contour"])
+  # Overlaying requires a shared figure; default to figure 0 when switching modes.
+  if kwargs["comparison"] and kwargs["figure"] is None:
+    kwargs["figure"] = 0
+  # end
+  del kwargs["no_multi2d"]
+  del kwargs["multi2d_mode"]
+
+
 
   if kwargs["globalrange"] or kwargs["cutoffglobalrange"]:
     vmin = float("inf")

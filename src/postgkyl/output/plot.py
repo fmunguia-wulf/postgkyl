@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from matplotlib import cm
 from matplotlib import colors
+from matplotlib import patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import mpl_toolkits.mplot3d  # noqa: F401  (registers the '3d' projection)
 from typing import Tuple, TYPE_CHECKING
 import matplotlib as mpl
 import matplotlib.axes
@@ -64,6 +66,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     streamline: bool = False, sdensity: int = 1,
     quiver: bool = False,
     contour: bool = False, clevels: list | None = None, cnlevels: int | None = None, cont_label: bool = False,
+    surface: bool = False, comparison: bool = False, alpha: float | None = None,
     diverging: bool = False,
     lineouts: int | None = None,
     xmin: float | None = None, xmax: float | None = None, xscale: float = 1.0, xshift: float = 0.0,
@@ -91,6 +94,12 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
   ``cval`` onto the colormap. ``cval_min``/``cval_max`` set the normalization
   range (typically the min/max of the ``cval`` values across all curves), so that
   several curves drawn into the same axes share a consistent color scale.
+
+  For 2D data, ``surface`` draws a 3D surface instead of a ``pcolormesh``. When
+  several 2D datasets are overlaid onto the same axes for comparison, set
+  ``comparison`` so that each surface/contour gets a distinct color and a legend
+  entry (instead of overlapping and hiding each other). ``alpha`` controls the
+  surface transparency.
   """
 
   # ---- Set style and process inputs ----
@@ -243,6 +252,10 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
   # end
 
   # ---- Prepare Figure and Axes ----------------------------------------
+  # Surface plots need 3D axes; only meaningful for 2D data.
+  use_3d = bool(surface) and num_dims == 2
+  subplot_kw = {"projection": "3d"} if use_3d else {}
+
   if bool(figsize):
     figsize = (int(figsize.split(",")[0]), int(figsize.split(",")[1]))
   # end
@@ -268,7 +281,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   else:
     if squeeze:  # Plotting into 1 panel
-      fig.subplots(1, 1)
+      fig.subplots(1, 1, subplot_kw=subplot_kw)
       ax = fig.axes
       ax[0].set_xlabel(xlabel)
       ax[0].set_ylabel(ylabel)
@@ -297,7 +310,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       # end
 
       if num_dims == 1 or lineouts is not None:
-        fig.subplots(num_rows, num_cols, sharex=True)
+        fig.subplots(num_rows, num_cols, sharex=True, subplot_kw=subplot_kw)
+      elif use_3d:  # 3D axes cannot share x/y with each other
+        fig.subplots(num_rows, num_cols, subplot_kw=subplot_kw)
       else:  # In 2D, share y-axis as well
         fig.subplots(num_rows, num_cols, sharex=True, sharey=True)
       # end
@@ -373,7 +388,47 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     elif num_dims == 2:
       extend = None
 
-      if contour:  # ----------------------------------------------------
+      if surface:  # 3D surface plot -----------------------------------
+        nodal_grid = _get_nodal_grid(grid, cells)
+        xg = (nodal_grid[0] + xshift)*xscale
+        yg = (nodal_grid[1] + yshift)*yscale
+        z = (values[..., comp].transpose() + zshift)*zscale
+        if xg.ndim == 1:
+          xg, yg = np.meshgrid(xg, yg)
+        else:
+          xg, yg = xg.transpose(), yg.transpose()
+        # end
+        # Count how many overlays already live on these axes so each gets a
+        # distinct color (used for both surface and contour comparisons).
+        count = getattr(cax, "_pgkyl_overlay_count", 0)
+        cax._pgkyl_overlay_count = count + 1
+        if comparison or bool(color):
+          surf_color = color if bool(color) else f"C{count:d}"
+          im = cax.plot_surface(xg, yg, z, color=surf_color,
+              alpha=alpha if alpha is not None else 0.6,
+              linewidth=0, antialiased=True, shade=True)
+          if label:
+            handles = getattr(cax, "_pgkyl_handles", [])
+            handles.append(patches.Patch(color=surf_color, label=label))
+            cax._pgkyl_handles = handles
+          # end
+        else:
+          im = cax.plot_surface(xg, yg, z, cmap=mpl.rcParams["image.cmap"],
+              alpha=alpha if alpha is not None else 1.0,
+              linewidth=0, antialiased=True)
+          if colorbar:
+            fig.colorbar(im, ax=cax, label=clabel or "", shrink=0.6, pad=0.1)
+          # end
+        # end
+        if clabel:
+          cax.set_zlabel(clabel)
+        # end
+        if zmin is not None or zmax is not None:
+          cax.set_zlim(zmin, zmax)
+        # end
+        colorbar = False
+
+      elif contour:  # ----------------------------------------------------
         levels = 10
         if cnlevels:
           levels = int(cnlevels) - 1
@@ -394,7 +449,20 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         x = (nodal_grid[0] + xshift) * xscale
         y = (nodal_grid[1] + yshift) * yscale
         z = (values[..., comp].transpose() + zshift) * zscale
-        im = cax.contour(x, y, z, levels, *args, origin="lower", colors=color, linewidths=linewidth)
+        cont_colors = color
+        if comparison and not bool(color):
+          # Give each overlaid dataset a distinct, single color + legend entry.
+          count = getattr(cax, "_pgkyl_overlay_count", 0)
+          cax._pgkyl_overlay_count = count + 1
+          cont_colors = f"C{count:d}"
+          if label:
+            handles = getattr(cax, "_pgkyl_handles", [])
+            handles.append(patches.Patch(color=cont_colors, label=label))
+            cax._pgkyl_handles = handles
+          # end
+          colorbar = False
+        # end
+        im = cax.contour(x, y, z, levels, *args, origin="lower", colors=cont_colors, linewidths=linewidth)
         if cont_label:
           cax.clabel(im, inline=1)
         # end
@@ -516,9 +584,12 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     cax.grid(showgrid)
     # Legend
     if legend:
-      if num_dims == 1 and label != "":
+      if getattr(cax, "_pgkyl_handles", None):
+        # Overlaid 2D datasets (surface/contour comparison): real legend.
+        cax.legend(handles=cax._pgkyl_handles, loc=0)
+      elif num_dims == 1 and label != "":
         cax.legend(loc=0)
-      else:
+      elif not (surface and num_dims == 2):
         cax.text(0.03, 0.96, label,
             bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8, "boxstyle": "round"},
             verticalalignment="top", horizontalalignment="left", transform=cax.transAxes)
@@ -545,7 +616,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     if ymin is not None or ymax is not None:
       cax.set_ylim(ymin, ymax)
     # end
-    if fixaspect:
+    if fixaspect and not (surface and num_dims == 2):
       plt.setp(cax, aspect=aspect)
     # end
   # end
