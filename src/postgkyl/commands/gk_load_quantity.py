@@ -147,6 +147,8 @@ def _get_src_gdata_qdict(src, path: str, name: str, species: str, frame: int) ->
     help="Tag for the output dataset.")
 @click.option("--label", "-l", default=None, type=click.STRING,
     help="Label override for the output dataset.")
+@click.option("--const", "-c", default=None, type=click.STRING,
+    help="Comma-separated key=value pairs of named constants.")
 @click.pass_context
 def gk_load_quantity(ctx, **kwargs):
   """
@@ -184,6 +186,22 @@ def gk_load_quantity(ctx, **kwargs):
 
   quant_attr = gk_quant_registry[quantity]
 
+  # Parse --const into a dict, auto-converting numeric values.
+  user_const = {}
+  if kwargs.get("const"):
+    for pair in kwargs["const"].split(","):
+      key, _, val = pair.partition("=")
+      key = key.strip()
+      val = val.strip()
+      try:
+        val = int(val)
+      except ValueError:
+        try:
+          val = float(val)
+        except ValueError:
+          pass
+      user_const[key] = val
+
   path = kwargs["path"].rstrip("/") + "/"
 
   # Determine which source combination and frames to use.
@@ -203,7 +221,7 @@ def gk_load_quantity(ctx, **kwargs):
       else:
         gdatas.append(_get_src_gdata_qdict(src, path, kwargs["name"], kwargs["species"], frame))
 
-    out = fetch_func(gdatas) # Compute quantity.
+    out = fetch_func(gdatas, **user_const) # Compute quantity.
 
     # Set label and tag.
     default_label = quant_attr["label"] % kwargs["species"]
