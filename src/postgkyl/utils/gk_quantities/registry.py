@@ -74,7 +74,7 @@ _temp = {
 # Pressure.
 _press = {
   "source"    : [["MaxwellianMoments"], ["BiMaxwellianMoments"], [_M0,_temp]],
-  "fetch_func": [ff.fetch_press_from_Max, ff.fetch_press_from_BiMax, ff.fetch_s0c0_mul_s0c0],
+  "fetch_func": [ff.fetch_press_from_Max, ff.fetch_press_from_BiMax, ff.fetch_s0c0_mul_s1c0],
   "label"     : r"$p_{%s}$ (Pa)",
 }
 

@@ -147,7 +147,7 @@ fetch_s0c2_add_s0c3 = _make_fetch_sick_addsub_sjcl(0,2,0,3,operator.add)
 fetch_s0c0_sub_s1c0 = _make_fetch_sick_addsub_sjcl(0,0,1,0,operator.sub)
 
 # Functions to multiply two components.
-fetch_s0c0_mul_s0c0 = _make_fetch_sick_mul_sjcl(0,0,0,0)
+fetch_s0c0_mul_s1c0 = _make_fetch_sick_mul_sjcl(0,0,1,0)
 fetch_s0c0_mul_s0c1 = _make_fetch_sick_mul_sjcl(0,0,0,1)
 
 # Functions to divide two components.
@@ -259,10 +259,10 @@ def fetch_press_from_Max(gdatas, **kwargs):
   press = den * temp.
   """
   maxmom = gdatas[0]
-  nb = _get_num_basis_from_gdata(bimax)
+  nb = _get_num_basis_from_gdata(maxmom)
   vals = maxmom.get_values()[..., :nb]
   
-  press = GData(ctx=gd.ctx)
+  press = GData(ctx=maxmom.ctx)
   press.push(maxmom.get_grid(), np.zeros_like(vals))
 
   dgops = GkeyllDGops()
