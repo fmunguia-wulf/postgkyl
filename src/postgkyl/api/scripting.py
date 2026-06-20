@@ -19,6 +19,7 @@ the generator that keeps ``api.py`` in sync with the click commands.
 import glob
 import os
 import re
+import shlex
 import time
 
 import click
@@ -73,14 +74,94 @@ class _Session:
     style_file = style or os.path.join(
         os.path.dirname(postgkyl.output.__file__), "postgkyl.mplstyle")
     load_style(self.ctx, style_file)
+    self.cmd_stack = []
 
-  def _run(self, command: click.Command, **kwargs):
+  def _run(self, command: click.Command, _files=None, **kwargs):
     """Dispatch a click command against this session's stack.
 
     ``ctx.invoke`` fills in defaults for any option that is not passed, so the
     generated methods only need to forward their (already defaulted) arguments.
+
+    The equivalent CLI fragment is recorded on ``cmd_stack`` (see
+    :meth:`print_cmd`). ``_files`` carries the positional file name(s) for the
+    ``load`` command, which on the command line are named directly rather than
+    via a ``load`` keyword.
     """
+    self.cmd_stack.append(self._format_command(command, kwargs, files=_files))
     return self.ctx.invoke(command, **kwargs)
+
+  @staticmethod
+  def _long_opt(opts) -> str:
+    """Pick the most readable CLI flag for a parameter (prefer the long form)."""
+    long = [o for o in opts if o.startswith("--")]
+    return max(long or opts, key=len)
+
+  def _format_command(self, command: click.Command, kwargs: dict, files=None) -> str:
+    """Render one command as the CLI fragment that reproduces it.
+
+    Only options whose value differs from the command default are emitted, so
+    the result matches what a user would actually type rather than spelling out
+    every defaulted option the generated methods forward.
+    """
+    # ``load`` is triggered on the CLI by naming the file(s) directly; there is
+    # no ``load`` token. Every other command is named explicitly.
+    tokens = [shlex.quote(f) for f in files] if files is not None else [command.name]
+
+    for param in command.params:
+      if param.name == "help" or param.name not in kwargs:
+        continue
+      value = kwargs[param.name]
+      default = param.default
+      # click >=8.2 marks "no default given" with a Sentinel; treat as None.
+      if repr(default).startswith("Sentinel"):
+        default = None
+
+      if getattr(param, "is_flag", False):
+        secondary = getattr(param, "secondary_opts", [])
+        if default is True and secondary:
+          # Toggle flag that defaults on (e.g. --show/--no-show); only the
+          # off-switch is worth printing.
+          if value is False:
+            tokens.append(self._long_opt(secondary))
+        elif value:
+          tokens.append(self._long_opt(param.opts))
+        continue
+
+      if value is None or value == default:
+        continue
+
+      opt = self._long_opt(param.opts)
+      if getattr(param, "multiple", False) or getattr(param, "nargs", 1) == -1:
+        for item in value:
+          tokens.append(f"{opt} {shlex.quote(str(item))}")
+      else:
+        tokens.append(f"{opt} {shlex.quote(str(value))}")
+
+    return " ".join(tokens)
+
+  def get_cmd(self) -> str:
+    """Return the pgkyl CLI command equivalent to this session so far."""
+    parts = ["pgkyl"]
+    if self.ctx.obj.get("verbose"):
+      parts.append("--verbose")
+    if self.ctx.obj.get("batch_mode"):
+      parts.append("--batch-mode")
+    parts.extend(self.cmd_stack)
+    return " ".join(parts)
+
+  def print_cmd(self) -> str:
+    """Print the pgkyl CLI command equivalent to this session.
+
+    Reconstructs the chained command line that would reproduce every command run
+    on this session so far, e.g. after::
+
+        pg.load("file.gkyl")
+        pg.gk_rz(phi_tor=0.0)
+        pg.plot(fixaspect=True)
+
+    ``pg.print_cmd()`` prints ``pgkyl file.gkyl gk-rz --fix-aspect``.
+    """
+    print(self.get_cmd())
 
   def load(self, *files: str, **kwargs):
     """Load one or more Gkeyll files onto the stack.
@@ -98,8 +179,8 @@ class _Session:
     # entry of ``in_data_strings`` and advances the counter), mirroring how each
     # file on the CLI triggers its own ``load`` call. Invoke it once per file.
     result = None
-    for _ in files:
-      result = self._run(cmd.load, **kwargs)
+    for f in files:
+      result = self._run(cmd.load, _files=(f,), **kwargs)
     return result
   
   def get_framelist(self, name: str, simprefix: str, path: str = ".") -> list[int]:
