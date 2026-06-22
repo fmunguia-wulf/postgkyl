@@ -311,8 +311,8 @@ def fetch_ExB_vel(gdatas, **kwargs):
   vE_dir = kwargs["dir"]
 
   jacobtot_inv = gdatas[0]
-  b_i = gdatas[0]
-  phi = gdatas[0]
+  b_i = gdatas[1]
+  phi = gdatas[2]
 
   # Components of the quantities in the cross product AxB.
   comp_idxA = comp_idxB = 0

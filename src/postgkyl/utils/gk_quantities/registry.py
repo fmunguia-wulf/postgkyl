@@ -129,7 +129,7 @@ _press = {
 
 # ExB drift
 _ExB_vel = {
-  "source"    : [["geo_int_jacobtot_inv","geo_int_b_i","phi"],],
+  "source"    : [["geo_int_jacobtot_inv","geo_int_b_i","field"],],
   "fetch_func": [ff.fetch_ExB_vel],
   "label"     : r"$v_{E,%d}$ (m/s)",
 }
