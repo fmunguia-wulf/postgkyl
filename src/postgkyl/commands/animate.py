@@ -1,5 +1,8 @@
+import os
+import tempfile
 from matplotlib.animation import FuncAnimation
 from multiprocessing import Pool
+from PIL import Image
 import click
 import matplotlib
 import matplotlib.pyplot as plt
@@ -12,11 +15,40 @@ import postgkyl.output.plot
 def _save_frame_worker(args):
   """Worker for parallel frame saving; each process creates its own figure."""
   matplotlib.use("Agg")
-  frame_idx, frame_data, kwargs, saveframes, dpi, figsize = args
+  frame_idx, frame_data, kwargs, prefix, dpi, figsize = args
   fig = plt.figure(figsize=figsize)
   _update(0, [frame_data], fig, kwargs)
-  plt.savefig(f"{saveframes:s}_{frame_idx:d}.png", dpi=dpi)
+  plt.savefig(f"{prefix:s}_{frame_idx:d}.png", dpi=dpi)
   plt.close(fig)
+# end
+
+
+def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
+  """Save frames as PNGs, using parallel workers when nproc > 1."""
+  if kwargs["nproc"] > 1:
+    args_list = [(i, data_list[i], kwargs, prefix, kwargs["dpi"], figsize)
+        for i in range(num_frames)]
+    with Pool(kwargs["nproc"]) as pool:
+      pool.map(_save_frame_worker, args_list)
+    # end
+  else:
+    for i in range(num_frames):
+      _update(i, data_list, fig, kwargs)
+      plt.savefig(f"{prefix:s}_{i:d}.png", dpi=kwargs["dpi"])
+    # end
+  # end
+# end
+
+
+def _compile_movie(frame_files, output_file, duration):
+  """Compile a list of PNG frame files into an animated GIF (or other PIL-supported format)."""
+  images = [Image.open(f) for f in frame_files]
+  print(f"Creating movie {output_file}...")
+  images[0].save(
+      output_file, save_all=True, append_images=images[1:],
+      duration=duration, loop=0, optimize=False,
+  )
+  print(f"Movie {output_file} created.")
 # end
 
 
@@ -182,9 +214,10 @@ def globalrange(data,kwargs):
 @click.option("--hashtag", is_flag=True, help="Turns on the pgkyl hashtag!")
 @click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", type=click.STRING,
-    help="Save individual frames as PNGS instead of an animation")
+    help="Save individual frames as PNGs; also compiles a movie if --save or --saveas is given.")
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
-    help="Number of parallel processes for saving frames (requires --saveframes).")
+    help="Number of parallel processes for frame generation. When >1 without --saveframes, "
+         "frames are written to a temp directory, compiled into a movie, then removed.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -192,7 +225,8 @@ def animate(ctx, **kwargs):
   """Animate the actively loaded dataset and show resulting plots in a loop.
 
   Typically, the datasets are loaded using wildcard/regex feature of the -f option to
-  the main pgkyl executable. To save the animation ffmpeg needs to be installed.
+  the main pgkyl executable. Saving via --saveframes or --nproc uses Pillow (GIF by
+  default); the interactive FuncAnimation path still requires ffmpeg.
   """
   verb_print(ctx, "Starting animate")
   data = ctx.obj["data"]
@@ -238,6 +272,7 @@ def animate(ctx, **kwargs):
     figsize = (int(kwargs["figsize"].split(",")[0]), int(kwargs["figsize"].split(",")[1]))
   # end
 
+  duration = int(1000 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
 
   set_figure = False
   min_size = np.NAN
@@ -249,7 +284,7 @@ def animate(ctx, **kwargs):
       num_datasets = int(data.get_num_datasets(tag=tag))
       min_size = int(np.nanmin((min_size, num_datasets)))
     # end
-    
+
     tag_iterator = list(data.tag_iterator(kwargs["use"]))
     kwargs["legend"] = True
     set_figure = True
@@ -278,40 +313,39 @@ def animate(ctx, **kwargs):
       # end
       figs.append(plt.figure(fig_num, figsize=figsize))
       fig_num += 1
-      
-      if not kwargs["saveframes"]:
+
+      num_frames = int(np.nanmin((min_size, len(data_list))))
+      file_name = f"anim_{tag:s}.gif" if tag is not None else "anim.gif"
+      if kwargs["saveas"]:
+        file_name = str(kwargs["saveas"])
+      # end
+
+      if kwargs["saveframes"]:
+        # Save PNGs, then optionally compile a movie.
+        _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+        if kwargs["save"] or kwargs["saveas"]:
+          frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+          _compile_movie(frame_files, file_name, duration)
+        # end
+        kwargs["show"] = False
+      elif kwargs["nproc"] > 1:
+        # Parallel: use a temp dir, compile, then clean up.
+        with tempfile.TemporaryDirectory() as tmpdir:
+          tmp_prefix = os.path.join(tmpdir, "frame")
+          _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+          frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+          _compile_movie(frame_files, file_name, duration)
+        # end
+        kwargs["show"] = False
+      else:
         anims.append(
-            FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+            FuncAnimation(figs[-1], _update, num_frames,
                 fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
                 blit=False)
         )
-
-        if tag is not None:
-          file_name = f"anim_{tag:s}.mp4"
-        else:
-          file_name = "anim.mp4"
-        # end
-        if kwargs["saveas"]:
-          file_name = str(kwargs["saveas"])
-        # end
         if kwargs["save"] or kwargs["saveas"]:
           anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
         # end
-      else:
-        num_frames = int(np.nanmin((min_size, len(data_list))))
-        if kwargs["nproc"] > 1:
-          args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
-              for i in range(num_frames)]
-          with Pool(kwargs["nproc"]) as pool:
-            pool.map(_save_frame_worker, args_list)
-          # end
-        else:
-          for i in range(num_frames):
-            _update(i, data_list, figs[-1], kwargs)
-            plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-          # end
-        # end
-        kwargs["show"] = False  # do not show in this case
       # end
     # end
   #animation code for multiblock case
@@ -333,36 +367,35 @@ def animate(ctx, **kwargs):
     if (not kwargs["color"] and data_list[0][0].get_num_dims() == 1):
       kwargs["color"] = "tab:blue"
     # end
-    if not kwargs["saveframes"]:
+
+    num_frames = int(np.nanmin((min_size, len(data_list))))
+    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
+
+    if kwargs["saveframes"]:
+      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+      if kwargs["save"] or kwargs["saveas"]:
+        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, duration)
+      # end
+      kwargs["show"] = False
+    elif kwargs["nproc"] > 1:
+      with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_prefix = os.path.join(tmpdir, "frame")
+        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, duration)
+      # end
+      kwargs["show"] = False
+    else:
       anims.append(
-          FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+          FuncAnimation(figs[-1], _update, num_frames,
               fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
               blit=False)
       )
-      file_name = "anim.mp4"
-      if kwargs["saveas"]:
-        file_name = str(kwargs["saveas"])
-      # end
       if kwargs["save"] or kwargs["saveas"]:
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
-    else:
-      num_frames = int(np.nanmin((min_size, len(data_list))))
-      if kwargs["nproc"] > 1:
-        args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
-            for i in range(num_frames)]
-        with Pool(kwargs["nproc"]) as pool:
-          pool.map(_save_frame_worker, args_list)
-        # end
-      else:
-        for i in range(num_frames):
-          _update(i, data_list, figs[-1], kwargs)
-          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-        # end
-      # end
-      kwargs["show"] = False  # do not show in this case
     # end
-
 
   else:
 
@@ -376,35 +409,34 @@ def animate(ctx, **kwargs):
     else:
       figs.append(plt.figure(figsize=figsize))
     # end
-    if not kwargs["saveframes"]:
+
+    num_frames = int(np.nanmin((min_size, len(data_list))))
+    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
+
+    if kwargs["saveframes"]:
+      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+      if kwargs["save"] or kwargs["saveas"]:
+        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, duration)
+      # end
+      kwargs["show"] = False
+    elif kwargs["nproc"] > 1:
+      with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_prefix = os.path.join(tmpdir, "frame")
+        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, duration)
+      # end
+      kwargs["show"] = False
+    else:
       anims.append(
-          FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+          FuncAnimation(figs[-1], _update, num_frames,
               fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
               blit=False)
       )
-
-      file_name = "anim.mp4"
-      if kwargs["saveas"]:
-        file_name = str(kwargs["saveas"])
-      # end
       if kwargs["save"] or kwargs["saveas"]:
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
-    else:
-      num_frames = int(np.nanmin((min_size, len(data_list))))
-      if kwargs["nproc"] > 1:
-        args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
-            for i in range(num_frames)]
-        with Pool(kwargs["nproc"]) as pool:
-          pool.map(_save_frame_worker, args_list)
-        # end
-      else:
-        for i in range(num_frames):
-          _update(i, data_list, figs[-1], kwargs)
-          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-        # end
-      # end
-      kwargs["show"] = False  # do not show in this case
     # end
   # end
 
