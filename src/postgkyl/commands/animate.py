@@ -1,10 +1,23 @@
 from matplotlib.animation import FuncAnimation
+from multiprocessing import Pool
 import click
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 from postgkyl.utils import verb_print, set_frame
 import postgkyl.output.plot
+
+
+def _save_frame_worker(args):
+  """Worker for parallel frame saving; each process creates its own figure."""
+  matplotlib.use("Agg")
+  frame_idx, frame_data, kwargs, saveframes, dpi, figsize = args
+  fig = plt.figure(figsize=figsize)
+  _update(0, [frame_data], fig, kwargs)
+  plt.savefig(f"{saveframes:s}_{frame_idx:d}.png", dpi=dpi)
+  plt.close(fig)
+# end
 
 
 def _update(frame, data, fig, kwargs):
@@ -170,6 +183,8 @@ def globalrange(data,kwargs):
 @click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", type=click.STRING,
     help="Save individual frames as PNGS instead of an animation")
+@click.option("--nproc", default=1, type=click.INT, show_default=True,
+    help="Number of parallel processes for saving frames (requires --saveframes).")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -283,9 +298,18 @@ def animate(ctx, **kwargs):
           anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
         # end
       else:
-        for i in range(int(np.nanmin((min_size, len(data_list))))):
-          _update(i, data_list, figs[-1], kwargs)
-          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+        num_frames = int(np.nanmin((min_size, len(data_list))))
+        if kwargs["nproc"] > 1:
+          args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
+              for i in range(num_frames)]
+          with Pool(kwargs["nproc"]) as pool:
+            pool.map(_save_frame_worker, args_list)
+          # end
+        else:
+          for i in range(num_frames):
+            _update(i, data_list, figs[-1], kwargs)
+            plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+          # end
         # end
         kwargs["show"] = False  # do not show in this case
       # end
@@ -323,14 +347,23 @@ def animate(ctx, **kwargs):
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
     else:
-      for i in range(int(np.nanmin((min_size, len(data_list))))):
-        _update(i, data_list, figs[-1], kwargs)
-        plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+      num_frames = int(np.nanmin((min_size, len(data_list))))
+      if kwargs["nproc"] > 1:
+        args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
+            for i in range(num_frames)]
+        with Pool(kwargs["nproc"]) as pool:
+          pool.map(_save_frame_worker, args_list)
+        # end
+      else:
+        for i in range(num_frames):
+          _update(i, data_list, figs[-1], kwargs)
+          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+        # end
       # end
       kwargs["show"] = False  # do not show in this case
     # end
-      
-    
+
+
   else:
 
     #create main list of lists (non-multiblock case)
@@ -358,9 +391,18 @@ def animate(ctx, **kwargs):
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
     else:
-      for i in range(int(np.nanmin((min_size, len(data_list))))):
-        _update(i, data_list, figs[-1], kwargs)
-        plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+      num_frames = int(np.nanmin((min_size, len(data_list))))
+      if kwargs["nproc"] > 1:
+        args_list = [(i, data_list[i], kwargs, kwargs["saveframes"], kwargs["dpi"], figsize)
+            for i in range(num_frames)]
+        with Pool(kwargs["nproc"]) as pool:
+          pool.map(_save_frame_worker, args_list)
+        # end
+      else:
+        for i in range(num_frames):
+          _update(i, data_list, figs[-1], kwargs)
+          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
+        # end
       # end
       kwargs["show"] = False  # do not show in this case
     # end
