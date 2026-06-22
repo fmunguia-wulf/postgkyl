@@ -15,14 +15,12 @@ from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d
 def dg(ctx, **kwargs):
   """Generate a discontinuous DG representation of the data.
 
-  \b
   The modal DG decomposition is evaluated at two points per cell, each located
   just inside a cell interface (slightly interior, controlled by --eps). A NaN
   is inserted between every couple of points so that, when plotted, the curve is
   broken at each interface and the inter-cell discontinuities of the DG solution
   are visible.
 
-  \b
   Example (1D plot of the M0 moment along x at frame 0):
     pgkyl prefix-ion_M0_0.gkyl dg sel --z1=0.0 --z2=0.0 pl
   """
