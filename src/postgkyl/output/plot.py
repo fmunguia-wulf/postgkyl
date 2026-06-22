@@ -134,492 +134,496 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
 
   # The most important thing
   if xkcd:
-    plt.xkcd()
+    xkcd_call = plt.xkcd
+  else :
+    xkcd_call = lambda: mpl.rc_context(rc=mpl.rcParams)
   # end
 
-  if not bool(color) and not isinstance(data, tuple):
-    cl = data.color
-  # end
-  if bool(color):
-    mpl.rcParams["lines.color"] = color
-  # end
-  if bool(linewidth):
-    mpl.rcParams["lines.linewidth"] = linewidth
-  # end
-  if bool(linestyle):
-    mpl.rcParams["lines.linestyle"] = linestyle
-  # end
-
-  # ---- Data Loading ----
-  # Get the handles on the grid and values
-  grid_in, values = input_parser(data)
-  grid = grid_in.copy()
-
-  if isinstance(data, tuple):
-    if len(grid) == len(values.shape):
-      num_dims = len(values.squeeze().shape)
-    else:
-      num_dims = len(values[..., 0].squeeze().shape)
+  with xkcd_call():
+      
+    if not bool(color) and not isinstance(data, tuple):
+      cl = data.color
     # end
-    lg = len(grid)
-    lower, upper, cells = np.zeros(lg), np.zeros(lg), np.zeros(lg)
-    for d in range(lg):
-      lower[d] = np.min(grid[d])
-      upper[d] = np.max(grid[d])
-      if len(grid[d].shape) == 1:
-        cells[d] = len(grid[d])
+    if bool(color):
+      mpl.rcParams["lines.color"] = color
+    # end
+    if bool(linewidth):
+      mpl.rcParams["lines.linewidth"] = linewidth
+    # end
+    if bool(linestyle):
+      mpl.rcParams["lines.linestyle"] = linestyle
+    # end
+
+    # ---- Data Loading ----
+    # Get the handles on the grid and values
+    grid_in, values = input_parser(data)
+    grid = grid_in.copy()
+
+    if isinstance(data, tuple):
+      if len(grid) == len(values.shape):
+        num_dims = len(values.squeeze().shape)
       else:
-        cells[d] = len(grid[d][d])
+        num_dims = len(values[..., 0].squeeze().shape)
       # end
+      lg = len(grid)
+      lower, upper, cells = np.zeros(lg), np.zeros(lg), np.zeros(lg)
+      for d in range(lg):
+        lower[d] = np.min(grid[d])
+        upper[d] = np.max(grid[d])
+        if len(grid[d].shape) == 1:
+          cells[d] = len(grid[d])
+        else:
+          cells[d] = len(grid[d][d])
+        # end
+      # end
+    else: # GData
+      num_dims = data.get_num_dims(squeeze=True)
+      lower, upper = data.get_bounds()
+      cells = data.get_num_cells()
     # end
-  else: # GData
-    num_dims = data.get_num_dims(squeeze=True)
-    lower, upper = data.get_bounds()
-    cells = data.get_num_cells()
-  # end
-  if num_dims > 2:
-    raise ValueError("Only 1D and 2D plots are currently supported")
-  # end
-
-  # Squeeze the data (get rid of "collapsed" dimensions)
-  axes_labels = ["$z_0$", "$z_1$", "$z_2$", "$z_3$", "$z_4$", "$z_5$"]
-  if len(grid) > num_dims:
-    idx = []
-    for dim, g in enumerate(grid):
-      if cells[dim] <= 1:
-        idx.append(dim)
-      # end
-      grid[dim] = g.squeeze()
+    if num_dims > 2:
+      raise ValueError("Only 1D and 2D plots are currently supported")
     # end
-    if bool(idx):
-      for i in reversed(idx):
-        grid.pop(i)
-      # end
-      lower = np.delete(lower, idx)
-      upper = np.delete(upper, idx)
-      cells = np.delete(cells, idx)
-      axes_labels = np.delete(axes_labels, idx)
-      values = np.squeeze(values, tuple(idx))
 
-      # c2p grids
-      if len(grid[0].shape) > 1:
-        for d in range(num_dims):
-          for i in reversed(idx):
-            grid[d] = np.mean(grid[d], axis=i)
+    # Squeeze the data (get rid of "collapsed" dimensions)
+    axes_labels = ["$z_0$", "$z_1$", "$z_2$", "$z_3$", "$z_4$", "$z_5$"]
+    if len(grid) > num_dims:
+      idx = []
+      for dim, g in enumerate(grid):
+        if cells[dim] <= 1:
+          idx.append(dim)
+        # end
+        grid[dim] = g.squeeze()
+      # end
+      if bool(idx):
+        for i in reversed(idx):
+          grid.pop(i)
+        # end
+        lower = np.delete(lower, idx)
+        upper = np.delete(upper, idx)
+        cells = np.delete(cells, idx)
+        axes_labels = np.delete(axes_labels, idx)
+        values = np.squeeze(values, tuple(idx))
+
+        # c2p grids
+        if len(grid[0].shape) > 1:
+          for d in range(num_dims):
+            for i in reversed(idx):
+              grid[d] = np.mean(grid[d], axis=i)
+            # end
           # end
         # end
       # end
     # end
-  # end
 
-  # Get the number of components and an indexer
-  step = 2 if bool(streamline or quiver) else 1
-  num_comps = values.shape[-1]
-  idx_comps = range(int(np.floor(num_comps / step)))
-  if num_axes:
-    num_comps = num_axes
-  else:
-    num_comps = len(idx_comps)
-  # end
-
-  # Create axis labels
-  if xlabel is None:
-    xlabel = axes_labels[0] if lineouts != 1 else axes_labels[1]
-    if xshift != 0.0 and xscale != 1.0:
-      xlabel = rf"({xlabel:s} + {xshift:.2e}) $\times$ {xscale:.2e}"
-    elif xshift != 0.0:
-      xlabel = rf"{xlabel:s} + {xshift:.2e}"
-    elif xscale != 1.0:
-      xlabel = rf"{xlabel:s} $\times$ {xscale:.2e}"
-    # end
-  # end
-  if ylabel is None and num_dims == 2 and lineouts is None:
-    ylabel = axes_labels[1]
-    if yshift != 0.0 and yscale != 1.0:
-      ylabel = rf"({ylabel:s} + {yshift:.2e}) $\times$ {yscale:.2e}"
-    elif xshift != 0.0:
-      ylabel = rf"{ylabel:s} + {yshift:.2e}"
-    elif xscale != 1.0:
-      ylabel = rf"{ylabel:s} $\times$ {yscale:.2e}"
-    # end
-  # end
-  if zscale != 1.0:
-    if clabel:
-      clabel = rf"{clabel:s} $\times$ {zscale:.3e}"
+    # Get the number of components and an indexer
+    step = 2 if bool(streamline or quiver) else 1
+    num_comps = values.shape[-1]
+    idx_comps = range(int(np.floor(num_comps / step)))
+    if num_axes:
+      num_comps = num_axes
     else:
-      clabel = rf"$\times$ {zscale:.3e}"
+      num_comps = len(idx_comps)
     # end
-  # end
 
-  # ---- Prepare Figure and Axes ----------------------------------------
-  # Surface plots need 3D axes; only meaningful for 2D data.
-  use_3d = bool(surface) and num_dims == 2
-  subplot_kw = {"projection": "3d"} if use_3d else {}
-
-  if bool(figsize):
-    figsize = (int(figsize.split(",")[0]), int(figsize.split(",")[1]))
-  # end
-  if figure is None:
-    fig = plt.figure(figsize=figsize)
-  elif isinstance(figure, int):
-    fig = plt.figure(figure, figsize=figsize)
-  elif isinstance(figure, matplotlib.figure.Figure):
-    fig = figure
-  elif isinstance(figure, str):
-    fig = plt.figure(int(figure), figsize=figsize)
-  else:
-    raise TypeError(
-        "'fig' keyword needs to be one of " "None (default), int, or MPL Figure"
-    )
-  # end
-
-  # Axes
-  if fig.axes:
-    ax = fig.axes
-    if squeeze is False and num_comps > len(ax):
-      raise ValueError("Trying to plot into figure with not enough axes")
-    # end
-  else:
-    if squeeze:  # Plotting into 1 panel
-      fig.subplots(1, 1, subplot_kw=subplot_kw)
-      ax = fig.axes
-      ax[0].set_xlabel(xlabel)
-      ax[0].set_ylabel(ylabel)
-      if title is not None:
-        ax[0].set_title(title, y=1.08)
+    # Create axis labels
+    if xlabel is None:
+      xlabel = axes_labels[0] if lineouts != 1 else axes_labels[1]
+      if xshift != 0.0 and xscale != 1.0:
+        xlabel = rf"({xlabel:s} + {xshift:.2e}) $\times$ {xscale:.2e}"
+      elif xshift != 0.0:
+        xlabel = rf"{xlabel:s} + {xshift:.2e}"
+      elif xscale != 1.0:
+        xlabel = rf"{xlabel:s} $\times$ {xscale:.2e}"
       # end
-    else:  # Plotting each components into its own subplot
-      if num_subplot_row is not None:
-        num_rows = num_subplot_row
-        num_cols = int(np.ceil(num_comps/num_rows))
-      elif num_subplot_col is not None:
-        num_cols = num_subplot_col
-        num_rows = int(np.ceil(num_comps/num_cols))
+    # end
+    if ylabel is None and num_dims == 2 and lineouts is None:
+      ylabel = axes_labels[1]
+      if yshift != 0.0 and yscale != 1.0:
+        ylabel = rf"({ylabel:s} + {yshift:.2e}) $\times$ {yscale:.2e}"
+      elif xshift != 0.0:
+        ylabel = rf"{ylabel:s} + {yshift:.2e}"
+      elif xscale != 1.0:
+        ylabel = rf"{ylabel:s} $\times$ {yscale:.2e}"
+      # end
+    # end
+    if zscale != 1.0:
+      if clabel:
+        clabel = rf"{clabel:s} $\times$ {zscale:.3e}"
       else:
-        sr = np.sqrt(num_comps)
-        if sr == np.ceil(sr):
-          num_rows = int(sr)
-          num_cols = int(sr)
-        elif np.ceil(sr) * np.floor(sr) >= num_comps:
-          num_rows = int(np.floor(sr))
-          num_cols = int(np.ceil(sr))
-        else:
-          num_rows = int(np.ceil(sr))
-          num_cols = int(np.ceil(sr))
-        # end
-      # end
-
-      if num_dims == 1 or lineouts is not None:
-        fig.subplots(num_rows, num_cols, sharex=True, subplot_kw=subplot_kw)
-      elif use_3d:  # 3D axes cannot share x/y with each other
-        fig.subplots(num_rows, num_cols, subplot_kw=subplot_kw)
-      else:  # In 2D, share y-axis as well
-        fig.subplots(num_rows, num_cols, sharex=True, sharey=True)
-      # end
-      ax = fig.axes
-      # Removing extra axes
-      for i in range(num_comps, len(ax)):
-        ax[i].axis("off")
-      # end
-      # Add labels as super labels and titles
-      if bool(title):
-        fig.suptitle(title)
-      if bool(xlabel):
-        fig.supxlabel(xlabel)
-      if bool(ylabel):
-        fig.supylabel(ylabel)
-
-      for ax_idx, _ in enumerate(ax):
-        if bool(subplot_titles):
-          title = subplot_titles.split(",")[ax_idx] if ax_idx < len(subplot_titles.split(",")) else ""
-        else:
-          title = ""
-        # end
-        if bool(subplot_xlabels):
-          xlabel = subplot_xlabels.split(",")[ax_idx] if ax_idx < len(subplot_xlabels.split(",")) else ""
-        else:
-          xlabel = ""
-        # end
-        if bool(subplot_ylabels):
-          ylabel = subplot_ylabels.split(",")[ax_idx] if ax_idx < len(subplot_ylabels.split(",")) else ""
-        else:
-          ylabel = ""
-        # end
-
-        ax[ax_idx].set_xlabel(xlabel)
-        ax[ax_idx].set_ylabel(ylabel)
-        if bool(title):
-          ax[ax_idx].set_title(title, y=1.08)
-        # end
+        clabel = rf"$\times$ {zscale:.3e}"
       # end
     # end
-  # end
 
-  # ---- Main Plotting Loop ---------------------------------------------
-  for comp in idx_comps:
-    cax = ax[0] if squeeze else ax[comp + start_axes]
-    label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
+    # ---- Prepare Figure and Axes ----------------------------------------
+    # Surface plots need 3D axes; only meaningful for 2D data.
+    use_3d = bool(surface) and num_dims == 2
+    subplot_kw = {"projection": "3d"} if use_3d else {}
 
-    if num_dims == 1:
-      nodal_grid = _get_nodal_grid(grid, cells)
-      x = (nodal_grid[0] + xshift)*xscale
-      y = (values[..., comp] + yshift)*yscale
-      # Color the line from the colormap when a 'cval' is given (1D only).
-      line_color = color
-      if bool(cmap) and cval is not None:
-        if cval_max is not None and cval_min is not None and cval_max != cval_min:
-          t = (cval - cval_min)/(cval_max - cval_min)
-        else:
-          t = 0.5
-        # end
-        line_color = plt.get_cmap(cmap)(t)
+    if bool(figsize):
+      figsize = (int(figsize.split(",")[0]), int(figsize.split(",")[1]))
+    # end
+    if figure is None:
+      fig = plt.figure(figsize=figsize)
+    elif isinstance(figure, int):
+      fig = plt.figure(figure, figsize=figsize)
+    elif isinstance(figure, matplotlib.figure.Figure):
+      fig = figure
+    elif isinstance(figure, str):
+      fig = plt.figure(int(figure), figsize=figsize)
+    else:
+      raise TypeError(
+          "'fig' keyword needs to be one of " "None (default), int, or MPL Figure"
+      )
+    # end
+
+    # Axes
+    if fig.axes:
+      ax = fig.axes
+      if squeeze is False and num_comps > len(ax):
+        raise ValueError("Trying to plot into figure with not enough axes")
       # end
-      im = cax.plot(x, y, *args, color=line_color, label=label, markersize=markersize)
-      # Add a colorbar describing the cval-to-color mapping once per axes.
-      if (bool(cmap) and cval is not None and colorbar
-          and cval_max is not None and cval_min is not None and cval_max != cval_min
-          and not getattr(cax, "_pgkyl_cval_cbar", False)):
-        mappable = cm.ScalarMappable(
-            norm=colors.Normalize(vmin=cval_min, vmax=cval_max), cmap=plt.get_cmap(cmap))
-        pgkyl_colorbar(mappable, fig, cax, label=clabel)
-        cax._pgkyl_cval_cbar = True
-      # end
-
-    elif num_dims == 2:
-      extend = None
-
-      if surface:  # 3D surface plot -----------------------------------
-        nodal_grid = _get_nodal_grid(grid, cells)
-        xg = (nodal_grid[0] + xshift)*xscale
-        yg = (nodal_grid[1] + yshift)*yscale
-        z = (values[..., comp].transpose() + zshift)*zscale
-        if xg.ndim == 1:
-          xg, yg = np.meshgrid(xg, yg)
+    else:
+      if squeeze:  # Plotting into 1 panel
+        fig.subplots(1, 1, subplot_kw=subplot_kw)
+        ax = fig.axes
+        ax[0].set_xlabel(xlabel)
+        ax[0].set_ylabel(ylabel)
+        if title is not None:
+          ax[0].set_title(title, y=1.08)
+        # end
+      else:  # Plotting each components into its own subplot
+        if num_subplot_row is not None:
+          num_rows = num_subplot_row
+          num_cols = int(np.ceil(num_comps/num_rows))
+        elif num_subplot_col is not None:
+          num_cols = num_subplot_col
+          num_rows = int(np.ceil(num_comps/num_cols))
         else:
-          xg, yg = xg.transpose(), yg.transpose()
-        # end
-        # Count how many overlays already live on these axes so each gets a
-        # distinct color (used for both surface and contour comparisons).
-        count = getattr(cax, "_pgkyl_overlay_count", 0)
-        cax._pgkyl_overlay_count = count + 1
-        if comparison or bool(color):
-          surf_color = color if bool(color) else f"C{count:d}"
-          im = cax.plot_surface(xg, yg, z, color=surf_color,
-              alpha=alpha if alpha is not None else 0.6,
-              linewidth=0, antialiased=True, shade=True)
-          if label:
-            handles = getattr(cax, "_pgkyl_handles", [])
-            handles.append(patches.Patch(color=surf_color, label=label))
-            cax._pgkyl_handles = handles
-          # end
-        else:
-          im = cax.plot_surface(xg, yg, z, cmap=mpl.rcParams["image.cmap"],
-              alpha=alpha if alpha is not None else 1.0,
-              linewidth=0, antialiased=True)
-          if colorbar:
-            fig.colorbar(im, ax=cax, label=clabel or "", shrink=0.6, pad=0.1)
-          # end
-        # end
-        if clabel:
-          cax.set_zlabel(clabel)
-        # end
-        if zmin is not None or zmax is not None:
-          cax.set_zlim(zmin, zmax)
-        # end
-        colorbar = False
-
-      elif contour:  # ----------------------------------------------------
-        levels = 10
-        if cnlevels:
-          levels = int(cnlevels) - 1
-        elif clevels:
-          if ":" in clevels:
-            s = clevels.split(":")
-            levels = np.linspace(float(s[0]), float(s[1]), int(s[2]))
+          sr = np.sqrt(num_comps)
+          if sr == np.ceil(sr):
+            num_rows = int(sr)
+            num_cols = int(sr)
+          elif np.ceil(sr) * np.floor(sr) >= num_comps:
+            num_rows = int(np.floor(sr))
+            num_cols = int(np.ceil(sr))
           else:
-            levels = np.array(clevels.split(","))
-            # Filter out empty elements
-            levels = np.array(list(filter(None, levels)))
+            num_rows = int(np.ceil(sr))
+            num_cols = int(np.ceil(sr))
           # end
         # end
-        if isinstance(levels, np.ndarray) and len(levels) == 1:
-          colorbar = False
+
+        if num_dims == 1 or lineouts is not None:
+          fig.subplots(num_rows, num_cols, sharex=True, subplot_kw=subplot_kw)
+        elif use_3d:  # 3D axes cannot share x/y with each other
+          fig.subplots(num_rows, num_cols, subplot_kw=subplot_kw)
+        else:  # In 2D, share y-axis as well
+          fig.subplots(num_rows, num_cols, sharex=True, sharey=True)
         # end
-        nodal_grid = _get_nodal_grid(grid, cells)
-        x = (nodal_grid[0] + xshift) * xscale
-        y = (nodal_grid[1] + yshift) * yscale
-        z = (values[..., comp].transpose() + zshift) * zscale
-        cont_colors = color
-        if comparison and not bool(color):
-          # Give each overlaid dataset a distinct, single color + legend entry.
-          count = getattr(cax, "_pgkyl_overlay_count", 0)
-          cax._pgkyl_overlay_count = count + 1
-          cont_colors = f"C{count:d}"
-          if label:
-            handles = getattr(cax, "_pgkyl_handles", [])
-            handles.append(patches.Patch(color=cont_colors, label=label))
-            cax._pgkyl_handles = handles
+        ax = fig.axes
+        # Removing extra axes
+        for i in range(num_comps, len(ax)):
+          ax[i].axis("off")
+        # end
+        # Add labels as super labels and titles
+        if bool(title):
+          fig.suptitle(title)
+        if bool(xlabel):
+          fig.supxlabel(xlabel)
+        if bool(ylabel):
+          fig.supylabel(ylabel)
+
+        for ax_idx, _ in enumerate(ax):
+          if bool(subplot_titles):
+            title = subplot_titles.split(",")[ax_idx] if ax_idx < len(subplot_titles.split(",")) else ""
+          else:
+            title = ""
           # end
-          colorbar = False
-        # end
-        im = cax.contour(x, y, z, levels, *args, origin="lower", colors=cont_colors, linewidths=linewidth)
-        if cont_label:
-          cax.clabel(im, inline=1)
-        # end
+          if bool(subplot_xlabels):
+            xlabel = subplot_xlabels.split(",")[ax_idx] if ax_idx < len(subplot_xlabels.split(",")) else ""
+          else:
+            xlabel = ""
+          # end
+          if bool(subplot_ylabels):
+            ylabel = subplot_ylabels.split(",")[ax_idx] if ax_idx < len(subplot_ylabels.split(",")) else ""
+          else:
+            ylabel = ""
+          # end
 
-      elif quiver:  # ----------------------------------------------------
-        skip = int(np.max((len(grid[0]), len(grid[1])))//15)
-        skip2 = int(skip//2)
-        nodal_grid = _get_nodal_grid(grid, cells)
-        if len(nodal_grid[0].shape) == 1:
-          x = (nodal_grid[0][skip2::skip] + xshift)*xscale
-          y = (nodal_grid[1][skip2::skip] + yshift)*yscale
-        else:
-          x = (nodal_grid[0][skip2::skip, skip2::skip] + xshift)*xscale
-          y = (nodal_grid[1][skip2::skip, skip2::skip] + yshift)*yscale
+          ax[ax_idx].set_xlabel(xlabel)
+          ax[ax_idx].set_ylabel(ylabel)
+          if bool(title):
+            ax[ax_idx].set_title(title, y=1.08)
+          # end
         # end
-        z1 = (values[skip2::skip, skip2::skip, 2 * comp].transpose() + zshift)*zscale
-        z2 = (values[skip2::skip, skip2::skip, 2 * comp + 1].transpose() + zshift)*zscale
-        im = cax.quiver(x, y, z1, z2)
+      # end
+    # end
 
-      elif streamline:  # ------------------------------------------------
-        if bool(color):
-          cl = color
-        else:
-          # magnitude
-          cl = np.sqrt(
-              values[..., 2 * comp]**2 + values[..., 2 * comp + 1]**2
-          ).transpose()
-        # end
+    # ---- Main Plotting Loop ---------------------------------------------
+    for comp in idx_comps:
+      cax = ax[0] if squeeze else ax[comp + start_axes]
+      label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
+
+      if num_dims == 1:
         nodal_grid = _get_nodal_grid(grid, cells)
         x = (nodal_grid[0] + xshift)*xscale
-        y = (nodal_grid[1] + yshift)*yscale
-        z1 = (values[..., 2 * comp].transpose() + zshift)*zscale
-        z2 = (values[..., 2 * comp + 1].transpose() + zshift)*zscale
-        im = cax.streamplot(x, y, z1, z2, *args,
-            density=sdensity, broken_streamlines=False, color=cl, linewidth=linewidth)
-
-      elif lineouts is not None:  # -------------------------------------
-        num_lines = values.shape[1] if lineouts == 0 else values.shape[0]
-        nodal_grid = _get_nodal_grid(grid, cells)
-
-        if lineouts == 0:
-          x = (nodal_grid[0] + xshift)*xscale
-          vmin = (nodal_grid[1][0] + yshift)*yscale
-          vmax = (nodal_grid[1][-1] + yshift)*yscale
-          label = clabel or axes_labels[1]
-        else:
-          x = (nodal_grid[1] + xshift)*xscale
-          vmin = (nodal_grid[0][0] + yshift)*yscale
-          vmax = (nodal_grid[0][-1] + yshift)*yscale
-          label = clabel or axes_labels[0]
-        # end
-        idx = [slice(0, u) for u in values.shape]
-        idx[-1] = comp
-        for line in range(num_lines):
-          color = cm.inferno(line / (num_lines - 1))
-          if lineouts == 0:
-            idx[1] = line
+        y = (values[..., comp] + yshift)*yscale
+        # Color the line from the colormap when a 'cval' is given (1D only).
+        line_color = color
+        if bool(cmap) and cval is not None:
+          if cval_max is not None and cval_min is not None and cval_max != cval_min:
+            t = (cval - cval_min)/(cval_max - cval_min)
           else:
-            idx[0] = line
+            t = 0.5
           # end
-          y = (values[tuple(idx)] + yshift)*yscale
-          im = cax.plot(x, y, *args, color=color)
+          line_color = plt.get_cmap(cmap)(t)
         # end
-        mappable = cm.ScalarMappable(
-            norm=colors.Normalize(vmin=vmin, vmax=vmax, clip=False), cmap=cm.inferno
-        )
-        pgkyl_colorbar(mappable, fig, cax, label=label)
-        colorbar = False
-        legend = False
+        im = cax.plot(x, y, *args, color=line_color, label=label, markersize=markersize)
+        # Add a colorbar describing the cval-to-color mapping once per axes.
+        if (bool(cmap) and cval is not None and colorbar
+            and cval_max is not None and cval_min is not None and cval_max != cval_min
+            and not getattr(cax, "_pgkyl_cval_cbar", False)):
+          mappable = cm.ScalarMappable(
+              norm=colors.Normalize(vmin=cval_min, vmax=cval_max), cmap=plt.get_cmap(cmap))
+          pgkyl_colorbar(mappable, fig, cax, label=clabel)
+          cax._pgkyl_cval_cbar = True
+        # end
 
-      else:  # -----------------------------------------------------------
-        if zmin is not None and zmax is not None:
-          extend = "both"
-        elif zmax is not None:
-          extend = "max"
-        elif zmin is not None:
-          extend = "min"
-        # end
-        x = (grid[0] + xshift)*xscale
-        y = (grid[1] + yshift)*yscale
-        z = (values[..., comp].transpose() + zshift)*zscale
-        if len(x) == z.shape[1] or len(y) == z.shape[0]:
+      elif num_dims == 2:
+        extend = None
+
+        if surface:  # 3D surface plot -----------------------------------
+          nodal_grid = _get_nodal_grid(grid, cells)
+          xg = (nodal_grid[0] + xshift)*xscale
+          yg = (nodal_grid[1] + yshift)*yscale
+          z = (values[..., comp].transpose() + zshift)*zscale
+          if xg.ndim == 1:
+            xg, yg = np.meshgrid(xg, yg)
+          else:
+            xg, yg = xg.transpose(), yg.transpose()
+          # end
+          # Count how many overlays already live on these axes so each gets a
+          # distinct color (used for both surface and contour comparisons).
+          count = getattr(cax, "_pgkyl_overlay_count", 0)
+          cax._pgkyl_overlay_count = count + 1
+          if comparison or bool(color):
+            surf_color = color if bool(color) else f"C{count:d}"
+            im = cax.plot_surface(xg, yg, z, color=surf_color,
+                alpha=alpha if alpha is not None else 0.6,
+                linewidth=0, antialiased=True, shade=True)
+            if label:
+              handles = getattr(cax, "_pgkyl_handles", [])
+              handles.append(patches.Patch(color=surf_color, label=label))
+              cax._pgkyl_handles = handles
+            # end
+          else:
+            im = cax.plot_surface(xg, yg, z, cmap=mpl.rcParams["image.cmap"],
+                alpha=alpha if alpha is not None else 1.0,
+                linewidth=0, antialiased=True)
+            if colorbar:
+              fig.colorbar(im, ax=cax, label=clabel or "", shrink=0.6, pad=0.1)
+            # end
+          # end
+          if clabel:
+            cax.set_zlabel(clabel)
+          # end
+          if zmin is not None or zmax is not None:
+            cax.set_zlim(zmin, zmax)
+          # end
+          colorbar = False
+
+        elif contour:  # ----------------------------------------------------
+          levels = 10
+          if cnlevels:
+            levels = int(cnlevels) - 1
+          elif clevels:
+            if ":" in clevels:
+              s = clevels.split(":")
+              levels = np.linspace(float(s[0]), float(s[1]), int(s[2]))
+            else:
+              levels = np.array(clevels.split(","))
+              # Filter out empty elements
+              levels = np.array(list(filter(None, levels)))
+            # end
+          # end
+          if isinstance(levels, np.ndarray) and len(levels) == 1:
+            colorbar = False
+          # end
+          nodal_grid = _get_nodal_grid(grid, cells)
+          x = (nodal_grid[0] + xshift) * xscale
+          y = (nodal_grid[1] + yshift) * yscale
+          z = (values[..., comp].transpose() + zshift) * zscale
+          cont_colors = color
+          if comparison and not bool(color):
+            # Give each overlaid dataset a distinct, single color + legend entry.
+            count = getattr(cax, "_pgkyl_overlay_count", 0)
+            cax._pgkyl_overlay_count = count + 1
+            cont_colors = f"C{count:d}"
+            if label:
+              handles = getattr(cax, "_pgkyl_handles", [])
+              handles.append(patches.Patch(color=cont_colors, label=label))
+              cax._pgkyl_handles = handles
+            # end
+            colorbar = False
+          # end
+          im = cax.contour(x, y, z, levels, *args, origin="lower", colors=cont_colors, linewidths=linewidth)
+          if cont_label:
+            cax.clabel(im, inline=1)
+          # end
+
+        elif quiver:  # ----------------------------------------------------
+          skip = int(np.max((len(grid[0]), len(grid[1])))//15)
+          skip2 = int(skip//2)
+          nodal_grid = _get_nodal_grid(grid, cells)
+          if len(nodal_grid[0].shape) == 1:
+            x = (nodal_grid[0][skip2::skip] + xshift)*xscale
+            y = (nodal_grid[1][skip2::skip] + yshift)*yscale
+          else:
+            x = (nodal_grid[0][skip2::skip, skip2::skip] + xshift)*xscale
+            y = (nodal_grid[1][skip2::skip, skip2::skip] + yshift)*yscale
+          # end
+          z1 = (values[skip2::skip, skip2::skip, 2 * comp].transpose() + zshift)*zscale
+          z2 = (values[skip2::skip, skip2::skip, 2 * comp + 1].transpose() + zshift)*zscale
+          im = cax.quiver(x, y, z1, z2)
+
+        elif streamline:  # ------------------------------------------------
+          if bool(color):
+            cl = color
+          else:
+            # magnitude
+            cl = np.sqrt(
+                values[..., 2 * comp]**2 + values[..., 2 * comp + 1]**2
+            ).transpose()
+          # end
           nodal_grid = _get_nodal_grid(grid, cells)
           x = (nodal_grid[0] + xshift)*xscale
           y = (nodal_grid[1] + yshift)*yscale
-        # end
-        if len(x.shape) > 1:
-          x, y = x.transpose(), y.transpose()
-        # end
-        if diverging:
-          zmax = np.abs(z).max()
-          zmin = -zmax
-        # end
-        vmax, vmin = zmax, zmin
-        norm = None
-        if logz:
-          if diverging:
-            tmp = vmax/1000
-            norm = colors.SymLogNorm(
-                linthresh=tmp, linscale=tmp, vmin=vmin, vmax=vmax, base=10
-            )
+          z1 = (values[..., 2 * comp].transpose() + zshift)*zscale
+          z2 = (values[..., 2 * comp + 1].transpose() + zshift)*zscale
+          im = cax.streamplot(x, y, z1, z2, *args,
+              density=sdensity, broken_streamlines=False, color=cl, linewidth=linewidth)
+
+        elif lineouts is not None:  # -------------------------------------
+          num_lines = values.shape[1] if lineouts == 0 else values.shape[0]
+          nodal_grid = _get_nodal_grid(grid, cells)
+
+          if lineouts == 0:
+            x = (nodal_grid[0] + xshift)*xscale
+            vmin = (nodal_grid[1][0] + yshift)*yscale
+            vmax = (nodal_grid[1][-1] + yshift)*yscale
+            label = clabel or axes_labels[1]
           else:
-            norm = colors.LogNorm(vmin=vmin, vmax=vmax)
+            x = (nodal_grid[1] + xshift)*xscale
+            vmin = (nodal_grid[0][0] + yshift)*yscale
+            vmax = (nodal_grid[0][-1] + yshift)*yscale
+            label = clabel or axes_labels[0]
           # end
-          vmin, vmax = None, None
+          idx = [slice(0, u) for u in values.shape]
+          idx[-1] = comp
+          for line in range(num_lines):
+            color = cm.inferno(line / (num_lines - 1))
+            if lineouts == 0:
+              idx[1] = line
+            else:
+              idx[0] = line
+            # end
+            y = (values[tuple(idx)] + yshift)*yscale
+            im = cax.plot(x, y, *args, color=color)
+          # end
+          mappable = cm.ScalarMappable(
+              norm=colors.Normalize(vmin=vmin, vmax=vmax, clip=False), cmap=cm.inferno
+          )
+          pgkyl_colorbar(mappable, fig, cax, label=label)
+          colorbar = False
+          legend = False
+
+        else:  # -----------------------------------------------------------
+          if zmin is not None and zmax is not None:
+            extend = "both"
+          elif zmax is not None:
+            extend = "max"
+          elif zmin is not None:
+            extend = "min"
+          # end
+          x = (grid[0] + xshift)*xscale
+          y = (grid[1] + yshift)*yscale
+          z = (values[..., comp].transpose() + zshift)*zscale
+          if len(x) == z.shape[1] or len(y) == z.shape[0]:
+            nodal_grid = _get_nodal_grid(grid, cells)
+            x = (nodal_grid[0] + xshift)*xscale
+            y = (nodal_grid[1] + yshift)*yscale
+          # end
+          if len(x.shape) > 1:
+            x, y = x.transpose(), y.transpose()
+          # end
+          if diverging:
+            zmax = np.abs(z).max()
+            zmin = -zmax
+          # end
+          vmax, vmin = zmax, zmin
+          norm = None
+          if logz:
+            if diverging:
+              tmp = vmax/1000
+              norm = colors.SymLogNorm(
+                  linthresh=tmp, linscale=tmp, vmin=vmin, vmax=vmax, base=10
+              )
+            else:
+              norm = colors.LogNorm(vmin=vmin, vmax=vmax)
+            # end
+            vmin, vmax = None, None
+          # end
+          im = cax.pcolormesh(x, y, z,
+              norm=norm, vmin=vmin, vmax=vmax, edgecolors=edgecolors,
+              linewidth=0.1, shading="auto", *args)
         # end
-        im = cax.pcolormesh(x, y, z,
-            norm=norm, vmin=vmin, vmax=vmax, edgecolors=edgecolors,
-            linewidth=0.1, shading="auto", *args)
+        if not bool(color) and colorbar and not streamline:
+          pgkyl_colorbar(im, fig, cax, extend=extend, label=clabel)
+        # end
+      else:
+        raise ValueError(f"{num_dims:d}D data not supported")
       # end
-      if not bool(color) and colorbar and not streamline:
-        pgkyl_colorbar(im, fig, cax, extend=extend, label=clabel)
-      # end
-    else:
-      raise ValueError(f"{num_dims:d}D data not supported")
-    # end
 
-    # ---- Additional Formatting ----------------------------------------
-    cax.grid(showgrid)
-    # Legend
-    if legend:
-      if getattr(cax, "_pgkyl_handles", None):
-        # Overlaid 2D datasets (surface/contour comparison): real legend.
-        cax.legend(handles=cax._pgkyl_handles, loc=0)
-      elif num_dims == 1 and label != "":
-        cax.legend(loc=0)
-      elif not (surface and num_dims == 2):
-        cax.text(0.03, 0.96, label,
+      # ---- Additional Formatting ----------------------------------------
+      cax.grid(showgrid)
+      # Legend
+      if legend:
+        if getattr(cax, "_pgkyl_handles", None):
+          # Overlaid 2D datasets (surface/contour comparison): real legend.
+          cax.legend(handles=cax._pgkyl_handles, loc=0)
+        elif num_dims == 1 and label != "":
+          cax.legend(loc=0)
+        elif not (surface and num_dims == 2):
+          cax.text(0.03, 0.96, label,
+              bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8, "boxstyle": "round"},
+              verticalalignment="top", horizontalalignment="left", transform=cax.transAxes)
+        # end
+      # end
+      if hashtag:
+        cax.text(0.97, 0.03, "#pgkyl",
             bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8, "boxstyle": "round"},
-            verticalalignment="top", horizontalalignment="left", transform=cax.transAxes)
+            verticalalignment="bottom", horizontalalignment="right", transform=cax.transAxes)
+      # end
+      if logx:
+        cax.set_xscale("log")
+      # end
+      if logy:
+        cax.set_yscale("log")
+      # end
+      if num_dims == 1 and not relax:  # this causes troubles with contours
+        plt.autoscale(enable=True, axis="x", tight=True)
+        plt.autoscale(enable=True, axis="y")
+      # end
+      if xmin is not None or xmax is not None:
+        cax.set_xlim(xmin, xmax)
+      # end
+      if ymin is not None or ymax is not None:
+        cax.set_ylim(ymin, ymax)
+      # end
+      if fixaspect and not (surface and num_dims == 2):
+        plt.setp(cax, aspect=aspect)
       # end
     # end
-    if hashtag:
-      cax.text(0.97, 0.03, "#pgkyl",
-          bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8, "boxstyle": "round"},
-          verticalalignment="bottom", horizontalalignment="right", transform=cax.transAxes)
-    # end
-    if logx:
-      cax.set_xscale("log")
-    # end
-    if logy:
-      cax.set_yscale("log")
-    # end
-    if num_dims == 1 and not relax:  # this causes troubles with contours
-      plt.autoscale(enable=True, axis="x", tight=True)
-      plt.autoscale(enable=True, axis="y")
-    # end
-    if xmin is not None or xmax is not None:
-      cax.set_xlim(xmin, xmax)
-    # end
-    if ymin is not None or ymax is not None:
-      cax.set_ylim(ymin, ymax)
-    # end
-    if fixaspect and not (surface and num_dims == 2):
-      plt.setp(cax, aspect=aspect)
-    # end
-  # end
 
-  plt.tight_layout()
+    plt.tight_layout()
   return im
