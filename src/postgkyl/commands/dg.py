@@ -12,7 +12,7 @@ from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d
     help="Fraction of the half-cell width by which the evaluation point is "
          "moved inside from each cell interface (must be in [0, 1]).")
 @click.pass_context
-def gk_dg(ctx, **kwargs):
+def dg(ctx, **kwargs):
   """Generate a discontinuous DG representation of the data.
 
   \b
@@ -24,9 +24,9 @@ def gk_dg(ctx, **kwargs):
 
   \b
   Example (1D plot of the M0 moment along x at frame 0):
-    pgkyl prefix-ion_M0_0.gkyl gk-dg sel --z1=0.0 --z2=0.0 pl
+    pgkyl prefix-ion_M0_0.gkyl dg sel --z1=0.0 --z2=0.0 pl
   """
-  verb_print(ctx, "Starting gk-dg")
+  verb_print(ctx, "Starting dg")
   data = ctx.obj["data"]
   eps = kwargs["eps"]
 
@@ -34,19 +34,19 @@ def gk_dg(ctx, **kwargs):
     poly_order = dat.ctx.get("poly_order")
     if not poly_order == 1:
         ctx.fail(click.style(
-            "ERROR in gk-dg: only data with poly_order=1 is supported.",
+            "ERROR in dg: only data with poly_order=1 is supported.",
             fg="red"))
 
     if poly_order is None:
       ctx.fail(click.style(
-          "ERROR in gk-dg: no 'poly_order' was specified and dataset "
+          "ERROR in dg: no 'poly_order' was specified and dataset "
           f"{dat.get_label():s} does not have the required information.",
           fg="red"))
 
     num_dims = dat.get_num_dims()
     if num_dims > 3:
       ctx.fail(click.style(
-          "ERROR in gk-dg: only data with up to 3 dimensions is supported.",
+          "ERROR in dg: only data with up to 3 dimensions is supported.",
           fg="red"))
 
     num_cells = dat.get_num_cells()
@@ -103,4 +103,4 @@ def gk_dg(ctx, **kwargs):
       int_grid[d] = np.insert(int_grid[d], sep, int_grid[d][sep - 1])
 
     dat.push(int_grid, int_values)
-  verb_print(ctx, "Finishing gk-dg")
+  verb_print(ctx, "Finishing dg")
