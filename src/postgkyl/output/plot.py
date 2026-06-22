@@ -1,6 +1,7 @@
 """Module including custom Gkeyll plotting function"""
 from __future__ import annotations
 
+from contextlib import nullcontext
 from matplotlib import cm
 from matplotlib import colors
 from matplotlib import patches
@@ -27,7 +28,7 @@ def pgkyl_colorbar(obj, fig : matplotlib.figure.Figure, cax : matplotlib.axes.Ax
   cax2 = divider.append_axes("right", size="3%", pad=0.05)
   return fig.colorbar(obj, cax=cax2, label=label or "", extend=extend)
 
-def get_xkcd_safely():
+def get_xkcd_safely(xkcd=True):
     # Target fonts Matplotlib looks for in xkcd mode
     required_fonts = ['xkcd', 'xkcd Script', 'Comic Neue', 'Comic Sans MS']
     
@@ -49,12 +50,12 @@ def get_xkcd_safely():
         print("="*50 + "\n")
         
         # Fallback: Attempt standard sans-serif so the script keeps running
-        plt.rcParams['font.family'] = 'sans-serif'
+        font_rc = {'font.family': 'sans-serif'}
     else:
         # Secure fallback to Comic Sans if original xkcd isn't there but Sans is
-        plt.rcParams['font.family'] = ['Comic Sans MS', 'Comic Neue', 'sans-serif']
+        font_rc = {'font.family': 'Comic Sans MS'}
 
-    return plt.xkcd
+    return plt.xkcd, font_rc
 
 
 def _get_nodal_grid(grid : list, cells: np.ndarray):
@@ -164,12 +165,13 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
 
   # The most important thing
   if xkcd:
-    xkcd_call = get_xkcd_safely()
-  else :
-    xkcd_call = lambda: mpl.rc_context(rc=mpl.rcParams)
+    xkcd_cm, xkcd_rc = get_xkcd_safely()
+  else:
+    xkcd_cm = nullcontext
+    xkcd_rc = {}
   # end
 
-  with xkcd_call():
+  with xkcd_cm(), mpl.rc_context(rc=xkcd_rc):
 
     if not bool(color) and not isinstance(data, tuple):
       cl = data.color
