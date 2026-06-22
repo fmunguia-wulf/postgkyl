@@ -292,3 +292,66 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   dgops.multiply(0, press, 0, bimax, 0, press)
 
   return press
+
+def fetch_ExB_vel(gdatas, **kwargs):
+  """
+  A component of the ExB drift velocity
+    v_E,k = (epsilon_{ijk}/(J*B) * b_i * d(phi)/x^j
+  where epsilon_{ijk} is the Levi-Civitta tensor
+  and gdatas has (in this order):
+    1/(J*B): jacobtot_inv.
+    b_i: covariant components of the magnetic field unit vector.
+    phi: electrostatic potential.
+
+  The k-th component is selected by the 'dir' optional argument.
+  """
+  if "dir" not in kwargs:
+    raise KeyError("fetch_ExB_vel: select the j-th component with '--extra dir=j' (0-index).")
+
+  vE_dir = kwargs["dir"]
+
+  jacobtot_inv = gdatas[0]
+  b_i = gdatas[0]
+  phi = gdatas[0]
+
+  # Components of the quantities in the cross product AxB.
+  comp_idxA = comp_idxB = 0
+  if vE_dir == 0:
+    comp_idxA = 1
+    comp_idxB = 2
+  elif vE_dir == 1:
+    comp_idxA = 2
+    comp_idxB = 0
+  elif vE_dir == 2:
+    comp_idxA = 0
+    comp_idxB = 1
+  else
+    raise KeyError("fetch_ExB_vel: '--extra dir=j' must be >= 0 and <3.")
+
+  # Get the cell lengths.
+  lower, upper = phi.get_bounds()
+  cells = phi.get_num_cells()
+  dxA = (upper[comp_idxA] - lower[comp_idxA])/cells[comp_idxA]
+  dxB = (upper[comp_idxB] - lower[comp_idxB])/cells[comp_idxB]
+
+  buff = _empty_gdata_from_gdata(phi) # Positive term in AxB.
+  out = _empty_gdata_from_gdata(phi) # Negative term in AxB.
+
+  dgops = GkeyllDGops()
+
+  # Compute derivatives of phi
+  dgops.differentiate(comp_idxB, 1,  dxB, 0, buff, 0, phi)
+  dgops.differentiate(comp_idxA, 1, -dxA, 0, out , 0, phi)
+
+  # Multiply by b_i.
+  out = _empty_gdata_from_gdata(phi)
+  dgops.multiply(0, buff, comp_idxA, b_i, 0, buff)
+  dgops.multiply(0, out , comp_idxB, b_i, 0, out )
+
+  # Add two terms and multiply by 1/(J*B).
+  pos_term = buff.get_values()
+  neg_term = out.get_values()
+  out.set_values(pos_term + neg_term)
+  dgops.multiply(0, out, 0, jacobtot_inv, 0, out)
+
+  return out

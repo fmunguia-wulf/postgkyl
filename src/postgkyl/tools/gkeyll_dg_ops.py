@@ -19,14 +19,13 @@ _GKYL_DOUBLE = ctypes.c_int(2)
 
 class GkeyllDGops:
   """
-  Wraps gkyl_dg_mul_op and gkyl_dg_inv_op from libg0core.so.
+  Operations on DG data, returning DG data.
+  Some of these are implemented in Gkeyll, and we get them from libg0core.so.
 
-  Parameters
-  ----------
-  gkylsoft_path : str or None
-    Path to the gkylsoft directory (the one containing gkeyll/lib/libg0core.so).
-    If None, falls back to the GKYLSOFT env var, ~/.postgkyl/gkylsoft_path,
-    and the build-time default in postgkyl._gkylsoft_path.
+  Inputs:
+    gkylsoft_path: Path to the gkylsoft directory (the one containing gkeyll/lib/libg0core.so).
+                   If None, falls back to the GKYLSOFT env var, ~/.postgkyl/gkylsoft_path,
+                   and the build-time default in postgkyl._gkylsoft_path.
   """
 
   def __init__(self, gkylsoft_path: str | None = None):
@@ -74,6 +73,10 @@ class GkeyllDGops:
     lib.gkyl_dg_inv_op.argtypes = [c_vp, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_inv_op.restype  = None
 
+    # gkyl_dg_differentiate_op_local(basis*, dir, diff_order, dx, c_oop, out*, c_iop, inp*)
+    lib.gkyl_dg_differentiate_op_local.argtypes = [c_vp, c_i, c_i, ctypes.c_double, c_i, c_vp, c_i, c_vp]
+    lib.gkyl_dg_differentiate_op_local.restype  = None
+
   def _gdata_to_array(self, gdata):
     """
     Wrap a GData's value buffer in a gkyl_array without copying.
@@ -100,21 +103,15 @@ class GkeyllDGops:
     """
     Weak DG multiply: oop[c_oop] = lop[c_lop] * rop[c_rop].
 
-    Writes the result in-place into oop's underlying value buffer.
-
-    Inputs
-    ------
-    c_oop, c_lop, c_rop : int
-      Physical component indices (0-based) within each multi-component field.
-      Use 0 for single-component (scalar) fields.
-    oop, lop, rop : GData
-      Output and input operand datasets. oop must already have values
-      allocated (e.g. via GData.push with a zero array).
+    Inputs:
+      c_oop, c_lop, c_rop: Physical component indices (0-based) within each multi-component field.
+                           Use 0 for single-component (scalar) fields.
+      oop, lop, rop: Output and input operand datasets. oop be allocated.
     """
     basis = self._make_basis(lop)
-    arr_oop, vals_oop = self._gdata_to_array(oop)
-    arr_lop, vals_lop = self._gdata_to_array(lop)
-    arr_rop, vals_rop = self._gdata_to_array(rop)
+    arr_oop, _ = self._gdata_to_array(oop)
+    arr_lop, _ = self._gdata_to_array(lop)
+    arr_rop, _ = self._gdata_to_array(rop)
     try:
       self._lib.gkyl_dg_mul_op(basis,
         ctypes.c_int(c_oop), arr_oop,
@@ -126,23 +123,45 @@ class GkeyllDGops:
       self._lib.gkyl_array_release(arr_lop)
       self._lib.gkyl_array_release(arr_rop)
 
-  def invert(self,c_oop: int, oop, c_iop: int, iop) -> None:
+  def differentiate(self, dir: int, diff_order: int, dx: float, c_oop: int, oop, c_iop: int, iop) -> None:
+    """
+    Local DG differentiation: oop[c_oop] = d^diff_order/dx_dir^diff_order iop[c_iop].
+
+    Differentiates the DG expansion in each cell independently (no inter-cell stencil).
+
+    Inputs:
+      dir:        Direction of differentiation (0-based).
+      diff_order: Order of the derivative (1 or 2).
+      dx:         Cell length in the direction of differentiation.
+      c_oop, c_iop: Physical component indices (0-based).
+      oop, iop:   Output and input datasets. oop must be allocated.
+    """
+    basis = self._make_basis(iop)
+    arr_oop, _ = self._gdata_to_array(oop)
+    arr_iop, _ = self._gdata_to_array(iop)
+    try:
+      self._lib.gkyl_dg_differentiate_op_local(basis,
+        ctypes.c_int(dir), ctypes.c_int(diff_order), ctypes.c_double(dx),
+        ctypes.c_int(c_oop), arr_oop,
+        ctypes.c_int(c_iop), arr_iop,)
+    finally:
+      self._lib.gkyl_cart_modal_basis_release(basis)
+      self._lib.gkyl_array_release(arr_oop)
+      self._lib.gkyl_array_release(arr_iop)
+
+  def invert(self, c_oop: int, oop, c_iop: int, iop) -> None:
     """
     Weak DG invert: oop[c_oop] = 1 / iop[c_iop].
 
-    Writes the result in-place into oop's underlying value buffer.
     Only supported for serendipity basis at p=1 (gkeyll limitation).
 
-    Inputs
-    ------
-    c_oop, c_iop : int
-      Physical component indices (0-based).
-    oop, iop : GData
-      Output and input datasets. oop must already have values allocated.
+    Inputs:
+      c_oop, c_iop: Physical component indices (0-based).
+      oop, iop: Output and input datasets. oop be allocated.
     """
     basis  = self._make_basis(iop)
-    arr_oop, vals_oop = self._gdata_to_array(oop)
-    arr_iop, vals_iop = self._gdata_to_array(iop)
+    arr_oop, _ = self._gdata_to_array(oop)
+    arr_iop, _ = self._gdata_to_array(iop)
     try:
       self._lib.gkyl_dg_inv_op(basis,
         ctypes.c_int(c_oop), arr_oop,
@@ -151,3 +170,4 @@ class GkeyllDGops:
       self._lib.gkyl_cart_modal_basis_release(basis)
       self._lib.gkyl_array_release(arr_oop)
       self._lib.gkyl_array_release(arr_iop)
+
