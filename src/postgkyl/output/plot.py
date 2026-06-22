@@ -140,6 +140,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
   # end
 
   with xkcd_call():
+    if xkcd:
+      plt.rcParams['font.family'] = 'sans-serif'
+      plt.rcParams['font.sans-serif'] = ['Comic Sans MS', 'Comic Neue', 'Humor Sans', 'Arial']
       
     if not bool(color) and not isinstance(data, tuple):
       cl = data.color
