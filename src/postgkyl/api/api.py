@@ -129,12 +129,14 @@ Frobenius norm of agyrotropic pressure tensor.
       hashtag: bool = False,
       show: bool = True,
       saveframes: str | None = None,
+      nproc: int = 1,
       figsize: str | None = None,
       multiblock: bool = False):
     """Animate the actively loaded dataset and show resulting plots in a loop.
 
 Typically, the datasets are loaded using wildcard/regex feature of the -f option to
-the main pgkyl executable. To save the animation ffmpeg needs to be installed.
+the main pgkyl executable. Saving via --saveframes or --nproc uses Pillow (GIF by
+default); the interactive FuncAnimation path still requires ffmpeg.
 
     Args:
       use: (--use, -u) Specify a tag to plot.
@@ -198,11 +200,12 @@ the main pgkyl executable. To save the animation ffmpeg needs to be installed.
       collected: (--collected) Animate a dataset that has been collected, i.e. a single dataset with time taken to be the first index.
       hashtag: (--hashtag) Turns on the pgkyl hashtag!
       show: (--show) Turn showing of the plot ON and OFF.
-      saveframes: (--saveframes) Save individual frames as PNGS instead of an animation
+      saveframes: (--saveframes) Save individual frames as PNGs; also compiles a movie if --save or --saveas is given.
+      nproc: (--nproc) Number of parallel processes for frame generation. When >1 without --saveframes, frames are written to a temp directory, compiled into a movie, then removed.
       figsize: (--figsize) Comma-separated values for x and y size.
       multiblock: (-m, --multiblock) Plots blocks from each frame together
     """
-    return self._run(_cmd("animate"), use=use, grouptags=grouptags, squeeze=squeeze, subplots=subplots, nSubplotRow=nSubplotRow, nSubplotCol=nSubplotCol, transpose=transpose, contour=contour, clevels=clevels, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, group=group, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, color=color, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, float=float, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, cutoffglobalrange=cutoffglobalrange, legend=legend, colorbar=colorbar, forcelegend=forcelegend, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, notitle=notitle, interval=interval, save=save, saveas=saveas, fps=fps, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, collected=collected, hashtag=hashtag, show=show, saveframes=saveframes, figsize=figsize, multiblock=multiblock)
+    return self._run(_cmd("animate"), use=use, grouptags=grouptags, squeeze=squeeze, subplots=subplots, nSubplotRow=nSubplotRow, nSubplotCol=nSubplotCol, transpose=transpose, contour=contour, clevels=clevels, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, group=group, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, color=color, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, float=float, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, cutoffglobalrange=cutoffglobalrange, legend=legend, colorbar=colorbar, forcelegend=forcelegend, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, notitle=notitle, interval=interval, save=save, saveas=saveas, fps=fps, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, collected=collected, hashtag=hashtag, show=show, saveframes=saveframes, nproc=nproc, figsize=figsize, multiblock=multiblock)
 
   def collect(self,
       sumdata: bool = False,
