@@ -11,6 +11,7 @@ import matplotlib as mpl
 import matplotlib.axes
 import matplotlib.figure
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import numpy as np
 import os.path
 
@@ -25,6 +26,35 @@ def pgkyl_colorbar(obj, fig : matplotlib.figure.Figure, cax : matplotlib.axes.Ax
   divider = make_axes_locatable(cax)
   cax2 = divider.append_axes("right", size="3%", pad=0.05)
   return fig.colorbar(obj, cax=cax2, label=label or "", extend=extend)
+
+def get_xkcd_safely():
+    # Target fonts Matplotlib looks for in xkcd mode
+    required_fonts = ['xkcd', 'xkcd Script', 'Comic Neue', 'Comic Sans MS']
+    
+    # Check if at least one comic font is installed
+    available_fonts = [f.name for f in fm.fontManager.ttflist]
+    has_font = any(rf in available_fonts for rf in required_fonts)
+    
+    if not has_font:
+        print("\n" + "="*50)
+        print("  MINIMALIST XKCD FONT GUIDE")
+        print("="*50)
+        print("Matplotlib cannot find an XKCD-compatible font.")
+        print("\nTo fix this completely:")
+        print("1. Download the missing fonts (xkcd, xkcd-script, Comic Neue, or Comic Sans MS).")
+        print("2. Install the font(s) onto your operating system.")
+        print("3. Clear Matplotlib cache & restart your IDE:")
+        print("   -> import shutil, matplotlib as mpl")
+        print("   -> shutil.rmtree(mpl.get_cachedir())")
+        print("="*50 + "\n")
+        
+        # Fallback: Attempt standard sans-serif so the script keeps running
+        plt.rcParams['font.family'] = 'sans-serif'
+    else:
+        # Secure fallback to Comic Sans if original xkcd isn't there but Sans is
+        plt.rcParams['font.family'] = ['Comic Sans MS', 'Comic Neue', 'sans-serif']
+
+    return plt.xkcd
 
 
 def _get_nodal_grid(grid : list, cells: np.ndarray):
@@ -134,16 +164,13 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
 
   # The most important thing
   if xkcd:
-    xkcd_call = plt.xkcd
+    xkcd_call = get_xkcd_safely()
   else :
     xkcd_call = lambda: mpl.rc_context(rc=mpl.rcParams)
   # end
 
   with xkcd_call():
-    if xkcd:
-      plt.rcParams['font.family'] = 'sans-serif'
-      plt.rcParams['font.sans-serif'] = ['Comic Sans MS', 'Comic Neue', 'Humor Sans', 'Arial']
-      
+
     if not bool(color) and not isinstance(data, tuple):
       cl = data.color
     # end
