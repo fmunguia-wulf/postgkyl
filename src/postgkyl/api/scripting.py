@@ -102,15 +102,36 @@ class _Session:
     Only options whose value differs from the command default are emitted, so
     the result matches what a user would actually type rather than spelling out
     every defaulted option the generated methods forward.
+
+    Token order matters: pgkyl chains commands, so any token following a
+    positional argument is parsed as the *next* command. The fragment is
+    therefore emitted as ``name [options] [argument values]`` — options always
+    precede positional arguments. For example ``ev`` must read
+    ``ev --tag t '<chain>'`` (``ev '<chain>' --tag t`` would treat ``--tag`` as
+    a new command), and positional values are emitted bare (no metavar name).
     """
     # ``load`` is triggered on the CLI by naming the file(s) directly; there is
     # no ``load`` token. Every other command is named explicitly.
-    tokens = [shlex.quote(f) for f in files] if files is not None else [command.name]
+    name_tokens = [shlex.quote(f) for f in files] if files is not None else [command.name]
+    opt_tokens = []
+    arg_tokens = []
 
     for param in command.params:
       if param.name == "help" or param.name not in kwargs:
         continue
       value = kwargs[param.name]
+
+      # Positional arguments: emit the value(s) only, deferred to the end so they
+      # never sit between the command name and its options.
+      if isinstance(param, click.Argument):
+        if value is None:
+          continue
+        if getattr(param, "multiple", False) or getattr(param, "nargs", 1) == -1:
+          arg_tokens.extend(shlex.quote(str(item)) for item in value)
+        else:
+          arg_tokens.append(shlex.quote(str(value)))
+        continue
+
       default = param.default
       # click >=8.2 marks "no default given" with a Sentinel; treat as None.
       if repr(default).startswith("Sentinel"):
@@ -122,9 +143,9 @@ class _Session:
           # Toggle flag that defaults on (e.g. --show/--no-show); only the
           # off-switch is worth printing.
           if value is False:
-            tokens.append(self._long_opt(secondary))
+            opt_tokens.append(self._long_opt(secondary))
         elif value:
-          tokens.append(self._long_opt(param.opts))
+          opt_tokens.append(self._long_opt(param.opts))
         continue
 
       if value is None or value == default:
@@ -133,11 +154,66 @@ class _Session:
       opt = self._long_opt(param.opts)
       if getattr(param, "multiple", False) or getattr(param, "nargs", 1) == -1:
         for item in value:
-          tokens.append(f"{opt} {shlex.quote(str(item))}")
+          opt_tokens.append(f"{opt} {shlex.quote(str(item))}")
       else:
-        tokens.append(f"{opt} {shlex.quote(str(value))}")
+        opt_tokens.append(f"{opt} {shlex.quote(str(value))}")
 
-    return " ".join(tokens)
+    return " ".join(name_tokens + opt_tokens + arg_tokens)
+
+  def set_globals(self, *, c2p: str | None = None, c2p_vel: str | None = None,
+      varname: str | tuple[str, ...] | None = None, compgrid: bool | None = None,
+      z0: str | None = None, z1: str | None = None, z2: str | None = None,
+      z3: str | None = None, z4: str | None = None, z5: str | None = None,
+      component: str | None = None) -> None:
+    """Set pgkyl group-level options that apply to every file loaded afterwards.
+
+    These mirror the options placed *before* the data on the pgkyl command line,
+    e.g. ``pgkyl --c2p-vel map.gkyl file1.gkyl file2.gkyl``. Unlike the same-named
+    keyword arguments passed directly to :meth:`load` (which affect only that one
+    file), a global applies to all data loaded after it is set, so a subsequent
+    chain step such as ``ev`` sees a consistent grid type across its inputs. Call
+    this *before* the relevant :meth:`load` calls.
+
+    Args:
+      c2p: File with c2p mapped coordinates (global ``--c2p``).
+      c2p_vel: File with c2p mapped velocity coordinates (global ``--c2p-vel``).
+      varname: Adios variable name(s) (global ``--varname``).
+      compgrid: Disregard the mapped grid information (global ``--compgrid``).
+      z0, z1, z2, z3, z4, z5: Partial load along each coordinate (int or slice).
+      component: Partial load: components (int or slice).
+    """
+    obj = self.ctx.obj
+    if c2p is not None:
+      obj["global_c2p"] = c2p
+    if c2p_vel is not None:
+      obj["global_c2p_vel"] = c2p_vel
+    if compgrid is not None:
+      obj["compgrid"] = compgrid
+    if varname is not None:
+      obj["global_var_names"] = (varname,) if isinstance(varname, str) else tuple(varname)
+    cuts = list(obj["global_cuts"])
+    for idx, value in enumerate((z0, z1, z2, z3, z4, z5, component)):
+      if value is not None:
+        cuts[idx] = value
+    obj["global_cuts"] = tuple(cuts)
+
+  def _global_tokens(self) -> list[str]:
+    """CLI tokens for the active group-level options (see :meth:`set_globals`)."""
+    obj = self.ctx.obj
+    tokens = []
+    if obj.get("global_c2p"):
+      tokens.append(f"--c2p {shlex.quote(str(obj['global_c2p']))}")
+    if obj.get("global_c2p_vel"):
+      tokens.append(f"--c2p-vel {shlex.quote(str(obj['global_c2p_vel']))}")
+    if obj.get("compgrid"):
+      tokens.append("--compgrid")
+    for name in obj.get("global_var_names", ()):
+      tokens.append(f"--varname {shlex.quote(str(name))}")
+    cut_opts = ("--z0", "--z1", "--z2", "--z3", "--z4", "--z5", "--component")
+    for opt, value in zip(cut_opts, obj.get("global_cuts", (None,) * 7)):
+      if value is not None:
+        tokens.append(f"{opt} {shlex.quote(str(value))}")
+    return tokens
 
   def get_cmd(self) -> str:
     """Return the pgkyl CLI command equivalent to this session so far."""
@@ -146,6 +222,8 @@ class _Session:
       parts.append("--verbose")
     if self.ctx.obj.get("batch_mode"):
       parts.append("--batch-mode")
+    # Group-level options must precede the data they apply to.
+    parts.extend(self._global_tokens())
     parts.extend(self.cmd_stack)
     return " ".join(parts)
 
