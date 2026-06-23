@@ -165,7 +165,7 @@ _field = {
 _ExB_vel = {
   "source"    : [[_geo_int_jacobtot_inv,_geo_int_b_i,_field],],
   "fetch_func": [ff.fetch_ExB_vel],
-  "label"     : r"$v_{E,%d}$ (m/s)",
+  "label"     : r"$v_{E,%s}$ (m/s)",
 }
 
 gk_quant_registry: dict = {

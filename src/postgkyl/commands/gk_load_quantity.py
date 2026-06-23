@@ -256,16 +256,24 @@ def gk_load_quantity(ctx, **kwargs):
 
     # Set label and tag.
     label_tmpl = quant_attr["label"]
-    default_label = label_tmpl % kwargs["species"] if "%s" in label_tmpl else label_tmpl
+    if "%s" in label_tmpl:
+      if quantity == "ExB_vel":
+        default_label = label_tmpl % str(user_extra["dir"])
+      else:
+        default_label = label_tmpl % kwargs["species"][0] 
+    else:
+      default_label = label_tmpl
+    # end
+
     out_label = kwargs["label"] if kwargs["label"] is not None else default_label
 
+    if len(frames) > 1:
+      out_label += f" f{frame}"
+      
     out.set_tag(kwargs["tag"])
     out.set_label(out_label)
 
     data.add(out) # Push data to stack.
-
-  if len(frames) > 1:
-    data.set_unique_labels()
 
   verb_print(ctx, f"Finished loading '{quantity}'")
 
