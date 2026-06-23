@@ -284,7 +284,8 @@ def animate(ctx, **kwargs):
     figsize = (int(kwargs["figsize"].split(",")[0]), int(kwargs["figsize"].split(",")[1]))
   # end
 
-  duration = int(1000 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
+  # PIL requires duration in miliseconds.
+  duration = int(1.0e3 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
 
   set_figure = False
   min_size = np.NAN
