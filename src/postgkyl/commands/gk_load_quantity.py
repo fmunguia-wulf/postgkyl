@@ -67,6 +67,11 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
       else:
         _, frames_avail_q = _get_src_combo_and_frames(path, name, species, src, **kwargs)
 
+      if frames_avail_q == {-1}:
+        # Dict source is a geo-only quantity: doesn't constrain frames, just needs to exist.
+        combo_idx = cidx
+        continue
+
       if frames_avail_q:
         if not frames_avail:
           frames_avail = frames_avail_q.copy()

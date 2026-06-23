@@ -63,6 +63,27 @@ gk_conf_frame_files = [
   "apar", # Parallel component of the magnetic field vector.
 ]
 
+# Covariant components of magnetic field unit vector (interior).
+_geo_int_b_i = {
+  "source"    : [["geo_int_b_i"],],
+  "fetch_func": [ff.fetch_s0cAll],
+  "label"     : r"$b_i$",
+}
+
+# Reciprocal of Jacobian times bmag (interior).
+_geo_int_jacobtot_inv = {
+  "source"    : [["geo_int_jacobtot_inv"],],
+  "fetch_func": [ff.fetch_s0c0],
+  "label"     : r"$(J B)^{-1}$",
+}
+
+# Magnetic field magnitude (interior).
+_geo_int_bmag = {
+  "source"    : [["geo_int_bmag"],],
+  "fetch_func": [ff.fetch_s0c0],
+  "label"     : r"$B$ (T)",
+}
+
 # Zeroth velocity moment.
 _M0 = {
   "source"     : [["M0"], ["M0M1M2"], ["M0M1M2parM2perp"], ["MaxwellianMoments"], ["BiMaxwellianMoments"], ["HamiltonianMoments"],],
@@ -133,21 +154,30 @@ _press = {
   "label"     : r"$p_{%s}$ (Pa)",
 }
 
+# Electrostatic potential.
+_field = {
+  "source"    : [["field"],],
+  "fetch_func": [ff.fetch_s0c0],
+  "label"     : r"$\phi$ (V)",
+}
+
 # ExB drift
 _ExB_vel = {
-  "source"    : [["geo_int_jacobtot_inv","geo_int_b_i","field"],],
+  "source"    : [[_geo_int_jacobtot_inv,_geo_int_b_i,_field],],
   "fetch_func": [ff.fetch_ExB_vel],
   "label"     : r"$v_{E,%d}$ (m/s)",
 }
 
-# Magnetic field magnitude (from evaluation at interior).
-_geo_int_bmag = {
-  "source"    : [["geo_int_bmag"],],
-  "fetch_func": [ff.fetch_s0c0],
-  "label"     : r"$B$ (T)",
-}
-
 gk_quant_registry: dict = {
+  # Geometry outputs.
+  "geo_int_b_i" : _geo_int_b_i,
+  "geo_int_bmag" : _geo_int_bmag,
+  "geo_int_jacobtot_inv" : _geo_int_jacobtot_inv,
+  # Fields.
+  "field" : _field,
+  # Compound quanties of fields and geo.
+  "ExB_vel" : _ExB_vel,
+  # Species outputs.
   "M0" : _M0,
   "M1" : _M1,
   "M2par" : _M2par,
@@ -159,6 +189,4 @@ gk_quant_registry: dict = {
   "Tperp": _Tperp,
   "temp" : _temp,
   "press" : _press,
-  "ExB_vel" : _ExB_vel,
-  "bmag" : _geo_int_bmag,
 }

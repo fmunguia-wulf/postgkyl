@@ -36,17 +36,18 @@ def _empty_gdata_from_gdata(gdata) -> GData:
   out.push(gdata.get_grid(), np.zeros_like(gdata.get_values()))
   return out
 
-def _make_fetch_comp(comp: int):
+def _make_fetch_comp(icomp: int):
   """Return a fetch function that extracts the comp-th physical component."""
   def fetch(gdatas, **kw):
     g = gdatas[0].get_grid()
     nb = _get_num_basis_from_gdata(gdatas[0])
-    v = gdatas[0].get_values()[..., comp*nb:(comp+1)*nb].copy()
+    comp = [icomp,icomp] if icomp is not None else [0,int(gdatas[0].get_num_comps()/nb)]
+    v = gdatas[0].get_values()[..., comp[0]*nb:(comp[1]+1)*nb].copy()
     out = GData(ctx=gdatas[0].ctx)
     out.push(g, v)
     return out
   # end
-  fetch.__name__ = f"fetch_comp{comp}"
+  fetch.__name__ = f"fetch_comp{icomp}" if icomp is not None else f"fetch_compAll"
   return fetch
 
 def _make_fetch_sick_addsub_sjcl(si: int, ck: int, sj: int, cl: int, op):
@@ -134,6 +135,7 @@ def _make_fetch_sick_div_sjcl(si: int, ck: int, sj: int, cl: int):
   return fetch
 
 # Functions to extract a components.
+fetch_s0cAll = _make_fetch_comp(None)
 fetch_s0c0 = _make_fetch_comp(0)
 fetch_s0c1 = _make_fetch_comp(1)
 fetch_s0c2 = _make_fetch_comp(2)
