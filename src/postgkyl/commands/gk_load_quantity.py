@@ -8,7 +8,7 @@ from collections.abc import Iterable, Iterator
 import click
 
 from postgkyl.data import GData
-from postgkyl.utils.gk_quantities.registry import gk_quant_registry
+from postgkyl.utils.gk_quantities.registry import gk_quant_registry, gk_conf_frame_files, gk_geo_files
 from postgkyl.utils import verb_print
 
 def _iter_existing_files(stem: str, frames: Iterable[int]) -> Iterator[str]:
@@ -24,7 +24,10 @@ def _get_avail_frames_qfile(path, name, species, qname, **kwargs):
   Optional: pass a list of frames to look for in kwargs["frames"].
   """
   frames_avail: set[int] = set()
-  stem = f"{path}{name}-{species}_{qname}_"
+  if qname in gk_conf_frame_files:
+    stem = f"{path}{name}-{qname}_"
+  else:
+    stem = f"{path}{name}-{species}_{qname}_"
 
   if kwargs.get('frames'):
     frame_iter = _iter_existing_files(stem, iter(kwargs["frames"]))
@@ -52,6 +55,13 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
     combo = qattr["source"][cidx]
     # Check each source for this combo.
     for src in combo:
+      if isinstance(src, str) and src in gk_geo_files:
+        # Geo files have no frame number; just check the file exists.
+        if not os.path.isfile(f"{path}{name}-{src}.gkyl"):
+          frames_avail: set[int] = set()
+          break
+        continue
+
       if isinstance(src, str):
         frames_avail_q = _get_avail_frames_qfile(path, name, species, src, **kwargs)
       else:
@@ -70,31 +80,42 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
         combo_idx = cidx
       else:
         break
+    else:
+      # If all sources were geo files, frames_avail is still empty.
+      # Mark the combo as valid with {-1}.
+      if not frames_avail:
+        frames_avail = {-1}
+        combo_idx = cidx
 
     if frames_avail:
       break
 
   return combo_idx, frames_avail
 
-def _choose_source(path: str, name: str, species: str, quant_attr: dict, frame_inp: str) -> list[int]:
+def _choose_source(path: str, name: str, species: str, quant_attr: dict, frame_inp: str | None) -> list[int]:
   """Identify source combination and frames needed to get the requested quantity."""
 
-  frame_inp = frame_inp.strip()
   frame_list = list()
-  if "," in frame_inp:
-    frame_list = [int(f.strip()) for f in frame_inp.split(",")]
-  elif ":" not in frame_inp:
-    frame_list = [int(frame_inp)]
+  if frame_inp is not None:
+    frame_inp = frame_inp.strip()
+    if "," in frame_inp:
+      frame_list = [int(f.strip()) for f in frame_inp.split(",")]
+    elif ":" not in frame_inp:
+      frame_list = [int(frame_inp)]
   # end
 
   # Discover available frames from any of the possible source combinations.
   combo_idx, frames_avail = _get_src_combo_and_frames(path, name, species, quant_attr, frames=frame_list)
 
-  frames_avail_sorted = sorted(frames_avail)
-  if not frames_avail_sorted:
-    raise FileNotFoundError(f"No frames found for the requested quantity and "
-                            f"(path='{path}', name='{name}', species='{species}').")
+  if not frames_avail:
+    raise FileNotFoundError(f"No files found for the requested quantity "
+                            f"(path='{path}', name='{name}').")
 
+  # Geo-only quantities have no frame number; return a single None sentinel.
+  if frames_avail == {-1}:
+    return combo_idx, [None]
+
+  frames_avail_sorted = sorted(frames_avail)
   parts = frame_inp.split(":")
   if len(frame_list) == 0:
     lower = int(parts[0]) if parts[0] else frames_avail_sorted[0]
@@ -106,7 +127,12 @@ def _choose_source(path: str, name: str, species: str, quant_attr: dict, frame_i
 
 def _get_src_gdata_qfile(src: str, path: str, name: str, species: str, frame: int) -> GData:
   """Get the populated GData for a source, assuming it is a string to be incorporated into a file name."""
-  file_name = f"{path}{name}-{species}_{src}_{frame}.gkyl"
+  if src in gk_geo_files:
+    file_name = f"{path}{name}-{src}.gkyl"
+  elif src in gk_conf_frame_files:
+    file_name = f"{path}{name}-{src}_{frame}.gkyl"
+  else:
+    file_name = f"{path}{name}-{species}_{src}_{frame}.gkyl"
   return GData(file_name)
 
 def _get_src_gdata_qdict(src, path: str, name: str, species: str, frame: int) -> GData:
@@ -224,7 +250,8 @@ def gk_load_quantity(ctx, **kwargs):
     out = fetch_func(gdatas, **user_extra) # Compute quantity.
 
     # Set label and tag.
-    default_label = quant_attr["label"] % kwargs["species"]
+    label_tmpl = quant_attr["label"]
+    default_label = label_tmpl % kwargs["species"] if "%s" in label_tmpl else label_tmpl
     out_label = kwargs["label"] if kwargs["label"] is not None else default_label
 
     out.set_tag(kwargs["tag"])

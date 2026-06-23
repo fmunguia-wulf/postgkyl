@@ -313,40 +313,56 @@ def fetch_ExB_vel(gdatas, **kwargs):
   jacobtot_inv = gdatas[0]
   b_i = gdatas[1]
   phi = gdatas[2]
+  cdim = phi.get_num_dims()
 
   # Components of the quantities in the cross product AxB.
-  comp_idxA = comp_idxB = 0
+  diff_dir_pos = bi_c_pos = 0
+  diff_dir_neg = bi_c_neg = 0
+  calc_term = [True,True] # Whether to compute pos and neg term in component of AxB.
   if vE_dir == 0:
-    comp_idxA = 1
-    comp_idxB = 2
+    diff_dir_neg = bi_c_pos = 1
+    diff_dir_pos = bi_c_neg = cdim-1
+    if cdim < 3:
+      calc_term = [True,False]
+    # end
   elif vE_dir == 1:
-    comp_idxA = 2
-    comp_idxB = 0
+    bi_c_pos = 2
+    bi_c_neg = 0
+    diff_dir_neg = cdim-1
+    diff_dir_pos = 0
+    if cdim == 1:
+      calc_term = [False,True]
+    # end
   elif vE_dir == 2:
-    comp_idxA = 0
-    comp_idxB = 1
-  else
+    diff_dir_neg = bi_c_pos = 0
+    diff_dir_pos = bi_c_neg = 1
+    if cdim == 1:
+      calc_term = [False,False]
+    elif cdim == 2:
+      calc_term = [False,True]
+    # end
+  else:
     raise KeyError("fetch_ExB_vel: '--extra dir=j' must be >= 0 and <3.")
-
-  # Get the cell lengths.
-  lower, upper = phi.get_bounds()
-  cells = phi.get_num_cells()
-  dxA = (upper[comp_idxA] - lower[comp_idxA])/cells[comp_idxA]
-  dxB = (upper[comp_idxB] - lower[comp_idxB])/cells[comp_idxB]
 
   buff = _empty_gdata_from_gdata(phi) # Positive term in AxB.
   out = _empty_gdata_from_gdata(phi) # Negative term in AxB.
 
   dgops = GkeyllDGops()
+  lower, upper = phi.get_bounds()
+  cells = phi.get_num_cells()
+  if calc_term[0]:
+    # Compute derivatives of phi
+    dx = (upper[diff_dir_pos] - lower[diff_dir_pos])/cells[diff_dir_pos]
+    dgops.differentiate(diff_dir_pos, 1,  dx, 0, buff, 0, phi)
+    # Multiply by b_i.
+    dgops.multiply(0, buff, bi_c_pos, b_i, 0, buff)
 
-  # Compute derivatives of phi
-  dgops.differentiate(comp_idxB, 1,  dxB, 0, buff, 0, phi)
-  dgops.differentiate(comp_idxA, 1, -dxA, 0, out , 0, phi)
-
-  # Multiply by b_i.
-  out = _empty_gdata_from_gdata(phi)
-  dgops.multiply(0, buff, comp_idxA, b_i, 0, buff)
-  dgops.multiply(0, out , comp_idxB, b_i, 0, out )
+  if calc_term[1]:
+    # Compute derivatives of phi
+    dx = (upper[diff_dir_neg] - lower[diff_dir_neg])/cells[diff_dir_neg]
+    dgops.differentiate(diff_dir_neg, 1, -dx, 0, out , 0, phi)
+    # Multiply by b_i.
+    dgops.multiply(0, out , bi_c_neg, b_i, 0, out )
 
   # Add two terms and multiply by 1/(J*B).
   pos_term = buff.get_values()

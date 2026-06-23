@@ -57,6 +57,12 @@ gk_geo_files = [
   "geo_surf0_normcurlbhat",
 ]
 
+# List of quantities that do not depend on species and are written every frame.
+gk_conf_frame_files = [
+  "field", # Electrostatic potential.
+  "apar", # Parallel component of the magnetic field vector.
+]
+
 # Zeroth velocity moment.
 _M0 = {
   "source"     : [["M0"], ["M0M1M2"], ["M0M1M2parM2perp"], ["MaxwellianMoments"], ["BiMaxwellianMoments"], ["HamiltonianMoments"],],
@@ -134,6 +140,13 @@ _ExB_vel = {
   "label"     : r"$v_{E,%d}$ (m/s)",
 }
 
+# Magnetic field magnitude (from evaluation at interior).
+_geo_int_bmag = {
+  "source"    : [["geo_int_bmag"],],
+  "fetch_func": [ff.fetch_s0c0],
+  "label"     : r"$B$ (T)",
+}
+
 gk_quant_registry: dict = {
   "M0" : _M0,
   "M1" : _M1,
@@ -147,4 +160,5 @@ gk_quant_registry: dict = {
   "temp" : _temp,
   "press" : _press,
   "ExB_vel" : _ExB_vel,
+  "bmag" : _geo_int_bmag,
 }
