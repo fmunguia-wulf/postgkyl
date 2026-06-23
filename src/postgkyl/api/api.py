@@ -232,6 +232,17 @@ the chunk-sized pieces collected into each new dataset.
     """
     return self._run(_cmd("collect"), sumdata=sumdata, period=period, offset=offset, chunk=chunk, use=use, tag=tag, label=label)
 
+  def config(self,
+      gkylsoft: str | None = None,
+      config_file: str | None = None):
+    """Write postgkyl configuration (gkylsoft path) to the config file.
+
+    Args:
+      gkylsoft: (--gkylsoft, -g) Path to the gkylsoft directory. Uses GKYLSOFT_DIR env variable if not provided.
+      config_file: (--config-file, -c) Config file to write. Default: ~/.postgkyl/gkylsoft_path, or the POSTGKYL_CONFIG env variable if set.
+    """
+    return self._run(_cmd("config"), gkylsoft=gkylsoft, config_file=config_file)
+
   def current(self,
       qbym: bool = False,
       use: str | None = None,
@@ -517,6 +528,44 @@ NOTE: this command cannot be combined with other postgkyl commands.
       saveas: (--saveas) Name of figure file.
     """
     return self._run(_cmd("gk-energy-balance"), name=name, species=species, path=path, relative_error=relative_error, multib=multib, field_dot_file=field_dot_file, apar_dot_file=apar_dot_file, fdot_file=fdot_file, source_file=source_file, bflux_xlower_file=bflux_xlower_file, bflux_ylower_file=bflux_ylower_file, bflux_zlower_file=bflux_zlower_file, bflux_xupper_file=bflux_xupper_file, bflux_yupper_file=bflux_yupper_file, bflux_zupper_file=bflux_zupper_file, f_file=f_file, field_file=field_file, apar_file=apar_file, dt_file=dt_file, logy=logy, absy=absy, xlabel=xlabel, ylabel=ylabel, title=title, indent_left=indent_left, add_width=add_width, saveas=saveas)
+
+  def gk_load_quantity(self,
+      quantity: str | None = None,
+      qlist: bool = False,
+      name: str | None = None,
+      species: str | None = None,
+      frame: str | None = None,
+      path: str = './',
+      tag: str = 'default',
+      label: str | None = None,
+      extra: str | None = None):
+    """Gyrokinetics: load a pre-named quantity from simulation output files.
+
+
+For a list of accepted quantities use:
+  pgkyl gk-load-quantity --qlist
+
+
+Command line example:
+  pgkyl gk-load-quantity den -s ion -n gk_sheath_2x2v_p1 -f 9 interp plot
+
+
+Script example:
+  from postgkyl.commands.gk_load_quantity import load_gk_quantity
+  gdat = load_gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
+
+    Args:
+      quantity: (--quantity, -q) Quantity to plot.
+      qlist: (--qlist) List accepted quantities.
+      name: (--name, -n) Simulation name prefix (e.g. gk_sheath_2x2v_p1).
+      species: (--species, -s) Species name (e.g. ion or elc).
+      frame: (--frame, -f) Frame number, comma-separated list, or range 'start:stop[:step]'. Use ':' for all available frames.
+      path: (--path, -p) Directory containing the simulation files.
+      tag: (--tag, -t) Tag for the output dataset.
+      label: (--label, -l) Label override for the output dataset.
+      extra: (--extra, -e) Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.
+    """
+    return self._run(_cmd("gk-load-quantity"), quantity=quantity, qlist=qlist, name=name, species=species, frame=frame, path=path, tag=tag, label=label, extra=extra)
 
   def gk_nodes(self,
       name: str | None = None,
