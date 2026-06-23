@@ -43,7 +43,6 @@ def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
 def _compile_movie(frame_files, output_file, fps, duration):
   """Compile PNG frames into an animation."""
   ext = os.path.splitext(output_file)[1].lower()
-  fps_val = fps if fps else 10
   print(f"Creating {output_file}...")
   if ext in (".gif", ".webp", ".apng"):
     images = [Image.open(f) for f in frame_files]
