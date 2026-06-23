@@ -335,7 +335,7 @@ from fluid conserved variables.
       label: str | None = None,
       all: bool = False):
     """Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN), e.g., 'f[0] f[1] +'.
- Supported operators are:  '+', '-', '*', '/', 'dot', 'sqrt', 'sin', 'cos', 'tan', 'abs', 'avg', 'log', 'log10', 'max', 'min', 'max2', 'min2', 'mean', 'len', 'pow', 'sq', 'exp', 'grad', 'grad2', 'int', 'div', 'curl', 'scale_comp', 'scale_zi_axis'
+Supported operators are:  '+', '-', '*', '/', 'dot', 'sqrt', 'sin', 'cos', 'tan', 'abs', 'avg', 'log', 'log10', 'max', 'min', 'max2', 'min2', 'mean', 'len', 'pow', 'sq', 'exp', 'grad', 'grad2', 'int', 'div', 'curl', 'scale_comp', 'scale_zi_axis'
 
     Args:
       chain: (chain)
@@ -405,8 +405,8 @@ Example (1D plot of the M0 moment along x at frame 0):
       mapc2p: bool = False,
       block: int | None = None,
       tag: str = 'f'):
-    """Gyrokinetics: loads and interpolates distribution function from files containing the 
-distribution (f) times one or multiple Jacobians (jf). Optionally, use mappings (in files) 
+    """Gyrokinetics: loads and interpolates distribution function from files containing the
+distribution (f) times one or multiple Jacobians (jf). Optionally, use mappings (in files)
 to convert the native coordinates of jf to physical velocity space coordinates or
 Cartesian/cyclindrical position space coordinates.
 
@@ -841,6 +841,7 @@ energy.
       label: str | None = None):
     """Compute ideal MHD primitive and some derived variables from MHD conserved variables.
 
+
     Args:
       use: (--use, -u) Specify a 'tag' to apply to (default all tags).
       mu0: (--mu0, -m) Permeability of free space.
@@ -1135,6 +1136,7 @@ https://matplotlib.org/stable/api/matplotlib_configuration_api.html
       tag: str | None = None,
       label: str | None = None):
     """Extract ten-moment primitive variables from ten-moment conserved variables.
+
 
     Args:
       use: (--use, -u) Specify a 'tag' to apply to (default all tags).

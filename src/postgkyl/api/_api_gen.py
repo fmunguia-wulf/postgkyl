@@ -16,6 +16,7 @@ the committed ``api.py`` from drifting away from the commands.
 
 from __future__ import annotations
 
+import inspect
 import keyword
 import os
 import sys
@@ -125,8 +126,13 @@ def _render_command(cli_name: str, command: click.Command) -> str:
   joined = ",\n      ".join(params_src)
   signature = f"  def {method}(self,\n      {joined}):" if params_src else f"  def {method}(self):"
 
-  # Docstring: command help + per-parameter help.
-  doc = (command.help or "").strip()
+  # Docstring: command help + per-parameter help. Run the help through
+  # ``inspect.cleandoc`` so the embedded text is independent of how the
+  # installed click version preserves docstring indentation; otherwise the
+  # rendered output (and the ``test_api_in_sync`` check) would differ between
+  # environments purely on leading whitespace.
+  doc = "\n".join(
+      line.rstrip() for line in inspect.cleandoc(command.help or "").splitlines())
   lines = ['    """' + (doc if doc else method)]
   all_params = required + optional
   if all_params:
