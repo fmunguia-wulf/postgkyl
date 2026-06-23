@@ -161,11 +161,18 @@ _field = {
   "label"     : r"$\phi$ (V)",
 }
 
-# ExB drift
+# ExB drift.
 _ExB_vel = {
   "source"    : [[_geo_int_jacobtot_inv,_geo_int_b_i,_field],],
   "fetch_func": [ff.fetch_ExB_vel],
   "label"     : r"$v_{E,%s}$ (m/s)",
+}
+
+# Plasma beta.
+_beta = {
+  "source"    : [[_geo_int_bmag,_press],],
+  "fetch_func": [ff.fetch_beta_from_bmag_press],
+  "label"     : r"$\beta_{%s}$",
 }
 
 gk_quant_registry: dict = {
@@ -189,4 +196,5 @@ gk_quant_registry: dict = {
   "Tperp": _Tperp,
   "temp" : _temp,
   "press" : _press,
+  "beta" : _beta,
 }

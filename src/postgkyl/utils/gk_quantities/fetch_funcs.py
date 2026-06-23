@@ -22,6 +22,7 @@ import operator
 from postgkyl.data import GData
 from postgkyl.data.dg import get_num_basis
 from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
+import postgkyl.utils.gkeyll_const as gkc
 
 def _get_num_basis_from_gdata(gdata) -> int:
   from postgkyl.data.dg import get_num_basis
@@ -373,3 +374,26 @@ def fetch_ExB_vel(gdatas, **kwargs):
   dgops.multiply(0, out, 0, jacobtot_inv, 0, out)
 
   return out
+
+def fetch_beta_from_bmag_press(gdatas, **kwargs):
+  """
+  beta = 2*mu_0*press/bmag^2
+  """
+  bmag, press = gdatas
+
+  dgops = GkeyllDGops()
+
+  bmag_sq = _empty_gdata_from_gdata(bmag)
+  out = _empty_gdata_from_gdata(bmag)
+
+  dgops.multiply(0, bmag_sq, 0, bmag, 0, bmag)
+
+  dgops.invert(0, out, 0, bmag_sq)
+  dgops.multiply(0, out, 0, press, 0, out)
+
+  out_val = out.get_values()
+  
+  mu0 = gkc.GKYL_MU0
+  out.set_values(2.0*mu0*out_val)
+  return out
+
