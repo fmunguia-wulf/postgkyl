@@ -47,7 +47,7 @@ def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
 def _compile_movie(frame_files, output_file, fps, duration):
   """Compile PNG frames into an animation."""
   ext = os.path.splitext(output_file)[1].lower()
-  print(f"Creating {output_file}...")
+  verb_print(f"Creating {output_file}...")
   if ext in (".gif", ".webp", ".apng"):
     images = [Image.open(f) for f in frame_files]
     images[0].save(
@@ -76,7 +76,7 @@ def _compile_movie(frame_files, output_file, fps, duration):
   else:
     raise ValueError(f"Unsupported output format: {ext}")
 
-  print(f"{output_file} created.")
+  verb_print(f"{output_file} created.")
 # end
 
 
