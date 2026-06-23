@@ -238,6 +238,10 @@ def animate(ctx, **kwargs):
   verb_print(ctx, "Starting animate")
   data = ctx.obj["data"]
 
+  # Accept str or path-like input for --saveas (e.g. a pathlib.Path).
+  if kwargs["saveas"]:
+    kwargs["saveas"] = str(kwargs["saveas"])
+  # end
   if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(".gif"):
     raise click.ClickException("Currently only .gif output is supported for animations; please specify a .gif file with --saveas.")
   # end
