@@ -221,10 +221,9 @@ def globalrange(data,kwargs):
 @click.option("--hashtag", is_flag=True, help="Turns on the pgkyl hashtag!")
 @click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", type=click.STRING,
-    help="Save individual frames as PNGs; also compiles a movie if --save or --saveas is given.")
+    help="Save individual frames as PNGs.")
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
-    help="Number of parallel processes for frame generation. When >1 without --saveframes, "
-         "frames are written to a temp directory, compiled into a movie, then removed.")
+    help="Number of parallel processes for frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -232,8 +231,7 @@ def animate(ctx, **kwargs):
   """Animate the actively loaded dataset and show resulting plots in a loop.
 
   Typically, the datasets are loaded using wildcard/regex feature of the -f option to
-  the main pgkyl executable. Saving via --saveframes or --nproc uses Pillow (GIF by
-  default); the interactive FuncAnimation path still requires ffmpeg.
+  the main pgkyl executable.
   """
   verb_print(ctx, "Starting animate")
   data = ctx.obj["data"]
