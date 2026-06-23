@@ -211,7 +211,7 @@ def globalrange(data,kwargs):
 @click.option("--notitle", is_flag=True, help="Do not show title.")
 @click.option("-i", "--interval", default=100, help="Specify the animation interval.")
 @click.option("--save", is_flag=True, help="Save figure as PNG.")
-@click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as. Use .gif please.")
+@click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as.")
 @click.option("--fps", type=click.INT, help="Specify frames per second for saving.")
 @click.option("--dpi", type=click.INT, help="DPI (resolution) for output.")
 @click.option("-e", "--edgecolors", type=click.STRING, help="Set color for cell edges.")
