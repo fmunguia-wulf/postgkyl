@@ -360,6 +360,7 @@ class GData(object):
       "basis_info" : ["poly_order","basis_type","is_modal","num_comps"],
       "build_info" : ["changeset","builddate"], 
       "geometry_info": ["geometry_type", "geqdsk_sign_convention", "is_multib", "topo_file", "half_domain", "geqdsk_file"],
+      "species_info": ["mass","charge","adiabatic_gamma","vdim"],
     }
 
     output = ""
@@ -476,6 +477,26 @@ class GData(object):
     for key, val in self.ctx.items():
       if key not in sum(info_groups.values(), []):
         output += f"\n├─ {key:s}: {val}"
+      # end
+    # end
+
+    if self.__dict_has_key_from_group__(self.ctx, info_groups["species_info"]):
+      output += "\n├─ Species properties:"
+      if "mass" in self.ctx.keys():
+        printed_keys.append("mass")
+        output += f"\n│  ├─ Mass: {self.ctx['mass']:e}"
+      # end
+      if "charge" in self.ctx.keys():
+        printed_keys.append("charge")
+        output += f"\n│  ├─ Charge: {self.ctx['charge']:e}"
+      # end
+      if "gas_gamma" in self.ctx.keys():
+        printed_keys.append("gas_gamma")
+        output += f"\n│  ├─ Adiabatic index: {self.ctx['gas_gamma']:e}"
+      # end
+      if "vdim" in self.ctx.keys():
+        printed_keys.append("vdim")
+        output += f"\n│  ├─ Velocity dimensions: {self.ctx['vdim']:d}"
       # end
     # end
 
