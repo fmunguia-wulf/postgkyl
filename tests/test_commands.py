@@ -154,7 +154,7 @@ class TestCommands:
   def test_animate_save(self, tmp_path):
     self.ctx.invoke(cmd.load)
     self.ctx.invoke(cmd.load)
-    fn = tmp_path / "test_anim.mp4"
+    fn = tmp_path / "test_anim.gif"
     self.ctx.invoke(cmd.animate, show=False, saveas=fn)
     fig = plt.gcf()
     label = fig.figure.get_supylabel()
