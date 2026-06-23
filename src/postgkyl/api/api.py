@@ -192,7 +192,7 @@ default); the interactive FuncAnimation path still requires ffmpeg.
       notitle: (--notitle) Do not show title.
       interval: (-i, --interval) Specify the animation interval.
       save: (--save) Save figure as PNG.
-      saveas: (--saveas) Name to save the plot as.
+      saveas: (--saveas) Name to save the plot as. Use .gif please.
       fps: (--fps) Specify frames per second for saving.
       dpi: (--dpi) DPI (resolution) for output.
       edgecolors: (-e, --edgecolors) Set color for cell edges.
