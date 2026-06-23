@@ -47,7 +47,7 @@ def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
 def _compile_movie(frame_files, output_file, fps, duration):
   """Compile PNG frames into an animation."""
   ext = os.path.splitext(output_file)[1].lower()
-  print(f"Creating {output_file}...")
+  verb_print(f"Creating {output_file}...")
   if ext in (".gif", ".webp", ".apng"):
     images = [Image.open(f) for f in frame_files]
     images[0].save(
@@ -76,7 +76,7 @@ def _compile_movie(frame_files, output_file, fps, duration):
   else:
     raise ValueError(f"Unsupported output format: {ext}")
 
-  print(f"{output_file} created.")
+  verb_print(f"{output_file} created.")
 # end
 
 
@@ -163,31 +163,31 @@ def globalrange(data,kwargs):
 @click.command()
 @click.option("--use", "-u", default=None, help="Specify a tag to plot.")
 @click.option("--grouptags", is_flag=True, help="Group coresponding tagged frames.")
-@click.option("--squeeze", "-s", is_flag=True, help="Squeeze the components into one panel.")
+@click.option("--squeeze", "-p", is_flag=True, help="Squeeze the components into one panel.")
 @click.option("--subplots", "-b", is_flag=True, help="Make subplots from multiple datasets.")
 @click.option("--nsubplotrow", "nSubplotRow", type=click.INT,
     help="Manually set the number of rows for subplots.")
 @click.option("--nsubplotcol", "nSubplotCol", type=click.INT,
     help="Manually set the number of columns for subplots.")
 @click.option("--transpose", is_flag=True, help="Transpose axes.")
-@click.option("-c", "--contour", is_flag=True, help="Make contour plot.")
+@click.option("--contour", "-c", is_flag=True, help="Make contour plot.")
 @click.option("--clevels", type=click.STRING,
     help="Specify levels for contours: either integer or start:end:nlevels")
-@click.option("-q", "--quiver", is_flag=True, help="Make quiver plot.")
-@click.option("-l", "--streamline", is_flag=True, help="Make streamline plot.")
+@click.option("--quiver", "-q", is_flag=True, help="Make quiver plot.")
+@click.option("--streamline", "-l", is_flag=True, help="Make streamline plot.")
 @click.option("--sdensity", type=click.FLOAT, help="Control density of the streamlines.")
 @click.option("--arrowstyle", type=click.STRING, help="Set the style for streamline arrows.")
-@click.option("-g", "--group", type=click.Choice(["0", "1"]), help="Switch to group mode.")
-@click.option("-s", "--scatter", is_flag=True, help="Make scatter plot.")
+@click.option("--group", "-g", type=click.Choice(["0", "1"]), help="Switch to group mode.")
+@click.option("--scatter", "-s", is_flag=True, help="Make scatter plot.")
 @click.option("--markersize", type=click.FLOAT, help="Set marker size for scatter plots.")
 @click.option("--linewidth", type=click.FLOAT, help="Set the linewidth.")
 @click.option("--linestyle", type=click.Choice(["solid", "dashed", "dotted", "dashdot"]),
     help="Set the linestyle.")
 @click.option("--color", type=click.STRING, help="Set color when available.")
 @click.option("--style", help="Specify Matplotlib style file (default: Postgkyl).")
-@click.option("-d", "--diverging", is_flag=True, help="Switch to diverging colormesh mode.")
+@click.option("--diverging", "-d", is_flag=True, help="Switch to diverging colormesh mode.")
 @click.option("--arg", type=click.STRING, help="Additional plotting arguments, e.g., '*--'.")
-@click.option("-a", "--fix-aspect", "fixaspect", is_flag=True,
+@click.option("--fix-aspect", "-a", "fixaspect", is_flag=True,
     help="Enforce the same scaling on both axes.")
 @click.option("--logx", is_flag=True, help="Set x-axis to log scale.")
 @click.option("--logy", is_flag=True, help="Set y-axis to log scale.")
@@ -235,7 +235,7 @@ def globalrange(data,kwargs):
 @click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as.")
 @click.option("--fps", type=click.INT, help="Specify frames per second for saving.")
 @click.option("--dpi", type=click.INT, help="DPI (resolution) for output.")
-@click.option("-e", "--edgecolors", type=click.STRING, help="Set color for cell edges.")
+@click.option("--edgecolors", "-e", type=click.STRING, help="Set color for cell edges.")
 @click.option("--showgrid/--no-showgrid", default=True, help="Show grid-lines.")
 @click.option("--collected", is_flag=True,
    help="Animate a dataset that has been collected, i.e. a single dataset with time taken to be the first index.")
@@ -246,7 +246,7 @@ def globalrange(data,kwargs):
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
     help="Number of parallel processes for frame generation.")
 @click.option("--tmpdir", default=None, type=click.STRING, show_default=True,
-    help="Temporary directory for parallel frame generation.")
+    help="Directory to place the temporary directory for parallel frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
