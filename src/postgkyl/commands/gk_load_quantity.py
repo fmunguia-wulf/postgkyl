@@ -162,24 +162,24 @@ def _get_src_gdata_qdict(src, path: str, name: str, species: str, frame: int) ->
 
 @click.command(name="gk-load-quantity")
 @click.option("--quantity", "-q", required=False, type=click.STRING,
-    help="Quantity to plot.")
-@click.option("--alist", is_flag=True, default=False,
-  help="Print out the list of accepted quantities.")
+  help="Quantity to plot.")
+@click.option("--qlist", is_flag=True, default=False,
+  help="List accepted quantities.")
 @click.option("--name", "-n", required=False, type=click.STRING,
-    help="Simulation name prefix (e.g. gk_sheath_2x2v_p1).")
+  help="Simulation name prefix (e.g. gk_sheath_2x2v_p1).")
 @click.option("--species", "-s", required=False, type=click.STRING,
-    help="Species name (e.g. ion or elc).")
+  help="Species name (e.g. ion or elc).")
 @click.option("--frame", "-f", required=False, type=click.STRING,
-    help="Frame number, comma-separated list, or range 'start:stop[:step]'. "
-         "Use ':' for all available frames.")
+  help="Frame number, comma-separated list, or range 'start:stop[:step]'. "
+       "Use ':' for all available frames.")
 @click.option("--path", "-p", default="./", type=click.STRING,
-    help="Directory containing the simulation files.")
+  help="Directory containing the simulation files.")
 @click.option("--tag", "-t", default="default", type=click.STRING,
-    help="Tag for the output dataset.")
+  help="Tag for the output dataset.")
 @click.option("--label", "-l", default=None, type=click.STRING,
-    help="Label override for the output dataset.")
+  help="Label override for the output dataset.")
 @click.option("--extra", "-e", default=None, type=click.STRING,
-    help="Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.")
+  help="Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.")
 @click.pass_context
 def gk_load_quantity(ctx, **kwargs):
   """
@@ -199,16 +199,16 @@ def gk_load_quantity(ctx, **kwargs):
     gdat = load_gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
   """
 
-  if kwargs['alist']:
+  if kwargs['qlist']:
     # Print accepted quantities and exit.
     valid = sorted(gk_quant_registry.keys())
     print(f"Available quantities: {', '.join(valid)}.")
     return
 
-  data = ctx.obj["data"]
-  verb_print(ctx, f"Loading quantity '{kwargs['quantity']}' for {kwargs['name']}")
-
   quantity = kwargs["quantity"]
+
+  data = ctx.obj["data"]
+  verb_print(ctx, f"Loading quantity '{quantity}' for {kwargs['name']}")
 
   if quantity not in gk_quant_registry:
     valid = sorted(gk_quant_registry.keys())
@@ -235,45 +235,68 @@ def gk_load_quantity(ctx, **kwargs):
 
   path = kwargs["path"].rstrip("/") + "/"
 
-  # Determine which source combination and frames to use.
-  src_combo_idx, frames = _choose_source(path, kwargs["name"], kwargs["species"], quant_attr, kwargs["frame"])
-  src_combo, fetch_func = quant_attr["source"][src_combo_idx], quant_attr["fetch_func"][src_combo_idx]
+  # Create species list.
+  species_inp = kwargs["species"]
+  species_list = [s.strip() for s in species_inp.split(",")] if species_inp else [None]
 
-  verb_print(ctx, f"Will compute: {quantity} using source {src_combo_idx}" )
-  verb_print(ctx, f"Frames: {frames}")
+  verb_print(ctx, f"Species: {species_list}")
 
-  for frame in frames:
+  for species in species_list:
+    # Determine which source combination and frames to use for this species.
+    src_combo_idx, frames = _choose_source(path, kwargs["name"], species, quant_attr, kwargs["frame"])
+    src_combo, fetch_func = quant_attr["source"][src_combo_idx], quant_attr["fetch_func"][src_combo_idx]
 
-    # Load required datasets (sources).
-    gdatas = list()
-    for src in src_combo:
-      if isinstance(src, str):
-        gdatas.append(_get_src_gdata_qfile(src, path, kwargs["name"], kwargs["species"], frame))
+    verb_print(ctx, f"  {species}: will compute {quantity} using source {src_combo_idx}, frames {frames}")
+
+    for frame in frames:
+
+      # Load required datasets (sources).
+      gdatas = list()
+      for src in src_combo:
+        if isinstance(src, str):
+          gdatas.append(_get_src_gdata_qfile(src, path, kwargs["name"], species, frame))
+        else:
+          gdatas.append(_get_src_gdata_qdict(src, path, kwargs["name"], species, frame))
+
+      out = fetch_func(gdatas, **user_extra) # Compute quantity.
+
+      # Set label.
+      label_tmpl = quant_attr["label"]
+      default_label = ''
+      if "%s" in label_tmpl:
+        if quantity == "ExB_vel":
+          default_label = label_tmpl % str(user_extra["dir"])
+        else:
+          default_label = label_tmpl % species[0]
       else:
-        gdatas.append(_get_src_gdata_qdict(src, path, kwargs["name"], kwargs["species"], frame))
+        default_label = label_tmpl
 
-    out = fetch_func(gdatas, **user_extra) # Compute quantity.
-
-    # Set label and tag.
-    label_tmpl = quant_attr["label"]
-    if "%s" in label_tmpl:
-      if quantity == "ExB_vel":
-        default_label = label_tmpl % str(user_extra["dir"])
+      out_label = ''
+      if kwargs["label"] is not None:
+        out_label = kwargs["label"]
+        if len(species_list) > 1:
+          out_label += f" {species}"
+        # end
       else:
-        default_label = label_tmpl % kwargs["species"][0] 
-    else:
-      default_label = label_tmpl
-    # end
+        out_label = default_label
 
-    out_label = kwargs["label"] if kwargs["label"] is not None else default_label
+      if len(frames) > 1:
+        out_label += f" f{frame}"
+      # end
 
-    if len(frames) > 1:
-      out_label += f" f{frame}"
-      
-    out.set_tag(kwargs["tag"])
-    out.set_label(out_label)
+      out.set_label(out_label)
 
-    data.add(out) # Push data to stack.
+      # Set tag.
+      out_tag = kwargs["tag"]
+      if len(species_list) > 1:
+        out_tag += f"_{species}"
+      # end
+
+      out.set_tag(out_tag)
+
+      data.add(out) # Push data to stack.
+    # end frame loop
+  # end species loop
 
   verb_print(ctx, f"Finished loading '{quantity}'")
 
