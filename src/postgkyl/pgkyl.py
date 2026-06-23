@@ -134,6 +134,7 @@ def cli(ctx, **kwargs):
 
 
 # Hook the individual commands into pgkyl
+cli.add_command(cmd.config)
 cli.add_command(cmd.activate)
 cli.add_command(cmd.agyro)
 cli.add_command(cmd.mom_agyro)
