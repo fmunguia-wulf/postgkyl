@@ -1,6 +1,7 @@
 import os
+import shutil
 import tempfile
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from multiprocessing import Pool
 from PIL import Image
 import click
@@ -10,6 +11,9 @@ import numpy as np
 
 from postgkyl.utils import verb_print, set_frame
 import postgkyl.output.plot
+
+# Formats written through ffmpeg (PIL cannot produce these video containers).
+VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
 
 
 def _save_frame_worker(args):
@@ -43,7 +47,6 @@ def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
 def _compile_movie(frame_files, output_file, fps, duration):
   """Compile PNG frames into an animation."""
   ext = os.path.splitext(output_file)[1].lower()
-  fps_val = fps if fps else 10
   print(f"Creating {output_file}...")
   if ext in (".gif", ".webp", ".apng"):
     images = [Image.open(f) for f in frame_files]
@@ -51,10 +54,28 @@ def _compile_movie(frame_files, output_file, fps, duration):
         output_file, save_all=True, append_images=images[1:],
         duration=duration, loop=0, optimize=False,
     )
+  elif ext in VIDEO_EXTS:
+    # PIL cannot write video containers; use matplotlib's ffmpeg writer.
+    # duration is in milliseconds per frame, so fall back to it when fps is unset.
+    movie_fps = fps if fps else 1.0e3 / duration
+    writer = FFMpegWriter(fps=movie_fps)
+    first = Image.open(frame_files[0])
+    dpi = 100
+    fig = plt.figure(figsize=(first.width / dpi, first.height / dpi), dpi=dpi)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    with writer.saving(fig, output_file, dpi):
+      for frame_file in frame_files:
+        ax.clear()
+        ax.axis("off")
+        ax.imshow(Image.open(frame_file))
+        writer.grab_frame()
+      # end
+    # end
+    plt.close(fig)
   else:
-    # We do not support other format like .mp4 or .avi.
     raise ValueError(f"Unsupported output format: {ext}")
-    
+
   print(f"{output_file} created.")
 # end
 
@@ -211,7 +232,7 @@ def globalrange(data,kwargs):
 @click.option("--notitle", is_flag=True, help="Do not show title.")
 @click.option("-i", "--interval", default=100, help="Specify the animation interval.")
 @click.option("--save", is_flag=True, help="Save figure as PNG.")
-@click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as. Use .gif please.")
+@click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as.")
 @click.option("--fps", type=click.INT, help="Specify frames per second for saving.")
 @click.option("--dpi", type=click.INT, help="DPI (resolution) for output.")
 @click.option("-e", "--edgecolors", type=click.STRING, help="Set color for cell edges.")
@@ -221,10 +242,11 @@ def globalrange(data,kwargs):
 @click.option("--hashtag", is_flag=True, help="Turns on the pgkyl hashtag!")
 @click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", type=click.STRING,
-    help="Save individual frames as PNGs; also compiles a movie if --save or --saveas is given.")
+    help="Save individual frames as PNGs.")
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
-    help="Number of parallel processes for frame generation. When >1 without --saveframes, "
-         "frames are written to a temp directory, compiled into a movie, then removed.")
+    help="Number of parallel processes for frame generation.")
+@click.option("--tmpdir", default=None, type=click.STRING, show_default=True,
+    help="Temporary directory for parallel frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -232,8 +254,7 @@ def animate(ctx, **kwargs):
   """Animate the actively loaded dataset and show resulting plots in a loop.
 
   Typically, the datasets are loaded using wildcard/regex feature of the -f option to
-  the main pgkyl executable. Saving via --saveframes or --nproc uses Pillow (GIF by
-  default); the interactive FuncAnimation path still requires ffmpeg.
+  the main pgkyl executable.
   """
   verb_print(ctx, "Starting animate")
   data = ctx.obj["data"]
@@ -242,8 +263,18 @@ def animate(ctx, **kwargs):
   if kwargs["saveas"]:
     kwargs["saveas"] = str(kwargs["saveas"])
   # end
-  if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(".gif"):
-    raise click.ClickException("Currently only .gif output is supported for animations; please specify a .gif file with --saveas.")
+  supported_exts = (".gif", ".webp", ".apng") + VIDEO_EXTS
+  if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(supported_exts):
+    raise click.ClickException(
+        "Unsupported output format for --saveas; please use one of: "
+        + ", ".join(supported_exts) + ".")
+  # end
+  # Video containers are written through ffmpeg, which must be on the PATH.
+  if kwargs["saveas"] and kwargs["saveas"].lower().endswith(VIDEO_EXTS) \
+      and shutil.which("ffmpeg") is None:
+    raise click.ClickException(
+        "ffmpeg is required to write " + ", ".join(VIDEO_EXTS) + " files but was "
+        "not found. Please install ffmpeg or choose a .gif output instead.")
   # end
 
   if kwargs["xlim"]:
@@ -287,7 +318,8 @@ def animate(ctx, **kwargs):
     figsize = (int(kwargs["figsize"].split(",")[0]), int(kwargs["figsize"].split(",")[1]))
   # end
 
-  duration = int(1000 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
+  # PIL requires duration in miliseconds.
+  duration = int(1.0e3 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
 
   set_figure = False
   min_size = np.NAN
@@ -345,7 +377,7 @@ def animate(ctx, **kwargs):
         kwargs["show"] = False
       elif kwargs["nproc"] > 1:
         # Parallel: use a temp dir, compile, then clean up.
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
           tmp_prefix = os.path.join(tmpdir, "frame")
           _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
           frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
@@ -394,7 +426,7 @@ def animate(ctx, **kwargs):
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory() as tmpdir:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
@@ -436,7 +468,7 @@ def animate(ctx, **kwargs):
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory() as tmpdir:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
