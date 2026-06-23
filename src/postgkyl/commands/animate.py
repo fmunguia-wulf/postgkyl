@@ -44,10 +44,10 @@ def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
 # end
 
 
-def _compile_movie(frame_files, output_file, fps, duration):
+def _compile_movie(frame_files, output_file, fps, duration, ctx):
   """Compile PNG frames into an animation."""
   ext = os.path.splitext(output_file)[1].lower()
-  verb_print(f"Creating {output_file}...")
+  verb_print(ctx,f"Creating {output_file}...")
   if ext in (".gif", ".webp", ".apng"):
     images = [Image.open(f) for f in frame_files]
     images[0].save(
@@ -76,7 +76,7 @@ def _compile_movie(frame_files, output_file, fps, duration):
   else:
     raise ValueError(f"Unsupported output format: {ext}")
 
-  verb_print(f"{output_file} created.")
+  verb_print(ctx,f"{output_file} created.")
 # end
 
 
@@ -372,7 +372,7 @@ def animate(ctx, **kwargs):
         _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
         if kwargs["save"] or kwargs["saveas"]:
           frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-          _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
         # end
         kwargs["show"] = False
       elif kwargs["nproc"] > 1:
@@ -381,7 +381,7 @@ def animate(ctx, **kwargs):
           tmp_prefix = os.path.join(tmpdir, "frame")
           _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
           frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-          _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
         # end
         kwargs["show"] = False
       else:
@@ -422,7 +422,7 @@ def animate(ctx, **kwargs):
       _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
       if kwargs["save"] or kwargs["saveas"]:
         frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
@@ -430,7 +430,7 @@ def animate(ctx, **kwargs):
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
       # end
       kwargs["show"] = False
     else:
@@ -464,7 +464,7 @@ def animate(ctx, **kwargs):
       _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
       if kwargs["save"] or kwargs["saveas"]:
         frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
@@ -472,7 +472,7 @@ def animate(ctx, **kwargs):
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration)
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
       # end
       kwargs["show"] = False
     else:
