@@ -246,7 +246,7 @@ def globalrange(data,kwargs):
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
     help="Number of parallel processes for frame generation.")
 @click.option("--tmpdir", default=None, type=click.STRING, show_default=True,
-    help="Temporary directory for parallel frame generation.")
+    help="Directory to place the temporary directory for parallel frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
