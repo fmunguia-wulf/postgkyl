@@ -245,6 +245,8 @@ def globalrange(data,kwargs):
     help="Save individual frames as PNGs.")
 @click.option("--nproc", default=1, type=click.INT, show_default=True,
     help="Number of parallel processes for frame generation.")
+@click.option("--tmpdir", default=None, type=click.STRING, show_default=True,
+    help="Temporary directory for parallel frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -375,7 +377,7 @@ def animate(ctx, **kwargs):
         kwargs["show"] = False
       elif kwargs["nproc"] > 1:
         # Parallel: use a temp dir, compile, then clean up.
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
           tmp_prefix = os.path.join(tmpdir, "frame")
           _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
           frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
@@ -424,7 +426,7 @@ def animate(ctx, **kwargs):
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory() as tmpdir:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
@@ -466,7 +468,7 @@ def animate(ctx, **kwargs):
       # end
       kwargs["show"] = False
     elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory() as tmpdir:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
         tmp_prefix = os.path.join(tmpdir, "frame")
         _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
         frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
