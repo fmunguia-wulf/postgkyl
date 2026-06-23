@@ -1,6 +1,7 @@
 import os
+import shutil
 import tempfile
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from multiprocessing import Pool
 from PIL import Image
 import click
@@ -10,6 +11,9 @@ import numpy as np
 
 from postgkyl.utils import verb_print, set_frame
 import postgkyl.output.plot
+
+# Formats written through ffmpeg (PIL cannot produce these video containers).
+VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
 
 
 def _save_frame_worker(args):
@@ -50,10 +54,28 @@ def _compile_movie(frame_files, output_file, fps, duration):
         output_file, save_all=True, append_images=images[1:],
         duration=duration, loop=0, optimize=False,
     )
+  elif ext in VIDEO_EXTS:
+    # PIL cannot write video containers; use matplotlib's ffmpeg writer.
+    # duration is in milliseconds per frame, so fall back to it when fps is unset.
+    movie_fps = fps if fps else 1.0e3 / duration
+    writer = FFMpegWriter(fps=movie_fps)
+    first = Image.open(frame_files[0])
+    dpi = 100
+    fig = plt.figure(figsize=(first.width / dpi, first.height / dpi), dpi=dpi)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    with writer.saving(fig, output_file, dpi):
+      for frame_file in frame_files:
+        ax.clear()
+        ax.axis("off")
+        ax.imshow(Image.open(frame_file))
+        writer.grab_frame()
+      # end
+    # end
+    plt.close(fig)
   else:
-    # We do not support other format like .mp4 or .avi.
     raise ValueError(f"Unsupported output format: {ext}")
-    
+
   print(f"{output_file} created.")
 # end
 
@@ -239,8 +261,18 @@ def animate(ctx, **kwargs):
   if kwargs["saveas"]:
     kwargs["saveas"] = str(kwargs["saveas"])
   # end
-  if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(".gif"):
-    raise click.ClickException("Currently only .gif output is supported for animations; please specify a .gif file with --saveas.")
+  supported_exts = (".gif", ".webp", ".apng") + VIDEO_EXTS
+  if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(supported_exts):
+    raise click.ClickException(
+        "Unsupported output format for --saveas; please use one of: "
+        + ", ".join(supported_exts) + ".")
+  # end
+  # Video containers are written through ffmpeg, which must be on the PATH.
+  if kwargs["saveas"] and kwargs["saveas"].lower().endswith(VIDEO_EXTS) \
+      and shutil.which("ffmpeg") is None:
+    raise click.ClickException(
+        "ffmpeg is required to write " + ", ".join(VIDEO_EXTS) + " files but was "
+        "not found. Please install ffmpeg or choose a .gif output instead.")
   # end
 
   if kwargs["xlim"]:
