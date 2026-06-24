@@ -288,7 +288,7 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   Tperp_vals = vals[..., 3*nb:4*nb]
   temp_vals  = (Tpar_vals + 2.0 * Tperp_vals)/3.0
 
-  press = GData(ctx=gd.ctx)
+  press = GData(ctx=bimax.ctx)
   press.push(bimax.get_grid(), temp_vals.copy())
 
   dgops = GkeyllDGops()

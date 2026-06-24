@@ -51,8 +51,8 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
   frames_avail: set[int] = set()
   combo_idx = 0
   # Check each combination of sources.
-  for cidx in range(len(qattr["source"])):
-    combo = qattr["source"][cidx]
+  for cidx in range(len(qattr.source)):
+    combo = qattr.source[cidx]
     # Check each source for this combo.
     for src in combo:
       if isinstance(src, str) and src in gk_geo_files:
@@ -201,7 +201,7 @@ def gk_load_quantity(ctx, **kwargs):
 
   if kwargs['qlist']:
     # Print accepted quantities and exit.
-    valid = sorted(gk_quant_registry.keys())
+    valid = gk_quant_registry.list()
     print(f"Available quantities: {', '.join(valid)}.")
     return
 
@@ -210,12 +210,12 @@ def gk_load_quantity(ctx, **kwargs):
   data = ctx.obj["data"]
   verb_print(ctx, f"Loading quantity '{quantity}' for {kwargs['name']}")
 
-  if quantity not in gk_quant_registry:
-    valid = sorted(gk_quant_registry.keys())
+  if not gk_quant_registry.has(quantity):
+    valid = gk_quant_registry.list()
     raise ValueError(f"Unknown quantity '{quantity}'. "
                      f"Available quantities: {', '.join(valid)}.")
 
-  quant_attr = gk_quant_registry[quantity]
+  quant_attr = gk_quant_registry.get(quantity)
 
   # Parse --extra into a dict, auto-converting numeric values.
   user_extra = {}
@@ -244,7 +244,7 @@ def gk_load_quantity(ctx, **kwargs):
   for species in species_list:
     # Determine which source combination and frames to use for this species.
     src_combo_idx, frames = _choose_source(path, kwargs["name"], species, quant_attr, kwargs["frame"])
-    src_combo, fetch_func = quant_attr["source"][src_combo_idx], quant_attr["fetch_func"][src_combo_idx]
+    src_combo, fetch_func = quant_attr.source[src_combo_idx], quant_attr.fetch_func[src_combo_idx]
 
     verb_print(ctx, f"  {species}: will compute {quantity} using source {src_combo_idx}, frames {frames}")
 
@@ -261,7 +261,7 @@ def gk_load_quantity(ctx, **kwargs):
       out = fetch_func(gdatas, **user_extra) # Compute quantity.
 
       # Set label.
-      label_tmpl = quant_attr["label"]
+      label_tmpl = quant_attr.label
       default_label = ''
       if "%s" in label_tmpl:
         if quantity == "ExB_vel":
