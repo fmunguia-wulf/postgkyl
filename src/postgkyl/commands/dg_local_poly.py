@@ -31,10 +31,6 @@ def dg_local_poly(ctx, **kwargs):
 
   for dat in data.iterator(kwargs["use"]):
     poly_order = dat.ctx.get("poly_order")
-    if not poly_order == 1:
-        ctx.fail(click.style(
-            "ERROR in dg-local-poly: only data with poly_order=1 is supported.",
-            fg="red"))
 
     if poly_order is None:
       ctx.fail(click.style(
