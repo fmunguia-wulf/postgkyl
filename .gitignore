@@ -4,3 +4,5 @@ dist/
 postgkyl.egg-info/
 src/postgkyl/version.py
 .DS_Store
+.venv
+.new_venv
