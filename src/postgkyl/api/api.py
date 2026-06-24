@@ -141,27 +141,27 @@ the main pgkyl executable.
     Args:
       use: (--use, -u) Specify a tag to plot.
       grouptags: (--grouptags) Group coresponding tagged frames.
-      squeeze: (--squeeze, -s) Squeeze the components into one panel.
+      squeeze: (--squeeze, -p) Squeeze the components into one panel.
       subplots: (--subplots, -b) Make subplots from multiple datasets.
       nSubplotRow: (--nsubplotrow) Manually set the number of rows for subplots.
       nSubplotCol: (--nsubplotcol) Manually set the number of columns for subplots.
       transpose: (--transpose) Transpose axes.
-      contour: (-c, --contour) Make contour plot.
+      contour: (--contour, -c) Make contour plot.
       clevels: (--clevels) Specify levels for contours: either integer or start:end:nlevels
-      quiver: (-q, --quiver) Make quiver plot.
-      streamline: (-l, --streamline) Make streamline plot.
+      quiver: (--quiver, -q) Make quiver plot.
+      streamline: (--streamline, -l) Make streamline plot.
       sdensity: (--sdensity) Control density of the streamlines.
       arrowstyle: (--arrowstyle) Set the style for streamline arrows.
-      group: (-g, --group) Switch to group mode.
-      scatter: (-s, --scatter) Make scatter plot.
+      group: (--group, -g) Switch to group mode.
+      scatter: (--scatter, -s) Make scatter plot.
       markersize: (--markersize) Set marker size for scatter plots.
       linewidth: (--linewidth) Set the linewidth.
       linestyle: (--linestyle) Set the linestyle.
       color: (--color) Set color when available.
       style: (--style) Specify Matplotlib style file (default: Postgkyl).
-      diverging: (-d, --diverging) Switch to diverging colormesh mode.
+      diverging: (--diverging, -d) Switch to diverging colormesh mode.
       arg: (--arg) Additional plotting arguments, e.g., '*--'.
-      fixaspect: (-a, --fix-aspect) Enforce the same scaling on both axes.
+      fixaspect: (--fix-aspect, -a) Enforce the same scaling on both axes.
       logx: (--logx) Set x-axis to log scale.
       logy: (--logy) Set y-axis to log scale.
       logz: (--logz) Set values of 2D plot to log scale.
@@ -195,14 +195,14 @@ the main pgkyl executable.
       saveas: (--saveas) Name to save the plot as.
       fps: (--fps) Specify frames per second for saving.
       dpi: (--dpi) DPI (resolution) for output.
-      edgecolors: (-e, --edgecolors) Set color for cell edges.
+      edgecolors: (--edgecolors, -e) Set color for cell edges.
       showgrid: (--showgrid) Show grid-lines.
       collected: (--collected) Animate a dataset that has been collected, i.e. a single dataset with time taken to be the first index.
       hashtag: (--hashtag) Turns on the pgkyl hashtag!
       show: (--show) Turn showing of the plot ON and OFF.
       saveframes: (--saveframes) Save individual frames as PNGs.
       nproc: (--nproc) Number of parallel processes for frame generation.
-      tmpdir: (--tmpdir) Temporary directory for parallel frame generation.
+      tmpdir: (--tmpdir) Directory to place the temporary directory for parallel frame generation.
       figsize: (--figsize) Comma-separated values for x and y size.
       multiblock: (-m, --multiblock) Plots blocks from each frame together
     """
