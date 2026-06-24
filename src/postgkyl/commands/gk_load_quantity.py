@@ -52,19 +52,19 @@ def gk_load_quantity(ctx, **kwargs):
     return
 
   data = ctx.obj["data"]
-  verb_print(ctx, f"Loading quantity '{kwargs["quantity"]}' for {kwargs['name']}")
+  verb_print(ctx, f"Loading quantity {kwargs['quantity']} for {kwargs['name']}")
 
-  if not gk_quant_registry.has(kwargs["quantity"]):
+  if not gk_quant_registry.has(kwargs['quantity']):
     valid = gk_quant_registry.list()
     raise ValueError(f"Unknown quantity '{kwargs['quantity']}'. "
                      f"Available quantities: {', '.join(valid)}.")
 
-  gkquant = gk_quant_registry.get(kwargs["quantity"])
+  gkquant = gk_quant_registry.get(kwargs['quantity'])
 
   # Parse --extra into a dict, auto-converting numeric values.
   user_extra = {}
-  if kwargs.get("extra"):
-    for pair in kwargs["extra"].split(","):
+  if kwargs.get('extra'):
+    for pair in kwargs['extra'].split(","):
       key, _, val = pair.partition("=")
       key = key.strip()
       val = val.strip()
@@ -77,31 +77,31 @@ def gk_load_quantity(ctx, **kwargs):
           pass
       user_extra[key] = val
 
-  path = kwargs["path"].rstrip("/") + "/"
+  path = kwargs['path'].rstrip("/") + "/"
 
   # Create species list.
-  species_inp = kwargs["species"]
+  species_inp = kwargs['species']
   species_list = [s.strip() for s in species_inp.split(",")] if species_inp else [None]
 
   verb_print(ctx, f"Species: {species_list}")
 
   for species in species_list:
     # Determine which source combination and frames to use for this species.
-    src_combo_idx, frames = gkquant.choose_source(path, kwargs["name"], species, kwargs["frame"])
+    src_combo_idx, frames = gkquant.choose_source(path, kwargs['name'], species, kwargs['frame'])
 
     verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
 
     for frame in frames:
 
       # Load required datasets (sources) and compute the quantity.
-      out = gkquant.fetch(path, kwargs["name"], species, frame, src_combo_idx, **user_extra)
+      out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
 
       # Set label.
       default_label = gkquant.get_label(species=species[0], direction=user_extra.get("dir", ''))
 
       out_label = ''
-      if kwargs["label"] is not None:
-        out_label = kwargs["label"]
+      if kwargs['label'] is not None:
+        out_label = kwargs['label']
         if len(species_list) > 1:
           out_label += f" {species}"
         # end
@@ -115,7 +115,7 @@ def gk_load_quantity(ctx, **kwargs):
       out.set_label(out_label)
 
       # Set tag.
-      out_tag = kwargs["tag"]
+      out_tag = kwargs['tag']
       if len(species_list) > 1:
         out_tag += f"_{species}"
       # end
