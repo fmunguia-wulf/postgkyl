@@ -64,8 +64,8 @@ gk_conf_frame_files = [
   "apar", # Parallel component of the magnetic field vector.
 ]
 
+# Instance that will hold all available gyrokinetic quantities.
 gk_quant_registry: GkQuantityRegistry = GkQuantityRegistry()
-
 
 # Covariant components of magnetic field unit vector (interior).
 _geo_int_b_i : GkQuantity = GkQuantity(
