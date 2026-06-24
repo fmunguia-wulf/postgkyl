@@ -8,7 +8,7 @@ from collections.abc import Iterable, Iterator
 import click
 
 from postgkyl.data import GData
-from postgkyl.utils.gk_quantities.registry import gk_quant_registry, gk_conf_frame_files, gk_geo_files
+from postgkyl.utils.gk_quantities.registry import gk_quant_registry, gk_conf_frame_files, gk_geo_files, GkQuantity
 from postgkyl.utils import verb_print
 
 def _iter_existing_files(stem: str, frames: Iterable[int]) -> Iterator[str]:
@@ -42,7 +42,7 @@ def _get_avail_frames_qfile(path, name, species, qname, **kwargs):
   # end
   return frames_avail
 
-def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
+def _get_src_combo_and_frames(path : str, name : str, species : str, gkquant : GkQuantity, **kwargs):
   """
   Create a set of available frames for the files <path><name>-<species>_<dependency>_#.gkyl
   that the quantity whose attribute dictionary depends on.
@@ -51,8 +51,8 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
   frames_avail: set[int] = set()
   combo_idx = 0
   # Check each combination of sources.
-  for cidx in range(len(qattr.source)):
-    combo = qattr.source[cidx]
+  for cidx in range(len(gkquant.source)):
+    combo = gkquant.source[cidx]
     # Check each source for this combo.
     for src in combo:
       if isinstance(src, str) and src in gk_geo_files:
@@ -97,7 +97,7 @@ def _get_src_combo_and_frames(path, name, species, qattr, **kwargs):
 
   return combo_idx, frames_avail
 
-def _choose_source(path: str, name: str, species: str, quant_attr: dict, frame_inp: str | None) -> list[int]:
+def _choose_source(path: str, name: str, species: str, gkquant: GkQuantity, frame_inp: str | None) -> list[int]:
   """Identify source combination and frames needed to get the requested quantity."""
 
   frame_list = list()
@@ -110,7 +110,7 @@ def _choose_source(path: str, name: str, species: str, quant_attr: dict, frame_i
   # end
 
   # Discover available frames from any of the possible source combinations.
-  combo_idx, frames_avail = _get_src_combo_and_frames(path, name, species, quant_attr, frames=frame_list)
+  combo_idx, frames_avail = _get_src_combo_and_frames(path, name, species, gkquant, frames=frame_list)
 
   if not frames_avail:
     raise FileNotFoundError(f"No files found for the requested quantity "
@@ -140,14 +140,14 @@ def _get_src_gdata_qfile(src: str, path: str, name: str, species: str, frame: in
     file_name = f"{path}{name}-{species}_{src}_{frame}.gkyl"
   return GData(file_name)
 
-def _get_src_gdata_qdict(src, path: str, name: str, species: str, frame: int) -> GData:
-  """Get the populated Gdata for a soucce, assuming it is a either a dictionary or a string."""
+def _get_src_gdata(src: str | GkQuantity, path: str, name: str, species: str, frame: int) -> GData:
+  """Get the populated Gdata for a soucce, assuming it is a either a GkQuantity or a string."""
   if isinstance(src, str):
     return _get_src_gdata_qfile(src, path, name, species, frame)
   else:
     src_combo_idx, _ = _choose_source(path, name, species, src, str(frame))
 
-    src_combo, fetch_func = src["source"][src_combo_idx], src["fetch_func"][src_combo_idx]
+    src_combo, fetch_func = src.source[src_combo_idx], src.fetch_func[src_combo_idx]
 
     # Loop over sources in combo.
     derived_src_gdata = list()
@@ -155,7 +155,7 @@ def _get_src_gdata_qdict(src, path: str, name: str, species: str, frame: int) ->
       if isinstance(derived_src, str):
         derived_src_gdata.append(_get_src_gdata_qfile(derived_src, path, name, species, frame))
       else:
-        derived_src_gdata.append(_get_src_gdata_qdict(derived_src, path, name, species, frame))
+        derived_src_gdata.append(_get_src_gdata(derived_src, path, name, species, frame))
 
     out = fetch_func(derived_src_gdata)
     return out
@@ -205,17 +205,15 @@ def gk_load_quantity(ctx, **kwargs):
     print(f"Available quantities: {', '.join(valid)}.")
     return
 
-  quantity = kwargs["quantity"]
-
   data = ctx.obj["data"]
-  verb_print(ctx, f"Loading quantity '{quantity}' for {kwargs['name']}")
+  verb_print(ctx, f"Loading quantity '{kwargs["quantity"]}' for {kwargs['name']}")
 
-  if not gk_quant_registry.has(quantity):
+  if not gk_quant_registry.has(kwargs["quantity"]):
     valid = gk_quant_registry.list()
-    raise ValueError(f"Unknown quantity '{quantity}'. "
+    raise ValueError(f"Unknown quantity '{kwargs['quantity']}'. "
                      f"Available quantities: {', '.join(valid)}.")
 
-  quant_attr = gk_quant_registry.get(quantity)
+  gkquant = gk_quant_registry.get(kwargs["quantity"])
 
   # Parse --extra into a dict, auto-converting numeric values.
   user_extra = {}
@@ -243,33 +241,20 @@ def gk_load_quantity(ctx, **kwargs):
 
   for species in species_list:
     # Determine which source combination and frames to use for this species.
-    src_combo_idx, frames = _choose_source(path, kwargs["name"], species, quant_attr, kwargs["frame"])
-    src_combo, fetch_func = quant_attr.source[src_combo_idx], quant_attr.fetch_func[src_combo_idx]
+    src_combo_idx, frames = _choose_source(path, kwargs["name"], species, gkquant, kwargs["frame"])
+    src_combo, fetch_func = gkquant.source[src_combo_idx], gkquant.fetch_func[src_combo_idx]
 
-    verb_print(ctx, f"  {species}: will compute {quantity} using source {src_combo_idx}, frames {frames}")
+    verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
 
     for frame in frames:
 
       # Load required datasets (sources).
-      gdatas = list()
-      for src in src_combo:
-        if isinstance(src, str):
-          gdatas.append(_get_src_gdata_qfile(src, path, kwargs["name"], species, frame))
-        else:
-          gdatas.append(_get_src_gdata_qdict(src, path, kwargs["name"], species, frame))
+      gdatas = [_get_src_gdata(src, path, kwargs["name"], species, frame) for src in src_combo]
 
       out = fetch_func(gdatas, **user_extra) # Compute quantity.
 
       # Set label.
-      label_tmpl = quant_attr.label
-      default_label = ''
-      if "%s" in label_tmpl:
-        if quantity == "ExB_vel":
-          default_label = label_tmpl % str(user_extra["dir"])
-        else:
-          default_label = label_tmpl % species[0]
-      else:
-        default_label = label_tmpl
+      default_label = gkquant.get_label(species=species[0], direction=user_extra.get("dir", ''))
 
       out_label = ''
       if kwargs["label"] is not None:
@@ -298,5 +283,5 @@ def gk_load_quantity(ctx, **kwargs):
     # end frame loop
   # end species loop
 
-  verb_print(ctx, f"Finished loading '{quantity}'")
+  verb_print(ctx, f"Finished loading '{gkquant.name}'")
 

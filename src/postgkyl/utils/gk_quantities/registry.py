@@ -92,6 +92,15 @@ class GkQuantity:
     self.is_species_dep = is_species_dep
     self.is_vector = is_vector
 
+  def get_label(self, species=None, direction=None):
+    """Get the label for the quantity, replacing %s with species name or direction."""
+    if self.is_vector and direction is not None:
+      return self.label % str(direction)
+    elif self.is_species_dep and species is not None:
+      return self.label % species[0]
+    else:
+      return self.label
+
 class GkQuantityRegistry:
   """Registry of pre-named gyrokinetic quantities.
 
