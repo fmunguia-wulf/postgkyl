@@ -1,9 +1,7 @@
-"""Registry of pre-named gyrokinetic quantities.
+"""
+Registry of pre-named gyrokinetic quantities.
 
-Each entry maps a quantity name to a dict with:
-  - source: list of file combinations to try.
-  - fetch_func: corresponding fetch function for each file combo.
-  - label: default matplotlib label ('%s' is replaced by species name)
+Each entry is an instance of the GkQuantity class.
 """
 
 import postgkyl.utils.gk_quantities.fetch_funcs as ff

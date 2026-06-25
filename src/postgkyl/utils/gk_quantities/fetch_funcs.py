@@ -284,9 +284,10 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   nb = _get_num_basis_from_gdata(bimax)
   vals = bimax.get_values()
 
+  mass = bimax.ctx["mass"]
   Tpar_vals  = vals[..., 2*nb:3*nb]
   Tperp_vals = vals[..., 3*nb:4*nb]
-  temp_vals  = (Tpar_vals + 2.0 * Tperp_vals)/3.0
+  temp_vals  = mass*(Tpar_vals + 2.0 * Tperp_vals)/3.0
 
   press = GData(ctx=bimax.ctx)
   press.push(bimax.get_grid(), temp_vals.copy())

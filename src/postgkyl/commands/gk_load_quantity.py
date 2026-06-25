@@ -1,6 +1,3 @@
-"""
-Loading pre-named gyrokinetic quantities.
-"""
 import click
 
 from postgkyl.utils.gk_quantities.registry import gk_quant_registry
