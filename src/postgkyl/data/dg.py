@@ -51,7 +51,6 @@ def _get_basis_p(num_dim, num_comp):
   # end
   return basis, poly_order
 
-
 def _getnum_nodes(dim, poly_order, basis_type):
   if basis_type.lower() == "serendipity":
     num_nodes = num_nodesSerendipity[dim - 1, poly_order]
@@ -74,6 +73,9 @@ def _getnum_nodes(dim, poly_order, basis_type):
   # end
   return num_nodes
 
+def get_num_basis(dim, poly_order, basis_type) -> int:
+  # Return the number of nodes for a dimensionality, basis type and poly order.
+  return _getnum_nodes(dim, poly_order, basis_type)
 
 def _loadInterpMatrix(dim, poly_order, basis_type, interp, read, modal, c2p=False):
   if (interp is not None and read is None) or c2p:
