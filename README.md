@@ -105,6 +105,16 @@ Note that ADIOS2 is not available on PyPI for Mac OSX; therefore, Mac users who
 want to use it need to install the dependency from elsewhere, for example, using
 the above-mentioned `mamba` and then do *not* use the `adios` tag with `pip`.
 
+#### Optional path to Gkeyll
+
+Some features require telling postgkyl the location of the `core` library
+of [Gkeyll](https://github.com/ammarhakim/gkeyll). After installing postgkyl you
+can optionally write a postgkyl `config` file storing the location of Gkeyll's
+`gkylsoft/` installation library by invoking the postgkyl config command, e.g.
+```
+pgkyl config -g <path_to_gkylsoft>/gkylsoft/ -c ~/.postgkyl/gkylsoft_path
+```
+
 ## Testing
 
 Postgkyl utilizes [pytest](https://docs.pytest.org/) for testing. The tests can

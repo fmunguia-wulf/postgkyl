@@ -1,4 +1,5 @@
 from postgkyl.commands.data_space import DataSpace
+from postgkyl.commands.config import config
 
 from postgkyl.commands import ev_cmd
 
@@ -33,6 +34,7 @@ from postgkyl.commands.gk_energy_balance import gk_energy_balance
 from postgkyl.commands.gk_distf import load_gk_distf
 from postgkyl.commands.gk_distf import gk_distf
 from postgkyl.commands.dg_local_poly import dg_local_poly
+from postgkyl.commands.gk_load_quantity import gk_load_quantity
 from postgkyl.commands.gk_particle_balance import gk_particle_balance
 from postgkyl.commands.perprotate import perprotate
 from postgkyl.commands.plot import plot
