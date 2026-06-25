@@ -487,7 +487,7 @@ def fetch_gradB_vel(gdatas, **kwargs):
 def fetch_diamag_vel(gdatas, **kwargs):
   """
   A component of the diamagnetic drift velocity
-    v_diamag,k = \mathbf{v}{Ds} = \frac{1}{q n} \, \mathbf{b} \times \nabla p\perp / B
+    v_diamag,k = 1 / (q n) epsilon_{ijk} b_i * d(pperp)/dx^j / (J B)
   where epsilon_{ijk} is the Levi-Civitta tensor, q the species charge,
   and gdatas has (in this order):
     1/(J*B): inv. total Jacobian (jacobtot_inv).
