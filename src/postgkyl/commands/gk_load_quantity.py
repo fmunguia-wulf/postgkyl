@@ -1,6 +1,3 @@
-"""
-Loading pre-named gyrokinetic quantities.
-"""
 import click
 
 from postgkyl.utils.gk_quantities.registry import gk_quant_registry
@@ -87,7 +84,7 @@ def gk_load_quantity(ctx, **kwargs):
 
   for species in species_list:
     # Determine which source combination and frames to use for this species.
-    src_combo_idx, frames = gkquant.choose_source(path, kwargs['name'], species, kwargs['frame'])
+    src_combo_idx, frames = gkquant.get_avail_source(path, kwargs['name'], species, kwargs['frame'])
 
     verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
 
@@ -97,7 +94,7 @@ def gk_load_quantity(ctx, **kwargs):
       out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
 
       # Set label.
-      default_label = gkquant.get_label(species=species[0], direction=user_extra.get("dir", ''))
+      default_label = gkquant.get_label(species=species, direction=user_extra.get("dir", None))
 
       out_label = ''
       if kwargs['label'] is not None:

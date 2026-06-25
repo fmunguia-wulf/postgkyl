@@ -4,7 +4,8 @@ import os
 from postgkyl.data import GData
 
 class GkQuantity:
-  """Class for a gyrokinetic quantity.
+  """
+  Class for a gyrokinetic quantity.
 
   Attributes:
     name: Name of the quantity.
@@ -40,18 +41,13 @@ class GkQuantity:
     self.is_integrated = is_integrated
     self.is_geo = is_geo
 
-  def get_label(self, species : str | None = None, direction : str | None = None) -> str:
-    """Get the label for the quantity, replacing %s with species name or direction."""
-    if self.is_vector and direction is not None:
-      return self.label % str(direction)
-    elif self.is_species_dep and species is not None:
-      return self.label % species[0]
-    else:
-      return self.label
+  # Internal methods.
 
-  def src_stem(self, path : str, name : str, species : str, src : str) -> str:
-    """Stem of the file name for a string source, including the trailing
-    separator before the frame number (geo files have no frame, so no separator)."""
+  def _src_stem(self, path : str, name : str, species : str, src : str) -> str:
+    """
+    Stem of the file name for a string source, including the trailing
+    separator before the frame number (geo files have no frame, so no separator).
+    """
     if self.is_geo:
       return os.path.join(path, f"{name}-{src}")
     elif self.is_species_dep:
@@ -59,20 +55,22 @@ class GkQuantity:
     else:
       return os.path.join(path, f"{name}-{src}_")
 
-  def src_file_name(self, path : str, name : str, species : str, src : str,
+  def _src_file_name(self, path : str, name : str, species : str, src : str,
                     frame : int | None) -> str:
     """Full file name for a string source at the given frame."""
     if self.is_geo:
-      return f"{self.src_stem(path, name, species, src)}.gkyl"
+      return f"{self._src_stem(path, name, species, src)}.gkyl"
     else:
-      return f"{self.src_stem(path, name, species, src)}{frame}.gkyl"
+      return f"{self._src_stem(path, name, species, src)}{frame}.gkyl"
 
-  def avail_frames_src(self, path : str, name : str, species : str, src : str,
+  def _avail_frames_src(self, path : str, name : str, species : str, src : str,
                        frames : list[int] | None = None) -> set[int]:
-    """Set of available frames for a string source's file <stem><frame>.gkyl.
-    Optionally restrict the search to the given list of frames."""
+    """
+    Set of available frames for a string source's file <stem><frame>.gkyl.
+    Optionally restrict the search to the given list of frames.
+    """
     frames_avail : set[int] = set()
-    stem = self.src_stem(path, name, species, src)
+    stem = self._src_stem(path, name, species, src)
 
     if frames:
       candidates = (f"{stem}{f}.gkyl" for f in frames if os.path.isfile(f"{stem}{f}.gkyl"))
@@ -85,11 +83,13 @@ class GkQuantity:
         frames_avail.add(int(suffix))
     return frames_avail
 
-  def avail_combo_frames(self, path : str, name : str, species : str,
+  def _avail_combo_frames(self, path : str, name : str, species : str,
                          frames : list[int] | None = None) -> tuple[int, set[int]]:
-    """Find the first source combination whose files all exist and share the
+    """
+    Find the first source combination whose files all exist and share the
     same set of available frames. Returns (combo index, available frames).
-    A combination made up only of geo files is flagged with {-1}."""
+    A combination made up only of geo files is flagged with {-1}.
+    """
     frames_avail : set[int] = set()
     combo_idx = 0
     # Check each combination of sources.
@@ -104,9 +104,9 @@ class GkQuantity:
           continue
 
         if isinstance(src, str):
-          frames_avail_q = self.avail_frames_src(path, name, species, src, frames)
+          frames_avail_q = self._avail_frames_src(path, name, species, src, frames)
         else:
-          _, frames_avail_q = src.avail_combo_frames(path, name, species, frames)
+          _, frames_avail_q = src._avail_combo_frames(path, name, species, frames)
 
         if frames_avail_q == {-1}:
           # Source is a geo-only quantity: doesn't constrain frames, just needs to exist.
@@ -136,11 +136,30 @@ class GkQuantity:
 
     return combo_idx, frames_avail
 
-  def choose_source(self, path : str, name : str, species : str,
+  # Public methods.
+
+  def get_label(self, species : str | None = None, direction : str | None = None) -> str:
+    """Get the label for the quantity, replacing %s with species name or direction."""
+    if self.is_vector:
+      if direction is not None:
+        return self.label % str(direction)
+      else:
+        return self.label % 'i'
+    elif self.is_species_dep:
+      if species is not None:
+        return self.label % str(species[0])
+      else:
+        return self.label % 's'
+    else:
+      return self.label
+
+  def get_avail_source(self, path : str, name : str, species : str,
                     frame_inp : str | None) -> tuple[int, list[int | None]]:
-    """Identify the source combination and list of frames needed to get this
+    """
+    Identify the source combination and list of frames needed to get this
     quantity. frame_inp may be a single frame, a comma-separated list, or a
-    'start:stop[:step]' range (None or ':' means all available frames)."""
+    'start:stop[:step]' range (None or ':' means all available frames).
+    """
     frame_list : list[int] = []
     if frame_inp is not None:
       frame_inp = frame_inp.strip()
@@ -150,7 +169,7 @@ class GkQuantity:
         frame_list = [int(frame_inp)]
 
     # Discover available frames from any of the possible source combinations.
-    combo_idx, frames_avail = self.avail_combo_frames(path, name, species, frame_list)
+    combo_idx, frames_avail = self._avail_combo_frames(path, name, species, frame_list)
 
     if not frames_avail:
       raise FileNotFoundError(f"No files found for the requested quantity "
@@ -172,31 +191,36 @@ class GkQuantity:
     return combo_idx, frame_list
 
   def get_src_gdata(self, src : "str | GkQuantity", path : str, name : str,
-                    species : str, frame : int | None) -> GData:
-    """Get the populated GData for a source, which is either a string (file
-    name) or a GkQuantity (computed from its own sources)."""
+                    species : str, frame : int | None, **extra) -> GData:
+    """
+    Get the populated GData for a source, which is either a string (file
+    name) or a GkQuantity (computed from its own sources).
+    """
     if isinstance(src, str):
-      return GData(self.src_file_name(path, name, species, src, frame))
+      return GData(self._src_file_name(path, name, species, src, frame))
 
     # src is a GkQuantity: resolve its own source combination and compute it.
-    combo_idx, _ = src.choose_source(path, name, species, str(frame))
+    combo_idx, _ = src.get_avail_source(path, name, species, str(frame))
     combo = src.source[combo_idx]
     fetch_func = src.fetch_func[combo_idx]
-    gdatas = [src.get_src_gdata(s, path, name, species, frame) for s in combo]
-    return fetch_func(gdatas)
+    gdatas = [src.get_src_gdata(s, path, name, species, frame, **extra) for s in combo]
+    return fetch_func(gdatas, **extra)
 
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
-    """Load this quantity's sources for the given combination and frame, then
-    compute and return the resulting GData."""
+    """
+    Load this quantity's sources for the given combination and frame, then
+    compute and return the resulting GData.
+    """
     combo = self.source[combo_idx]
     fetch_func = self.fetch_func[combo_idx]
-    gdatas = [self.get_src_gdata(src, path, name, species, frame) for src in combo]
+    gdatas = [self.get_src_gdata(src, path, name, species, frame, **extra) for src in combo]
     return fetch_func(gdatas, **extra)
 
 
 class GkQuantityRegistry:
-  """Registry of pre-named gyrokinetic quantities.
+  """
+  Registry of pre-named gyrokinetic quantities.
 
   Attributes:
     registry: Dictionary mapping quantity names to GkQuantity objects.
