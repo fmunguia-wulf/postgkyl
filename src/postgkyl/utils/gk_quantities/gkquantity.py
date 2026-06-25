@@ -140,10 +140,18 @@ class GkQuantity:
 
   def get_label(self, species : str | None = None, direction : str | None = None) -> str:
     """Get the label for the quantity, replacing %s with species name or direction."""
-    if self.is_vector and direction is not None:
-      return self.label % str(direction)
-    elif self.is_species_dep and species is not None:
-      return self.label % species[0]
+    print(f"get_label: species={species}, direction={direction}")
+    print(f"self.label={self.label}, self.is_vector={self.is_vector}, self.is_species_dep={self.is_species_dep}")
+    if self.is_vector:
+      if direction is not None:
+        return self.label % str(direction)
+      else:
+        return self.label % 'i'
+    elif self.is_species_dep:
+      if species is not None:
+        return self.label % str(species[0])
+      else:
+        return self.label % 's'
     else:
       return self.label
 

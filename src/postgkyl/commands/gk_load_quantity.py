@@ -94,7 +94,7 @@ def gk_load_quantity(ctx, **kwargs):
       out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
 
       # Set label.
-      default_label = gkquant.get_label(species=species[0], direction=user_extra.get("dir", ''))
+      default_label = gkquant.get_label(species=species, direction=user_extra.get("dir", None))
 
       out_label = ''
       if kwargs['label'] is not None:
