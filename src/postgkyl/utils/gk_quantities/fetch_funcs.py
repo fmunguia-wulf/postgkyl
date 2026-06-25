@@ -30,8 +30,6 @@ def _get_ctx_val(gdata : GData, key : str, **kwargs):
   elif key in kwargs:
     return kwargs[key]
   else:
-    # print(f"gdata.ctx: {gdata.ctx}")
-    print(f"kwargs: {kwargs}")
     raise KeyError(f"fetch function: context key '{key}' not found in GData. Pass it as '--extra {key}=<value>'.")
 
 def _get_num_basis_from_gdata(gdata) -> int:
