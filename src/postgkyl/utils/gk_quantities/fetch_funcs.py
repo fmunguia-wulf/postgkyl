@@ -135,7 +135,7 @@ def _make_fetch_sick_div_sjcl(si: int, ck: int, sj: int, cl: int):
   fetch.__name__ = f"fetch_s{si}c{ck}_div_s{sj}c{cl}"
   return fetch
 
-def _b_cross_grad_over_B_component(scalar, jacobtot_inv, b_i, comp):
+def _b_cross_grad_div_B_component(scalar, jacobtot_inv, b_i, comp):
   """
   The comp-th component of the cross product b x grad(f)
     (b x grad f)_k / B = epsilon_{ijk} * b_i * d(f)/dx^j / (J B)
@@ -441,7 +441,7 @@ def fetch_ExB_vel(gdatas, **kwargs):
   phi = gdatas[3]
 
   # k-th component of b x grad(phi)/B.
-  out = _b_cross_grad_over_B_component(phi, jacobtot_inv, b_i, kwargs["dir"])
+  out = _b_cross_grad_div_B_component(phi, jacobtot_inv, b_i, kwargs["dir"])
 
   return out
 
@@ -467,7 +467,7 @@ def fetch_gradB_vel(gdatas, **kwargs):
   Tperp = gdatas[3]
 
   # k-th component of b x grad(B)/B.
-  out = _b_cross_grad_over_B_component(bmag, jacobtot_inv, b_i, kwargs["dir"])
+  out = _b_cross_grad_div_B_component(bmag, jacobtot_inv, b_i, kwargs["dir"])
 
   dgops = GkeyllDGops()
   # Multiply by Tperp.
@@ -507,7 +507,7 @@ def fetch_diamag_vel(gdatas, **kwargs):
   pressperp = gdatas[4]
 
   # k-th component of b x grad(p) / B.
-  out = _b_cross_grad_over_B_component(pressperp, jacobtot_inv, b_i, kwargs["dir"])
+  out = _b_cross_grad_div_B_component(pressperp, jacobtot_inv, b_i, kwargs["dir"])
 
   dgops = GkeyllDGops()
   # Divide by n
