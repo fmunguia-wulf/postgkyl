@@ -9,11 +9,11 @@ from click import Tuple
 import numpy as np
 import postgkyl as pg
 import pyvista as pv
-from .latex_conversion import latex_to_unicode
-from .nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
-from .axis_and_grid_prep import axis_and_grid_prep
-from .load_plot_data import load_plot_data
-from .downsample import downsample
+from postgkyl.utils.latex_conversion import latex_to_unicode
+from postgkyl.utils import nodal_to_cell_centered_grid
+from postgkyl.utils import axis_and_grid_prep
+from postgkyl.utils import load_plot_data
+from postgkyl.utils import downsample
 
 def pyvista(data: pg.GData | Tuple[list, np.ndarray], args: list = (),
     show: bool = True, spin: bool = True, max_points_per_axis: int = -1, contour_levels: int = 10,

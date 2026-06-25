@@ -1,4 +1,4 @@
-"""Unit tests for helper utilities in postgkyl.output."""
+"""Unit tests for helper utilities in postgkyl.utils."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ import importlib
 import numpy as np
 
 import postgkyl as pg
-from postgkyl.output.axis_and_grid_prep import axis_and_grid_prep
-from postgkyl.output.downsample import downsample
-from postgkyl.output.latex_conversion import latex_to_html, latex_to_unicode
-from postgkyl.output.load_plot_data import load_plot_data
-from postgkyl.output.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+from postgkyl.utils.axis_and_grid_prep import axis_and_grid_prep
+from postgkyl.utils.downsample import downsample
+from postgkyl.utils.latex_conversion import latex_to_html, latex_to_unicode
+from postgkyl.utils.load_plot_data import load_plot_data
+from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 
-load_plot_data_module = importlib.import_module("postgkyl.output.load_plot_data")
+load_plot_data_module = importlib.import_module("postgkyl.utils.load_plot_data")
 
 
 class _FakeGData:
@@ -204,9 +204,9 @@ def test_axis_and_grid_prep_quiver_component_stride_and_lineout_xlabel():
   assert xlabel == r"$z_1$"
 
 
-def test_output_module_exports_helpers():
-  assert pg.output.downsample is downsample
-  assert pg.output.nodal_to_cell_centered_grid is nodal_to_cell_centered_grid
+def test_utils_module_exports_helpers():
+  assert pg.utils.downsample is downsample
+  assert pg.utils.nodal_to_cell_centered_grid is nodal_to_cell_centered_grid
 
 
 def test_latex_to_unicode_converts_common_commands():

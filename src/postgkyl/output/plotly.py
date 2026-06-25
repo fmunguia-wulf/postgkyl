@@ -13,11 +13,11 @@ import os.path
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .axis_and_grid_prep import axis_and_grid_prep
-from .latex_conversion import latex_to_html
-from .load_plot_data import load_plot_data
-from .downsample import downsample
-from .nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+from postgkyl.utils import axis_and_grid_prep
+from postgkyl.utils.latex_conversion import latex_to_html
+from postgkyl.utils import load_plot_data
+from postgkyl.utils import downsample
+from postgkyl.utils import nodal_to_cell_centered_grid
 from postgkyl.data.idx_parser import idx_parser as parse_idx
 from postgkyl.data.select import select as data_select
 if TYPE_CHECKING:

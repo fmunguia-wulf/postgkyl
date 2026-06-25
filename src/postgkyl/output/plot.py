@@ -11,9 +11,9 @@ import matplotlib.figure
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
-from .nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
-from .axis_and_grid_prep import axis_and_grid_prep
-from .load_plot_data import load_plot_data
+from postgkyl.utils import nodal_to_cell_centered_grid
+from postgkyl.utils import axis_and_grid_prep
+from postgkyl.utils import load_plot_data
 
 if TYPE_CHECKING:
   from postgkyl import GData

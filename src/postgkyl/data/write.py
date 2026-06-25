@@ -176,7 +176,7 @@ def write(self, out_name: str = "",
     # To plot Gkeyll data in virtual reality (VR). Maxwell Rosen reccomends
     # Outputtng data in .vts format and importing it into Paraview, which has a VR interface.
     import pyvista as pv
-    from postgkyl.output.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+    from postgkyl.utils import nodal_to_cell_centered_grid
 
     n_grid = nodal_to_cell_centered_grid(self.get_grid(), num_cells, meshgrid=True)
     if num_dims == 1:
