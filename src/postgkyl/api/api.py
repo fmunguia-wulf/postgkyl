@@ -285,23 +285,20 @@ activating/deactivating multiple datasets.
 
   def dg_local_poly(self,
       use: str | None = None,
-      eps: float = 0.01,
-      pointspercell: int = 2):
+      npoints: int = 2):
     """Generate a discontinuous DG polynomial cellwise representation of the data.
-The modal DG decomposition is evaluated at two points per cell, each located
-just inside a cell interface (slightly interior, controlled by --eps). A NaN
-is inserted between every couple of points so that, when plotted, the curve is
-broken at each interface and the inter-cell discontinuities of the DG solution
+The modal DG decomposition is evaluated with npoints per cell from one face
+to the other. A NaN is inserted at every cell interface so that, when plotted,
+the curve is broken at each interface and the inter-cell discontinuities of the DG solution
 are visible.
 Example (1D plot of the M0 moment along x at frame 0):
-  pgkyl prefix-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
+  pgkyl sim_3x2v_p1-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
 
     Args:
       use: (--use, -u) Specify a 'tag' to apply to (default all tags).
-      eps: (--eps) Fraction of the half-cell width by which the evaluation point is moved inside from each cell interface (must be in [0, 1]).
-      pointspercell: (--pointspercell) Number of evaluation points per cell.
+      npoints: (--npoints, -n) Number of evaluation points per cell.
     """
-    return self._run(_cmd("dg-local-poly"), use=use, eps=eps, pointspercell=pointspercell)
+    return self._run(_cmd("dg-local-poly"), use=use, npoints=npoints)
 
   def differentiate(self,
       basis_type: Literal['ms', 'ns', 'mo'] | None = None,
