@@ -10,16 +10,41 @@ from .gkquantity import GkQuantity, GkQuantityRegistry
 # Instance that will hold all available gyrokinetic quantities.
 gk_quant_registry: GkQuantityRegistry = GkQuantityRegistry()
 
-# Covariant components of magnetic field unit vector (interior).
-_geo_int_b_i : GkQuantity = GkQuantity(
-  name = "geo_int_b_i",
-  source = [["geo_int_b_i"],],
-  fetch_func = [ff.fetch_s0cAll],
-  label = r"$b_%s$",
-  is_vector = True,
+# ------------------- Register quantities -------------------
+
+# -----------------------------------
+# --- Scalar geometric quantities ---
+# -----------------------------------
+
+# Configuration space Jacobian (interior).
+_geo_int_jacobgeo : GkQuantity = GkQuantity(
+  name = "geo_int_jacobgeo",
+  source = [["geo_int_jacobgeo"],],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$J$",
   is_geo = True
 )
-gk_quant_registry.register(_geo_int_b_i)
+gk_quant_registry.register(_geo_int_jacobgeo)
+
+# Reciprocal of configuration space Jacobian (interior).
+_geo_int_jacobgeo_inv : GkQuantity = GkQuantity(
+  name = "geo_int_jacobgeo_inv",
+  source = [["geo_int_jacobgeo_inv"],],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$J^{-1}$",
+  is_geo = True
+)
+gk_quant_registry.register(_geo_int_jacobgeo_inv)
+
+# Total Jacobian (interior).
+_geo_int_jacobtot : GkQuantity = GkQuantity(
+  name = "geo_int_jacobtot",
+  source = [["geo_int_jacobtot"],],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$J$",
+  is_geo = True
+)
+gk_quant_registry.register(_geo_int_jacobtot)
 
 # Reciprocal of Jacobian times bmag (interior).
 _geo_int_jacobtot_inv : GkQuantity = GkQuantity(
@@ -40,6 +65,39 @@ _geo_int_bmag : GkQuantity = GkQuantity(
   is_geo = True
 )
 gk_quant_registry.register(_geo_int_bmag)
+
+# -----------------------------------
+# --- Vector geometric quantities ---
+# -----------------------------------
+
+# Covariant components of magnetic field unit vector (interior).
+_geo_int_b_i : GkQuantity = GkQuantity(
+  name = "geo_int_b_i",
+  source = [["geo_int_b_i"],],
+  fetch_func = [ff.fetch_s0cAll],
+  label = r"$b_%s$",
+  is_vector = True,
+  is_geo = True
+)
+gk_quant_registry.register(_geo_int_b_i)
+
+# --------------------------------------------
+# --- Field quantities (species-dependent) ---
+# --------------------------------------------
+
+# Electrostatic potential.
+_field : GkQuantity = GkQuantity(
+  name = "field",
+  source = [["field"],],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$\phi$ (V)",
+  is_time_dep = True,
+)
+gk_quant_registry.register(_field)
+
+# ------------------------------------------
+# --- Plasma moments (species-dependent) ---
+# ------------------------------------------
 
 # Zeroth velocity moment.
 _M0 : GkQuantity = GkQuantity(
@@ -129,6 +187,10 @@ _Tperp : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_Tperp)
 
+# ---------------------------------------------------
+# --- Combined plasma moments (species-dependent) ---
+# ---------------------------------------------------
+
 # Temperature.
 _temp : GkQuantity = GkQuantity(
   name = "temp",
@@ -151,26 +213,27 @@ _press : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_press)
 
-# Electrostatic potential.
-_field : GkQuantity = GkQuantity(
-  name = "field",
-  source = [["field"],],
-  fetch_func = [ff.fetch_s0c0],
-  label = r"$\phi$ (V)",
+# Parallel pressure.
+_presspar : GkQuantity = GkQuantity(
+  name = "presspar",
+  source = [[_M0,_Tpar]],
+  fetch_func = [ff.fetch_press_p],
+  label = r"$p_{\parallel %s}$ (Pa)",
   is_time_dep = True,
+  is_species_dep = True,
 )
-gk_quant_registry.register(_field)
+gk_quant_registry.register(_presspar)
 
-# ExB drift.
-_ExB_vel : GkQuantity = GkQuantity(
-  name = "ExB_vel",
-  source = [[_geo_int_jacobtot_inv,_geo_int_b_i,_field],],
-  fetch_func = [ff.fetch_ExB_vel],
-  label = r"$v_{E,%s}$ (m/s)",
+# Perpendicular pressure.
+_pressperp : GkQuantity = GkQuantity(
+  name = "pressperp",
+  source = [[_M0,_Tperp]],
+  fetch_func = [ff.fetch_press_p],
+  label = r"$p_{\perp %s}$ (Pa)",
   is_time_dep = True,
-  is_vector = True
+  is_species_dep = True,
 )
-gk_quant_registry.register(_ExB_vel)
+gk_quant_registry.register(_pressperp)
 
 # Plasma beta.
 _beta : GkQuantity = GkQuantity(
@@ -182,3 +245,42 @@ _beta : GkQuantity = GkQuantity(
   is_species_dep = True,
 )
 gk_quant_registry.register(_beta)
+
+# ------------------------
+# --- Drift velocities ---
+# ------------------------
+
+# ExB drift velocity.
+_ExB_vel : GkQuantity = GkQuantity(
+  name = "ExB_vel",
+  source = [[_geo_int_jacobtot_inv,_geo_int_bmag,_geo_int_b_i,_field],],
+  fetch_func = [ff.fetch_ExB_vel],
+  label = r"$v_{E,%s}$ (m/s)",
+  is_time_dep = True,
+  is_vector = True
+)
+gk_quant_registry.register(_ExB_vel)
+
+# Grad B drift velocity.
+_gradB_vel : GkQuantity = GkQuantity(
+  name = "gradB_vel",
+  source = [[_geo_int_jacobtot_inv,_geo_int_bmag,_geo_int_b_i, _Tperp]],
+  fetch_func= [ff.fetch_gradB_vel],
+  label = r"$v_{\nabla B,%s}$ (m/s)",
+  is_time_dep = True,
+  is_species_dep = True,
+  is_vector = True
+)
+gk_quant_registry.register(_gradB_vel)
+
+# Diamagnetic drift velocity.
+_diamag_vel : GkQuantity = GkQuantity(
+  name = "diamag_vel",
+  source = [[_geo_int_jacobtot_inv,_geo_int_bmag,_geo_int_b_i, _M0, _pressperp]],
+  fetch_func= [ff.fetch_diamag_vel],
+  label = r"$v_{dia,%s}$ (m/s)",
+  is_time_dep = True,
+  is_species_dep = True,
+  is_vector = True
+)
+gk_quant_registry.register(_diamag_vel)
