@@ -3,31 +3,26 @@ import numpy as np
 
 from postgkyl.utils import verb_print
 from postgkyl.data.dg import _getnum_nodes
-from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d
+from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d, expand_4d, expand_5d, expand_6d
 
 
 @click.command()
 @click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--eps", type=click.FLOAT, default=1e-2,
-    help="Fraction of the half-cell width by which the evaluation point is "
-         "moved inside from each cell interface (must be in [0, 1]).")
-@click.option("--pointspercell", type=click.INT, default=2,
+@click.option("--npoints", "-n", type=click.INT, default=2,
     help="Number of evaluation points per cell.")
 @click.pass_context
 def dg_local_poly(ctx, **kwargs):
   """
   Generate a discontinuous DG polynomial cellwise representation of the data.
-  The modal DG decomposition is evaluated at two points per cell, each located
-  just inside a cell interface (slightly interior, controlled by --eps). A NaN
-  is inserted between every couple of points so that, when plotted, the curve is
-  broken at each interface and the inter-cell discontinuities of the DG solution
+  The modal DG decomposition is evaluated with npoints per cell from one face
+  to the other. A NaN is inserted at every cell interface so that, when plotted, 
+  the curve is broken at each interface and the inter-cell discontinuities of the DG solution
   are visible.
   Example (1D plot of the M0 moment along x at frame 0):
-    pgkyl prefix-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
+    pgkyl sim_3x2v_p1-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
   """
   verb_print(ctx, "Starting dg-local-poly")
   data = ctx.obj["data"]
-  eps = kwargs["eps"]
 
   for dat in data.iterator(kwargs["use"]):
     poly_order = dat.ctx.get("poly_order")
@@ -39,10 +34,6 @@ def dg_local_poly(ctx, **kwargs):
           fg="red"))
 
     num_dims = dat.get_num_dims()
-    if num_dims > 3:
-      ctx.fail(click.style(
-          "ERROR in dg-local-poly: only data with up to 3 dimensions is supported.",
-          fg="red"))
 
     num_cells = dat.get_num_cells()
     values = dat.get_values()
@@ -51,7 +42,7 @@ def dg_local_poly(ctx, **kwargs):
     num_eqn = int(dat.get_num_comps() // num_basis)
 
     # Reference evaluation nodes: just inside the two cell interfaces.
-    nodes = np.linspace(-1.0 + eps, 1.0 - eps, kwargs["pointspercell"])
+    nodes = np.linspace(-1.0, 1.0, kwargs["npoints"])
     num_nodes = len(nodes)
 
     # Evaluate the modal decomposition of each field at the interface nodes.
@@ -73,7 +64,33 @@ def dg_local_poly(ctx, **kwargs):
             for k, z in enumerate(nodes):
               int_values[i::num_nodes, j::num_nodes, k::num_nodes, m] = expand_3d[
                   int(poly_order - 1)](q, x, y, z)
-
+      elif num_dims == 4:
+        for i, x in enumerate(nodes):
+          for j, y in enumerate(nodes):
+            for k, z in enumerate(nodes):
+              for l, v1 in enumerate(nodes):
+                int_values[i::num_nodes, j::num_nodes, k::num_nodes, l::num_nodes,
+                           m] = expand_4d[int(poly_order - 1)](q, x, y, z, v1)
+      elif num_dims == 5:
+        for i, x in enumerate(nodes):
+          for j, y in enumerate(nodes):
+            for k, z in enumerate(nodes):
+              for l, v1 in enumerate(nodes):
+                for m1, v2 in enumerate(nodes):
+                  int_values[i::num_nodes, j::num_nodes, k::num_nodes,
+                             l::num_nodes, m1::num_nodes, m] = expand_5d[
+                                 int(poly_order - 1)](q, x, y, z, v1, v2)
+      elif num_dims == 6:
+        for i, x in enumerate(nodes):
+          for j, y in enumerate(nodes):
+            for k, z in enumerate(nodes):
+              for l, v1 in enumerate(nodes):
+                for m1, v2 in enumerate(nodes):
+                  for n1, v3 in enumerate(nodes):
+                    int_values[i::num_nodes, j::num_nodes, k::num_nodes,
+                               l::num_nodes, m1::num_nodes, n1::num_nodes,
+                               m] = expand_6d[int(poly_order - 1)](q, x, y, z, v1,
+                                                                   v2, v3)
     # Build the grid with the physical coordinates of the nodes.
     grid_in = dat.get_grid()
     lower, upper = dat.get_bounds()
