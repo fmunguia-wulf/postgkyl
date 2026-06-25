@@ -191,7 +191,7 @@ class GkQuantity:
     return combo_idx, frame_list
 
   def get_src_gdata(self, src : "str | GkQuantity", path : str, name : str,
-                    species : str, frame : int | None) -> GData:
+                    species : str, frame : int | None, **extra) -> GData:
     """
     Get the populated GData for a source, which is either a string (file
     name) or a GkQuantity (computed from its own sources).
@@ -203,8 +203,8 @@ class GkQuantity:
     combo_idx, _ = src.get_avail_source(path, name, species, str(frame))
     combo = src.source[combo_idx]
     fetch_func = src.fetch_func[combo_idx]
-    gdatas = [src.get_src_gdata(s, path, name, species, frame) for s in combo]
-    return fetch_func(gdatas)
+    gdatas = [src.get_src_gdata(s, path, name, species, frame, **extra) for s in combo]
+    return fetch_func(gdatas, **extra)
 
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
@@ -214,7 +214,7 @@ class GkQuantity:
     """
     combo = self.source[combo_idx]
     fetch_func = self.fetch_func[combo_idx]
-    gdatas = [self.get_src_gdata(src, path, name, species, frame) for src in combo]
+    gdatas = [self.get_src_gdata(src, path, name, species, frame, **extra) for src in combo]
     return fetch_func(gdatas, **extra)
 
 
