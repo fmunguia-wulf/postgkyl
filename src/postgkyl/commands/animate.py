@@ -1,10 +1,83 @@
-from matplotlib.animation import FuncAnimation
+import os
+import shutil
+import tempfile
+from matplotlib.animation import FuncAnimation, FFMpegWriter
+from multiprocessing import Pool
+from PIL import Image
 import click
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 from postgkyl.utils import verb_print, set_frame
 import postgkyl.output.plot
+
+# Formats written through ffmpeg (PIL cannot produce these video containers).
+VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
+
+
+def _save_frame_worker(args):
+  """Worker for parallel frame saving; each process creates its own figure."""
+  matplotlib.use("Agg")
+  frame_idx, frame_data, kwargs, prefix, dpi, figsize = args
+  fig = plt.figure(figsize=figsize)
+  _update(0, [frame_data], fig, kwargs)
+  plt.savefig(f"{prefix:s}_{frame_idx:d}.png", dpi=dpi)
+  plt.close(fig)
+# end
+
+
+def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
+  """Save frames as PNGs, using parallel workers when nproc > 1."""
+  if kwargs["nproc"] > 1:
+    args_list = [(i, data_list[i], kwargs, prefix, kwargs["dpi"], figsize)
+        for i in range(num_frames)]
+    with Pool(kwargs["nproc"]) as pool:
+      pool.map(_save_frame_worker, args_list)
+    # end
+  else:
+    for i in range(num_frames):
+      _update(i, data_list, fig, kwargs)
+      plt.savefig(f"{prefix:s}_{i:d}.png", dpi=kwargs["dpi"])
+    # end
+  # end
+# end
+
+
+def _compile_movie(frame_files, output_file, fps, duration, ctx):
+  """Compile PNG frames into an animation."""
+  ext = os.path.splitext(output_file)[1].lower()
+  verb_print(ctx,f"Creating {output_file}...")
+  if ext in (".gif", ".webp", ".apng"):
+    images = [Image.open(f) for f in frame_files]
+    images[0].save(
+        output_file, save_all=True, append_images=images[1:],
+        duration=duration, loop=0, optimize=False,
+    )
+  elif ext in VIDEO_EXTS:
+    # PIL cannot write video containers; use matplotlib's ffmpeg writer.
+    # duration is in milliseconds per frame, so fall back to it when fps is unset.
+    movie_fps = fps if fps else 1.0e3 / duration
+    writer = FFMpegWriter(fps=movie_fps)
+    first = Image.open(frame_files[0])
+    dpi = 100
+    fig = plt.figure(figsize=(first.width / dpi, first.height / dpi), dpi=dpi)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    with writer.saving(fig, output_file, dpi):
+      for frame_file in frame_files:
+        ax.clear()
+        ax.axis("off")
+        ax.imshow(Image.open(frame_file))
+        writer.grab_frame()
+      # end
+    # end
+    plt.close(fig)
+  else:
+    raise ValueError(f"Unsupported output format: {ext}")
+
+  verb_print(ctx,f"{output_file} created.")
+# end
 
 
 def _update(frame, data, fig, kwargs):
@@ -27,10 +100,10 @@ def _update(frame, data, fig, kwargs):
   for i, dat in enumerate(data[frame]):
     kwargs["title"] = ""
     if not kwargs["notitle"]:
-      if dat.ctx.get("frame"):
+      if dat.ctx.get("frame") is not None:
         kwargs["title"] = f"{kwargs['title']:s} frame: {dat.ctx['frame']:d} "
       # end
-      if dat.ctx.get("time"):
+      if dat.ctx.get("time") is not None:
         kwargs["title"] = f"{kwargs['title']:s} time: {dat.ctx['time']:.4e}"
       # end
     # end
@@ -90,31 +163,31 @@ def globalrange(data,kwargs):
 @click.command()
 @click.option("--use", "-u", default=None, help="Specify a tag to plot.")
 @click.option("--grouptags", is_flag=True, help="Group coresponding tagged frames.")
-@click.option("--squeeze", "-s", is_flag=True, help="Squeeze the components into one panel.")
+@click.option("--squeeze", "-p", is_flag=True, help="Squeeze the components into one panel.")
 @click.option("--subplots", "-b", is_flag=True, help="Make subplots from multiple datasets.")
 @click.option("--nsubplotrow", "nSubplotRow", type=click.INT,
     help="Manually set the number of rows for subplots.")
 @click.option("--nsubplotcol", "nSubplotCol", type=click.INT,
     help="Manually set the number of columns for subplots.")
 @click.option("--transpose", is_flag=True, help="Transpose axes.")
-@click.option("-c", "--contour", is_flag=True, help="Make contour plot.")
+@click.option("--contour", "-c", is_flag=True, help="Make contour plot.")
 @click.option("--clevels", type=click.STRING,
     help="Specify levels for contours: either integer or start:end:nlevels")
-@click.option("-q", "--quiver", is_flag=True, help="Make quiver plot.")
-@click.option("-l", "--streamline", is_flag=True, help="Make streamline plot.")
+@click.option("--quiver", "-q", is_flag=True, help="Make quiver plot.")
+@click.option("--streamline", "-l", is_flag=True, help="Make streamline plot.")
 @click.option("--sdensity", type=click.FLOAT, help="Control density of the streamlines.")
 @click.option("--arrowstyle", type=click.STRING, help="Set the style for streamline arrows.")
-@click.option("-g", "--group", type=click.Choice(["0", "1"]), help="Switch to group mode.")
-@click.option("-s", "--scatter", is_flag=True, help="Make scatter plot.")
+@click.option("--group", "-g", type=click.Choice(["0", "1"]), help="Switch to group mode.")
+@click.option("--scatter", "-s", is_flag=True, help="Make scatter plot.")
 @click.option("--markersize", type=click.FLOAT, help="Set marker size for scatter plots.")
 @click.option("--linewidth", type=click.FLOAT, help="Set the linewidth.")
 @click.option("--linestyle", type=click.Choice(["solid", "dashed", "dotted", "dashdot"]),
     help="Set the linestyle.")
 @click.option("--color", type=click.STRING, help="Set color when available.")
 @click.option("--style", help="Specify Matplotlib style file (default: Postgkyl).")
-@click.option("-d", "--diverging", is_flag=True, help="Switch to diverging colormesh mode.")
+@click.option("--diverging", "-d", is_flag=True, help="Switch to diverging colormesh mode.")
 @click.option("--arg", type=click.STRING, help="Additional plotting arguments, e.g., '*--'.")
-@click.option("-a", "--fix-aspect", "fixaspect", is_flag=True,
+@click.option("--fix-aspect", "-a", "fixaspect", is_flag=True,
     help="Enforce the same scaling on both axes.")
 @click.option("--logx", is_flag=True, help="Set x-axis to log scale.")
 @click.option("--logy", is_flag=True, help="Set y-axis to log scale.")
@@ -162,14 +235,18 @@ def globalrange(data,kwargs):
 @click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as.")
 @click.option("--fps", type=click.INT, help="Specify frames per second for saving.")
 @click.option("--dpi", type=click.INT, help="DPI (resolution) for output.")
-@click.option("-e", "--edgecolors", type=click.STRING, help="Set color for cell edges.")
+@click.option("--edgecolors", "-e", type=click.STRING, help="Set color for cell edges.")
 @click.option("--showgrid/--no-showgrid", default=True, help="Show grid-lines.")
 @click.option("--collected", is_flag=True,
    help="Animate a dataset that has been collected, i.e. a single dataset with time taken to be the first index.")
 @click.option("--hashtag", is_flag=True, help="Turns on the pgkyl hashtag!")
 @click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", type=click.STRING,
-    help="Save individual frames as PNGS instead of an animation")
+    help="Save individual frames as PNGs.")
+@click.option("--nproc", default=1, type=click.INT, show_default=True,
+    help="Number of parallel processes for frame generation.")
+@click.option("--tmpdir", default=None, type=click.STRING, show_default=True,
+    help="Directory to place the temporary directory for parallel frame generation.")
 @click.option("--figsize", help="Comma-separated values for x and y size.")
 @click.option("-m", "--multiblock", is_flag=True, help="Plots blocks from each frame together")
 @click.pass_context
@@ -177,10 +254,28 @@ def animate(ctx, **kwargs):
   """Animate the actively loaded dataset and show resulting plots in a loop.
 
   Typically, the datasets are loaded using wildcard/regex feature of the -f option to
-  the main pgkyl executable. To save the animation ffmpeg needs to be installed.
+  the main pgkyl executable.
   """
   verb_print(ctx, "Starting animate")
   data = ctx.obj["data"]
+
+  # Accept str or path-like input for --saveas (e.g. a pathlib.Path).
+  if kwargs["saveas"]:
+    kwargs["saveas"] = str(kwargs["saveas"])
+  # end
+  supported_exts = (".gif", ".webp", ".apng") + VIDEO_EXTS
+  if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(supported_exts):
+    raise click.ClickException(
+        "Unsupported output format for --saveas; please use one of: "
+        + ", ".join(supported_exts) + ".")
+  # end
+  # Video containers are written through ffmpeg, which must be on the PATH.
+  if kwargs["saveas"] and kwargs["saveas"].lower().endswith(VIDEO_EXTS) \
+      and shutil.which("ffmpeg") is None:
+    raise click.ClickException(
+        "ffmpeg is required to write " + ", ".join(VIDEO_EXTS) + " files but was "
+        "not found. Please install ffmpeg or choose a .gif output instead.")
+  # end
 
   if kwargs["xlim"]:
     kwargs["xmin"] = float(kwargs["xlim"].split(",")[0])
@@ -223,6 +318,8 @@ def animate(ctx, **kwargs):
     figsize = (int(kwargs["figsize"].split(",")[0]), int(kwargs["figsize"].split(",")[1]))
   # end
 
+  # PIL requires duration in miliseconds.
+  duration = int(1.0e3 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
 
   set_figure = False
   min_size = np.NAN
@@ -234,7 +331,7 @@ def animate(ctx, **kwargs):
       num_datasets = int(data.get_num_datasets(tag=tag))
       min_size = int(np.nanmin((min_size, num_datasets)))
     # end
-    
+
     tag_iterator = list(data.tag_iterator(kwargs["use"]))
     kwargs["legend"] = True
     set_figure = True
@@ -263,31 +360,39 @@ def animate(ctx, **kwargs):
       # end
       figs.append(plt.figure(fig_num, figsize=figsize))
       fig_num += 1
-      
-      if not kwargs["saveframes"]:
+
+      num_frames = int(np.nanmin((min_size, len(data_list))))
+      file_name = f"anim_{tag:s}.gif" if tag is not None else "anim.gif"
+      if kwargs["saveas"]:
+        file_name = str(kwargs["saveas"])
+      # end
+
+      if kwargs["saveframes"]:
+        # Save PNGs, then optionally compile a movie.
+        _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+        if kwargs["save"] or kwargs["saveas"]:
+          frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+        # end
+        kwargs["show"] = False
+      elif kwargs["nproc"] > 1:
+        # Parallel: use a temp dir, compile, then clean up.
+        with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
+          tmp_prefix = os.path.join(tmpdir, "frame")
+          _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+          frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+        # end
+        kwargs["show"] = False
+      else:
         anims.append(
-            FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+            FuncAnimation(figs[-1], _update, num_frames,
                 fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
                 blit=False)
         )
-
-        if tag is not None:
-          file_name = f"anim_{tag:s}.mp4"
-        else:
-          file_name = "anim.mp4"
-        # end
-        if kwargs["saveas"]:
-          file_name = str(kwargs["saveas"])
-        # end
         if kwargs["save"] or kwargs["saveas"]:
           anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
         # end
-      else:
-        for i in range(int(np.nanmin((min_size, len(data_list))))):
-          _update(i, data_list, figs[-1], kwargs)
-          plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-        # end
-        kwargs["show"] = False  # do not show in this case
       # end
     # end
   #animation code for multiblock case
@@ -309,28 +414,36 @@ def animate(ctx, **kwargs):
     if (not kwargs["color"] and data_list[0][0].get_num_dims() == 1):
       kwargs["color"] = "tab:blue"
     # end
-    if not kwargs["saveframes"]:
+
+    num_frames = int(np.nanmin((min_size, len(data_list))))
+    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
+
+    if kwargs["saveframes"]:
+      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+      if kwargs["save"] or kwargs["saveas"]:
+        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+      # end
+      kwargs["show"] = False
+    elif kwargs["nproc"] > 1:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
+        tmp_prefix = os.path.join(tmpdir, "frame")
+        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+      # end
+      kwargs["show"] = False
+    else:
       anims.append(
-          FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+          FuncAnimation(figs[-1], _update, num_frames,
               fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
               blit=False)
       )
-      file_name = "anim.mp4"
-      if kwargs["saveas"]:
-        file_name = str(kwargs["saveas"])
-      # end
       if kwargs["save"] or kwargs["saveas"]:
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
-    else:
-      for i in range(int(np.nanmin((min_size, len(data_list))))):
-        _update(i, data_list, figs[-1], kwargs)
-        plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-      # end
-      kwargs["show"] = False  # do not show in this case
     # end
-      
-    
+
   else:
 
     #create main list of lists (non-multiblock case)
@@ -343,26 +456,34 @@ def animate(ctx, **kwargs):
     else:
       figs.append(plt.figure(figsize=figsize))
     # end
-    if not kwargs["saveframes"]:
+
+    num_frames = int(np.nanmin((min_size, len(data_list))))
+    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
+
+    if kwargs["saveframes"]:
+      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
+      if kwargs["save"] or kwargs["saveas"]:
+        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+      # end
+      kwargs["show"] = False
+    elif kwargs["nproc"] > 1:
+      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
+        tmp_prefix = os.path.join(tmpdir, "frame")
+        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
+        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
+        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
+      # end
+      kwargs["show"] = False
+    else:
       anims.append(
-          FuncAnimation(figs[-1], _update, int(np.nanmin((min_size, len(data_list)))),
+          FuncAnimation(figs[-1], _update, num_frames,
               fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
               blit=False)
       )
-
-      file_name = "anim.mp4"
-      if kwargs["saveas"]:
-        file_name = str(kwargs["saveas"])
-      # end
       if kwargs["save"] or kwargs["saveas"]:
         anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
       # end
-    else:
-      for i in range(int(np.nanmin((min_size, len(data_list))))):
-        _update(i, data_list, figs[-1], kwargs)
-        plt.savefig(f"{kwargs['saveframes']:s}_{i:d}.png", dpi=kwargs["dpi"])
-      # end
-      kwargs["show"] = False  # do not show in this case
     # end
   # end
 
