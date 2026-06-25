@@ -4,7 +4,8 @@ import os
 from postgkyl.data import GData
 
 class GkQuantity:
-  """Class for a gyrokinetic quantity.
+  """
+  Class for a gyrokinetic quantity.
 
   Attributes:
     name: Name of the quantity.
@@ -50,8 +51,10 @@ class GkQuantity:
       return self.label
 
   def src_stem(self, path : str, name : str, species : str, src : str) -> str:
-    """Stem of the file name for a string source, including the trailing
-    separator before the frame number (geo files have no frame, so no separator)."""
+    """
+    Stem of the file name for a string source, including the trailing
+    separator before the frame number (geo files have no frame, so no separator).
+    """
     if self.is_geo:
       return os.path.join(path, f"{name}-{src}")
     elif self.is_species_dep:
@@ -69,8 +72,10 @@ class GkQuantity:
 
   def avail_frames_src(self, path : str, name : str, species : str, src : str,
                        frames : list[int] | None = None) -> set[int]:
-    """Set of available frames for a string source's file <stem><frame>.gkyl.
-    Optionally restrict the search to the given list of frames."""
+    """
+    Set of available frames for a string source's file <stem><frame>.gkyl.
+    Optionally restrict the search to the given list of frames.
+    """
     frames_avail : set[int] = set()
     stem = self.src_stem(path, name, species, src)
 
@@ -87,9 +92,11 @@ class GkQuantity:
 
   def avail_combo_frames(self, path : str, name : str, species : str,
                          frames : list[int] | None = None) -> tuple[int, set[int]]:
-    """Find the first source combination whose files all exist and share the
+    """
+    Find the first source combination whose files all exist and share the
     same set of available frames. Returns (combo index, available frames).
-    A combination made up only of geo files is flagged with {-1}."""
+    A combination made up only of geo files is flagged with {-1}.
+    """
     frames_avail : set[int] = set()
     combo_idx = 0
     # Check each combination of sources.
@@ -138,9 +145,11 @@ class GkQuantity:
 
   def choose_source(self, path : str, name : str, species : str,
                     frame_inp : str | None) -> tuple[int, list[int | None]]:
-    """Identify the source combination and list of frames needed to get this
+    """
+    Identify the source combination and list of frames needed to get this
     quantity. frame_inp may be a single frame, a comma-separated list, or a
-    'start:stop[:step]' range (None or ':' means all available frames)."""
+    'start:stop[:step]' range (None or ':' means all available frames).
+    """
     frame_list : list[int] = []
     if frame_inp is not None:
       frame_inp = frame_inp.strip()
@@ -173,8 +182,10 @@ class GkQuantity:
 
   def get_src_gdata(self, src : "str | GkQuantity", path : str, name : str,
                     species : str, frame : int | None) -> GData:
-    """Get the populated GData for a source, which is either a string (file
-    name) or a GkQuantity (computed from its own sources)."""
+    """
+    Get the populated GData for a source, which is either a string (file
+    name) or a GkQuantity (computed from its own sources).
+    """
     if isinstance(src, str):
       return GData(self.src_file_name(path, name, species, src, frame))
 
@@ -187,8 +198,10 @@ class GkQuantity:
 
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
-    """Load this quantity's sources for the given combination and frame, then
-    compute and return the resulting GData."""
+    """
+    Load this quantity's sources for the given combination and frame, then
+    compute and return the resulting GData.
+    """
     combo = self.source[combo_idx]
     fetch_func = self.fetch_func[combo_idx]
     gdatas = [self.get_src_gdata(src, path, name, species, frame) for src in combo]
@@ -196,7 +209,8 @@ class GkQuantity:
 
 
 class GkQuantityRegistry:
-  """Registry of pre-named gyrokinetic quantities.
+  """
+  Registry of pre-named gyrokinetic quantities.
 
   Attributes:
     registry: Dictionary mapping quantity names to GkQuantity objects.
