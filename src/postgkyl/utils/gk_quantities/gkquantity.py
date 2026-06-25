@@ -41,16 +41,9 @@ class GkQuantity:
     self.is_integrated = is_integrated
     self.is_geo = is_geo
 
-  def get_label(self, species : str | None = None, direction : str | None = None) -> str:
-    """Get the label for the quantity, replacing %s with species name or direction."""
-    if self.is_vector and direction is not None:
-      return self.label % str(direction)
-    elif self.is_species_dep and species is not None:
-      return self.label % species[0]
-    else:
-      return self.label
+  # Internal methods.
 
-  def src_stem(self, path : str, name : str, species : str, src : str) -> str:
+  def _src_stem(self, path : str, name : str, species : str, src : str) -> str:
     """
     Stem of the file name for a string source, including the trailing
     separator before the frame number (geo files have no frame, so no separator).
@@ -62,22 +55,22 @@ class GkQuantity:
     else:
       return os.path.join(path, f"{name}-{src}_")
 
-  def src_file_name(self, path : str, name : str, species : str, src : str,
+  def _src_file_name(self, path : str, name : str, species : str, src : str,
                     frame : int | None) -> str:
     """Full file name for a string source at the given frame."""
     if self.is_geo:
-      return f"{self.src_stem(path, name, species, src)}.gkyl"
+      return f"{self._src_stem(path, name, species, src)}.gkyl"
     else:
-      return f"{self.src_stem(path, name, species, src)}{frame}.gkyl"
+      return f"{self._src_stem(path, name, species, src)}{frame}.gkyl"
 
-  def avail_frames_src(self, path : str, name : str, species : str, src : str,
+  def _avail_frames_src(self, path : str, name : str, species : str, src : str,
                        frames : list[int] | None = None) -> set[int]:
     """
     Set of available frames for a string source's file <stem><frame>.gkyl.
     Optionally restrict the search to the given list of frames.
     """
     frames_avail : set[int] = set()
-    stem = self.src_stem(path, name, species, src)
+    stem = self._src_stem(path, name, species, src)
 
     if frames:
       candidates = (f"{stem}{f}.gkyl" for f in frames if os.path.isfile(f"{stem}{f}.gkyl"))
@@ -90,7 +83,7 @@ class GkQuantity:
         frames_avail.add(int(suffix))
     return frames_avail
 
-  def avail_combo_frames(self, path : str, name : str, species : str,
+  def _avail_combo_frames(self, path : str, name : str, species : str,
                          frames : list[int] | None = None) -> tuple[int, set[int]]:
     """
     Find the first source combination whose files all exist and share the
@@ -111,9 +104,9 @@ class GkQuantity:
           continue
 
         if isinstance(src, str):
-          frames_avail_q = self.avail_frames_src(path, name, species, src, frames)
+          frames_avail_q = self._avail_frames_src(path, name, species, src, frames)
         else:
-          _, frames_avail_q = src.avail_combo_frames(path, name, species, frames)
+          _, frames_avail_q = src._avail_combo_frames(path, name, species, frames)
 
         if frames_avail_q == {-1}:
           # Source is a geo-only quantity: doesn't constrain frames, just needs to exist.
@@ -143,6 +136,17 @@ class GkQuantity:
 
     return combo_idx, frames_avail
 
+  # Public methods.
+
+  def get_label(self, species : str | None = None, direction : str | None = None) -> str:
+    """Get the label for the quantity, replacing %s with species name or direction."""
+    if self.is_vector and direction is not None:
+      return self.label % str(direction)
+    elif self.is_species_dep and species is not None:
+      return self.label % species[0]
+    else:
+      return self.label
+
   def choose_source(self, path : str, name : str, species : str,
                     frame_inp : str | None) -> tuple[int, list[int | None]]:
     """
@@ -159,7 +163,7 @@ class GkQuantity:
         frame_list = [int(frame_inp)]
 
     # Discover available frames from any of the possible source combinations.
-    combo_idx, frames_avail = self.avail_combo_frames(path, name, species, frame_list)
+    combo_idx, frames_avail = self._avail_combo_frames(path, name, species, frame_list)
 
     if not frames_avail:
       raise FileNotFoundError(f"No files found for the requested quantity "
@@ -187,7 +191,7 @@ class GkQuantity:
     name) or a GkQuantity (computed from its own sources).
     """
     if isinstance(src, str):
-      return GData(self.src_file_name(path, name, species, src, frame))
+      return GData(self._src_file_name(path, name, species, src, frame))
 
     # src is a GkQuantity: resolve its own source combination and compute it.
     combo_idx, _ = src.choose_source(path, name, species, str(frame))
