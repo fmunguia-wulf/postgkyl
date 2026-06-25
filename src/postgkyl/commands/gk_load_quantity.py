@@ -84,7 +84,7 @@ def gk_load_quantity(ctx, **kwargs):
 
   for species in species_list:
     # Determine which source combination and frames to use for this species.
-    src_combo_idx, frames = gkquant.choose_source(path, kwargs['name'], species, kwargs['frame'])
+    src_combo_idx, frames = gkquant.get_avail_source(path, kwargs['name'], species, kwargs['frame'])
 
     verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
 

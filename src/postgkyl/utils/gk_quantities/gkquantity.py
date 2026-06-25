@@ -155,7 +155,7 @@ class GkQuantity:
     else:
       return self.label
 
-  def choose_source(self, path : str, name : str, species : str,
+  def get_avail_source(self, path : str, name : str, species : str,
                     frame_inp : str | None) -> tuple[int, list[int | None]]:
     """
     Identify the source combination and list of frames needed to get this
@@ -202,7 +202,7 @@ class GkQuantity:
       return GData(self._src_file_name(path, name, species, src, frame))
 
     # src is a GkQuantity: resolve its own source combination and compute it.
-    combo_idx, _ = src.choose_source(path, name, species, str(frame))
+    combo_idx, _ = src.get_avail_source(path, name, species, str(frame))
     combo = src.source[combo_idx]
     fetch_func = src.fetch_func[combo_idx]
     gdatas = [src.get_src_gdata(s, path, name, species, frame) for s in combo]
