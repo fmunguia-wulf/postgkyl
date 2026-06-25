@@ -24,6 +24,16 @@ from postgkyl.data.dg import get_num_basis
 from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
 import postgkyl.utils.gkeyll_const as gkc
 
+def _get_ctx_val(gdata : GData, key : str, **kwargs):
+  if key in gdata.ctx:
+    return gdata.ctx[key]
+  elif key in kwargs:
+    return kwargs[key]
+  else:
+    # print(f"gdata.ctx: {gdata.ctx}")
+    print(f"kwargs: {kwargs}")
+    raise KeyError(f"fetch function: context key '{key}' not found in GData. Pass it as '--extra {key}=<value>'.")
+
 def _get_num_basis_from_gdata(gdata) -> int:
   from postgkyl.data.dg import get_num_basis
   ndim = gdata.get_num_dims()
@@ -240,7 +250,7 @@ def fetch_M1_from_H(gdatas, **kwargs):
   M1 from the Hamiltonian moments (Hmom).
   """
   hmom = gdatas[0]
-  mass = hmom.ctx["mass"]
+  mass = _get_ctx_val(hmom, "mass", **kwargs)
   nb = _get_num_basis_from_gdata(hmom)
   vals = hmom.get_values()
 
@@ -260,7 +270,7 @@ def fetch_Tpar_from_BiMax(gdatas, **kwargs):
   Tpar = fetch_s0c2(gdatas)
 
   bimax = gdatas[0]
-  mass = bimax.ctx["mass"]
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tpar.set_values(mass * Tpar.get_values())
   return Tpar
 
@@ -283,7 +293,7 @@ def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
   m2par_val = m2par.get_values()
   um1_val = upar.get_values()
   
-  mass = m0.ctx["mass"]
+  mass = _get_ctx_val(m0, "mass", **kwargs)
   Tpar.set_values(mass * (m2par_val - um1_val))
   dgops.multiply(0, Tpar, 0, Tpar, 0, m0_inv)
   return Tpar
@@ -295,7 +305,7 @@ def fetch_Tperp_from_BiMax(gdatas, **kwargs):
   Tperp = fetch_s0c3(gdatas)
 
   bimax = gdatas[0]
-  mass = bimax.ctx["mass"]
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tperp.set_values(mass * Tperp.get_values())
   return Tperp
 
@@ -306,7 +316,7 @@ def fetch_Tperp_from_M0_M2perp(gdatas, **kwargs):
   Tperp = fetch_s1c0_div_s0c0(gdatas)
 
   m0 = gdatas[0]
-  mass = m0.ctx["mass"]
+  mass = _get_ctx_val(m0, "mass", **kwargs)
   Tperp.set_values(0.5 * mass * Tperp.get_values())
   return Tperp
 
@@ -317,7 +327,7 @@ def fetch_temp_from_Max(gdatas, **kwargs):
   temp = fetch_s0c2(gdatas)
 
   maxmom = gdatas[0]
-  mass = maxmom.ctx["mass"]
+  mass = _get_ctx_val(maxmom, "mass", **kwargs)
   temp.set_values(mass * temp.get_values())
   return temp
 
@@ -354,7 +364,7 @@ def fetch_press_from_Max(gdatas, **kwargs):
   dgops = GkeyllDGops()
   dgops.multiply(0, press, 0, maxmom, 2, maxmom)
 
-  mass = maxmom.ctx["mass"]
+  mass = _get_ctx_val(maxmom, "mass", **kwargs)
   press.set_values(mass * press.get_values())
   return press
 
@@ -367,7 +377,7 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   nb = _get_num_basis_from_gdata(bimax)
   vals = bimax.get_values()
 
-  mass = bimax.ctx["mass"]
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tpar_vals  = vals[..., 2*nb:3*nb]
   Tperp_vals = vals[..., 3*nb:4*nb]
   temp_vals  = mass*(Tpar_vals + 2.0 * Tperp_vals)/3.0
@@ -479,7 +489,7 @@ def fetch_gradB_vel(gdatas, **kwargs):
   dgops.multiply(0, out, 0, out, 0, denom_inv)
 
   # Divide by the species charge.
-  charge = Tperp.ctx["charge"]
+  charge = _get_ctx_val(Tperp, "charge", **kwargs)
   out.set_values(out.get_values()/charge)
 
   return out
@@ -516,7 +526,7 @@ def fetch_diamag_vel(gdatas, **kwargs):
   dgops.multiply(0, out, 0, out, 0, denom_inv)
 
   # Divide by the species charge.
-  charge = pressperp.ctx["charge"]
+  charge = _get_ctx_val(pressperp, "charge", **kwargs)
   out.set_values(out.get_values()/charge)
 
   return out
