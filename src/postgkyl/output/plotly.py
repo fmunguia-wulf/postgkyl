@@ -684,6 +684,12 @@ def plotly(data: GData | Tuple[list, np.ndarray],
     raise ValueError("Surface plots do not support scatter mode")
   # end
 
+  # In surface mode the vertical axis is the function value, not a coordinate;
+  # default its label to empty unless the user overrode it via --zlabel.
+  if surface_mode and zlabel is None:
+    zlabel = " "
+  # end
+
   grid, values, _, _, cells, _, num_comps, idx_comps, xlabel, ylabel, zlabel, clabel = axis_and_grid_prep(
       grid=grid, values=values, lower=lower, upper=upper, cells=cells,
       num_dims=num_dims, streamline=False, quiver=False, num_axes=num_axes,
