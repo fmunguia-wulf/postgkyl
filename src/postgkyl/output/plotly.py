@@ -443,6 +443,25 @@ def _prepare_2d_coordinates(coords: list[np.ndarray], value_shape: tuple[int, ..
   # end
   return arrays[0], arrays[1]
 
+
+def _scene_axis(label: str | None, log_axis: bool, axis_range: list[float] | None,
+    showgrid: bool, theme: dict) -> dict:
+  """Build a themed Plotly 3D scene axis dict, shared by the x/y/z axes."""
+  return dict(
+    title=dict(text=latex_to_html(label), font=dict(color=theme["text_color"])),
+    showgrid=showgrid,
+    type="log" if log_axis else "linear",
+    exponentformat="e",
+    range=axis_range,
+    showbackground=True,
+    backgroundcolor=theme["scene_color"],
+    gridcolor=theme["grid_color"],
+    linecolor=theme["axis_line_color"],
+    tickfont=dict(color=theme["text_color"]),
+    zerolinecolor=theme["grid_color"],
+  )
+
+
 def plotly(data: GData | Tuple[list, np.ndarray],
     squeeze: bool = False, num_axes: int = None,
     num_subplot_row: int | None = None, num_subplot_col: int | None = None,
@@ -571,16 +590,7 @@ def plotly(data: GData | Tuple[list, np.ndarray],
     value = np.asarray(values[..., comp]) * zscale + zshift
     color_value = value * cscale + cshift
     render_color_value = np.array(color_value, copy=True)
-    finite_value = np.isfinite(color_value)
-    finite_count = int(finite_value.sum())
-
-    if finite_count:
-      value_min = float(np.nanmin(color_value))
-      value_max = float(np.nanmax(color_value))
-    else:
-      value_min = float("nan")
-      value_max = float("nan")
-    # end
+    value_min, value_max = _finite_range(color_value)
 
     if surface_mode:
       x_grid, y_grid = _prepare_2d_coordinates(cc_grid, value.shape)
@@ -612,27 +622,9 @@ def plotly(data: GData | Tuple[list, np.ndarray],
     scene_aspectmode, scene_aspectratio = _resolve_plotly_aspect(aspect)
 
     scene = dict(
-      xaxis=dict(
-        title=dict(text=latex_to_html(xlabel), font=dict(color=text_color)), showgrid=showgrid,
-        type="log" if logx else "linear", exponentformat="e", range=x_axis_range,
-        showbackground=True, backgroundcolor=scene_color, gridcolor=grid_color,
-        linecolor=axis_line_color, tickfont=dict(color=text_color),
-        zerolinecolor=grid_color,
-      ),
-      yaxis=dict(
-        title=dict(text=latex_to_html(ylabel), font=dict(color=text_color)), showgrid=showgrid,
-        type="log" if logy else "linear", exponentformat="e", range=y_axis_range,
-        showbackground=True, backgroundcolor=scene_color, gridcolor=grid_color,
-        linecolor=axis_line_color, tickfont=dict(color=text_color),
-        zerolinecolor=grid_color,
-      ),
-      zaxis=dict(
-        title=dict(text=latex_to_html(zlabel), font=dict(color=text_color)), showgrid=showgrid,
-        type="log" if logz else "linear", exponentformat="e", range=z_axis_range,
-        showbackground=True, backgroundcolor=scene_color, gridcolor=grid_color,
-        linecolor=axis_line_color, tickfont=dict(color=text_color),
-        zerolinecolor=grid_color,
-      ),
+      xaxis=_scene_axis(xlabel, logx, x_axis_range, showgrid, theme_colors),
+      yaxis=_scene_axis(ylabel, logy, y_axis_range, showgrid, theme_colors),
+      zaxis=_scene_axis(zlabel, logz, z_axis_range, showgrid, theme_colors),
       bgcolor=scene_color,
       aspectmode=scene_aspectmode,
       aspectratio=scene_aspectratio,
@@ -656,30 +648,29 @@ def plotly(data: GData | Tuple[list, np.ndarray],
 
     trace_colorscale = scalar_colorscale
     trace_colorbar_kwargs = dict(colorbar_kwargs)
+    show_colorbar = colorbar and comp_idx == 0 and not bool(color)
+    trace_name = label or f"c{comp}"
+    show_trace_legend = legend and bool(label)
 
     if surface_mode:
       if logc:
         render_color_value, cmin_val, cmax_val = _apply_log_colorscale(
             render_color_value, cmin_val, cmax_val, trace_colorbar_kwargs)
       # end
-
-      surface_trace = go.Surface(
-          x=x,
-          y=y,
-          z=z,
+      trace_list = [go.Surface(
+          x=x, y=y, z=z,
           surfacecolor=render_color_value,
           colorscale=trace_colorscale,
-          cmin=cmin_val,
-          cmax=cmax_val,
-          showscale=colorbar and comp_idx == 0 and not bool(color),
-          colorbar=trace_colorbar_kwargs if colorbar and comp_idx == 0 and not bool(color) else None,
+          cmin=cmin_val, cmax=cmax_val,
+          showscale=show_colorbar,
+          colorbar=trace_colorbar_kwargs if show_colorbar else None,
           opacity=opacity,
-          name=label or f"c{comp}",
-          showlegend=legend and bool(label),
-      )
-      trace_list = [surface_trace]
+          name=trace_name,
+          showlegend=show_trace_legend,
+      )]
     else:
-      render_color_value = np.array(color_value, copy=True)
+      # Volume and scatter share the same value transforms and downsampling;
+      # only the final trace type differs.
       if logz:
         positive = np.where(render_color_value > 0, render_color_value, np.nan)
         render_color_value = np.log10(positive)
@@ -690,75 +681,62 @@ def plotly(data: GData | Tuple[list, np.ndarray],
           cmax_val = np.log10(cmax_val)
         # end
       # end
-      render_x, render_y, render_z = x, y, z
-      volume_opacity_scale = [[0.0, 0.0], [0.5, 0.2], [1.0, 0.8]]
-      show_volume_colorbar = colorbar and comp_idx == 0 and not bool(color)
-    # end
-
-    if logc and not surface_mode:
-      render_color_value, cmin_val, cmax_val = _apply_log_colorscale(
-          render_color_value, cmin_val, cmax_val, trace_colorbar_kwargs)
-    # end
-
-    if not surface_mode and scatter:
-      render_x, render_y, render_z, render_color_value = downsample(
-        render_x, render_y, render_z, render_color_value,
-        maximum_points_per_axis=maximum_points_per_axis,
-      )
-      marker_size = max(1.0, 2.0 * float(marker_radius))
-      scatter_colorscale = trace_colorscale
-      scatter_opacity = opacity
-      if not bool(color) and scatter_opacity_range is not None:
-        min_alpha, max_alpha = scatter_opacity_range
-        scatter_colorscale = _opacity_mapping(
-            trace_colorscale,
-            min_alpha=min_alpha,
-            max_alpha=max_alpha,
-            log_scale=scatter_opacity_log,
-        )
-        # Colorscale already encodes alpha gradient; keep trace opacity neutral.
-        scatter_opacity = 1.0
+      if logc:
+        render_color_value, cmin_val, cmax_val = _apply_log_colorscale(
+            render_color_value, cmin_val, cmax_val, trace_colorbar_kwargs)
       # end
-      trace = go.Scatter3d(
-        x=render_x.ravel(),
-        y=render_y.ravel(),
-        z=render_z.ravel(),
-        mode="markers",
-        marker=dict(
-          size=marker_size,
-          symbol=markerstyle,
-          color=render_color_value.ravel(),
-          colorscale=scatter_colorscale,
-          cmin=cmin_val,
-          cmax=cmax_val,
-          opacity=scatter_opacity,
-          showscale=show_volume_colorbar,
-          colorbar=trace_colorbar_kwargs if show_volume_colorbar else None,
-        ),
-        name=label or f"c{comp}",
-        showlegend=legend and bool(label),
-      )
-      trace_list = [trace]
-    elif not surface_mode:
       render_x, render_y, render_z, render_color_value = downsample(
-          render_x, render_y, render_z, render_color_value,
+          x, y, z, render_color_value,
           maximum_points_per_axis=maximum_points_per_axis,
       )
-      trace = go.Volume(
-          x=render_x.ravel(), y=render_y.ravel(), z=render_z.ravel(), value=render_color_value.ravel(),
-          colorscale=trace_colorscale,
-          cmin=cmin_val,
-          cmax=cmax_val,
-          opacity=opacity,
-          opacityscale=volume_opacity_scale,
-          surface_count=surface_count,
-          showscale=show_volume_colorbar,
-          colorbar=trace_colorbar_kwargs if show_volume_colorbar else None,
-          name=label or f"c{comp}",
-          showlegend=legend and bool(label),
-      )
-      trace_list = [trace]
-    # end
+
+      if scatter:
+        marker_size = max(1.0, 2.0 * float(marker_radius))
+        scatter_colorscale = trace_colorscale
+        scatter_opacity = opacity
+        if not bool(color) and scatter_opacity_range is not None:
+          min_alpha, max_alpha = scatter_opacity_range
+          scatter_colorscale = _opacity_mapping(
+              trace_colorscale,
+              min_alpha=min_alpha,
+              max_alpha=max_alpha,
+              log_scale=scatter_opacity_log,
+          )
+          # Colorscale already encodes alpha gradient; keep trace opacity neutral.
+          scatter_opacity = 1.0
+        # end
+        trace_list = [go.Scatter3d(
+            x=render_x.ravel(), y=render_y.ravel(), z=render_z.ravel(),
+            mode="markers",
+            marker=dict(
+              size=marker_size,
+              symbol=markerstyle,
+              color=render_color_value.ravel(),
+              colorscale=scatter_colorscale,
+              cmin=cmin_val, cmax=cmax_val,
+              opacity=scatter_opacity,
+              showscale=show_colorbar,
+              colorbar=trace_colorbar_kwargs if show_colorbar else None,
+            ),
+            name=trace_name,
+            showlegend=show_trace_legend,
+        )]
+      else:
+        volume_opacity_scale = [[0.0, 0.0], [0.5, 0.2], [1.0, 0.8]]
+        trace_list = [go.Volume(
+            x=render_x.ravel(), y=render_y.ravel(), z=render_z.ravel(),
+            value=render_color_value.ravel(),
+            colorscale=trace_colorscale,
+            cmin=cmin_val, cmax=cmax_val,
+            opacity=opacity,
+            opacityscale=volume_opacity_scale,
+            surface_count=surface_count,
+            showscale=show_colorbar,
+            colorbar=trace_colorbar_kwargs if show_colorbar else None,
+            name=trace_name,
+            showlegend=show_trace_legend,
+        )]
+      # end
     # end
 
     for trace in trace_list:
