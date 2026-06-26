@@ -24,6 +24,14 @@ from postgkyl.data.dg import get_num_basis
 from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
 import postgkyl.utils.gkeyll_const as gkc
 
+def _get_ctx_val(gdata : GData, key : str, **kwargs):
+  if key in gdata.ctx:
+    return gdata.ctx[key]
+  elif key in kwargs:
+    return kwargs[key]
+  else:
+    raise KeyError(f"fetch function: context key '{key}' not found in GData. Pass it as '--extra {key}=<value>'.")
+
 def _get_num_basis_from_gdata(gdata) -> int:
   from postgkyl.data.dg import get_num_basis
   ndim = gdata.get_num_dims()
@@ -135,6 +143,81 @@ def _make_fetch_sick_div_sjcl(si: int, ck: int, sj: int, cl: int):
   fetch.__name__ = f"fetch_s{si}c{ck}_div_s{sj}c{cl}"
   return fetch
 
+def _b_cross_grad_div_B_component(scalar, jacobtot_inv, b_i, comp):
+  """
+  The comp-th component of the cross product b x grad(f)
+    (b x grad f)_k / B = epsilon_{ijk} * b_i * d(f)/dx^j / (J B)
+  where epsilon_{ijk} is the Levi-Civitta tensor, f is a scalar field
+  and b_i are the covariant components of a vector field.
+
+  Note: the 1/Jacobian factor of the curvilinear cross product is NOT
+  included here and must be applied by the caller.
+
+  Inputs:
+    scalar: scalar field f to be differentiated.
+    jacobtot_inv: inverse of the Jacobian of the total coordinate transformation.
+    b_i:    covariant components of the vector field b.
+    comp:   component k of the cross product to compute (0-index, < 3).
+  """
+  cdim = scalar.get_num_dims()
+
+  # Components of the quantities in the cross product AxB.
+  diff_dir_pos = bi_c_pos = 0
+  diff_dir_neg = bi_c_neg = 0
+  calc_term = [True,True] # Whether to compute pos and neg term in component of AxB.
+  if comp == 0:
+    diff_dir_neg = bi_c_pos = 1
+    diff_dir_pos = bi_c_neg = cdim-1
+    if cdim < 3:
+      calc_term = [True,False]
+    # end
+  elif comp == 1:
+    bi_c_pos = 2
+    bi_c_neg = 0
+    diff_dir_neg = cdim-1
+    diff_dir_pos = 0
+    if cdim == 1:
+      calc_term = [False,True]
+    # end
+  elif comp == 2:
+    diff_dir_neg = bi_c_pos = 0
+    diff_dir_pos = bi_c_neg = 1
+    if cdim == 1:
+      calc_term = [False,False]
+    elif cdim == 2:
+      calc_term = [False,True]
+    # end
+  else:
+    raise KeyError("_b_cross_grad_component: component must be >= 0 and < 3.")
+
+  buff = _empty_gdata_from_gdata(scalar) # Positive term in AxB.
+  out = _empty_gdata_from_gdata(scalar) # Negative term in AxB.
+
+  dgops = GkeyllDGops()
+  lower, upper = scalar.get_bounds()
+  cells = scalar.get_num_cells()
+  if calc_term[0]:
+    # Compute derivatives of the scalar field.
+    dx = (upper[diff_dir_pos] - lower[diff_dir_pos])/cells[diff_dir_pos]
+    dgops.differentiate(diff_dir_pos, 1,  dx, 0, buff, 0, scalar)
+    # Multiply by b_i.
+    dgops.multiply(0, buff, bi_c_pos, b_i, 0, buff)
+
+  if calc_term[1]:
+    # Compute derivatives of the scalar field.
+    dx = (upper[diff_dir_neg] - lower[diff_dir_neg])/cells[diff_dir_neg]
+    dgops.differentiate(diff_dir_neg, 1, -dx, 0, out , 0, scalar)
+    # Multiply by b_i.
+    dgops.multiply(0, out , bi_c_neg, b_i, 0, out )
+
+  # Add the two terms to form the comp-th component of b x grad(f).
+  out.set_values(buff.get_values() + out.get_values())
+
+  # Divide by the Jacobian factor of the curvilinear cross product.
+  dgops.multiply(0, out, 0, out, 0, jacobtot_inv)
+
+  return out
+
 # Functions to extract a components.
 fetch_s0cAll = _make_fetch_comp(None)
 fetch_s0c0 = _make_fetch_comp(0)
@@ -156,12 +239,16 @@ fetch_s0c0_mul_s0c1 = _make_fetch_sick_mul_sjcl(0,0,0,1)
 # Functions to divide two components.
 fetch_s1c0_div_s0c0 = _make_fetch_sick_div_sjcl(1,0,0,0)
 
+# ------------------------------------------
+# --- Plasma moments (species-dependent) ---
+# ------------------------------------------
+
 def fetch_M1_from_H(gdatas, **kwargs):
   """
   M1 from the Hamiltonian moments (Hmom).
   """
   hmom = gdatas[0]
-  mass = hmom.ctx["mass"]
+  mass = _get_ctx_val(hmom, "mass", **kwargs)
   nb = _get_num_basis_from_gdata(hmom)
   vals = hmom.get_values()
 
@@ -181,7 +268,7 @@ def fetch_Tpar_from_BiMax(gdatas, **kwargs):
   Tpar = fetch_s0c2(gdatas)
 
   bimax = gdatas[0]
-  mass = bimax.ctx["mass"]
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tpar.set_values(mass * Tpar.get_values())
   return Tpar
 
@@ -204,7 +291,7 @@ def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
   m2par_val = m2par.get_values()
   um1_val = upar.get_values()
   
-  mass = m0.ctx["mass"]
+  mass = _get_ctx_val(m0, "mass", **kwargs)
   Tpar.set_values(mass * (m2par_val - um1_val))
   dgops.multiply(0, Tpar, 0, Tpar, 0, m0_inv)
   return Tpar
@@ -216,7 +303,7 @@ def fetch_Tperp_from_BiMax(gdatas, **kwargs):
   Tperp = fetch_s0c3(gdatas)
 
   bimax = gdatas[0]
-  mass = bimax.ctx["mass"]
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tperp.set_values(mass * Tperp.get_values())
   return Tperp
 
@@ -227,7 +314,7 @@ def fetch_Tperp_from_M0_M2perp(gdatas, **kwargs):
   Tperp = fetch_s1c0_div_s0c0(gdatas)
 
   m0 = gdatas[0]
-  mass = m0.ctx["mass"]
+  mass = _get_ctx_val(m0, "mass", **kwargs)
   Tperp.set_values(0.5 * mass * Tperp.get_values())
   return Tperp
 
@@ -238,7 +325,7 @@ def fetch_temp_from_Max(gdatas, **kwargs):
   temp = fetch_s0c2(gdatas)
 
   maxmom = gdatas[0]
-  mass = maxmom.ctx["mass"]
+  mass = _get_ctx_val(maxmom, "mass", **kwargs)
   temp.set_values(mass * temp.get_values())
   return temp
 
@@ -256,6 +343,10 @@ def fetch_temp_from_Tpar_Tperp(gdatas, **kwargs):
   temp.set_values((Tpar_val + 2.0*Tperp_val)/3.0)
   return temp
 
+# ---------------------------------------------------
+# --- Combined plasma moments (species-dependent) ---
+# ---------------------------------------------------
+
 def fetch_press_from_Max(gdatas, **kwargs):
   """
   Pressure from Maxwellian moments.
@@ -271,7 +362,7 @@ def fetch_press_from_Max(gdatas, **kwargs):
   dgops = GkeyllDGops()
   dgops.multiply(0, press, 0, maxmom, 2, maxmom)
 
-  mass = maxmom.ctx["mass"]
+  mass = _get_ctx_val(maxmom, "mass", **kwargs)
   press.set_values(mass * press.get_values())
   return press
 
@@ -284,11 +375,12 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   nb = _get_num_basis_from_gdata(bimax)
   vals = bimax.get_values()
 
+  mass = _get_ctx_val(bimax, "mass", **kwargs)
   Tpar_vals  = vals[..., 2*nb:3*nb]
   Tperp_vals = vals[..., 3*nb:4*nb]
-  temp_vals  = (Tpar_vals + 2.0 * Tperp_vals)/3.0
+  temp_vals  = mass*(Tpar_vals + 2.0 * Tperp_vals)/3.0
 
-  press = GData(ctx=gd.ctx)
+  press = GData(ctx=bimax.ctx)
   press.push(bimax.get_grid(), temp_vals.copy())
 
   dgops = GkeyllDGops()
@@ -296,84 +388,19 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
 
   return press
 
-def fetch_ExB_vel(gdatas, **kwargs):
+def fetch_press_p(gdatas, **kwargs):
   """
-  A component of the ExB drift velocity
-    v_E,k = (epsilon_{ijk}/(J*B) * b_i * d(phi)/x^j
-  where epsilon_{ijk} is the Levi-Civitta tensor
-  and gdatas has (in this order):
-    1/(J*B): jacobtot_inv.
-    b_i: covariant components of the magnetic field unit vector.
-    phi: electrostatic potential.
-
-  The k-th component is selected by the 'dir' optional argument.
+  Perpendicular/parallel pressure in J/m^3.
+  p_p = n * T_p.
   """
-  if "dir" not in kwargs:
-    raise KeyError("fetch_ExB_vel: select the j-th component with '--extra dir=j' (0-index).")
-
-  vE_dir = kwargs["dir"]
-
-  jacobtot_inv = gdatas[0]
-  b_i = gdatas[1]
-  phi = gdatas[2]
-  cdim = phi.get_num_dims()
-
-  # Components of the quantities in the cross product AxB.
-  diff_dir_pos = bi_c_pos = 0
-  diff_dir_neg = bi_c_neg = 0
-  calc_term = [True,True] # Whether to compute pos and neg term in component of AxB.
-  if vE_dir == 0:
-    diff_dir_neg = bi_c_pos = 1
-    diff_dir_pos = bi_c_neg = cdim-1
-    if cdim < 3:
-      calc_term = [True,False]
-    # end
-  elif vE_dir == 1:
-    bi_c_pos = 2
-    bi_c_neg = 0
-    diff_dir_neg = cdim-1
-    diff_dir_pos = 0
-    if cdim == 1:
-      calc_term = [False,True]
-    # end
-  elif vE_dir == 2:
-    diff_dir_neg = bi_c_pos = 0
-    diff_dir_pos = bi_c_neg = 1
-    if cdim == 1:
-      calc_term = [False,False]
-    elif cdim == 2:
-      calc_term = [False,True]
-    # end
-  else:
-    raise KeyError("fetch_ExB_vel: '--extra dir=j' must be >= 0 and <3.")
-
-  buff = _empty_gdata_from_gdata(phi) # Positive term in AxB.
-  out = _empty_gdata_from_gdata(phi) # Negative term in AxB.
-
+  m0 = gdatas[0]
+  Tp = gdatas[1]
+  
   dgops = GkeyllDGops()
-  lower, upper = phi.get_bounds()
-  cells = phi.get_num_cells()
-  if calc_term[0]:
-    # Compute derivatives of phi
-    dx = (upper[diff_dir_pos] - lower[diff_dir_pos])/cells[diff_dir_pos]
-    dgops.differentiate(diff_dir_pos, 1,  dx, 0, buff, 0, phi)
-    # Multiply by b_i.
-    dgops.multiply(0, buff, bi_c_pos, b_i, 0, buff)
+  press_p = _empty_gdata_from_gdata(m0)
+  dgops.multiply(0, press_p, 0, m0, 0, Tp)
 
-  if calc_term[1]:
-    # Compute derivatives of phi
-    dx = (upper[diff_dir_neg] - lower[diff_dir_neg])/cells[diff_dir_neg]
-    dgops.differentiate(diff_dir_neg, 1, -dx, 0, out , 0, phi)
-    # Multiply by b_i.
-    dgops.multiply(0, out , bi_c_neg, b_i, 0, out )
-
-  # Add two terms and multiply by 1/(J*B).
-  pos_term = buff.get_values()
-  neg_term = out.get_values()
-  out.set_values(pos_term + neg_term)
-  dgops.multiply(0, out, 0, jacobtot_inv, 0, out)
-
-  return out
+  return press_p
 
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
   """
@@ -397,3 +424,107 @@ def fetch_beta_from_bmag_press(gdatas, **kwargs):
   out.set_values(2.0*mu0*out_val)
   return out
 
+# ------------------------
+# --- Drift velocities ---
+# ------------------------
+
+def fetch_ExB_vel(gdatas, **kwargs):
+  """
+  A component of the ExB drift velocity
+    v_{E,k} = epsilon_{ijk}/(J B) * b_i * d(phi)/dx^j
+  where epsilon_{ijk} is the Levi-Civitta tensor
+  and gdatas has (in this order):
+    1/(J*B): jacobtot_inv.
+    b_i: covariant components of the magnetic field unit vector.
+    phi: electrostatic potential.
+
+  The k-th component is selected by the 'dir' optional argument.
+  """
+  if "dir" not in kwargs:
+    raise KeyError("fetch_ExB_vel: select the j-th component with '--extra dir=j' (0-index).")
+
+  jacobtot_inv = gdatas[0]
+  bmag = gdatas[1]
+  b_i = gdatas[2]
+  phi = gdatas[3]
+
+  # k-th component of b x grad(phi)/B.
+  out = _b_cross_grad_div_B_component(phi, jacobtot_inv, b_i, kwargs["dir"])
+
+  return out
+
+def fetch_gradB_vel(gdatas, **kwargs):
+  """
+  A component of the grad-B drift velocity
+    v_gradB,k = Tperp/(q B) * epsilon_{ijk} * b_i * d(B)/dx^j / (J B)
+  where epsilon_{ijk} is the Levi-Civitta tensor, q the species charge,
+  and gdatas has (in this order):
+    1/(J*B): inv. total Jacobian (jacobtot_inv).
+    B: magnetic field magnitude (bmag).
+    b_i: covariant components of the magnetic field unit vector.
+    Tperp: perpendicular temperature (in Joules).
+
+  The k-th component is selected by the 'dir' optional argument.
+  """
+  if "dir" not in kwargs:
+    raise KeyError("fetch_gradB_vel: select the j-th component with '--extra dir=j' (0-index).")
+
+  jacobtot_inv = gdatas[0]
+  bmag = gdatas[1]
+  b_i = gdatas[2]
+  Tperp = gdatas[3]
+
+  # k-th component of b x grad(B)/B.
+  out = _b_cross_grad_div_B_component(bmag, jacobtot_inv, b_i, kwargs["dir"])
+
+  dgops = GkeyllDGops()
+  # Multiply by Tperp.
+  dgops.multiply(0, out, 0, Tperp, 0, out)
+
+  # Divide by B.
+  denom_inv = _empty_gdata_from_gdata(bmag)
+  dgops.invert(0, denom_inv, 0, bmag)
+  dgops.multiply(0, out, 0, out, 0, denom_inv)
+
+  # Divide by the species charge.
+  charge = _get_ctx_val(Tperp, "charge", **kwargs)
+  out.set_values(out.get_values()/charge)
+
+  return out
+
+def fetch_diamag_vel(gdatas, **kwargs):
+  """
+  A component of the diamagnetic drift velocity
+    v_diamag,k = 1 / (q n) epsilon_{ijk} b_i * d(pperp)/dx^j / (J B)
+  where epsilon_{ijk} is the Levi-Civitta tensor, q the species charge,
+  and gdatas has (in this order):
+    1/(J*B): inv. total Jacobian (jacobtot_inv).
+    B: magnetic field magnitude (bmag).
+    b_i: covariant components of the magnetic field unit vector.
+    m0: zeroth moment (density).
+    p_perp: perpendicular pressure (in Joules/m^3).
+  The k-th component is selected by the 'dir' optional argument.
+  """
+  if "dir" not in kwargs:
+    raise KeyError("fetch_diamag_vel: select the j-th component with '--extra dir=j' (0-index).")
+
+  jacobtot_inv = gdatas[0]
+  bmag = gdatas[1]
+  b_i = gdatas[2]
+  m0 = gdatas[3]
+  pressperp = gdatas[4]
+
+  # k-th component of b x grad(p) / B.
+  out = _b_cross_grad_div_B_component(pressperp, jacobtot_inv, b_i, kwargs["dir"])
+
+  dgops = GkeyllDGops()
+  # Divide by n
+  denom_inv = _empty_gdata_from_gdata(bmag)
+  dgops.invert(0, denom_inv, 0, m0)
+  dgops.multiply(0, out, 0, out, 0, denom_inv)
+
+  # Divide by the species charge.
+  charge = _get_ctx_val(pressperp, "charge", **kwargs)
+  out.set_values(out.get_values()/charge)
+
+  return out

@@ -318,20 +318,13 @@ class GData(object):
       # end
     # end
 
-  def __dict_has_key_from_group__(self, dict_in, group_members_in):
-    # Check if a dictionary with key-value pairs, where the key is the name of a group and
-    # the value a list of group members (as strings), has a member from a given
-    # group.
-    #  dict_in: input dictionary.
-    #  group_members_in: group members to check for in dict_in.
-    dict_keys = dict_in.keys()
-    for key in group_members_in:
-      if key in dict_keys:
-        return True
-      #end
-    #end
-    return False
-      
+  def _dict_has_key_from_group(self, dict_in, group_members_in):
+    """
+    Check if a dictionary with key-value pairs, where the key is the name of a group and
+    the value a list of group members (as strings), has a member from a given
+    group.
+    """
+    return not dict_in.keys().isdisjoint(group_members_in)
 
   # ---- Info -----
   def info(self) -> str:
@@ -379,7 +372,7 @@ class GData(object):
 
     output += f"├─ Number of components: {num_comps:d}\n"
     output += f"├─ Number of dimensions: {num_dims:d}\n"
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["grid_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["grid_info"]):
       output += f"├─ Grid: ({self.get_grid_type():s})\n"
       if "lower" in self.ctx.keys() and "upper" in self.ctx.keys() and "cells" in self.ctx.keys():
         for d in range(num_dims - 1):
@@ -409,7 +402,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["basis_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["basis_info"]):
       output += "\n├─ DG info:"
       if "poly_order" in self.ctx.keys():
         printed_keys.append("poly_order")
@@ -425,7 +418,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["build_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["build_info"]):
       output += "\n├─ Created with Gkeyll:"
       if "changeset" in self.ctx.keys():
         printed_keys.append("changeset")
@@ -437,7 +430,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["geometry_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["geometry_info"]):
       output += "\n├─ Geometry info:"
       if "geometry_type" in self.ctx.keys():
         printed_keys.append("geometry_type")
@@ -456,7 +449,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["species_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["species_info"]):
       output += "\n├─ Species properties:"
       if "mass" in self.ctx.keys():
         printed_keys.append("mass")
