@@ -364,5 +364,7 @@ def plot(ctx, **kwargs):
 
   if kwargs["show"]:
     plt.show()
+  else:
+    plt.close()
   # end
   verb_print(ctx, "Finishing plot")
