@@ -82,6 +82,12 @@ def gk_load_quantity(ctx, **kwargs):
 
   verb_print(ctx, f"Species: {species_list}")
 
+  # Handle frames integer or integer list input.
+  if isinstance(kwargs['frame'], int):
+    kwargs['frame'] = str(kwargs['frame'])
+  if isinstance(kwargs['frame'], list):
+    kwargs['frame'] = ",".join(str(f) for f in kwargs['frame'])
+
   for species in species_list:
     # Determine which source combination and frames to use for this species.
     src_combo_idx, frames = gkquant.get_avail_source(path, kwargs['name'], species, kwargs['frame'])
