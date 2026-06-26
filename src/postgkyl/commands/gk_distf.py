@@ -1,19 +1,3 @@
-# MR was heavily inspired by LLMs (copilot) in writing this file. Highly specific and detailed prompts were used, with several iterations of refactors. Copilot inserted several unnecessary error checks because it didn't understand the assumptions we can make about the data. It was incredibly helpful in checking. I had to remove a lot of functions it used to make load_gk_distf more concise.
-
-"""
-# Script example of usage in python
-import postgkyl as pg
-from postgkyl.commands import load_gk_distf
-import matplotlib.pyplot as plt
-
-distf = pg.commands.load_gk_distf(
-                name="gk_lorentzian_mirror",
-                species="ion",
-                frame=0)
-pg.data.select(distf, z0=0.0, overwrite=True)
-pg.output.plot(distf)
-plt.show()
-"""
 import glob
 
 import click
@@ -25,27 +9,24 @@ from postgkyl.utils import verb_print
 # mc2nu grid deformation helpers
 # This is a result of the gkyl_reader not having support for both mapc2p and mapc2p-vel grids.
 # Particularly, the gkyl_reader does not support mapping phase space arrays with mapc2p
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26
 def _convert_cell_centered_to_nodal(cell_centers: np.ndarray) -> np.ndarray:
-  """ Given an array defined at cell centers, return the corresponding nodal values
-   by interpolating half a cell width at the boundaries."""
+  """
+  Given an array defined at cell centers, return the corresponding nodal
+  values by interpolating half a cell width at the boundaries.
+  """
   nodes = np.zeros(cell_centers.size + 1, dtype=cell_centers.dtype)
   nodes[1:-1] = 0.5 * (cell_centers[:-1] + cell_centers[1:])
   nodes[0]  = cell_centers[0]  + (cell_centers[0]  - nodes[1]) # Cell center plus half a cell width
   nodes[-1] = cell_centers[-1] + (cell_centers[-1] - nodes[-2]) # Cell center plus half a cell width
   return nodes
-# end
 
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26
 def _extract_values_along_dimension(mapped_values: np.ndarray, axis: int, cdim: int) -> np.ndarray:
   """Decompose mapped_values into a 1D array along the specified axis"""
   idx = [0] * (cdim + 1)  # Initialize indexing array. mc2nu has cdim+1 dimensions.
   idx[axis] = slice(None)  # Define a slice along the desired axis.
   idx[-1] = axis  # Select the appropriate component of mc2nu
   return mapped_values[tuple(idx)].reshape(-1)  # Apply indices and flatten to 1D.
-# end
 
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26, removing extra code.
 def _apply_mc2nu_grid(uniform_grid: list, mc2nu_file: str, interp: int | None = None) -> list:
   """Replace computational configuration-space grid with non-uniform spatial coordinates."""
   mc2nu_data = GData(mc2nu_file)
@@ -59,7 +40,6 @@ def _apply_mc2nu_grid(uniform_grid: list, mc2nu_file: str, interp: int | None = 
     nonuniform_grid[d] = _convert_cell_centered_to_nodal(mc2nu_single_axis)
   # end
   return nonuniform_grid
-# end
 
 def _resolve_optional_file_option(option_value: str | None) -> tuple[bool, str | None]:
   """Interpret an optional-value CLI option as (enabled, override_file)."""
@@ -68,28 +48,25 @@ def _resolve_optional_file_option(option_value: str | None) -> tuple[bool, str |
   if option_value == "":
     return True, None
   return True, option_value
-# end
 
-# Public API
 def load_gk_distf(
-    name: str, species: str, frame: int,
-    tag: str = "f", suffix: str = "", use_c2p_vel: bool = False,
-    use_mc2nu: bool = False, use_mapc2p: bool = False, block_idx: int | None = None,
-    interp: int | None = None,
-    jf_file: str | None = None,
-    mapc2p_vel_file: str | None = None,
-    jacobvel_file: str | None = None,
-    mc2nu_file: str | None = None,
-    mapc2p_file: str | None = None,
-    jacobtot_inv_file: str | None = None,
-) -> GData:
-  """Build a real distribution function from saved JBf data."""
-  # Mostly by LLMs, but heavily refactored and verified by MR 3/16/26
+  name: str, species: str, frame: int,
+  tag: str = "f", suffix: str = "", use_c2p_vel: bool = False,
+  use_mc2nu: bool = False, use_mapc2p: bool = False, block_idx: int | None = None,
+  interp: int | None = None,
+  Jf_file: str | None = None,
+  mapc2p_vel_file: str | None = None,
+  jacobvel_file: str | None = None,
+  mc2nu_file: str | None = None,
+  mapc2p_file: str | None = None,
+  jacobtot_inv_file: str | None = None, ) -> GData:
+  """Build a real distribution function from saved JxJvBf data."""
+
   prefix = f"{name}_b{block_idx}" if block_idx is not None else name
   frame_infix = f"{suffix}_" if suffix else ""
 
-  if jf_file is None:
-    jf_file = f"{prefix}-{species}_{frame_infix}{frame}.gkyl"
+  if Jf_file is None:
+    Jf_file = f"{prefix}-{species}_{frame_infix}{frame}.gkyl"
   # end
   if mapc2p_vel_file is None:
     mapc2p_vel_file = f"{prefix}-{species}_mapc2p_vel.gkyl"
@@ -107,50 +84,49 @@ def load_gk_distf(
     jacobtot_inv_file = f"{prefix}-jacobtot_inv.gkyl"
   # end
 
-  jf_data           = GData(jf_file, mapc2p_vel_name=mapc2p_vel_file if use_c2p_vel else None)
+  Jf_data           = GData(Jf_file, mapc2p_vel_name=mapc2p_vel_file if use_c2p_vel else None)
   jacobvel_data     = GData(jacobvel_file)
   jacobtot_inv_data = GData(jacobtot_inv_file)
 
   # Divide Jf by jacobvel to get f * J_x * B.
-  fjxB_data = GData(ctx=jf_data.ctx) # Inside a GData object so we can interpolate
-  fjxB_values = jf_data.get_values() / jacobvel_data.get_values()
-  fjxB_data.push(jf_data.get_grid(), fjxB_values)
+  fJxB_data = GData(ctx=Jf_data.ctx) # Inside a GData object so we can interpolate
+  fJxB_values = Jf_data.get_values() / jacobvel_data.get_values()
+  fJxB_data.push(Jf_data.get_grid(), fJxB_values)
 
   # Interpolate f * J_x * B and jacobtot_inv to the same grid.
-  out_grid, fjxB_values    = GInterpModal(fjxB_data, 1, "gkhyb", interp).interpolate()
+  out_grid, fJxB_values    = GInterpModal(fJxB_data, 1, "gkhyb", interp).interpolate()
   _, jacobtot_inv_values   = GInterpModal(jacobtot_inv_data, 1, "ms", interp).interpolate()
-  fjxB_values              = np.squeeze(fjxB_values)
+  fJxB_values              = np.squeeze(fJxB_values)
   jacobtot_inv_values      = np.squeeze(jacobtot_inv_values)
 
   # Reshape jacobtot_inv to have 1 component over velocity dimensions, then multiply.
-  vdim = fjxB_values.ndim - jacobtot_inv_values.ndim
+  vdim = fJxB_values.ndim - jacobtot_inv_values.ndim
   jacobtot_inv_reshaped = jacobtot_inv_values.reshape(jacobtot_inv_values.shape + (1,) * vdim)
-  f_values = fjxB_values * jacobtot_inv_reshaped
+  f_values = fJxB_values * jacobtot_inv_reshaped
   # Add 1 dimension to represent 1 component
   f_values = f_values.reshape(f_values.shape + (1,))
 
   if use_mc2nu:
     out_grid = _apply_mc2nu_grid(out_grid, mc2nu_file, interp)
     if use_c2p_vel:
-      jf_data.ctx["grid_type"] = "c2p_vel + mc2nu"
+      Jf_data.ctx["grid_type"] = "c2p_vel + mc2nu"
     else:
-      jf_data.ctx["grid_type"] = "mc2nu"
+      Jf_data.ctx["grid_type"] = "mc2nu"
     # end
   elif use_mapc2p:
     out_grid = _apply_mc2nu_grid(out_grid, mapc2p_file, interp)
     if use_c2p_vel:
-      jf_data.ctx["grid_type"] = "c2p_vel + mapc2p"
+      Jf_data.ctx["grid_type"] = "c2p_vel + mapc2p"
     else:
-      jf_data.ctx["grid_type"] = "mapc2p"
+      Jf_data.ctx["grid_type"] = "mapc2p"
     # end
   # end
 
-  out = GData(tag=tag, ctx=jf_data.ctx)
+  out = GData(tag=tag, ctx=Jf_data.ctx)
   out.push(out_grid, f_values)
   return out
 # end
 
-# Generated by LLMs, commented and verified by MR 3/16/26
 @click.command()
 @click.option("--name", "-n", required=True, type=click.STRING,
   help="Simulation name prefix (e.g. gk_lorentzian_mirror).")
@@ -158,7 +134,7 @@ def load_gk_distf(
   help="Species name (e.g. ion or elc).")
 @click.option("--suffix", default="", type=click.STRING,
   help="Use <name>-<species>_<suffix>_<frame>.gkyl as the input distribution.")
-@click.option("--jf-file", default=None, type=click.STRING,
+@click.option("--Jf-file", default=None, type=click.STRING,
   help="Jf filename override. If omitted, the default naming convention is used.")
 @click.option("--jacobvel-file", default=None, type=click.STRING,
   help="jacobvel filename override. If omitted, the default naming convention is used.")
@@ -185,10 +161,22 @@ def load_gk_distf(
   help="Tag for output dataset.")
 @click.pass_context
 def gk_distf(ctx, **kwargs):
-  """Gyrokinetics: loads and interpolates distribution function from files containing the 
-  distribution (f) times one or multiple Jacobians (jf). Optionally, use mappings (in files) 
-  to convert the native coordinates of jf to physical velocity space coordinates or
-  Cartesian/cyclindrical position space coordinates."""
+  """
+  Gyrokinetics: load the distribution function from files containing the 
+  distribution (f) times one or multiple Jacobians (J). The Jacobians are
+  divided out in order to output f. The distribution is interpolated, and
+  the interpolation can optionally use mappings to convert from computational
+  to physical coordinates.
+
+  Command line example:
+    pgkyl gk-distf -n gk_lorentzian_mirror -s ion -f 0
+
+  Script example:
+    import postgkyl as pg
+    from postgkyl.commands import load_gk_distf
+    
+    distf = pg.commands.load_gk_distf(name="gk_lorentzian_mirror", species="ion", frame=0)
+  """
   data = ctx.obj["data"]
 
   verb_print(ctx, "Building distribution function for " + kwargs["name"])
@@ -200,7 +188,6 @@ def gk_distf(ctx, **kwargs):
     frames = [int(frame_spec)] # Stick to the frame specified on input
   else:
     # Figure out how many frames are possible to read based on what files are available
-    # Generated by LLMs
     prefix = f"{kwargs['name']}_b{kwargs['block']}" if kwargs["block"] is not None else kwargs["name"]
     frame_infix = f"{kwargs['suffix']}_" if kwargs["suffix"] else ""
     stem = f"{prefix}-{kwargs['species']}_{frame_infix}"
@@ -230,7 +217,7 @@ def gk_distf(ctx, **kwargs):
       use_mc2nu=use_mc2nu, use_mapc2p=use_mapc2p,
       block_idx=kwargs["block"],
       interp=kwargs["interp"],
-      jf_file=kwargs["jf_file"],
+      Jf_file=kwargs["Jf_file"],
       mapc2p_vel_file=mapc2p_vel_file,
       jacobvel_file=kwargs["jacobvel_file"],
       mc2nu_file=mc2nu_file,
