@@ -63,6 +63,10 @@ class GkeyllDGops:
     lib.gkyl_cart_modal_serendip_new.argtypes = [c_i, c_i]
     lib.gkyl_cart_modal_serendip_new.restype  = c_vp
 
+    # gkyl_cart_modal_gkhybrid_new(cdim, vdim) -> gkyl_basis*
+    lib.gkyl_cart_modal_gkhybrid_new.argtypes = [c_i, c_i]
+    lib.gkyl_cart_modal_gkhybrid_new.restype  = c_vp
+
     # gkyl_cart_modal_basis_get_num_basis(basis*) -> int
     lib.gkyl_cart_modal_basis_get_num_basis.argtypes = [c_vp]
     lib.gkyl_cart_modal_basis_get_num_basis.restype  = c_i
@@ -92,6 +96,10 @@ class GkeyllDGops:
     lib.gkyl_dg_mul_op.argtypes = [c_vp, c_i, c_vp, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_mul_op.restype  = None
 
+    # gkyl_dg_mul_conf_phase_op_range(cbasis*, pbasis*, pout*, cop*, pop*, crange*, prange*)
+    lib.gkyl_dg_mul_conf_phase_op_range.argtypes = [c_vp, c_vp, c_vp, c_vp, c_vp, c_vp, c_vp]
+    lib.gkyl_dg_mul_conf_phase_op_range.restype  = None
+
     # gkyl_dg_inv_op(basis*, c_oop, out*, c_iop, iop*)
     lib.gkyl_dg_inv_op.argtypes = [c_vp, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_inv_op.restype  = None
@@ -116,7 +124,7 @@ class GkeyllDGops:
     lib.gkyl_dg_eval_at_coord_proj_release.argtypes = [c_vp]
     lib.gkyl_dg_eval_at_coord_proj_release.restype  = None
 
-  def _gdata_to_array(self, gdata):
+  def _gkyl_array_new_from_gdata(self, gdata):
     """
     Wrap a GData's value buffer in a gkyl_array without copying.
 
@@ -132,11 +140,26 @@ class GkeyllDGops:
     arr_ptr = self._lib.gkyl_array_new_from_buff(_GKYL_DOUBLE, ncomp, size, data_ptr)
     return arr_ptr, values
 
-  def _make_basis(self, gdata):
-    """Create a serendipity basis from a GData's metadata. Caller must release."""
+  def _gkyl_basis_new_from_gdata(self, gdata):
+    """Create a basis from a GData's metadata. Caller must release."""
     ndim       = ctypes.c_int(gdata.get_num_dims())
     poly_order = ctypes.c_int(int(gdata.ctx["poly_order"]))
-    return self._lib.gkyl_cart_modal_serendip_new(ndim, poly_order)
+    basis_type = ctypes.c_int(int(gdata.ctx["basis_type"]))
+    if basis_type == "gkhybrid":
+      vdim = 1 if ndim == 2 else 2
+      cdim = ndim - vdim
+      return self._lib.gkyl_cart_modal_gkhybrid_new(cdim, vdim)
+    else:
+      return self._lib.gkyl_cart_modal_serendip_new(ndim, poly_order)
+
+  def _gkyl_range_new_from_gdata(self, gdata):
+    """Create a 1-indexed gkyl_range covering all cells of gdata. Caller must release."""
+    values = gdata.get_values()
+    cells  = list(values.shape[:-1])
+    ndim   = len(cells)
+    c_lo   = (ctypes.c_int * ndim)(*([1] * ndim))
+    c_up   = (ctypes.c_int * ndim)(*cells)
+    return self._lib.gkyl_range_new(ctypes.c_int(ndim), c_lo, c_up)
 
   def multiply(self, c_oop: int, oop, c_lop: int, lop, c_rop: int, rop) -> None:
     """
@@ -145,12 +168,12 @@ class GkeyllDGops:
     Inputs:
       c_oop, c_lop, c_rop: Physical component indices (0-based) within each multi-component field.
                            Use 0 for single-component (scalar) fields.
-      oop, lop, rop: Output and input operand datasets. oop be allocated.
+      oop, lop, rop: Output and input operand datasets. Must be pre-allocated.
     """
-    basis = self._make_basis(lop)
-    arr_oop, _ = self._gdata_to_array(oop)
-    arr_lop, _ = self._gdata_to_array(lop)
-    arr_rop, _ = self._gdata_to_array(rop)
+    basis = self._gkyl_basis_new_from_gdata(lop)
+    arr_oop, _ = self._gkyl_array_new_from_gdata(oop)
+    arr_lop, _ = self._gkyl_array_new_from_gdata(lop)
+    arr_rop, _ = self._gkyl_array_new_from_gdata(rop)
     try:
       self._lib.gkyl_dg_mul_op(basis,
         ctypes.c_int(c_oop), arr_oop,
@@ -161,6 +184,37 @@ class GkeyllDGops:
       self._lib.gkyl_array_release(arr_oop)
       self._lib.gkyl_array_release(arr_lop)
       self._lib.gkyl_array_release(arr_rop)
+
+  def multiply_conf_phase(self, pout, cop, pop) -> None:
+    """
+    Weak DG conf-phase multiply: pout = cop * pop on all cells.
+
+    cop is a conf-space field and pop/pout are phase-space fields.
+    Ranges are constructed automatically from the shape of each dataset.
+
+    Inputs:
+      pout: Output phase-space dataset. Must be pre-allocated.
+      cop:  Conf-space operand dataset.
+      pop:  Phase-space operand dataset.
+    """
+    cbasis = self._gkyl_basis_new_from_gdata(cop)
+    pbasis = self._gkyl_basis_new_from_gdata(pop)
+    arr_pout, _ = self._gkyl_array_new_from_gdata(pout)
+    arr_cop,  _ = self._gkyl_array_new_from_gdata(cop)
+    arr_pop,  _ = self._gkyl_array_new_from_gdata(pop)
+    crange = self._gkyl_range_new_from_gdata(cop)
+    prange = self._gkyl_range_new_from_gdata(pop)
+    try:
+      self._lib.gkyl_dg_mul_conf_phase_op_range(
+        cbasis, pbasis, arr_pout, arr_cop, arr_pop, crange, prange)
+    finally:
+      self._lib.gkyl_cart_modal_basis_release(cbasis)
+      self._lib.gkyl_cart_modal_basis_release(pbasis)
+      self._lib.gkyl_array_release(arr_pout)
+      self._lib.gkyl_array_release(arr_cop)
+      self._lib.gkyl_array_release(arr_pop)
+      self._lib.gkyl_range_release(crange)
+      self._lib.gkyl_range_release(prange)
 
   def differentiate(self, dir: int, diff_order: int, dx: float, c_oop: int, oop, c_iop: int, iop) -> None:
     """
@@ -175,9 +229,9 @@ class GkeyllDGops:
       c_oop, c_iop: Physical component indices (0-based).
       oop, iop:   Output and input datasets. oop must be allocated.
     """
-    basis = self._make_basis(iop)
-    arr_oop, _ = self._gdata_to_array(oop)
-    arr_iop, _ = self._gdata_to_array(iop)
+    basis = self._gkyl_basis_new_from_gdata(iop)
+    arr_oop, _ = self._gkyl_array_new_from_gdata(oop)
+    arr_iop, _ = self._gkyl_array_new_from_gdata(iop)
     try:
       self._lib.gkyl_dg_differentiate_op_local(basis,
         ctypes.c_int(dir), ctypes.c_int(diff_order), ctypes.c_double(dx),
@@ -249,7 +303,7 @@ class GkeyllDGops:
       tar_grid      = [np.array([eval_coords[d]]) for d in range(num_eval)]
 
     # donor array
-    arr_do, values = self._gdata_to_array(gdata)
+    arr_do, values = self._gkyl_array_new_from_gdata(gdata)
     ncomp_raw = int(values.shape[-1])
 
     # target buffer
@@ -302,9 +356,9 @@ class GkeyllDGops:
       c_oop, c_iop: Physical component indices (0-based).
       oop, iop: Output and input datasets. oop be allocated.
     """
-    basis  = self._make_basis(iop)
-    arr_oop, _ = self._gdata_to_array(oop)
-    arr_iop, _ = self._gdata_to_array(iop)
+    basis  = self._gkyl_basis_new_from_gdata(iop)
+    arr_oop, _ = self._gkyl_array_new_from_gdata(oop)
+    arr_iop, _ = self._gkyl_array_new_from_gdata(iop)
     try:
       self._lib.gkyl_dg_inv_op(basis,
         ctypes.c_int(c_oop), arr_oop,
