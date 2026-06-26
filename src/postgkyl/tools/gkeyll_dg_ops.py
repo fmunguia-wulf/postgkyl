@@ -100,8 +100,8 @@ class GkeyllDGops:
     lib.gkyl_dg_differentiate_op_local.argtypes = [c_vp, c_i, c_i, c_d, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_differentiate_op_local.restype  = None
 
-    # gkyl_dg_eval_at_coord_proj_new(basis_do*, basis_tar*, num_eval_dirs, eval_dirs*, use_gpu)
-    lib.gkyl_dg_eval_at_coord_proj_new.argtypes = [c_vp, c_vp, c_i, ctypes.POINTER(c_i), ctypes.c_bool]
+    # gkyl_dg_eval_at_coord_proj_new(cdim_do, basis_do*, num_eval_dirs, eval_dirs*, use_gpu)
+    lib.gkyl_dg_eval_at_coord_proj_new.argtypes = [c_i, c_vp, c_i, ctypes.POINTER(c_i), ctypes.c_bool]
     lib.gkyl_dg_eval_at_coord_proj_new.restype  = c_vp
 
     # gkyl_dg_eval_at_coord_proj_advance(up*, eval_coords*, grid*, pick_lower*,
@@ -215,7 +215,7 @@ class GkeyllDGops:
     num_eval  = len(eval_dirs)
     keep_dirs = [d for d in range(ndim) if d not in eval_dirs]
     ndim_tar  = len(keep_dirs)
-    cells_tar = [cells[d] for d in keep_dirs]
+    cells_tar = [cells[d] for d in keep_dirs] if num_eval<ndim else [1 for d in range(ndim)]
 
     # donor grid (opaque)
     c_lower  = (ctypes.c_double * ndim)(*lower)
@@ -239,12 +239,14 @@ class GkeyllDGops:
       c_rng_lo_tar  = (ctypes.c_int * ndim_tar)(*([1] * ndim_tar))
       c_rng_up_tar  = (ctypes.c_int * ndim_tar)(*cells_tar)
       rng_tar_ptr   = self._lib.gkyl_range_new(ctypes.c_int(ndim_tar), c_rng_lo_tar, c_rng_up_tar)
+      tar_grid      = [grid_edges[d] for d in keep_dirs]
     else:
       # all dims evaluated: basis_tar = NULL per C API; use a 1D range of shape (1,)
       basis_tar_ptr = ctypes.c_void_p(None)
       num_basis_tar = 1
       c_one       = (ctypes.c_int * 1)(1)
       rng_tar_ptr = self._lib.gkyl_range_new(ctypes.c_int(1), c_one, c_one)
+      tar_grid      = [np.array([eval_coords[d]]) for d in range(num_eval)]
 
     # donor array
     arr_do, values = self._gdata_to_array(gdata)
@@ -264,7 +266,7 @@ class GkeyllDGops:
     # updater
     c_eval_dirs   = (ctypes.c_int  * num_eval)(*eval_dirs)
     updater       = self._lib.gkyl_dg_eval_at_coord_proj_new(
-      basis_do_ptr, basis_tar_ptr, ctypes.c_int(num_eval), c_eval_dirs, ctypes.c_bool(False),
+      ctypes.c_int(ndim), basis_do_ptr, ctypes.c_int(num_eval), c_eval_dirs, ctypes.c_bool(False),
     )
     c_eval_coords = (ctypes.c_double * num_eval)(*eval_coords)
     c_pick_lower  = (ctypes.c_bool   * num_eval)(*([False] * num_eval))
@@ -285,7 +287,6 @@ class GkeyllDGops:
       self._lib.gkyl_range_release(rng_do_ptr)
       self._lib.gkyl_range_release(rng_tar_ptr)
 
-    tar_grid = [grid_edges[d] for d in keep_dirs]
     out = GData(ctx=gdata.ctx, comp_grid=comp_grid)
     out.push(tar_grid, tar_buf)
 
