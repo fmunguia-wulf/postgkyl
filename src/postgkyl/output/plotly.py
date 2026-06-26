@@ -203,6 +203,47 @@ def _log_colorbar_ticks(log_min: float, log_max: float, max_ticks: int = 7) -> t
   return [float(v) for v in tick_vals], tick_text
 
 
+def _apply_log_colorscale(render_color_value: np.ndarray, cmin_val: float | None,
+    cmax_val: float | None, colorbar_kwargs: dict) -> tuple[np.ndarray, float, float]:
+  """Map color values into log10 space and configure decade colorbar ticks.
+
+  Returns the log-scaled color values together with the matching ``(cmin, cmax)``
+  in log space, and adds the tick configuration to ``colorbar_kwargs`` in place.
+  Used for both surface and volume traces so the logic lives in one spot.
+  """
+  log_value = np.full(render_color_value.shape, np.nan, dtype=float)
+  valid_mask = render_color_value > 0
+  log_value[valid_mask] = np.log10(render_color_value[valid_mask])
+
+  if np.any(valid_mask):
+    valid_min = float(np.nanmin(log_value[valid_mask]))
+    valid_max = float(np.nanmax(log_value[valid_mask]))
+  else:
+    valid_min = 0.0
+    valid_max = 1.0
+  # end
+
+  if cmin_val is not None and cmin_val > 0:
+    valid_min = float(np.log10(cmin_val))
+  # end
+  if cmax_val is not None and cmax_val > 0:
+    valid_max = float(np.log10(cmax_val))
+  # end
+  if not np.isfinite(valid_max) or valid_max <= valid_min:
+    valid_max = valid_min + 1.0
+  # end
+
+  render_color_value = np.nan_to_num(log_value, nan=valid_min, posinf=valid_max, neginf=valid_min)
+
+  tick_vals, tick_text = _log_colorbar_ticks(valid_min, valid_max)
+  if tick_vals:
+    colorbar_kwargs["tickmode"] = "array"
+    colorbar_kwargs["tickvals"] = tick_vals
+    colorbar_kwargs["ticktext"] = tick_text
+  # end
+  return render_color_value, valid_min, valid_max
+
+
 def _resolve_plotly_aspect(aspect: str | float | None) -> tuple[str, dict | None]:
   """Resolve the aspect ratio setting for Plotly 3D scenes.
   
@@ -224,6 +265,33 @@ def _resolve_plotly_aspect(aspect: str | float | None) -> tuple[str, dict | None
 
   ratio = float(aspect)
   return "manual", dict(x=ratio, y=ratio, z=ratio)
+
+
+def _build_rotation_post_script(scene_name: str,
+    starting_azimuthal_angle: float, polar_angle: float,
+    rotation_period: float, radius: float) -> str:
+  """Load the rotation-controls JS template and fill in camera parameters.
+
+  The template lives in ``rotation_controls.js`` alongside this module so the
+  JavaScript can be edited with proper tooling instead of as an embedded
+  Python string. ``{plot_id}`` is left intact for Plotly to substitute.
+  """
+  template_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+      "rotation_controls.js")
+  with open(template_path) as template_file:
+    template = template_file.read()
+  # end
+  replacements = {
+      "__PGKYL_SCENE_NAME__": scene_name,
+      "__PGKYL_AZIMUTH_DEG__": f"{float(starting_azimuthal_angle):.17g}",
+      "__PGKYL_POLAR_DEG__": f"{float(polar_angle):.17g}",
+      "__PGKYL_PERIOD_SEC__": f"{float(rotation_period):.17g}",
+      "__PGKYL_RADIUS__": f"{float(radius):.17g}",
+  }
+  for token, value in replacements.items():
+    template = template.replace(token, value)
+  # end
+  return template
 
 
 def save_rotating_plotly_figure(fig, file_name: str,
@@ -268,271 +336,9 @@ def save_rotating_plotly_figure(fig, file_name: str,
     omega = 2.0 * np.pi / float(rotation_period)
 
     if omega > 0.0:
-      post_script = f"""
-const gd = document.getElementById('{{plot_id}}');
-const sceneName = '{scene_name}';
-const defaultAzimuthDeg = {float(starting_azimuthal_angle):.17g};
-const defaultPolarDeg = {float(polar_angle):.17g};
-const defaultPeriodSec = {float(rotation_period):.17g};
-const defaultRadius = {float(radius):.17g};
-let rafId = null;
-let startMs = null;
-
-let azimuthDeg = defaultAzimuthDeg;
-let polarDeg = defaultPolarDeg;
-let periodSec = defaultPeriodSec;
-let cameraRadius = defaultRadius;
-
-let theta0 = 0.0;
-let omega = 0.0;
-let xyRadius = 0.0;
-let zEye = 0.0;
-
-const clampPositive = (value, fallback) => (Number.isFinite(value) && value > 0.0 ? value : fallback);
-
-const recomputeRotationParams = () => {{
-  const polarRad = polarDeg * Math.PI / 180.0;
-  theta0 = azimuthDeg * Math.PI / 180.0;
-  xyRadius = cameraRadius * Math.sin(polarRad);
-  zEye = cameraRadius * Math.cos(polarRad);
-  omega = 2.0 * Math.PI / periodSec;
-}};
-
-const updateCamera = (theta) => {{
-  const camera = {{
-    eye: {{x: xyRadius * Math.cos(theta), y: xyRadius * Math.sin(theta), z: zEye}},
-    up: {{x: 0.0, y: 0.0, z: 1.0}},
-    center: {{x: 0.0, y: 0.0, z: 0.0}}
-  }};
-  Plotly.relayout(gd, {{ [sceneName + '.camera']: camera }});
-}};
-
-const startRotation = () => {{
-  if (rafId === null) {{
-    rafId = requestAnimationFrame(animate);
-  }}
-}};
-
-const stopRotation = () => {{
-  if (rafId !== null) {{
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }}
-}};
-
-const resetRotation = () => {{
-  startMs = null;
-  updateCamera(theta0);
-  startRotation();
-}};
-
-const parent = gd.parentNode;
-if (parent) {{
-  if (getComputedStyle(parent).position === 'static') {{
-    parent.style.position = 'relative';
-  }}
-
-  const controls = document.createElement('div');
-  controls.style.position = 'absolute';
-  controls.style.top = '12px';
-  controls.style.left = '12px';
-  controls.style.zIndex = '20';
-  controls.style.background = 'rgba(255, 255, 255, 0.92)';
-  controls.style.border = '1px solid #b7bec8';
-  controls.style.borderRadius = '8px';
-  controls.style.padding = '8px 10px';
-  controls.style.fontFamily = 'sans-serif';
-  controls.style.fontSize = '12px';
-  controls.style.color = '#1f2933';
-  controls.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.18)';
-  controls.style.display = 'grid';
-  controls.style.gridTemplateColumns = 'auto auto';
-  controls.style.gap = '6px 8px';
-  controls.style.alignItems = 'center';
-  controls.style.opacity = '0';
-  controls.style.pointerEvents = 'none';
-  controls.style.transition = 'opacity 120ms ease';
-
-  const showControlsButton = document.createElement('button');
-  showControlsButton.type = 'button';
-  showControlsButton.textContent = 'Show rotation controls';
-  showControlsButton.style.position = 'absolute';
-  showControlsButton.style.top = '12px';
-  showControlsButton.style.left = '12px';
-  showControlsButton.style.zIndex = '21';
-  showControlsButton.style.fontSize = '12px';
-  showControlsButton.style.padding = '4px 8px';
-  showControlsButton.style.cursor = 'pointer';
-  showControlsButton.style.opacity = '0';
-  showControlsButton.style.pointerEvents = 'none';
-  showControlsButton.style.transition = 'opacity 120ms ease';
-
-  const makeNumberInput = (value, min, step) => {{
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.value = String(value);
-    input.min = String(min);
-    input.step = String(step);
-    input.style.width = '86px';
-    input.style.fontSize = '12px';
-    return input;
-  }};
-
-  const addRow = (labelText, inputEl) => {{
-    const label = document.createElement('label');
-    label.textContent = labelText;
-    controls.appendChild(label);
-    controls.appendChild(inputEl);
-  }};
-
-  const periodInput = makeNumberInput(defaultPeriodSec, 0.001, 0.1);
-  const azimuthInput = makeNumberInput(defaultAzimuthDeg, -3600, 1);
-  const polarInput = makeNumberInput(defaultPolarDeg, -3600, 1);
-  const radiusInput = makeNumberInput(defaultRadius, 0.001, 0.1);
-
-  addRow('Period (s)', periodInput);
-  addRow('Azimuth (deg)', azimuthInput);
-  addRow('Polar (deg)', polarInput);
-  addRow('Radius', radiusInput);
-
-  const buttonWrap = document.createElement('div');
-  buttonWrap.style.gridColumn = '1 / span 2';
-  buttonWrap.style.display = 'flex';
-  buttonWrap.style.gap = '8px';
-
-  const applyButton = document.createElement('button');
-  applyButton.type = 'button';
-  applyButton.textContent = 'Apply';
-
-  const stopButton = document.createElement('button');
-  stopButton.type = 'button';
-  stopButton.textContent = 'Stop rotation';
-
-  const hideButton = document.createElement('button');
-  hideButton.type = 'button';
-  hideButton.textContent = 'Hide controls';
-
-  for (const btn of [applyButton, stopButton, hideButton]) {{
-    btn.style.fontSize = '12px';
-    btn.style.padding = '3px 8px';
-    btn.style.cursor = 'pointer';
-  }}
-
-  let controlsCollapsed = true;
-  let hoverActive = false;
-  let hideTimer = null;
-
-  const setControlsVisible = (visible) => {{
-    controls.style.opacity = visible ? '1' : '0';
-    controls.style.pointerEvents = visible ? 'auto' : 'none';
-  }};
-
-  const setShowButtonVisible = (visible) => {{
-    showControlsButton.style.opacity = visible ? '1' : '0';
-    showControlsButton.style.pointerEvents = visible ? 'auto' : 'none';
-  }};
-
-  const refreshControlsVisibility = () => {{
-    if (!hoverActive) {{
-      setControlsVisible(false);
-      setShowButtonVisible(false);
-      return;
-    }}
-    if (controlsCollapsed) {{
-      setControlsVisible(false);
-      setShowButtonVisible(true);
-    }} else {{
-      setControlsVisible(true);
-      setShowButtonVisible(false);
-    }}
-  }};
-
-  const clearHideTimer = () => {{
-    if (hideTimer !== null) {{
-      clearTimeout(hideTimer);
-      hideTimer = null;
-    }}
-  }};
-
-  const scheduleHide = () => {{
-    clearHideTimer();
-    hideTimer = setTimeout(() => {{
-      hoverActive = false;
-      refreshControlsVisibility();
-    }}, 100);
-  }};
-
-  const applyInputs = () => {{
-    periodSec = clampPositive(parseFloat(periodInput.value), defaultPeriodSec);
-    cameraRadius = clampPositive(parseFloat(radiusInput.value), defaultRadius);
-    azimuthDeg = Number.isFinite(parseFloat(azimuthInput.value)) ? parseFloat(azimuthInput.value) : defaultAzimuthDeg;
-    polarDeg = Number.isFinite(parseFloat(polarInput.value)) ? parseFloat(polarInput.value) : defaultPolarDeg;
-
-    periodInput.value = String(periodSec);
-    radiusInput.value = String(cameraRadius);
-    azimuthInput.value = String(azimuthDeg);
-    polarInput.value = String(polarDeg);
-
-    recomputeRotationParams();
-    resetRotation();
-  }};
-
-  applyButton.addEventListener('click', () => {{
-    applyInputs();
-  }});
-
-  stopButton.addEventListener('click', () => {{
-    stopRotation();
-  }});
-
-  hideButton.addEventListener('click', () => {{
-    controlsCollapsed = true;
-    refreshControlsVisibility();
-  }});
-
-  showControlsButton.addEventListener('click', () => {{
-    controlsCollapsed = false;
-    hoverActive = true;
-    refreshControlsVisibility();
-  }});
-
-  parent.addEventListener('mouseenter', () => {{
-    hoverActive = true;
-    clearHideTimer();
-    refreshControlsVisibility();
-  }});
-
-  parent.addEventListener('mouseleave', () => {{
-    scheduleHide();
-  }});
-
-  buttonWrap.appendChild(applyButton);
-  buttonWrap.appendChild(stopButton);
-  buttonWrap.appendChild(hideButton);
-  controls.appendChild(buttonWrap);
-  parent.appendChild(controls);
-  parent.appendChild(showControlsButton);
-  refreshControlsVisibility();
-}}
-
-gd.addEventListener('mousedown', stopRotation);
-gd.addEventListener('wheel', stopRotation);
-gd.addEventListener('touchstart', stopRotation);
-
-const animate = (timestamp) => {{
-  if (startMs === null) {{
-    startMs = timestamp;
-  }}
-  const elapsedSeconds = (timestamp - startMs) / 1000.0;
-  const theta = theta0 + omega * elapsedSeconds;
-  updateCamera(theta);
-  rafId = requestAnimationFrame(animate);
-}};
-
-recomputeRotationParams();
-updateCamera(theta0);
-startRotation();
-"""
+      post_script = _build_rotation_post_script(
+          scene_name, starting_azimuthal_angle, polar_angle,
+          rotation_period, radius)
       fig.write_html(file_name, include_plotlyjs="cdn", post_script=post_script)
     else:
       fig.write_html(file_name)
@@ -853,38 +659,8 @@ def plotly(data: GData | Tuple[list, np.ndarray],
 
     if surface_mode:
       if logc:
-        log_value = np.full(render_color_value.shape, np.nan, dtype=float)
-        valid_mask = render_color_value > 0
-        log_value[valid_mask] = np.log10(render_color_value[valid_mask])
-
-        if np.any(valid_mask):
-          valid_min = float(np.nanmin(log_value[valid_mask]))
-          valid_max = float(np.nanmax(log_value[valid_mask]))
-        else:
-          valid_min = 0.0
-          valid_max = 1.0
-        # end
-
-        if cmin_val is not None and cmin_val > 0:
-          valid_min = float(np.log10(cmin_val))
-        # end
-        if cmax_val is not None and cmax_val > 0:
-          valid_max = float(np.log10(cmax_val))
-        # end
-        if not np.isfinite(valid_max) or valid_max <= valid_min:
-          valid_max = valid_min + 1.0
-        # end
-
-        render_color_value = np.nan_to_num(log_value, nan=valid_min, posinf=valid_max, neginf=valid_min)
-        cmin_val = valid_min
-        cmax_val = valid_max
-
-        tick_vals, tick_text = _log_colorbar_ticks(cmin_val, cmax_val)
-        if tick_vals:
-          trace_colorbar_kwargs["tickmode"] = "array"
-          trace_colorbar_kwargs["tickvals"] = tick_vals
-          trace_colorbar_kwargs["ticktext"] = tick_text
-        # end
+        render_color_value, cmin_val, cmax_val = _apply_log_colorscale(
+            render_color_value, cmin_val, cmax_val, trace_colorbar_kwargs)
       # end
 
       surface_trace = go.Surface(
@@ -920,38 +696,8 @@ def plotly(data: GData | Tuple[list, np.ndarray],
     # end
 
     if logc and not surface_mode:
-      log_value = np.full(render_color_value.shape, np.nan, dtype=float)
-      valid_mask = render_color_value > 0
-      log_value[valid_mask] = np.log10(render_color_value[valid_mask])
-
-      if np.any(valid_mask):
-        valid_min = float(np.nanmin(log_value[valid_mask]))
-        valid_max = float(np.nanmax(log_value[valid_mask]))
-      else:
-        valid_min = 0.0
-        valid_max = 1.0
-      # end
-
-      if cmin_val is not None and cmin_val > 0:
-        valid_min = float(np.log10(cmin_val))
-      # end
-      if cmax_val is not None and cmax_val > 0:
-        valid_max = float(np.log10(cmax_val))
-      # end
-      if not np.isfinite(valid_max) or valid_max <= valid_min:
-        valid_max = valid_min + 1.0
-      # end
-
-      render_color_value = np.nan_to_num(log_value, nan=valid_min, posinf=valid_max, neginf=valid_min)
-      cmin_val = valid_min
-      cmax_val = valid_max
-
-      tick_vals, tick_text = _log_colorbar_ticks(cmin_val, cmax_val)
-      if tick_vals:
-        trace_colorbar_kwargs["tickmode"] = "array"
-        trace_colorbar_kwargs["tickvals"] = tick_vals
-        trace_colorbar_kwargs["ticktext"] = tick_text
-      # end
+      render_color_value, cmin_val, cmax_val = _apply_log_colorscale(
+          render_color_value, cmin_val, cmax_val, trace_colorbar_kwargs)
     # end
 
     if not surface_mode and scatter:
