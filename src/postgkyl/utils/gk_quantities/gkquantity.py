@@ -189,12 +189,43 @@ class GkQuantity:
       frame_list = [f for f in frames_avail_sorted if lower <= f < upper and (f - lower) % step == 0]
 
     return combo_idx, frame_list
+  
+  def get_avail_frames(self, path : str, name : str, species : str) -> list[int]:
+    """
+    Get the list of available frames for this quantity, based on the first
+    source combination whose files all exist and share the same set of frames.
+
+    Parameters:
+        path (str): The directory path where the files are located.
+        name (str): The base name (simulation prefix) of the dataset.
+        species (str): The species name.
+
+    Returns:
+        list[int]: Sorted list of available frame numbers. Returns an empty list
+        if no files are found for the quantity.
+    """
+    _, frames_avail = self._avail_combo_frames(path, name, species)
+    if frames_avail == {-1}:
+      return []
+    return sorted(frames_avail)
 
   def get_src_gdata(self, src : "str | GkQuantity", path : str, name : str,
                     species : str, frame : int | None, **extra) -> GData:
     """
     Get the populated GData for a source, which is either a string (file
     name) or a GkQuantity (computed from its own sources).
+
+    Parameters:
+        src (str | GkQuantity): The source, either a string (file name)
+            or a GkQuantity (computed from its own sources).
+        path (str): The directory path where the files are located.
+        name (str): The base name (simulation prefix) of the dataset.
+        species (str): The species name.
+        frame (int | None): The frame number to load (None for geo-only quantities).
+        **extra: Additional keyword arguments to pass to the fetch function.
+
+    Returns:
+        GData: The populated GData object for the source.
     """
     if isinstance(src, str):
       return GData(self._src_file_name(path, name, species, src, frame))

@@ -424,6 +424,55 @@ def fetch_beta_from_bmag_press(gdatas, **kwargs):
   out.set_values(2.0*mu0*out_val)
   return out
 
+def fetch_rho_e_over_lambda_d_sq(gdatas, **kwargs):
+  """
+  Electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
+  (rho_e/lambda_d)^2 = 1/B^2 (m_e n_e/ eps0). Gdatas has:
+    1. Bmag: magnetic field magnitude (bmag).
+    2. M0: zeroth moment (density).
+  We output the square of the quantity to avoid the square root operation.
+  """
+  bmag, m0 = gdatas
+  me = gkc.GKYL_ELECTRON_MASS
+  eps0 = gkc.GKYL_EPSILON0
+
+  dgops = GkeyllDGops()
+
+  bmag_sq = _empty_gdata_from_gdata(bmag)
+  dgops.multiply(0, bmag_sq, 0, bmag, 0, bmag)
+
+  bmag_inv_sq = _empty_gdata_from_gdata(bmag)
+  dgops.invert(0, bmag_inv_sq, 0, bmag_sq)
+
+  out = _empty_gdata_from_gdata(bmag)
+  dgops.multiply(0, out, 0, bmag_inv_sq, 0, m0)
+
+  out.set_values(out.get_values() * me / eps0)
+  
+  return out
+
+def fetch_phi_norm(gdatas, **kwargs):
+  """
+  Normalized electrostatic potential.
+  phi_norm = e*phi/T_e. Gdatas has:
+    1. phi: electrostatic potential (phi).
+    2. temp: temperature (temp).
+  """
+  phi, temp = gdatas
+  e = gkc.GKYL_ELEMENTARY_CHARGE
+
+  dgops = GkeyllDGops()
+
+  temp_inv = _empty_gdata_from_gdata(temp)
+  dgops.invert(0, temp_inv, 0, temp)
+
+  out = _empty_gdata_from_gdata(phi)
+  dgops.multiply(0, out, 0, phi, 0, temp_inv)
+
+  out.set_values(out.get_values() * e)
+  
+  return out
+
 # ------------------------
 # --- Drift velocities ---
 # ------------------------

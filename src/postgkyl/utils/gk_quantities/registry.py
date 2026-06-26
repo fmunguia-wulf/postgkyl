@@ -1,6 +1,9 @@
 """
 Registry of pre-named gyrokinetic quantities.
 
+You can access the "gk_quant_registry" instance to get a list
+of all available gyrokinetic quantities and manipulate them.
+
 Each entry is an instance of the GkQuantity class.
 """
 
@@ -245,6 +248,28 @@ _beta : GkQuantity = GkQuantity(
   is_species_dep = True,
 )
 gk_quant_registry.register(_beta)
+
+# Square of electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
+_rho_e_over_lambda_d_sq : GkQuantity = GkQuantity(
+  name = "rho_e_over_lambda_d_sq",
+  source = [[_geo_int_bmag, _M0],],
+  fetch_func = [ff.fetch_rho_e_over_lambda_d_sq],
+  label = r"$(\rho_e/\lambda_d)^2$",
+  is_time_dep = True,
+  is_species_dep = False,
+)
+gk_quant_registry.register(_rho_e_over_lambda_d_sq)
+
+# Normalized elctrostatic potential.
+_phi_norm : GkQuantity = GkQuantity(
+  name = "phi_norm",
+  source = [[_field, _temp],],
+  fetch_func = [ff.fetch_phi_norm],
+  label = r"$\phi_{norm}$",
+  is_time_dep = True,
+  is_species_dep = False,
+)
+gk_quant_registry.register(_phi_norm)
 
 # ------------------------
 # --- Drift velocities ---
