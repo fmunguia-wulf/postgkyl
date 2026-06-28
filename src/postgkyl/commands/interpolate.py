@@ -7,7 +7,7 @@ from postgkyl.utils import verb_print
 
 @click.command()
 @click.option("--basis_type","-b",
-    type=click.Choice(["ms", "ns", "mo", "mt", "gkhyb", "pkpmhyb"]),
+    type=click.Choice(["ms", "ns", "mo", "mt", "gkhyb", "gkhyb_vel", "pkpmhyb"]),
     help="Specify DG basis.")
 @click.option("--poly_order", "-p", type=click.INT, help="Specify polynomial order.")
 @click.option("--interp", "-i", type=click.INT,
@@ -39,6 +39,9 @@ def interpolate(ctx, **kwargs):
       is_modal = True
     elif kwargs["basis_type"] == "gkhyb":
       basis_type = "gkhybrid"
+      is_modal = True
+    elif kwargs["basis_type"] == "gkhyb_vel":
+      basis_type = "gkhybrid_vel"
       is_modal = True
     elif kwargs["basis_type"] == "pkpmhyb":
       basis_type = "hybrid"

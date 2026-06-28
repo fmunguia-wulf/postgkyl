@@ -4,6 +4,7 @@ import click
 import numpy as np
 
 from postgkyl.data import GData, GInterpModal
+from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
 from postgkyl.utils import verb_print
 
 # mc2nu grid deformation helpers
@@ -75,13 +76,13 @@ def load_gk_distf(
     jacobvel_file = f"{prefix}-{species}_jacobvel.gkyl"
   # end
   if mc2nu_file is None:
-    mc2nu_file = f"{prefix}-mc2nu_pos_deflated.gkyl"
+    mc2nu_file = f"{prefix}-geo_corn_mc2nu_pos_deflated.gkyl"
   # end
   if mapc2p_file is None:
-    mapc2p_file = f"{prefix}-mapc2p_deflated.gkyl"
+    mapc2p_file = f"{prefix}-geo_corn_mapc2p_deflated.gkyl"
   # end
   if jacobtot_inv_file is None:
-    jacobtot_inv_file = f"{prefix}-jacobtot_inv.gkyl"
+    jacobtot_inv_file = f"{prefix}-geo_int_jacobtot_inv.gkyl"
   # end
 
   Jf_data           = GData(Jf_file, mapc2p_vel_name=mapc2p_vel_file if use_c2p_vel else None)
@@ -93,18 +94,26 @@ def load_gk_distf(
   fJxB_values = Jf_data.get_values() / jacobvel_data.get_values()
   fJxB_data.push(Jf_data.get_grid(), fJxB_values)
 
-  # Interpolate f * J_x * B and jacobtot_inv to the same grid.
-  out_grid, fJxB_values    = GInterpModal(fJxB_data, 1, "gkhyb", interp).interpolate()
-  _, jacobtot_inv_values   = GInterpModal(jacobtot_inv_data, 1, "ms", interp).interpolate()
-  fJxB_values              = np.squeeze(fJxB_values)
-  jacobtot_inv_values      = np.squeeze(jacobtot_inv_values)
+  if interp == 0:
+    # No interpolation: weak multiply by reciprocal of (J_x*B).
+    out_grid = fJxB_data.get_grid()
+    f_data = GData(ctx=fJxB_data.ctx)
+    f_data.push(out_grid, np.zeros_like(fJxB_data.get_values()))
+    GkeyllDGops().multiply_conf_phase(f_data, jacobtot_inv_data, fJxB_data)
+    f_values = f_data.get_values()
+  else:
+    # Interpolate f * J_x * B and jacobtot_inv to the same grid.
+    out_grid, fJxB_values    = GInterpModal(fJxB_data, 1, "gkhyb", interp).interpolate()
+    _, jacobtot_inv_values   = GInterpModal(jacobtot_inv_data, 1, "ms", interp).interpolate()
+    fJxB_values              = np.squeeze(fJxB_values)
+    jacobtot_inv_values      = np.squeeze(jacobtot_inv_values)
 
-  # Reshape jacobtot_inv to have 1 component over velocity dimensions, then multiply.
-  vdim = fJxB_values.ndim - jacobtot_inv_values.ndim
-  jacobtot_inv_reshaped = jacobtot_inv_values.reshape(jacobtot_inv_values.shape + (1,) * vdim)
-  f_values = fJxB_values * jacobtot_inv_reshaped
-  # Add 1 dimension to represent 1 component
-  f_values = f_values.reshape(f_values.shape + (1,))
+    # Reshape jacobtot_inv to have 1 component over velocity dimensions, then multiply.
+    vdim = fJxB_values.ndim - jacobtot_inv_values.ndim
+    jacobtot_inv_reshaped = jacobtot_inv_values.reshape(jacobtot_inv_values.shape + (1,) * vdim)
+    f_values = fJxB_values * jacobtot_inv_reshaped
+    # Add 1 dimension to represent 1 component
+    f_values = f_values.reshape(f_values.shape + (1,))
 
   if use_mc2nu:
     out_grid = _apply_mc2nu_grid(out_grid, mc2nu_file, interp)
@@ -144,17 +153,17 @@ def load_gk_distf(
   help="Frame number, comma separated values, or range. Use ':' for all frames\n"
        " and 'start:stop[:step]' for ranges.")
 @click.option("--interp", "-i", type=click.INT,
-  help="Interpolation onto a general mesh of specified amount.")
+  help="Interpolation onto a general mesh of specified amount. User -i 0 for no interpolation.")
 @click.option("--c2p-vel", "-v", default=None, flag_value="", type=click.STRING,
   help="Convert velocity-space computational to physical coordinates, using mapping\n"
        "in (optionally) given file (default *_mapc2p_vel.gkyl).")
 @click.option("--mc2nu", "-m", default=None, flag_value="", type=click.STRING,
   help="Convert non-uniform computational to field-aligned coordinates using mapping \n"
-       "in (optionally) given file (default: *_mc2nu_pos_deflated.gkyl).")
+       "in (optionally) given file (default: *-geo_corn_mc2nu_pos_deflated.gkyl).")
 @click.option("--mapc2p", "-p", default=None, flag_value="", type=click.STRING,
   help="Convert position-space computational to Cartesian (GKYL_GEOMETRY_MAPC2P) or \n"
        "cylindrical (GKYL_GEOMETRY_TOKAMAK, GKYL_GEOMETRY_MIRROR) coordinates, using \n"
-       "mapping in (optionally) given file (default: *_mapc2p.gkyl)") 
+       "mapping in (optionally) given file (default: *-geo_corn_mapc2p.gkyl)") 
 @click.option("--block", "-b", default=None, type=click.INT,
   help="Use block-specific files with _b<idx> prefix, e.g. -b 1 loads <name>_b1-*.gkyl.")
 @click.option("--tag", "-t", default="f", type=click.STRING,
@@ -168,9 +177,11 @@ def gk_distf(ctx, **kwargs):
   the interpolation can optionally use mappings to convert from computational
   to physical coordinates.
 
+  \b
   Command line example:
     pgkyl gk-distf -n gk_lorentzian_mirror -s ion -f 0
 
+  \b
   Script example:
     import postgkyl as pg
     from postgkyl.commands import load_gk_distf
@@ -217,7 +228,7 @@ def gk_distf(ctx, **kwargs):
       use_mc2nu=use_mc2nu, use_mapc2p=use_mapc2p,
       block_idx=kwargs["block"],
       interp=kwargs["interp"],
-      Jf_file=kwargs["Jf_file"],
+      Jf_file=kwargs.get("Jf-file"),
       mapc2p_vel_file=mapc2p_vel_file,
       jacobvel_file=kwargs["jacobvel_file"],
       mc2nu_file=mc2nu_file,

@@ -14,6 +14,7 @@ import numpy as np
 
 from postgkyl._gkylsoft_path import resolve_gkylsoft_path
 from postgkyl.data import GData
+import postgkyl.utils.gkeyll_enums as gke
 
 # gkyl_elem_type enum ordinal for double (INT=0, FLOAT=1, DOUBLE=2)
 _GKYL_DOUBLE = ctypes.c_int(2)
@@ -67,7 +68,7 @@ class GkeyllDGops:
     lib.gkyl_cart_modal_gkhybrid_new.argtypes = [c_i, c_i]
     lib.gkyl_cart_modal_gkhybrid_new.restype  = c_vp
 
-    # gkyl_cart_modal_basis_get_num_basis(basis*) -> int
+    # gkyl_cart_modal_basis_get_num_basis(*basis) -> int
     lib.gkyl_cart_modal_basis_get_num_basis.argtypes = [c_vp]
     lib.gkyl_cart_modal_basis_get_num_basis.restype  = c_i
 
@@ -75,7 +76,7 @@ class GkeyllDGops:
     lib.gkyl_cart_modal_basis_release.argtypes = [c_vp]
     lib.gkyl_cart_modal_basis_release.restype  = None
 
-    # gkyl_rect_grid_new(ndim, lower*, upper*, cells*) -> gkyl_rect_grid*
+    # gkyl_rect_grid_new(ndim, *lower, *upper, *cells) -> gkyl_rect_grid*
     lib.gkyl_rect_grid_new.argtypes = [c_i, ctypes.POINTER(c_d),
                                        ctypes.POINTER(c_d), ctypes.POINTER(c_i)]
     lib.gkyl_rect_grid_new.restype  = c_vp
@@ -84,7 +85,7 @@ class GkeyllDGops:
     lib.gkyl_rect_grid_release.argtypes = [c_vp]
     lib.gkyl_rect_grid_release.restype  = None
 
-    # gkyl_range_new(ndim, lower*, upper*) -> gkyl_range*
+    # gkyl_range_new(ndim, *lower, *upper) -> gkyl_range*
     lib.gkyl_range_new.argtypes = [c_i, ctypes.POINTER(c_i), ctypes.POINTER(c_i)]
     lib.gkyl_range_new.restype  = c_vp
 
@@ -92,25 +93,32 @@ class GkeyllDGops:
     lib.gkyl_range_release.argtypes = [c_vp]
     lib.gkyl_range_release.restype  = None
 
-    # gkyl_dg_mul_op(basis*, c_oop, out*, c_lop, lop*, c_rop, rop*)
+    # gkyl_dg_mul_op(*basis, c_oop, *out, c_lop, *lop, c_rop, rop*)
     lib.gkyl_dg_mul_op.argtypes = [c_vp, c_i, c_vp, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_mul_op.restype  = None
 
-    # gkyl_dg_mul_conf_phase_op_range(cbasis*, pbasis*, pout*, cop*, pop*, crange*, prange*)
+    # gkyl_dg_mul_conf_phase_op_range(*cbasis, *pbasis, *pout, *cop, *pop, *crange, *prange)
     lib.gkyl_dg_mul_conf_phase_op_range.argtypes = [c_vp, c_vp, c_vp, c_vp, c_vp, c_vp, c_vp]
     lib.gkyl_dg_mul_conf_phase_op_range.restype  = None
 
-    # gkyl_dg_inv_op(basis*, c_oop, out*, c_iop, iop*)
+    # gkyl_dg_inv_op(*basis, c_oop, *out, c_iop, *iop)
     lib.gkyl_dg_inv_op.argtypes = [c_vp, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_inv_op.restype  = None
 
-    # gkyl_dg_differentiate_op_local(basis*, dir, diff_order, dx, c_oop, out*, c_iop, inp*)
+    # gkyl_dg_differentiate_op_local(*basis, dir, diff_order, dx, c_oop, *out, c_iop, inp*)
     lib.gkyl_dg_differentiate_op_local.argtypes = [c_vp, c_i, c_i, c_d, c_i, c_vp, c_i, c_vp]
     lib.gkyl_dg_differentiate_op_local.restype  = None
 
-    # gkyl_dg_eval_at_coord_proj_new(cdim_do, basis_do*, num_eval_dirs, eval_dirs*, use_gpu)
+    # gkyl_dg_eval_at_coord_proj_new(cdim_do, *basis_do, num_eval_dirs, *eval_dirs, use_gpu)
     lib.gkyl_dg_eval_at_coord_proj_new.argtypes = [c_i, c_vp, c_i, ctypes.POINTER(c_i), ctypes.c_bool]
     lib.gkyl_dg_eval_at_coord_proj_new.restype  = c_vp
+
+    # gkyl_dg_eval_at_coord_proj_target_basis(up*, cdim*, ndim*, btype*, poly_order*, num_basis*)
+    lib.gkyl_dg_eval_at_coord_proj_target_basis.argtypes = [
+      c_vp, ctypes.POINTER(c_i), ctypes.POINTER(c_i), ctypes.POINTER(c_i),
+      ctypes.POINTER(c_i), ctypes.POINTER(c_i),
+    ]
+    lib.gkyl_dg_eval_at_coord_proj_target_basis.restype  = None
 
     # gkyl_dg_eval_at_coord_proj_advance(up*, eval_coords*, grid*, pick_lower*,
     #                                     known_index*, rng_do*, rng_tar*, fdo*, ftar*)
@@ -131,10 +139,10 @@ class GkeyllDGops:
     Returns (arr_ptr, values) where values is the numpy array kept alive
     to prevent GC while arr_ptr is in use.
     """
-    values = gdata.get_values()
+    values = np.squeeze(gdata.get_values())
     # Ensure C-contiguous float64 layout expected by gkyl kernels
     values = np.ascontiguousarray(values, dtype=np.float64)
-    size  = ctypes.c_size_t(int(np.prod(values.shape[:-1])))
+    size  = ctypes.c_size_t(int(np.prod(values.shape)))
     ncomp = ctypes.c_size_t(int(values.shape[-1]))
     data_ptr = values.ctypes.data_as(ctypes.c_void_p)
     arr_ptr = self._lib.gkyl_array_new_from_buff(_GKYL_DOUBLE, ncomp, size, data_ptr)
@@ -142,15 +150,15 @@ class GkeyllDGops:
 
   def _gkyl_basis_new_from_gdata(self, gdata):
     """Create a basis from a GData's metadata. Caller must release."""
-    ndim       = ctypes.c_int(gdata.get_num_dims())
-    poly_order = ctypes.c_int(int(gdata.ctx["poly_order"]))
-    basis_type = ctypes.c_int(int(gdata.ctx["basis_type"]))
+    ndim       = gdata.get_num_dims()
+    poly_order = int(gdata.ctx["poly_order"])
+    basis_type = gdata.ctx["basis_type"]
     if basis_type == "gkhybrid":
       vdim = 1 if ndim == 2 else 2
       cdim = ndim - vdim
-      return self._lib.gkyl_cart_modal_gkhybrid_new(cdim, vdim)
+      return self._lib.gkyl_cart_modal_gkhybrid_new(ctypes.c_int(cdim), ctypes.c_int(vdim))
     else:
-      return self._lib.gkyl_cart_modal_serendip_new(ndim, poly_order)
+      return self._lib.gkyl_cart_modal_serendip_new(ctypes.c_int(ndim), ctypes.c_int(poly_order))
 
   def _gkyl_range_new_from_gdata(self, gdata):
     """Create a 1-indexed gkyl_range covering all cells of gdata. Caller must release."""
@@ -259,6 +267,7 @@ class GkeyllDGops:
       lower, upper, and num_comps in ctx are set correctly for the target.
     """
     ndim       = gdata.get_num_dims()
+    vals       = gdata.get_values()
     poly_order = int(gdata.ctx["poly_order"])
 
     grid_edges = gdata.get_grid()
@@ -271,70 +280,66 @@ class GkeyllDGops:
     ndim_tar  = len(keep_dirs)
     cells_tar = [cells[d] for d in keep_dirs] if num_eval<ndim else [1 for d in range(ndim)]
 
-    # donor grid (opaque)
+    # Donor grid.
     c_lower  = (ctypes.c_double * ndim)(*lower)
     c_upper  = (ctypes.c_double * ndim)(*upper)
     c_cells  = (ctypes.c_int   * ndim)(*cells)
     grid_ptr = self._lib.gkyl_rect_grid_new(ctypes.c_int(ndim), c_lower, c_upper, c_cells)
 
-    # donor range: 1-indexed lower=[1,...], upper=[cells[d],...]
+    # Donor range (1-indexed).
     c_rng_lo_do = (ctypes.c_int * ndim)(*([1] * ndim))
     c_rng_up_do = (ctypes.c_int * ndim)(*cells)
     rng_do_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim), c_rng_lo_do, c_rng_up_do)
 
-    # donor basis
-    basis_do_ptr = self._lib.gkyl_cart_modal_serendip_new(ctypes.c_int(ndim), ctypes.c_int(poly_order))
+    # Donor basis.
+    basis_do_ptr = self._gkyl_basis_new_from_gdata(gdata)
     num_basis_do = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_do_ptr))
 
-    # target basis and range
+    # Updater.
+    c_eval_dirs = (ctypes.c_int * num_eval)(*eval_dirs)
+    updater     = self._lib.gkyl_dg_eval_at_coord_proj_new(ctypes.c_int(ndim), basis_do_ptr, 
+      ctypes.c_int(num_eval), c_eval_dirs, ctypes.c_bool(False), )
+
+    # Get number of basis in target field.
+    _cdim_tar = ctypes.c_int(); _ndim_tar = ctypes.c_int(); _btype_tar = ctypes.c_int()
+    _poly_order_tar = ctypes.c_int(); _num_basis_tar = ctypes.c_int()
+    self._lib.gkyl_dg_eval_at_coord_proj_target_basis(updater, ctypes.byref(_cdim_tar), ctypes.byref(_ndim_tar),
+      ctypes.byref(_btype_tar), ctypes.byref(_poly_order_tar), ctypes.byref(_num_basis_tar), )
+    num_basis_tar = int(_num_basis_tar.value)
+
+    # Target range and grid.
     if ndim_tar > 0:
-      basis_tar_ptr = self._lib.gkyl_cart_modal_serendip_new(ctypes.c_int(ndim_tar), ctypes.c_int(poly_order))
-      num_basis_tar = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_tar_ptr))
-      c_rng_lo_tar  = (ctypes.c_int * ndim_tar)(*([1] * ndim_tar))
-      c_rng_up_tar  = (ctypes.c_int * ndim_tar)(*cells_tar)
-      rng_tar_ptr   = self._lib.gkyl_range_new(ctypes.c_int(ndim_tar), c_rng_lo_tar, c_rng_up_tar)
-      tar_grid      = [grid_edges[d] for d in keep_dirs]
+      c_rng_lo_tar = (ctypes.c_int * ndim_tar)(*([1] * ndim_tar))
+      c_rng_up_tar = (ctypes.c_int * ndim_tar)(*cells_tar)
+      rng_tar_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim_tar), c_rng_lo_tar, c_rng_up_tar)
+      tar_grid     = [grid_edges[d] for d in keep_dirs]
     else:
-      # all dims evaluated: basis_tar = NULL per C API; use a 1D range of shape (1,)
-      basis_tar_ptr = ctypes.c_void_p(None)
-      num_basis_tar = 1
       c_one       = (ctypes.c_int * 1)(1)
       rng_tar_ptr = self._lib.gkyl_range_new(ctypes.c_int(1), c_one, c_one)
-      tar_grid      = [np.array([eval_coords[d]]) for d in range(num_eval)]
+      tar_grid    = [np.array([eval_coords[d]]) for d in range(num_eval)]
 
-    # donor array
+    # Donor array.
     arr_do, values = self._gkyl_array_new_from_gdata(gdata)
     ncomp_raw = int(values.shape[-1])
 
-    # target buffer
+    # Target buffer.
     num_phys_comps = ncomp_raw // num_basis_do
     ncomp_tar      = num_phys_comps * num_basis_tar
-    size_tar       = int(np.prod(cells_tar)) if cells_tar else 1
-    tar_shape      = (*cells_tar, ncomp_tar) if cells_tar else (ncomp_tar,)
+    size_tar       = int(np.prod(cells_tar))
+    tar_shape      = (*cells_tar, ncomp_tar)
     tar_buf        = np.zeros(tar_shape, dtype=np.float64)
-    arr_tar        = self._lib.gkyl_array_new_from_buff(
-      _GKYL_DOUBLE, ctypes.c_size_t(ncomp_tar), ctypes.c_size_t(size_tar),
-      tar_buf.ctypes.data_as(ctypes.c_void_p),
-    )
+    arr_tar        = self._lib.gkyl_array_new_from_buff(_GKYL_DOUBLE, ctypes.c_size_t(ncomp_tar),
+      ctypes.c_size_t(size_tar), tar_buf.ctypes.data_as(ctypes.c_void_p), )
 
-    # updater
-    c_eval_dirs   = (ctypes.c_int  * num_eval)(*eval_dirs)
-    updater       = self._lib.gkyl_dg_eval_at_coord_proj_new(
-      ctypes.c_int(ndim), basis_do_ptr, ctypes.c_int(num_eval), c_eval_dirs, ctypes.c_bool(False),
-    )
     c_eval_coords = (ctypes.c_double * num_eval)(*eval_coords)
     c_pick_lower  = (ctypes.c_bool   * num_eval)(*([False] * num_eval))
     c_known_idx   = (ctypes.c_int    * ndim)(*([-1] * ndim))
     try:
-      self._lib.gkyl_dg_eval_at_coord_proj_advance(
-        updater, c_eval_coords, grid_ptr, c_pick_lower, c_known_idx,
-        rng_do_ptr, rng_tar_ptr, arr_do, arr_tar,
-      )
+      self._lib.gkyl_dg_eval_at_coord_proj_advance(updater, c_eval_coords, grid_ptr,
+        c_pick_lower, c_known_idx, rng_do_ptr, rng_tar_ptr, arr_do, arr_tar,)
     finally:
       self._lib.gkyl_dg_eval_at_coord_proj_release(updater)
       self._lib.gkyl_cart_modal_basis_release(basis_do_ptr)
-      if ndim_tar > 0:
-        self._lib.gkyl_cart_modal_basis_release(basis_tar_ptr)
       self._lib.gkyl_array_release(arr_do)
       self._lib.gkyl_array_release(arr_tar)
       self._lib.gkyl_rect_grid_release(grid_ptr)
@@ -343,6 +348,10 @@ class GkeyllDGops:
 
     out = GData(ctx=gdata.ctx, comp_grid=comp_grid)
     out.push(tar_grid, tar_buf)
+
+    # Re-set the basis in the context in case it changed.
+    out.ctx["basis_type"] = gke.basis_type_gkyl_to_pgkyl(int(_btype_tar.value))
+    out.ctx["poly_order"] = int(_poly_order_tar.value)
 
     return out
 
