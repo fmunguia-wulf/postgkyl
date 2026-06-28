@@ -50,7 +50,7 @@ class GkeyllDGops:
     c_vp = ctypes.c_void_p
     c_i  = ctypes.c_int
     c_sz = ctypes.c_size_t
-    c_d = ctypes.c_double
+    c_d  = ctypes.c_double
 
     # gkyl_array_new_from_buff(type, ncomp, size, buff) -> gkyl_array*
     lib.gkyl_array_new_from_buff.argtypes = [c_i, c_sz, c_sz, c_vp]
