@@ -1,7 +1,6 @@
 import click
 
-from postgkyl.data import GData
-import postgkyl.tools
+from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
@@ -19,11 +18,9 @@ def laguerrecompose(ctx, **kwargs):
 
   for f, tm in zip(data.iterator(kwargs["distribution"]), data.iterator(kwargs["tm"])):
     if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=f.ctx)
-      postgkyl.tools.laguerre_compose(f, tm, out)
+      data.add(ops.laguerre_compose(f, tm, tag=kwargs["tag"], label=kwargs["label"]))
     else:
-      postgkyl.tools.laguerre_compose(f, tm, f)
+      ops.laguerre_compose(f, tm, inplace=True)
     # end
   # end
   verb_print(ctx, "Finishing laguerrecompose")

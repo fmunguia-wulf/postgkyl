@@ -1,9 +1,7 @@
 import click
 
-from postgkyl.data import GData
-from postgkyl.tools import transform_frame
+from postgkyl import ops
 from postgkyl.utils import verb_print
-
 
 
 @click.command()
@@ -16,17 +14,16 @@ from postgkyl.utils import verb_print
 @click.option("--label", "-l", help="Custom label for the result.")
 @click.pass_context
 def transformframe(ctx, **kwargs):
-  """Compose PKPM Laguerre coefficients together."""
+  """Shift a PKPM distribution function to the bulk-velocity frame."""
   verb_print(ctx, "Starting transformframe")
   data = ctx.obj["data"]
 
   for f, bulk in zip(data.iterator(kwargs["distribution"]), data.iterator(kwargs["bulk"])):
     if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=f.ctx)
-      transform_frame(f, bulk, kwargs["cdim"], out)
+      data.add(ops.transform_frame(f, bulk, cdim=kwargs["cdim"],
+          tag=kwargs["tag"], label=kwargs["label"]))
     else:
-      transform_frame(f, bulk, kwargs["cdim"], f)
+      ops.transform_frame(f, bulk, cdim=kwargs["cdim"], inplace=True)
     # end
   # end
   verb_print(ctx, "Finishing transformframe")

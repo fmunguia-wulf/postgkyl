@@ -18,9 +18,11 @@ import postgkyl.utils.gkeyll_enums as gkenums
 dir_path = f"{os.path.dirname(__file__)}/test_data"
 
 
-def _make(grid, values, **kwargs):
-    d = GData(**kwargs)
+def _make(grid, values, tag="default", ctx_extra=None, **kwargs):
+    d = GData(tag=tag, **kwargs)
     d.push(grid, values)
+    if ctx_extra:
+        d.ctx.update(ctx_extra)
     return d
 
 
@@ -590,3 +592,210 @@ class TestGkeyllEnums:
         idx = 2
         key = gkenums.enum_idx_to_key(gkenums.gkyl_geometry_id, idx)
         assert gkenums.enum_key_to_idx(gkenums.gkyl_geometry_id, key) == idx
+
+
+# ---------------------------------------------------------------------------
+# copy()
+# ---------------------------------------------------------------------------
+
+class TestGDataCopy:
+    def test_copy_is_independent(self):
+        grid = [np.linspace(0.0, 1.0, 6)]
+        values = np.arange(5.0)[:, np.newaxis]
+        d = _make(grid, values, tag="orig")
+        c = d.copy()
+        c.get_values()[0, 0] = 999.0
+        c.get_grid()[0][0] = -7.0
+        assert d.get_values()[0, 0] == 0.0
+        assert d.get_grid()[0][0] == 0.0
+
+    def test_copy_carries_metadata(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 1)), tag="mytag")
+        d.ctx["poly_order"] = 2
+        c = d.copy()
+        assert c.get_tag() == "mytag"
+        assert c.ctx["poly_order"] == 2
+
+    def test_copy_ctx_not_shared(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 1)))
+        c = d.copy()
+        c.ctx["new_key"] = 1
+        assert "new_key" not in d.ctx
+
+    def test_copy_data_false_has_no_values(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 1)))
+        c = d.copy(data=False)
+        assert c.get_values() is None
+
+    def test_copy_does_not_read_file(self):
+        # copy of a file-backed dataset must not re-invoke the reader
+        d = pg.GData(f"{dir_path}/shock-f-ser-p1.gkyl")
+        c = d.copy()
+        np.testing.assert_array_equal(c.get_values(), d.get_values())
+
+
+# ---------------------------------------------------------------------------
+# _result()
+# ---------------------------------------------------------------------------
+
+class TestGDataResult:
+    def _src(self):
+        return _make([np.linspace(0.0, 1.0, 6)], np.ones((5, 1)), tag="src")
+
+    def test_result_new_by_default(self):
+        d = self._src()
+        new_grid = [np.linspace(0.0, 2.0, 4)]
+        new_vals = np.zeros((3, 1))
+        out = d._result(new_grid, new_vals)
+        assert out is not d
+        # source untouched
+        assert d.get_values().shape == (5, 1)
+        assert out.get_values().shape == (3, 1)
+
+    def test_result_inplace_mutates_self(self):
+        d = self._src()
+        out = d._result([np.linspace(0.0, 2.0, 4)], np.zeros((3, 1)), inplace=True)
+        assert out is d
+        assert d.get_values().shape == (3, 1)
+
+    def test_result_sets_tag_and_label(self):
+        d = self._src()
+        out = d._result([np.linspace(0.0, 1.0, 4)], np.ones((3, 1)),
+                        tag="newtag", label="newlabel")
+        assert out.get_tag() == "newtag"
+        assert out.get_label() == "newlabel"
+
+    def test_result_ctx_updates(self):
+        d = self._src()
+        out = d._result(d.get_grid(), d.get_values(), interpolated=True)
+        assert out.ctx["interpolated"] is True
+        assert "interpolated" not in d.ctx
+
+
+# ---------------------------------------------------------------------------
+# is_interpolated guardrail state
+# ---------------------------------------------------------------------------
+
+class TestIsInterpolated:
+    def test_plain_numpy_is_operable(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 1)))
+        assert d.is_interpolated is True
+
+    def test_raw_modal_not_operable(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 2)),
+                  ctx_extra={"is_modal": True})
+        assert d.is_interpolated is False
+
+    def test_interpolated_flag_makes_operable(self):
+        d = _make([np.linspace(0.0, 1.0, 4)], np.ones((3, 2)),
+                  ctx_extra={"is_modal": True, "interpolated": True})
+        assert d.is_interpolated is True
+
+
+# ---------------------------------------------------------------------------
+# Arithmetic dunders + NumPy interop
+# ---------------------------------------------------------------------------
+
+class TestGDataArithmetic:
+    def _pair(self):
+        grid = [np.linspace(0.0, 1.0, 6)]
+        a = _make(grid, np.arange(1.0, 6.0)[:, np.newaxis], tag="a")
+        b = _make(grid, np.full((5, 1), 2.0), tag="b")
+        return a, b
+
+    def test_add(self):
+        a, b = self._pair()
+        c = a + b
+        assert isinstance(c, GData)
+        np.testing.assert_allclose(c.get_values(), a.get_values() + b.get_values())
+
+    def test_sub(self):
+        a, b = self._pair()
+        np.testing.assert_allclose((a - b).get_values(), a.get_values() - 2.0)
+
+    def test_mul(self):
+        a, b = self._pair()
+        np.testing.assert_allclose((a * b).get_values(), a.get_values() * 2.0)
+
+    def test_div(self):
+        a, b = self._pair()
+        np.testing.assert_allclose((a / b).get_values(), a.get_values() / 2.0)
+
+    def test_pow(self):
+        a, _ = self._pair()
+        np.testing.assert_allclose((a ** 2).get_values(), a.get_values() ** 2)
+
+    def test_scalar_broadcast_and_reflected(self):
+        a, _ = self._pair()
+        np.testing.assert_allclose((a + 10).get_values(), a.get_values() + 10)
+        np.testing.assert_allclose((10 + a).get_values(), a.get_values() + 10)
+        np.testing.assert_allclose((10 - a).get_values(), 10 - a.get_values())
+        np.testing.assert_allclose((2 * a).get_values(), 2 * a.get_values())
+
+    def test_neg_abs(self):
+        a, _ = self._pair()
+        np.testing.assert_allclose((-a).get_values(), -a.get_values())
+        np.testing.assert_allclose(abs(-a).get_values(), a.get_values())
+
+    def test_result_carries_left_grid(self):
+        a, b = self._pair()
+        c = a + b
+        np.testing.assert_array_equal(c.get_grid()[0], a.get_grid()[0])
+
+    def test_self_difference_is_zero(self):
+        a, _ = self._pair()
+        np.testing.assert_allclose((a - a).get_values(), 0.0)
+
+    def test_numpy_ufunc_returns_gdata(self):
+        a, b = self._pair()
+        c = np.sqrt(a ** 2 + b ** 2)
+        assert isinstance(c, GData)
+        expected = np.sqrt(a.get_values() ** 2 + b.get_values() ** 2)
+        np.testing.assert_allclose(c.get_values(), expected)
+        np.testing.assert_array_equal(c.get_grid()[0], a.get_grid()[0])
+
+    def test_asarray(self):
+        a, _ = self._pair()
+        np.testing.assert_array_equal(np.asarray(a), a.get_values())
+
+    def test_incompatible_shapes_raise(self):
+        a = _make([np.linspace(0.0, 1.0, 6)], np.ones((5, 1)))
+        b = _make([np.linspace(0.0, 1.0, 5)], np.ones((4, 1)))
+        with pytest.raises(ValueError):
+            _ = a + b
+
+    def test_modal_guardrail_blocks_math(self):
+        a = _make([np.linspace(0.0, 1.0, 6)], np.ones((5, 2)),
+                  ctx_extra={"is_modal": True})
+        with pytest.raises(ValueError):
+            _ = a + a
+        with pytest.raises(ValueError):
+            _ = np.sqrt(a)
+
+    def test_interpolated_modal_allows_math(self):
+        a = _make([np.linspace(0.0, 1.0, 6)], np.ones((5, 2)),
+                  ctx_extra={"is_modal": True, "interpolated": True})
+        np.testing.assert_allclose((a + a).get_values(), 2.0)
+
+
+# ---------------------------------------------------------------------------
+# repr / str
+# ---------------------------------------------------------------------------
+
+class TestGDataRepr:
+    def test_repr_contains_tag_and_shape(self):
+        d = _make([np.linspace(0.0, 1.0, 6)], np.ones((5, 1)), tag="elc")
+        r = repr(d)
+        assert "GData" in r
+        assert "elc" in r
+        assert "(5,)" in r
+
+    def test_repr_empty(self):
+        assert "empty" in repr(GData())
+
+    def test_str_includes_values_preview(self):
+        d = _make([np.linspace(0.0, 1.0, 6)], np.arange(5.0)[:, np.newaxis])
+        s = str(d)
+        assert "GData" in s
+        # multi-line: header + array preview
+        assert "\n" in s

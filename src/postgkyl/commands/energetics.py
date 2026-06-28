@@ -1,10 +1,7 @@
 import click
-import numpy as np
 
-from postgkyl.data import GData
+from postgkyl import ops
 from postgkyl.utils import verb_print
-
-import postgkyl.tools.energetics
 
 
 @click.command()
@@ -17,17 +14,11 @@ import postgkyl.tools.energetics
 def energetics(ctx, **kwargs):
   """Decomposes the components of the energy (kinetic, thermal, electromagnetic) for a two-species (electron, ion) plasma."""
   verb_print(ctx, "Starting energetics decomposition")
-  data = ctx.obj["data"]  # shortcut
+  data = ctx.obj["data"]
 
   for elc, ion, em in zip(data.iterator(kwargs["elc"]),
       data.iterator(kwargs["ion"]), data.iterator(kwargs["field"])):
-    grid = em.get_grid()
-    out_energetics = np.zeros(em.get_values()[..., 0:7].shape)
-    out = GData(tag=kwargs["tag"], comp_grid=ctx.obj["compgrid"],
-        label=kwargs["label"], ctx=em.ctx)
-    grid, out_energetics = postgkyl.tools.energetics(elc, ion, em)
-    out.push(grid, out_energetics)
-    data.add(out)
+    data.add(ops.energetics(elc, ion, em, tag=kwargs["tag"], label=kwargs["label"]))
   # end
 
   data.deactivate_all(tag=kwargs["elc"])

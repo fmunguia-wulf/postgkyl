@@ -1,6 +1,6 @@
-import base64
 import click
 
+from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
@@ -9,16 +9,11 @@ from postgkyl.utils import verb_print
 @click.pass_context
 def extractinput(ctx, **kwargs):
   """Extract embedded input file from compatible BP files"""
-  verb_print(ctx, "Starting ")
+  verb_print(ctx, "Starting extractinput")
   data = ctx.obj["data"]
 
   for dat in data.iterator(kwargs["use"]):
-    enc_inp = dat.get_input_file()
-    if enc_inp:
-      inpfile = base64.decodebytes(enc_inp.encode("utf-8")).decode("utf-8")
-      click.echo(inpfile)
-    else:
-      click.echo("No embedded input file!")
-    # end
+    inpfile = ops.extract_input(dat)
+    click.echo(inpfile if inpfile else "No embedded input file!")
   # end
   verb_print(ctx, "Finishing extractinput")

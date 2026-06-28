@@ -1,45 +1,23 @@
 import click
-import numpy as np
 
-from postgkyl.data import GData
+from postgkyl import ops
+from postgkyl.commands._apply import apply
 from postgkyl.utils import verb_print
 
 
 @click.command()
 @click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
 @click.option("--filename", "-f", type=click.STRING, help="Specify the file with a mask.")
-@click.option("--lower", "-l", type=click.FLOAT,
-    help="Specify the lower theshold to be masked out.")
-@click.option("--upper", "-u", type=click.FLOAT,
-    help="Specify the upper theshold to be masked out.")
+@click.option("--lower", type=click.FLOAT,
+    help="Specify the lower threshold; values below it are masked out.")
+@click.option("--upper", type=click.FLOAT,
+    help="Specify the upper threshold; values above it are masked out.")
+@click.option("--tag", "-t", help="Optional tag for the resulting array.")
+@click.option("--label", "-l", help="Custom label for the result.")
 @click.pass_context
 def mask(ctx, **kwargs):
-  """Mask data with specified Gkeyll mask file."""
+  """Mask data with a Gkeyll mask file or by numeric thresholds."""
   verb_print(ctx, "Starting mask")
-  data = ctx.obj("data")
-
-  if kwargs["filename"]:
-    mask_fld = GData(kwargs["filename"]).get_values()
-  # end
-
-  for dat in data.interator(kwargs["use"]):
-    values = dat.get_values()
-
-    if kwargs["filename"]:
-      mask_fld_rep = np.repeat(mask_fld, dat.get_num_comps(), axis=-1)
-      data.set_values(np.ma.masked_where(mask_fld_rep < 0.0, values))
-    elif kwargs.get("lower") and kwargs.get("upper"):
-      dat.set_values(np.ma.masked_outside(values, kwargs["lower"], kwargs["upper"]))
-    elif kwargs.get("lower"):
-      dat.set_values(np.ma.masked_less(values, kwargs["lower"]))
-    elif kwargs.get("upper"):
-      dat.set_values(np.ma.masked_greater(values, kwargs["upper"]))
-    else:
-      data.set_values(values)
-      click.echo(
-          click.style("WARNING in 'mask': No masking information specified.", fg="yellow")
-      )
-    # end
-  # end
-
+  apply(ctx, ops.mask, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"],
+      filename=kwargs["filename"], lower=kwargs["lower"], upper=kwargs["upper"])
   verb_print(ctx, "Finishing mask")

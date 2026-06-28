@@ -1,9 +1,8 @@
 import click
 
-from postgkyl.data import GData
+from postgkyl import ops
+from postgkyl.commands._apply import apply
 from postgkyl.utils import verb_print
-
-import postgkyl.tools
 
 
 @click.command()
@@ -14,17 +13,5 @@ import postgkyl.tools
 def magsq(ctx, **kwargs):
   """Calculate the magnitude squared of an input array."""
   verb_print(ctx, "Starting magnitude squared computation")
-  data = ctx.obj["data"]
-
-  for dat in data.iterator(kwargs["use"]):
-    if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
-      postgkyl.tools.mag_sq(dat, output=out)
-      data.add(out)
-    else:
-      postgkyl.tools.mag_sq(dat, output=dat)
-    # end
-  # end
-
+  apply(ctx, ops.magsq, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"])
   verb_print(ctx, "Finishing magnitude squared computation")

@@ -1,9 +1,8 @@
 import click
 
+from postgkyl import ops
 from postgkyl.data import GData, GInterpModal
 from postgkyl.utils import verb_print
-import postgkyl.tools.laguerre_compose
-import postgkyl.tools.transform_frame
 
 
 @click.command()
@@ -19,21 +18,19 @@ def pkpm(ctx, **kwargs):
   verb_print(ctx, "Starting Gkyl PKPM")
   data = ctx.obj["data"]
 
-  gf = GData(f"{kwargs['name'],:s}-{kwargs['species']:s}_{kwargs['idx']:s}.gkyl")
+  gf = GData(f"{kwargs['name']:s}-{kwargs['species']:s}_{kwargs['idx']:s}.gkyl")
   gvars = GData(f"{kwargs['name']:s}-{kwargs['species']:s}_pkpm_vars_{kwargs['idx']:s}.gkyl")
 
-  num_dims = gf.get_num_dims()
-  c_dim = num_dims - 1
+  c_dim = gf.get_num_dims() - 1
 
-  dg = GInterpModal(gf, kwargs["poly_order"], "pkpmhyb")
-  dg.interpolate((0, 1), overwrite=True)
+  GInterpModal(gf, kwargs["poly_order"], "pkpmhyb").interpolate((0, 1), overwrite=True)
 
-  dg = GInterpModal(gvars, kwargs["poly_order"], "ms")
-  grid_and_T_m = dg.interpolate(3)
-  grid_and_us = dg.interpolate((0, 1, 2))
+  dg_vars = GInterpModal(gvars, kwargs["poly_order"], "ms")
+  grid_and_T_m = dg_vars.interpolate(3)
+  grid_and_us = dg_vars.interpolate((0, 1, 2))
 
-  postgkyl.tools.laguerre_compose(gf, grid_and_T_m, gf)
-  postgkyl.tools.transform_frame(gf, grid_and_us, c_dim, gf)
+  ops.laguerre_compose(gf, grid_and_T_m, inplace=True)
+  ops.transform_frame(gf, grid_and_us, cdim=c_dim, inplace=True)
 
   gf.set_tag(kwargs["tag"])
   gf.set_label(kwargs["label"])

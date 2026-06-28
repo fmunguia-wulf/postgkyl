@@ -1,7 +1,7 @@
 import click
 
-from postgkyl.data import GData
-from postgkyl.data import GInterpModal, GInterpNodal
+from postgkyl import ops
+from postgkyl.commands._apply import apply
 from postgkyl.utils import verb_print
 
 
@@ -20,48 +20,7 @@ from postgkyl.utils import verb_print
 def differentiate(ctx, **kwargs):
   """Interpolate a derivative of DG data on a uniform mesh."""
   verb_print(ctx, "Starting differentiate")
-  data = ctx.obj["data"]
-
-  basis_type = None
-  is_modal = None
-  if kwargs.get("basis_type"):
-    if kwargs["basis_type"] == "ms":
-      basis_type = "serendipity"
-      is_modal = True
-    elif kwargs["basis_type"] == "ns":
-      basis_type = "serendipity"
-      is_modal = False
-    elif kwargs["basis_type"] == "mo":
-      basis_type = "maximal-order"
-      is_modal = True
-    elif kwargs["basis_type"] == "mt":
-      basis_type = "tensor"
-      is_modal = True
-    # end
-  # end
-
-  for dat in data.iterator(kwargs["use"]):
-    if kwargs["basis_type"] is None and dat.ctx["basis_type"] is None:
-      ctx.fail(
-          click.style(f"ERROR in interpolate: no 'basis_type' was specified and dataset {dat.get_label():s} does not have required ctxdata",
-              fg="red")
-      )
-    # end
-
-    if is_modal or dat.ctx["is_modal"]:
-      dg = GInterpModal(dat, kwargs["poly_order"], kwargs["basis_type"],
-          kwargs["interp"], kwargs["read"])
-    else:
-      dg = GInterpNodal(dat, kwargs["poly_order"], basis_type, kwargs["interp"], kwargs["read"])
-    # end
-
-    if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
-      grid, values = dg.differentiate(direction=kwargs["direction"])
-      out.push(grid, values)
-      data.add(out)
-    else:
-      dg.differentiate(direction=kwargs["direction"], overwrite=True)
-    # end
+  apply(ctx, ops.differentiate, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"],
+      basis=kwargs["basis_type"], p=kwargs["poly_order"], interp=kwargs["interp"],
+      read=kwargs["read"], direction=kwargs["direction"])
   verb_print(ctx, "Finishing differentiate")

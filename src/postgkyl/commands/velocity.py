@@ -1,6 +1,6 @@
 import click
 
-from postgkyl.data import GData
+from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
@@ -13,18 +13,10 @@ from postgkyl.utils import verb_print
 @click.pass_context
 def velocity(ctx, **kwargs):
   verb_print(ctx, "Starting velocity")
-
-  data = ctx.obj["data"]  # shortcut
+  data = ctx.obj["data"]
 
   for m0, m1 in zip(data.iterator(kwargs["density"]), data.iterator(kwargs["momentum"])):
-    grid = m0.get_grid()
-    vals_M0 = m0.get_values()
-    vals_M1 = m1.get_values()
-
-    out = GData(tag=kwargs["tag"], comp_grid=ctx.obj["compgrid"],
-        label=kwargs["label"], ctx=m0.ctx)
-    out.push(grid, vals_M1 / vals_M0)
-    data.add(out)
+    data.add(ops.velocity(m0, m1, tag=kwargs["tag"], label=kwargs["label"]))
   # end
 
   data.deactivate_all(tag=kwargs["density"])

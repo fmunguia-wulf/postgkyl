@@ -1,6 +1,8 @@
 import click
 import numpy as np
 
+from postgkyl import ops
+from postgkyl.commands._apply import apply
 from postgkyl.data import GData
 from postgkyl.utils import verb_print, set_frame
 
@@ -143,20 +145,8 @@ def select(ctx, **kwargs):
 
 
   else:
-    for dat in data.iterator(kwargs["use"]):
-      if kwargs["tag"]:
-        out = GData(tag=kwargs["tag"], label=kwargs["label"],
-            comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
-        grid, values = postgkyl.data.select(dat,
-            z0=kwargs["z0"], z1=kwargs["z1"], z2=kwargs["z2"], z3=kwargs["z3"],
-            z4=kwargs["z4"], z5=kwargs["z5"], comp=kwargs["comp"])
-        out.push(grid, values)
-        data.add(out)
-      else:
-        postgkyl.data.select(dat, overwrite=True,
-            z0=kwargs["z0"], z1=kwargs["z1"], z2=kwargs["z2"], z3=kwargs["z3"],
-            z4=kwargs["z4"], z5=kwargs["z5"], comp=kwargs["comp"])
-      # end
-    # end
+    apply(ctx, ops.select, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"],
+        z0=kwargs["z0"], z1=kwargs["z1"], z2=kwargs["z2"], z3=kwargs["z3"],
+        z4=kwargs["z4"], z5=kwargs["z5"], comp=kwargs["comp"])
   # end
   verb_print(ctx, "Finishing select")

@@ -1,8 +1,8 @@
 import click
 
-from postgkyl.data import GData
+from postgkyl import ops
+from postgkyl.commands._apply import apply
 from postgkyl.utils import verb_print
-import postgkyl.tools.fft
 
 
 @click.command()
@@ -20,18 +20,6 @@ def fft(ctx, **kwargs):
   Only works on 1D data at present.
   """
   verb_print(ctx, "Starting FFT")
-  data = ctx.obj["data"]
-
-  for dat in data.iterator(kwargs["use"]):
-    if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
-      grid, values = postgkyl.tools.fft(dat, psd=kwargs["psd"], iso=kwargs["iso"])
-      out.push(grid, values)
-      data.add(out)
-    else:
-      postgkyl.tools.fft(dat, psd=kwargs["psd"], iso=kwargs["iso"], overwrite=True)
-    # end
-  # end
-
+  apply(ctx, ops.fft, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"],
+      psd=kwargs["psd"], iso=kwargs["iso"])
   verb_print(ctx, "Finishing FFT")

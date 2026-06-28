@@ -1,9 +1,7 @@
 import click
-import numpy as np
 
-from postgkyl.data import GData
+from postgkyl import ops
 from postgkyl.utils import verb_print
-import postgkyl.tools.accumulate_current
 
 
 @click.command()
@@ -20,13 +18,8 @@ def current(ctx, **kwargs):
   data = ctx.obj["data"]
 
   for dat in data.iterator(kwargs["use"]):
-    grid = dat.get_grid()
-    outcurrent = np.zeros(dat.get_values().shape)
-    grid, outcurrent = postgkyl.tools.accumulate_current(dat, kwargs["qbym"])
+    out = ops.current(dat, qbym=kwargs["qbym"], tag=kwargs["tag"], label=kwargs["label"])
     dat.deactivate()
-    out = GData(tag=kwargs["tag"], comp_grid=ctx.obj["compgrid"],
-        label=kwargs["label"], ctx=dat.ctx)
-    out.push(grid, outcurrent)
     data.add(out)
   # end
   verb_print(ctx, "Finishing current accumulation")

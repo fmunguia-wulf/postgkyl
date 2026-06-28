@@ -412,3 +412,242 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
 
   plt.tight_layout()
   return im
+
+
+def plot_datasets(datasets, **kwargs):
+  """Plot one or more datasets onto a shared figure.
+
+  This is the multi-dataset orchestration layer used by both the top-level
+  ``postgkyl.plot`` (script API) and the CLI ``plot`` command. It performs the
+  cross-dataset work — the optional global-range scan, figure/subplot
+  management, per-dataset legend labels — and calls the single-dataset
+  :func:`plot` for each member. Returns the Matplotlib figure.
+
+  ``datasets`` is an iterable of ``GData``. Recognized orchestration kwargs
+  mirror the CLI ``plot`` options (``globalrange``, ``cutoffglobalrange``,
+  ``subplots``, ``legend`` as comma string, ``no_legend``, ``multiblock``,
+  ``save``/``saveas``/``dpi``/``saveframes``/``batch_mode``/
+  ``saveframes_prefix``, ``show``, ``arg``, ``scatter``, ``x/y/zlim``);
+  everything else is forwarded to :func:`plot`.
+  """
+  datasets = list(datasets)
+  num_datasets = len(datasets)
+
+  args = kwargs.get("arg", "") or ""
+  if kwargs.get("scatter"):
+    args += "."
+  # end
+  kwargs.pop("arg", None)
+
+  if kwargs.get("jet"):
+    import warnings
+    warnings.warn("The 'jet' colormap is not perceptually uniform and can "
+        "create features which do not exist in the data.", stacklevel=2)
+  # end
+
+  if kwargs.get("aspect"):
+    kwargs["fixaspect"] = True
+  # end
+
+  if kwargs.get("lineouts"):
+    kwargs["lineouts"] = int(kwargs["lineouts"])
+  # end
+
+  # Subplots: count total components for axis layout
+  kwargs["num_axes"] = None
+  if kwargs.get("subplots"):
+    kwargs["num_axes"] = sum(dat.get_num_comps() for dat in datasets)
+    kwargs["start_axes"] = 0
+    if kwargs.get("figure") is None:
+      kwargs["figure"] = 0
+    # end
+  # end
+
+  for lim, lo, hi in (("xlim", "xmin", "xmax"), ("ylim", "ymin", "ymax"),
+      ("zlim", "zmin", "zmax")):
+    if kwargs.get(lim):
+      parts = kwargs[lim].split(",")
+      kwargs[lo] = float(parts[0])
+      kwargs[hi] = float(parts[1])
+    # end
+  # end
+
+  dataset_fignum = kwargs.get("figure") in ("dataset", "set", "s")
+
+  multiblock = kwargs.get("multiblock", False)
+  if multiblock and kwargs.get("cutoffglobalrange") is None:
+    kwargs["globalrange"] = True
+  # end
+
+  # Global range scan across all datasets for a uniform color/value scale
+  if kwargs.get("globalrange") or kwargs.get("cutoffglobalrange"):
+    zscale = kwargs.get("zscale", 1.0)
+    vmin, vmax = float("inf"), float("-inf")
+    v_extrema = np.array([])
+    for dat in datasets:
+      val = dat.get_values() * zscale
+      vmin = min(vmin, np.nanmin(val))
+      vmax = max(vmax, np.nanmax(val))
+      v_extrema = np.append(v_extrema, [np.nanmin(val), np.nanmax(val)])
+    # end
+    v_extrema = np.sort(v_extrema)
+    if kwargs.get("cutoffglobalrange"):
+      boundary = 100 * (1 - kwargs["cutoffglobalrange"]) / 2
+      vmax = np.percentile(v_extrema, 100 - boundary)
+      vmin = np.percentile(v_extrema, boundary)
+    # end
+    if kwargs.get("zmin") is None:
+      kwargs["zmin"] = vmin
+    # end
+    if kwargs.get("zmax") is None:
+      kwargs["zmax"] = vmax
+    # end
+  # end
+
+  if multiblock and kwargs.get("contour") and kwargs.get("clevels") is None:
+    kwargs["clevels"] = f"{kwargs['zmin']}:{kwargs['zmax']}:10"
+  # end
+
+  # Legend: a comma-separated string sets per-dataset labels; --no-legend hides
+  legend = kwargs.get("legend")
+  legend_labels = None
+  if isinstance(legend, str) and legend:
+    legend_labels = [lbl.strip() for lbl in legend.split(",")]
+  # end
+  kwargs["legend"] = not kwargs.get("no_legend", False)
+  kwargs.pop("no_legend", None)
+  forcelegend = kwargs.get("forcelegend", False)
+
+  # Save/show policy (read, but harmless if also forwarded to plot())
+  save = kwargs.get("save", False)
+  saveas = kwargs.get("saveas", None)
+  dpi = kwargs.get("dpi", 200)
+  saveframes = kwargs.get("saveframes", None)
+  batch_mode = kwargs.get("batch_mode", False)
+  saveframes_prefix = kwargs.get("saveframes_prefix", None)
+  show = kwargs.get("show", False)
+
+  file_name = ""
+  fig = None
+  for i, dat in enumerate(datasets):
+    if dataset_fignum:
+      kwargs["figure"] = int(i)
+    # end
+    if multiblock:
+      kwargs["figure"] = 0
+    # end
+
+    if legend_labels is not None and i < len(legend_labels):
+      label = legend_labels[i]
+    elif num_datasets > 1 or forcelegend:
+      label = dat.get_label()
+    else:
+      label = ""
+    # end
+
+    plot(dat, args, label_prefix=label, **kwargs)
+    fig = plt.gcf()
+
+    if kwargs.get("subplots"):
+      kwargs["start_axes"] += dat.get_num_comps()
+    # end
+
+    if save or saveas:
+      if saveas:
+        file_name = saveas
+      else:
+        if file_name != "":
+          file_name = file_name + "_"
+        # end
+        if dat._file_name:
+          file_name = file_name + dat._file_name.split(".")[0]
+        else:
+          file_name = file_name + "ev_" + (dat.get_label() or dat.get_tag()).replace(" ", "_")
+        # end
+      # end
+    # end
+    if (save or saveas) and kwargs.get("figure") is None:
+      plt.savefig(str(file_name), dpi=dpi)
+      file_name = ""
+    # end
+    if saveframes:
+      plt.savefig(f"{saveframes:s}_{i:d}.png", dpi=dpi)
+      show = False
+    # end
+    if batch_mode:
+      plt.savefig(f"{saveframes_prefix:s}_{i:d}.png", dpi=dpi)
+      show = False
+    # end
+  # end
+
+  if save or saveas:
+    plt.savefig(str(file_name), dpi=dpi)
+  # end
+  if show:
+    plt.show()
+  # end
+  return fig
+
+
+def animate(datasets, *, interval: int = 100, fixed_range: bool = True,
+    notitle: bool = False, show: bool = False, save: bool = False,
+    saveas: str | None = None, fps: int | None = None, dpi: int | None = None,
+    arg: str = "", **plot_kwargs):
+  """Animate a sequence of datasets, one frame per dataset (matplotlib).
+
+  This is the script-facing core of the CLI ``animate`` command for the common
+  one-dataset-per-frame case. With ``fixed_range`` the value/colour scale is
+  held constant across frames. Returns the ``FuncAnimation`` (keep a reference
+  so it is not garbage-collected). Saving requires ffmpeg.
+  """
+  from matplotlib.animation import FuncAnimation
+
+  datasets = list(datasets)
+  if not datasets:
+    raise ValueError("animate: no datasets to animate.")
+  # end
+
+  # Hold a constant value/colour scale across all frames.
+  if fixed_range:
+    num_dims = datasets[0].get_num_dims()
+    scale = plot_kwargs.get("zscale", 1.0) if num_dims > 1 else plot_kwargs.get("yscale", 1.0)
+    vmin, vmax = float("inf"), float("-inf")
+    for dat in datasets:
+      val = dat.get_values() * scale
+      vmin = min(vmin, np.nanmin(val))
+      vmax = max(vmax, np.nanmax(val))
+    # end
+    lo_key, hi_key = ("zmin", "zmax") if num_dims > 1 else ("ymin", "ymax")
+    plot_kwargs.setdefault(lo_key, vmin)
+    plot_kwargs.setdefault(hi_key, vmax)
+  # end
+
+  fig = plt.figure()
+
+  def _update(frame):
+    fig.clear()
+    dat = datasets[frame]
+    kwargs = dict(plot_kwargs)
+    kwargs["figure"] = fig
+    if not notitle:
+      title = ""
+      if dat.ctx.get("frame") is not None:
+        title += f" frame: {dat.ctx['frame']:d} "
+      # end
+      if dat.ctx.get("time") is not None:
+        title += f" time: {dat.ctx['time']:.4e}"
+      # end
+      kwargs["title"] = title
+    # end
+    return plot(dat, arg, **kwargs)
+  # end
+
+  anim = FuncAnimation(fig, _update, len(datasets), interval=interval, blit=False)
+
+  if save or saveas:
+    anim.save(saveas or "anim.mp4", writer="ffmpeg", fps=fps, dpi=dpi)
+  # end
+  if show:
+    plt.show()
+  # end
+  return anim

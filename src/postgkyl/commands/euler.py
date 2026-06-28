@@ -1,9 +1,7 @@
 import click
 
-from postgkyl.data import GData
+from postgkyl import ops
 from postgkyl.utils import verb_print
-
-import postgkyl.tools.prim_vars as pv
 
 
 @click.command()
@@ -22,36 +20,15 @@ def euler(ctx, **kwargs):
   """
   verb_print(ctx, "Starting euler")
   data = ctx.obj["data"]
-
   v = kwargs["variable_name"]
+
   for dat in data.iterator(kwargs["use"]):
     verb_print(ctx, f"euler: Extracting {v:s} from data set.")
-    out = dat
     if kwargs["tag"]:
-      out = GData(tag=kwargs["tag"], label=kwargs["label"],
-          comp_grid=ctx.obj["compgrid"], ctx=dat.ctx)
-      data.add(out)
-    # end
-    if v == "density":
-      pv.get_density(dat, out_mom=out)
-    elif v == "xvel":
-      pv.get_vx(dat, out_mom=out)
-    elif v == "yvel":
-      pv.get_vy(dat, out_mom=out)
-    elif v == "zvel":
-      pv.get_vz(dat, out_mom=out)
-    elif v == "vel":
-      pv.get_vi(dat, out_mom=out)
-    elif v == "pressure":
-      pv.get_p(dat, gas_gamma=kwargs["gas_gamma"], num_moms=5, out_mom=out)
-    elif v == "ke":
-      pv.get_ke(dat, gas_gamma=kwargs["gas_gamma"], num_moms=5, out_mom=out)
-    elif v == "temp":
-      pv.get_temp(dat, gas_gamma=kwargs["gas_gamma"], num_moms=5, out_mom=out)
-    elif v == "sound":
-      pv.get_sound(dat, gas_gamma=kwargs["gas_gamma"], num_moms=5, out_mom=out)
-    elif v == "mach":
-      pv.get_mach(dat, gas_gamma=kwargs["gas_gamma"], num_moms=5, out_mom=out)
+      data.add(ops.euler(dat, v, gas_gamma=kwargs["gas_gamma"],
+          tag=kwargs["tag"], label=kwargs["label"]))
+    else:
+      ops.euler(dat, v, gas_gamma=kwargs["gas_gamma"], inplace=True)
     # end
   # end
   verb_print(ctx, "Finishing euler")

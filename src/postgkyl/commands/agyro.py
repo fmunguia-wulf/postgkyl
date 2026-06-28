@@ -1,7 +1,6 @@
 import click
 
-from postgkyl.data import GData
-from postgkyl.tools import get_agyro, get_gkyl_10m_agyro
+from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
@@ -23,18 +22,12 @@ def agyro(ctx, **kwargs):
   Frobenius norm of agyrotropic pressure tensor.
   """
   verb_print(ctx, "Starting agyro")
-
   data = ctx.obj["data"]
-  tag = "agyro"
-  if kwargs["tag"]:
-    tag = kwargs["tag"]
-  # end
+  tag = kwargs["tag"] or "agyro"
 
   for pressure, bfield in zip(data.iterator(kwargs["pressure"]), data.iterator(kwargs["bfield"])):
-    grid, agyro_vals = get_agyro(p_in=pressure, b_in=bfield, measure=kwargs["measure"])
-    out = GData(tag=tag, label=kwargs["label"], comp_grid=ctx.obj["compgrid"], ctx=pressure.ctx)
-    out.push(grid, agyro_vals)
-    data.add(out)
+    data.add(ops.agyro(pressure, bfield, measure=kwargs["measure"],
+        tag=tag, label=kwargs["label"]))
   # end
   verb_print(ctx, "Finishing agyro")
 
@@ -54,17 +47,11 @@ def mom_agyro(ctx, **kwargs):
   agyrotropic pressure tensor.
   """
   verb_print(ctx, "Starting agyro")
-
   data = ctx.obj["data"]
-  tag = "agyro"
-  if kwargs["tag"]:
-    tag = kwargs["tag"]
-  # end
+  tag = kwargs["tag"] or "agyro"
 
   for species, field in zip(data.iterator(kwargs["species"]), data.iterator(kwargs["field"])):
-    grid, agyro_vals = get_gkyl_10m_agyro(species=species, field=field, measure=kwargs["measure"])
-    out = GData(tag=tag, label=kwargs["label"], comp_grid=ctx.obj["compgrid"], ctx=species.ctx)
-    out.push(grid, agyro_vals)
-    data.add(out)
+    data.add(ops.mom_agyro(species, field, measure=kwargs["measure"],
+        tag=tag, label=kwargs["label"]))
   # end
   verb_print(ctx, "Finishing agyro")
