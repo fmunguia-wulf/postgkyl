@@ -93,7 +93,7 @@ class DatasetGroup:
     return output.plot_datasets(self._datasets, **kwargs)
 
   def info(self) -> str:
-    return "\n\n".join(dat.info() for dat in self._datasets)
+    return "\n\n".join(dat.info(index=i) for i, dat in enumerate(self._datasets))
 
   def animate(self, **kwargs):
     """Animate the members (one frame each) with matplotlib. See ``output.animate``."""

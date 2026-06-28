@@ -30,7 +30,8 @@ def info(ctx, **kwargs):
             fg=color, bold=bold)
     )
     if not kwargs["compact"]:
-      click.echo(dat.info() + "\n")
+      dat.info(header=False)  # the colored header above replaces info's own
+      click.echo("")          # trailing blank line between datasets
     # end
   # end
 

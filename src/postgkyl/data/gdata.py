@@ -335,14 +335,19 @@ class GData(object):
       
 
   # ---- Info -----
-  def info(self) -> str:
+  def info(self, index: int = 0, header: bool = True) -> str:
     """Prints GData object information.
 
     Prints time (only when available), number of components, dimension
     spans, extremes for a GData object.
 
     Args:
-      none
+      index: int = 0
+        Dataset index shown in the header (the dataset's position within its
+        tag); defaults to 0 for a standalone dataset.
+      header: bool = True
+        Prepend a ``label (tag#index)`` header line. The CLI sets this False
+        because it prints its own colored header.
 
     Returns:
       output: str
@@ -364,7 +369,12 @@ class GData(object):
     }
 
     output = ""
-    
+
+    if header:
+      lbl = self.get_label()
+      output += f"{lbl:s}{' ' if lbl else '':s}({self.get_tag():s}#{index:d})\n"
+    # end
+
     printed_keys = []
 
     if "time" in self.ctx.keys():
@@ -397,15 +407,19 @@ class GData(object):
       max_idx = np.unravel_index(np.nanargmax(values), values.shape)
       minimum = np.nanmin(values)
       min_idx = np.unravel_index(np.nanargmin(values), values.shape)
-      output += f"\n├─ Maximum: {maximum:e} at {str(max_idx[:num_dims]):s}"
+      # Cast indices to plain Python ints so they format as (218,) rather
+      # than (np.int64(218),).
+      max_pos = tuple(int(i) for i in max_idx[:num_dims])
+      min_pos = tuple(int(i) for i in min_idx[:num_dims])
+      output += f"\n├─ Maximum: {maximum:e} at {str(max_pos):s}"
       if num_comps > 1:
-        output += f" component {max_idx[-1]:d}\n"
+        output += f" component {int(max_idx[-1]):d}\n"
       else:
         output += "\n"
       # end
-      output += f"├─ Minimum: {minimum:e} at {str(min_idx[:num_dims]):s}"
+      output += f"├─ Minimum: {minimum:e} at {str(min_pos):s}"
       if num_comps > 1:
-        output += f" component {min_idx[-1]:d}"
+        output += f" component {int(min_idx[-1]):d}"
       # end
     # end
 
@@ -456,6 +470,8 @@ class GData(object):
       # end
     # end
 
+    print(output)
+    print()
     return output
 
   # ---- Write ----
