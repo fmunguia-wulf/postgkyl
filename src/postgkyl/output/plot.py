@@ -39,7 +39,8 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     ymin: float | None = None, ymax: float | None = None, yscale: float = 1.0, yshift: float = 0.0,
     zmin: float | None = None, zmax: float | None = None, zscale: float = 1.0, zshift: float = 0.0,
     relax: bool = False, style: str | None = None, rcParams: dict | None = None,
-    legend: bool = True, label_prefix: str = "", colorbar: bool = True,
+    legend: bool = True, label_prefix: str = "", legend_axis: int | None = None,
+    colorbar: bool = True,
     xlabel: str | None = None, ylabel: str | None = None, clabel: str | None = None, title: str | None = None,
     subplot_titles: str | None = None, subplot_xlabels: str | None = None, subplot_ylabels: str | None = None,
     logx: bool = False, logy: bool = False, logz: bool = False,
@@ -222,7 +223,13 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
   # ---- Main Plotting Loop ---------------------------------------------
   for comp in idx_comps:
     cax = ax[0] if squeeze else ax[comp + start_axes]
-    label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
+    # When a specific legend subplot is requested, label by dataset only
+    # (drop the per-component "_cN" suffix) so the single legend stays clean.
+    if legend_axis is not None:
+      label = label_prefix
+    else:
+      label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
+    # end
 
     if num_dims == 1:
       nodal_grid = nodal_to_cell_centered_grid(grid, cells)
@@ -374,10 +381,15 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
 
     # ---- Additional Formatting ----------------------------------------
     cax.grid(showgrid)
-    # Legend
+    # Legend. ``legend_axis`` restricts the line legend to a single subplot
+    # (identified by its flat axis index); None draws it on every subplot.
+    axis_idx = 0 if squeeze else comp + start_axes
+    show_legend_here = legend_axis is None or axis_idx == legend_axis
     if legend:
       if num_dims == 1 and label != "":
-        cax.legend(loc=0)
+        if show_legend_here:
+          cax.legend(loc=0)
+        # end
       else:
         cax.text(0.03, 0.96, label,
             bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8, "boxstyle": "round"},
@@ -508,11 +520,14 @@ def plot_datasets(datasets, **kwargs):
     kwargs["clevels"] = f"{kwargs['zmin']}:{kwargs['zmax']}:10"
   # end
 
-  # Legend: a comma-separated string sets per-dataset labels; --no-legend hides
+  # Legend: a comma-separated string (CLI) or a list/tuple (script API) sets
+  # per-dataset labels; --no-legend hides.
   legend = kwargs.get("legend")
   legend_labels = None
   if isinstance(legend, str) and legend:
     legend_labels = [lbl.strip() for lbl in legend.split(",")]
+  elif isinstance(legend, (list, tuple)):
+    legend_labels = [str(lbl).strip() for lbl in legend]
   # end
   kwargs["legend"] = not kwargs.get("no_legend", False)
   kwargs.pop("no_legend", None)

@@ -24,7 +24,7 @@ def _find_cell_index(array, value):
 
 def _string_to_index(value: str, array: np.ndarray, nodal: bool = False) -> int:
   if isinstance(value, str):
-    if value.isdigit():
+    if value.lstrip("-").isdigit():
       return int(value)
     else:
       if nodal:

@@ -49,6 +49,15 @@ def _get_basis_p(num_dim, num_comp):
     basis = "tensor"
     poly_order = idx + 1
   # end
+  if basis is None:
+    raise ValueError(
+        "Could not infer the basis: got {:d} "
+        "component(s) for a {:d}D grid, which matches no supported serendipity "
+        "or tensor basis. The mapc2p file likely does not match the dataset "
+        "(e.g. a 1D geometry applied to {:d}D data).".format(
+            num_comp, num_dim, num_dim)
+    )
+  # end
   return basis, poly_order
 
 

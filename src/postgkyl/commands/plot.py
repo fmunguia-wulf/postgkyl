@@ -73,6 +73,8 @@ import postgkyl.output.plot
 @click.option("--legend", default=None, type=click.STRING,
     help="If specified, comma-separated legend labels (e.g., 'a,b,c').")
 @click.option("--no-legend", is_flag=True, help="Hide legend.")
+@click.option("--legend-axis", "legend_axis", default=None, type=click.INT,
+    help="Restrict the legend to the subplot with this flat index (0-based).")
 @click.option("--force-legend", "forcelegend", is_flag=True,
     help="Force legend even when plotting a single dataset.")
 @click.option("--color", type=click.STRING, help="Set color when available.")
