@@ -15,8 +15,8 @@ L1  data/       GData master class + readers + DG interp  (I/O & storage)
 L2  ops/        one function per verb                     ← the single seam
     output/     rendering backends
     utils/      generic, cross-cutting support
-    gk/         gyrokinetics domain reference (constants, enums, quantity registry)
-L3  GData / DatasetGroup / loader / group   fluent script API
+    gk/         gyrokinetics domain reference             (constants, enums, quantity registry)
+L3  GData / DatasetGroup / loader / group                 fluent script API
 L4  apps/       composed diagnostics & workflows          (script-callable)
 L5  commands/   Click CLI shells                          (thin: argv → ops / apps)
 ```
@@ -157,19 +157,3 @@ L2 verb or one L4 app. Most are ~3-line shells calling an `ops` verb through **`
 
 The CLI entry point itself is **`pgkyl.py`**: `PgkylCommandGroup` (chaining, command
 abbreviation, aliases, bare-filename-as-`load`) and all `cli.add_command(...)` wiring.
-
----
-
-## Current deviations from this structure
-
-The tree is converging on the layout above; `REFACTOR.md` is the migration plan. The
-outstanding gaps:
-
-| Item | Lives now | Ideal home |
-|---|---|---|
-| `gk_energy_balance`, `gk_particle_balance`, `gk_nodes`, `trajectory` | `commands/` (CLI-only) | **L4 `apps/`** |
-| `gkyl_pkpm` (`pkpm`), `gk_load_quantity` | `commands/` | **L3 loader** (`pg.load.pkpm` / `.gk_quantity`) |
-| `dg_local_poly` (a true `verb(data)->data`) | `commands/` | **L2 `ops/`** + `GData` method |
-| Coordinate-mapping grid construction | inlined in `data/gkyl_reader.load()` (×2) | **L1 `data/mapping.py`** |
-| Load-option global/local resolution | `commands/load.py` (~50 lines) | `commands/_load_opts.py` |
-| Dead code | `commands/temp.py`, `commands/old/`, `data/old/` | deleted |
