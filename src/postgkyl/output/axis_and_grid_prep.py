@@ -38,7 +38,9 @@ def _resolve_plot_labels(
   if xlabel is None:
     xlabel = axis_labels[0]
   if ylabel is None:
-    ylabel = axis_labels[1] if num_dims > 1 else axis_labels[0]
+    # In 1D the y-axis is the field value, not a coordinate, so it has no
+    # default label; only 2D maps the second coordinate onto the y-axis.
+    ylabel = axis_labels[1] if num_dims > 1 else ""
   if zlabel is None:
     zlabel = axis_labels[2] if num_dims > 2 else axis_labels[-1]
 

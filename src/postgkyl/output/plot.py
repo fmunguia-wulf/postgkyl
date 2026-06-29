@@ -595,7 +595,7 @@ def plot_datasets(datasets, **kwargs):
     # end
   # end
 
-  if save or saveas:
+  if (save or saveas) and kwargs.get("figure") is not None:
     plt.savefig(str(file_name), dpi=dpi)
   # end
   if show:
