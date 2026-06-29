@@ -143,6 +143,85 @@ class _Loader:
         mapc2p_vel_name=mapc2p_vel_name, reader_name=reader_name,
         load=load, click_mode=click_mode) for f in files])
 
+  def gk_distf(self, name: str, species: str,
+      frame: int | str | list | tuple,
+      *, tag: str = "f", suffix: str = "",
+      use_c2p_vel: bool = False, use_mc2nu: bool = False, use_mapc2p: bool = False,
+      block_idx: int | None = None, interp: int | None = None,
+      jf_file: str | None = None, mapc2p_vel_file: str | None = None,
+      jacobvel_file: str | None = None, mc2nu_file: str | None = None,
+      mapc2p_file: str | None = None,
+      jacobtot_inv_file: str | None = None) -> "GData | DatasetGroup":
+    """Load and interpolate a gyrokinetic distribution function.
+
+    The script-side equivalent of the CLI ``gk_distf`` command: it reads the
+    saved ``Jf`` (distribution times one or more Jacobians) together with the
+    velocity/configuration Jacobians, divides them out, and interpolates onto a
+    nodal grid, optionally applying velocity- and position-space coordinate
+    mappings. Unlike :meth:`__call__` it returns *interpolated* data ready for
+    array math and plotting.
+
+    A single ``frame`` returns a :class:`postgkyl.GData`; a list/tuple of frames
+    or a range string (e.g. ``'0:10'``) returns a :class:`postgkyl.DatasetGroup`
+    (one member per frame, labelled by frame number), mirroring
+    :meth:`many`.
+
+    Args:
+      name: str
+        Simulation name prefix (e.g. ``'gk_lorentzian_mirror'``).
+      species: str
+        Species name (e.g. ``'ion'`` or ``'elc'``).
+      frame: int | str | list | tuple
+        Frame index, comma-separated indices, or a ``'start:stop[:step]'`` /
+        ``':'`` range (range bounds default to the frames found on disk).
+      tag: str
+        Tag for the resulting dataset(s).
+      suffix: str
+        Use ``<name>-<species>_<suffix>_<frame>.gkyl`` as the input distribution.
+      use_c2p_vel: bool
+        Convert velocity-space computational coordinates to physical ones using
+        the ``mapc2p_vel`` mapping.
+      use_mc2nu: bool
+        Convert non-uniform computational coordinates to field-aligned ones.
+      use_mapc2p: bool
+        Convert position-space computational coordinates to Cartesian/cylindrical.
+      block_idx: int | None
+        Use block-specific files with a ``_b<idx>`` prefix.
+      interp: int | None
+        Interpolate onto a general mesh of the specified amount.
+      jf_file, mapc2p_vel_file, jacobvel_file, mc2nu_file, mapc2p_file,
+      jacobtot_inv_file: str | None
+        Explicit filename overrides; each defaults to the standard naming
+        convention derived from ``name``/``species``/``block_idx`` when omitted.
+
+    Returns:
+      A :class:`postgkyl.GData` for a single frame, otherwise a
+      :class:`postgkyl.DatasetGroup` with one member per frame.
+    """
+    from postgkyl.commands.gk_distf import load_gk_distf, resolve_frames
+
+    frames = resolve_frames(frame, name=name, species=species,
+        suffix=suffix, block_idx=block_idx)
+    datasets = []
+    for f in frames:
+      out = load_gk_distf(name=name, species=species, frame=f,
+          tag=tag, suffix=suffix,
+          use_c2p_vel=use_c2p_vel, use_mc2nu=use_mc2nu, use_mapc2p=use_mapc2p,
+          block_idx=block_idx, interp=interp,
+          jf_file=jf_file, mapc2p_vel_file=mapc2p_vel_file,
+          jacobvel_file=jacobvel_file, mc2nu_file=mc2nu_file,
+          mapc2p_file=mapc2p_file, jacobtot_inv_file=jacobtot_inv_file)
+      if len(frames) > 1:
+        out.set_label(str(f))
+      # end
+      datasets.append(out)
+    # end
+
+    if len(datasets) == 1 and not isinstance(frame, (list, tuple)):
+      return datasets[0]
+    # end
+    return DatasetGroup(datasets)
+
   def outputs(self, extensions: str = "bp,gkyl") -> dict:
     """Discover Gkeyll output filename stems in the current directory.
 

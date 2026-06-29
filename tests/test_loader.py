@@ -49,3 +49,72 @@ class TestLoadMany:
     def test_many_no_match_raises(self):
         with pytest.raises(FileNotFoundError):
             pg.load.many(str(GEN_DIR / "does_not_exist_*.gkyl"))
+
+
+class TestResolveFrames:
+    def test_single_int(self):
+        from postgkyl.commands.gk_distf import resolve_frames
+        assert resolve_frames(5, name="n", species="ion") == [5]
+
+    def test_list(self):
+        from postgkyl.commands.gk_distf import resolve_frames
+        assert resolve_frames([1, 2, 3], name="n", species="ion") == [1, 2, 3]
+
+    def test_csv_string(self):
+        from postgkyl.commands.gk_distf import resolve_frames
+        assert resolve_frames("0,2,4", name="n", species="ion") == [0, 2, 4]
+
+    def test_range_discovers_files(self, tmp_path, monkeypatch):
+        from postgkyl.commands.gk_distf import resolve_frames
+        # Lay down files matching the default naming convention for a few frames.
+        for f in (0, 1, 2, 3):
+            (tmp_path / f"sim-ion_{f}.gkyl").touch()
+        # end
+        monkeypatch.chdir(tmp_path)
+        assert resolve_frames("1:3", name="sim", species="ion") == [1, 2]
+        assert resolve_frames(":", name="sim", species="ion") == [0, 1, 2, 3]
+        assert resolve_frames("0:4:2", name="sim", species="ion") == [0, 2]
+
+
+class TestLoadGkDistf:
+    """Dispatch tests for pg.load.gk_distf (single -> GData, many -> group).
+
+    The full distribution-function math needs a complete companion-file set that
+    is not part of the test fixtures, so the per-frame loader is stubbed; these
+    tests pin the frame-resolution + return-type contract that wires gk_distf
+    into the loader namespace.
+    """
+
+    def _stub(self, monkeypatch):
+        calls = []
+
+        def fake_load_gk_distf(*, name, species, frame, tag, **kwargs):
+            calls.append(frame)
+            d = GData(tag=tag)
+            d.push([np.array([0.0, 1.0])], np.array([[float(frame)]]))
+            return d
+
+        import importlib
+        gk_distf_mod = importlib.import_module("postgkyl.commands.gk_distf")
+        monkeypatch.setattr(gk_distf_mod, "load_gk_distf", fake_load_gk_distf)
+        return calls
+
+    def test_single_frame_returns_gdata(self, monkeypatch):
+        self._stub(monkeypatch)
+        out = pg.load.gk_distf(name="sim", species="ion", frame=3)
+        assert isinstance(out, GData)
+        assert out.get_tag() == "f"
+
+    def test_multi_frame_returns_group(self, monkeypatch):
+        calls = self._stub(monkeypatch)
+        out = pg.load.gk_distf(name="sim", species="ion", frame="0,2,4")
+        assert isinstance(out, DatasetGroup)
+        assert len(out) == 3
+        assert calls == [0, 2, 4]
+        assert [d.label for d in out] == ["0", "2", "4"]
+
+    def test_single_element_list_returns_group(self, monkeypatch):
+        self._stub(monkeypatch)
+        out = pg.load.gk_distf(name="sim", species="ion", frame=[7])
+        assert isinstance(out, DatasetGroup)
+        assert len(out) == 1
