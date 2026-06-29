@@ -54,6 +54,7 @@ from .energetics import energetics
 from .fft import fft
 from .fit import fit
 from .fit import fit_evaluate
+from .fit import auto_guess
 from .fit import FIT_FUNCTIONS
 from .fit import FIT_NDIM
 from .fit import RPN_OPERATORS

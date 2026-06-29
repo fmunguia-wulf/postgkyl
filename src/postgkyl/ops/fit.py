@@ -12,7 +12,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from postgkyl.tools.fit import fit as _fit, fit_evaluate as _fit_evaluate
+from postgkyl.tools.fit import (
+    fit as _fit,
+    fit_evaluate as _fit_evaluate,
+    auto_guess as _auto_guess,
+    FIT_NDIM,
+    rpn_ndim,
+)
 from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 if TYPE_CHECKING:
@@ -43,8 +49,8 @@ def fit(data: "GData", fit_type: str, *, guess=None, inplace: bool = False,
       operators, or numbers) become fit parameters.
     guess: str | Sequence[float] | None
       Initial guess for the fit parameters. A comma-separated string (e.g.
-      '1,0,2') or a sequence of floats. None lets the fitter pick defaults
-      (ones).
+      '1,0,2') or a sequence of floats. None derives a data-driven guess per
+      component via :func:`postgkyl.tools.fit.auto_guess`.
     inplace: bool
       When True, mutate and return ``data``; otherwise return a new GData.
     tag: str | None
@@ -54,7 +60,8 @@ def fit(data: "GData", fit_type: str, *, guess=None, inplace: bool = False,
 
   Returns:
     A new GData holding the fitted curve on the (active) grid, with
-    ``ctx['fit_params']`` and ``ctx['fit_R2']`` set (or the mutated input when
+    ``ctx['fit_params']``, ``ctx['fit_std']`` (1-sigma parameter
+    uncertainties), and ``ctx['fit_R2']`` set (or the mutated input when
     inplace=True).
 
   Raises:
@@ -80,6 +87,13 @@ def fit(data: "GData", fit_type: str, *, guess=None, inplace: bool = False,
     values = values[idx]
   # end
 
+  ndim_fit = FIT_NDIM.get(fit_type, rpn_ndim(fit_type))
+  if len(cc_grid) != ndim_fit:
+    raise ValueError(
+        f"fit '{fit_type}' requires {ndim_fit} spatial dimension(s), but data "
+        f"has {len(cc_grid)}. Reduce it first (e.g. select or integrate).")
+  # end
+
   if len(cc_grid) == 1:
     xdata = cc_grid[0]
   else:
@@ -93,17 +107,19 @@ def fit(data: "GData", fit_type: str, *, guess=None, inplace: bool = False,
   # end
 
   active_shape = tuple(cg.shape[0] for cg in cc_grid)
-  fit_values_list, all_params, all_r2 = [], [], []
+  fit_values_list, all_params, all_std, all_r2 = [], [], [], []
   for comp in range(values.shape[-1]):
     ydata = values[..., comp].flatten()
-    params, _cov, r2 = _fit(xdata, ydata, fit_type, p0=guess_list)
+    p0 = guess_list if guess_list is not None else _auto_guess(fit_type, xdata, ydata)
+    params, cov, r2 = _fit(xdata, ydata, fit_type, p0=p0)
     y_fit = _fit_evaluate(xdata, fit_type, params)
     fit_values_list.append(y_fit.reshape(active_shape + (1,)))
     all_params.append(params)
+    all_std.append(np.sqrt(np.diag(cov)))
     all_r2.append(r2)
   # end
 
   fit_values = np.concatenate(fit_values_list, axis=-1)
   fit_grid = [grid[d] for d in active]
   return data._result(fit_grid, fit_values, inplace=inplace, tag=tag, label=label,
-      fit_params=all_params, fit_R2=all_r2)
+      fit_params=all_params, fit_std=all_std, fit_R2=all_r2)

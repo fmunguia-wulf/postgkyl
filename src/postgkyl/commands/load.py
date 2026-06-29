@@ -71,7 +71,7 @@ def load(
             z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=opts.comp, var_name=var,
             label=label, mapc2p_name=opts.mapc2p_name,
             mapc2p_vel_name=opts.mapc2p_vel_name,
-            reader_name=reader, load=load, click_mode=True)
+            reader_name=reader, load=load, cli_mode=True)
         if fv:
           dg = GInterpModal(dat, 0, "ms")
           dg.interpolateGrid(overwrite=True)

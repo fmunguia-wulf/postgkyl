@@ -57,7 +57,7 @@ class _Loader:
       tag: str = "default", label: str = "",
       ctx: dict | None = None,
       comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
-      reader_name: str = "", load: bool = True, click_mode: bool = False) -> GData:
+      reader_name: str = "", load: bool = True, cli_mode: bool = False) -> GData:
     """Load a single file into a :class:`postgkyl.GData`.
 
     Args:
@@ -90,7 +90,7 @@ class _Loader:
       load: bool = True
         Automatically the data to memory; when set to False, data can be loaded later
         using the load() method.
-      click_mode: bool = False
+      cli_mode: bool = False
         Enables command-line behavior like prompting when a
         var_name is either missing or doesn't match any available.
 
@@ -102,7 +102,7 @@ class _Loader:
         var_name=var_name, tag=tag, label=label, ctx=ctx,
         comp_grid=comp_grid, mapc2p_name=mapc2p_name,
         mapc2p_vel_name=mapc2p_vel_name, reader_name=reader_name,
-        load=load, click_mode=click_mode)
+        load=load, cli_mode=cli_mode)
 
   def many(self, pattern: str,
       comp: int | str | None = None,
@@ -114,7 +114,7 @@ class _Loader:
       ctx: dict | None = None,
       comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
       reader_name: str = "", load: bool = True,
-      click_mode: bool = False) -> DatasetGroup:
+      cli_mode: bool = False) -> DatasetGroup:
     """Load every file matching a glob ``pattern`` into a ``DatasetGroup``.
 
     Files are loaded in sorted order so frame sweeps stay in sequence. Every
@@ -141,7 +141,7 @@ class _Loader:
         var_name=var_name, tag=tag, label=label, ctx=ctx,
         comp_grid=comp_grid, mapc2p_name=mapc2p_name,
         mapc2p_vel_name=mapc2p_vel_name, reader_name=reader_name,
-        load=load, click_mode=click_mode) for f in files])
+        load=load, cli_mode=cli_mode) for f in files])
 
   def gk_distf(self, name: str, species: str,
       frame: int | str | list | tuple,

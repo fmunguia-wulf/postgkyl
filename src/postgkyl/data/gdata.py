@@ -41,7 +41,7 @@ class GData(object):
       tag: str = "default", label: str = "",
       ctx: dict | None = None,
       comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
-      reader_name: str = "", load: bool = True, click_mode: bool = False):
+      reader_name: str = "", load: bool = True, cli_mode: bool = False):
     """Initializes the Data class with a Gkeyll output file.
 
     Args:
@@ -74,7 +74,7 @@ class GData(object):
       load: bool = True
         Automatically the data to memory; when set to False, data can be loaded later
         using the load() method.
-      click_mode: bool = False
+      cli_mode: bool = False
         Enables command-line behavior like prompting when a
         var_name is either missing or doesn't match any available.
     """
@@ -122,7 +122,7 @@ class GData(object):
       for key, rd in readers.items():
         self._reader = rd(file_name=self._file_name, ctx=self.ctx, var_name=var_name,
           c2p=mapc2p_name, c2p_vel=mapc2p_vel_name, axes=zs, comp=comp,
-          click_mode=click_mode)
+          cli_mode=cli_mode)
         if self._reader.is_compatible():
           reader_set = True
           break

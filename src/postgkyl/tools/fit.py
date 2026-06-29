@@ -250,3 +250,110 @@ def fit(
   R2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 1.0
 
   return params, cov, R2
+
+
+def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | None:
+  """Return data-driven initial parameter guesses for known fit types.
+
+  Produces a sensible ``p0`` for :func:`fit` by inspecting the data (e.g. a
+  least-squares seed for linear/polynomial models, peak location and FWHM for a
+  gaussian, the dominant FFT frequency for a sinusoid). Returns ``None`` for RPN
+  expressions or when the data has no finite values, in which case :func:`fit`
+  falls back to its default (ones).
+
+  Args:
+    fit_type: str
+      A built-in model name (an RPN expression yields ``None``).
+    xdata: np.ndarray
+      Independent variable: shape ``(N,)`` for 1D models, ``(2, N)`` for 2D.
+    ydata: np.ndarray
+      Dependent variable, shape ``(N,)``.
+
+  Returns:
+    A list of initial parameter guesses, or ``None`` when no heuristic applies.
+  """
+  y = np.asarray(ydata, dtype=float)
+  finite = np.isfinite(y)
+  if not np.any(finite):
+    return None
+  y_fin = y[finite]
+  y_min, y_max = y_fin.min(), y_fin.max()
+  y_mean = y_fin.mean()
+  y_range = y_max - y_min
+
+  if fit_type == "linear":
+    x = np.asarray(xdata)
+    dx = x.max() - x.min()
+    a = y_range / dx if dx != 0 else 1.0
+    b = y_mean - a * x.mean()
+    return [a, b]
+
+  if fit_type == "quadratic":
+    x = np.asarray(xdata)
+    try:
+      return list(np.polyfit(x, y, 2))
+    except Exception:
+      return [0.0, 1.0, y_mean]
+
+  if fit_type == "plane":
+    x, yc = xdata[0], xdata[1]
+    A = np.column_stack([x, yc, np.ones_like(x)])
+    result, *_ = np.linalg.lstsq(A, y, rcond=None)
+    return list(result)
+
+  if fit_type == "quadratic2d":
+    x, yc = xdata[0], xdata[1]
+    A = np.column_stack([x**2, yc**2, x * yc, x, yc, np.ones_like(x)])
+    result, *_ = np.linalg.lstsq(A, y, rcond=None)
+    return list(result)
+
+  if fit_type == "exp_plateau":
+    x = np.asarray(xdata)
+    n_tail = max(1, len(x) // 10)
+    C = float(y[np.argsort(x)[-n_tail:]].mean())
+    A = float(y_max - C) or 1.0
+    x_span = x.max() - x.min()
+    b = -1.0 / x_span if x_span > 0 else -1.0
+    return [A, b, C]
+
+  if fit_type == "gaussian":
+    x = np.asarray(xdata)
+    A = float(y_max)
+    mu = float(x[np.argmax(y)])
+    above = x[y >= A / 2] if A != 0 else x
+    if len(above) >= 2:
+      sigma = float((above[-1] - above[0]) / (2 * np.sqrt(2 * np.log(2))))
+    else:
+      sigma = float((x.max() - x.min()) / 4)
+    return [A, mu, max(abs(sigma), 1e-10)]
+
+  if fit_type == "power":
+    b_off = float(y_min)
+    a = float(y_max - b_off) or 1.0
+    return [a, 1.0, b_off]
+
+  if fit_type == "sinusoid":
+    x = np.asarray(xdata)
+    A = float(y_range / 2) or 1.0
+    C = float((y_max + y_min) / 2)
+    sort_idx = np.argsort(x)
+    x_s, y_s = x[sort_idx], y[sort_idx]
+    if len(x_s) > 1:
+      dx = np.mean(np.diff(x_s))
+      freqs = np.fft.rfftfreq(len(y_s), d=dx)
+      fft_amp = np.abs(np.fft.rfft(y_s - C))
+      i_peak = np.argmax(fft_amp[1:]) + 1 if len(fft_amp) > 1 else 1
+      omega = float(2 * np.pi * freqs[i_peak])
+    else:
+      omega = 1.0
+    return [A, omega, 0.0, C]
+
+  if fit_type == "tanh_transition":
+    x = np.asarray(xdata)
+    A = float(y_range / 2) or 1.0
+    C = float((y_max + y_min) / 2)
+    x0 = float(x[np.argmax(np.abs(np.gradient(y)))])
+    w = float((x.max() - x.min()) / 4) or 1.0
+    return [A, x0, w, C]
+
+  return None

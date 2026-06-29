@@ -22,7 +22,7 @@ class GkylAdiosReader(object):
   def __init__(self, file_name: str, ctx: dict | None = None,
       var_name: str = "CartGridField", c2p: str = "",
       axes: tuple | None = (None, None, None, None, None, None),
-      comp: int | slice | None = None, click_mode: bool = False,
+      comp: int | slice | None = None, cli_mode: bool = False,
       **kwargs):
     """Initialize the instance of ADIOS reader.
 
@@ -37,7 +37,7 @@ class GkylAdiosReader(object):
         Coordinate indices for partial loading.
       comp: int
         Component index for partial loading.
-      click_mode: bool = False
+      cli_mode: bool = False
         Enables command-line behavior like prompting when a
         var_name is either missing or doesn't match any available.
       **kwargs
@@ -58,7 +58,7 @@ class GkylAdiosReader(object):
 
     self.is_frame = False
     self.is_diagnostic = False
-    self.click_mode = click_mode
+    self.cli_mode = cli_mode
 
     self.ctx = ctx
     if not ("grid_type" in self.ctx.keys()):
@@ -176,7 +176,7 @@ class GkylAdiosReader(object):
     fh = adios2.FileReader(self._file_name)
 
     if self.var_name not in fh.available_variables():
-      if self.click_mode:
+      if self.cli_mode:
         var_name = self.var_name
         while True:
           var_name = typer.prompt(f"Variable name '{var_name:s}' is not available, please select from the available ones: {self.ctx['var_names']:s}")
