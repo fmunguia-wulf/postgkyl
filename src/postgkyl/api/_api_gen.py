@@ -52,15 +52,43 @@ def _cmd(name: str):
   return cli.commands[name]
 
 
+def _flag(value, flag_value):
+  """Translate an API boolean for a click optional-value flag.
+
+  ``True`` enables the flag with its default behaviour (click's ``flag_value``),
+  ``False`` disables it (``None``); a string passes straight through as an
+  explicit override. This lets the friendly ``bool`` API default map onto what
+  the command already expects without the commands needing to know about it.
+  """
+  if value is True:
+    return flag_value
+  if value is False:
+    return None
+  return value
+
+
 class PgkylSession(_Session):
 '''
+
+
+def _is_optional_value_flag(param: click.Parameter) -> bool:
+  """Click "optional value" flag: a flag whose ``flag_value`` is not boolean.
+
+  These accept ``--opt`` (use ``flag_value``) or ``--opt FILE`` (override), and
+  default to ``None`` when absent. They wrap into the API as ``bool | str``.
+  """
+  return (
+      getattr(param, "is_flag", False)
+      and not isinstance(getattr(param, "flag_value", None), bool))
 
 
 def _annotation(param: click.Parameter) -> str:
   """Map a click parameter type to a Python type annotation string."""
   ctype = param.type
   name = getattr(ctype, "name", "text")
-  if getattr(param, "is_flag", False) or name == "boolean":
+  if _is_optional_value_flag(param):
+    base = "bool | str"
+  elif getattr(param, "is_flag", False) or name == "boolean":
     base = "bool"
   elif name == "integer":
     base = "int"
@@ -85,7 +113,8 @@ def _default_repr(param: click.Parameter) -> str:
   default = param.default
   # click >=8.2 uses a Sentinel for "no default was given".
   if default is None or repr(default).startswith("Sentinel"):
-    return "False" if getattr(param, "is_flag", False) else "None"
+    is_bool_flag = getattr(param, "is_flag", False) and not _is_optional_value_flag(param)
+    return "False" if is_bool_flag else "None"
   if _is_collection(param):
     return "()"
   return repr(default)
@@ -145,8 +174,14 @@ def _render_command(cli_name: str, command: click.Command) -> str:
   lines.append('    """')
   docstring = "\n".join(lines)
 
+  def _pass_value(param: click.Parameter) -> str:
+    name = _safe_name(param.name)
+    if _is_optional_value_flag(param):
+      return f"_flag({name}, {param.flag_value!r})"
+    return name
+
   passes = ", ".join(
-      f"{param.name}={_safe_name(param.name)}" for param in all_params)
+      f"{param.name}={_pass_value(param)}" for param in all_params)
   call = f'    return self._run(_cmd("{cli_name}"){", " + passes if passes else ""})'
 
   return f"{signature}\n{docstring}\n{call}\n"
