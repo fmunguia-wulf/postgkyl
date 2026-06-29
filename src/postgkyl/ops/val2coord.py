@@ -33,11 +33,39 @@ def _get_range(str_in: str, length: int) -> np.ndarray:
 
 def val2coord(data: "GData", *, x: str, y: str, periodic: bool = False,
     tag: str | None = None, label: str | None = None):
-  """Select columns of ``data`` to form new (x, y) datasets.
+  """Build new (x, y) datasets from columns of a DynVector.
 
-  ``x``/``y`` are component selectors (index, comma list, or 'lo:hi:step'). One
-  output dataset is produced per selected y-component, returned as a
-  :class:`postgkyl.group.DatasetGroup`.
+  Reinterprets columns of ``data`` (typically a DynVector / diagnostic table)
+  as plot-ready datasets: the ``x`` column(s) become the grid and the ``y``
+  column(s) become the values. One output dataset is produced per selected
+  y-component. When more than one x-component is selected, their count must
+  match the number of y-components (paired one-to-one); a single x-component
+  is shared across all y-components.
+
+  Args:
+    data: GData
+      The source dataset whose last-axis columns are selected.
+    x: str
+      Component selector for the independent variable: an integer index, a
+      comma-separated list (e.g. '0,2'), or a 'lo:hi:step' slice string.
+    y: str
+      Component selector for the dependent variable(s); same forms as ``x``.
+      One output dataset is produced per selected y-component.
+    periodic: bool
+      When True, append the first sample to the end of each output (wrapping)
+      so periodic data closes on itself.
+    tag: str | None
+      Optional tag for the returned datasets.
+    label: str | None
+      Optional label for the returned datasets.
+
+  Returns:
+    A ``postgkyl.group.DatasetGroup`` containing one GData per selected
+    y-component.
+
+  Raises:
+    ValueError: If more than one x-component is selected and their number does
+      not equal the number of y-components.
   """
   from postgkyl.group import DatasetGroup
 

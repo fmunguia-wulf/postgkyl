@@ -13,7 +13,27 @@ if TYPE_CHECKING:
 
 def grid(data: "GData", *, inplace: bool = False, tag: str | None = None,
     label: str | None = None) -> "GData":
-  """Create a dataset whose values are the physical coordinates of ``data``'s grid."""
+  """Turn a dataset's grid into a dataset of coordinate values.
+
+  Builds a new dataset whose values, at each node, are the physical
+  coordinates of ``data``'s grid (one component per dimension). Handles
+  uniform meshes, velocity-space c2p mappings, and full computational-to-
+  physical (c2p) mapped grids.
+
+  Args:
+    data: GData
+      The dataset whose grid is converted to coordinate values.
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData with one component per dimension holding the physical
+    coordinates (or the mutated input when inplace=True).
+  """
   grid_in = data.get_grid()
   num_dims = data.get_num_dims()
   num_cells = data.get_num_cells()

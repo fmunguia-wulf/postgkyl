@@ -26,8 +26,106 @@ def pyvista(data: pg.GData | Tuple[list, np.ndarray], args: list = (),
     cylindrical_to_cartesian: bool = False, theme: str = "default", saveas: str = "",
     xscale: float = 1.0, yscale: float = 1.0, zscale: float = 1.0, xshift: float = 0.0, yshift: float = 0.0, zshift: float = 0.0, hide_zeros: bool = False,
     **kwargs):
-  """ Description
-  Creates a 3D plot of a scalar field using PyVista with various customization options.
+  """Render a 3D scalar field with PyVista.
+
+  Builds a structured grid from the (single-component) scalar values and
+  renders it as a volume, contour isosurfaces, or an interactive clip/slice
+  plane. The grid is normalized to the requested ``aspect_ratio`` because
+  PyVista handles non-integer axis extents poorly. Supports saving to image,
+  vector, HTML and other PyVista export formats.
+
+  Args:
+    data: pg.GData | tuple[list, np.ndarray]
+      Dataset to plot, either a :class:`GData` or a ``(grid, values)`` tuple.
+      Only the first value component is used.
+    args: list
+      Extra positional arguments accepted for CLI parity (unused).
+    show: bool
+      Open an interactive render window. When ``False`` the plotter renders
+      off-screen (also forced off-screen when saving to an image format).
+    spin: bool
+      Slowly auto-rotate the camera in the interactive window until the user
+      interacts with it.
+    max_points_per_axis: int
+      Downsample the grid to at most this many points per axis to speed up
+      rendering; ``-1`` disables downsampling.
+    contour_levels: int
+      Number of isosurfaces to extract when ``is_contour`` is set.
+    is_log: bool
+      Color by log10 of the scalar; non-positive values are masked to NaN and
+      the colorbar is formatted as ``10^x``.
+    is_contour: bool
+      Render isosurface contours instead of a volume.
+    is_shaded: bool
+      Enable shading on the volume render (only used in volume mode).
+    hide_axes: bool
+      Hide the bounding-box axes and labels.
+    mesh_clip_plane: bool
+      Add an interactive clip plane (``add_mesh_clip_plane``) along ``-x``.
+    mesh_slice_plane: bool
+      Add an interactive slice plane (``add_mesh_slice``) along ``-x``.
+    volume_clip_plane: bool
+      Add an interactive volume clip plane (volume mode only).
+    cmin: float | None
+      Lower color limit; defaults to the data minimum (log10 applied when
+      ``is_log``).
+    cmax: float | None
+      Upper color limit; defaults to the data maximum.
+    aspect_ratio: tuple[float, float, float]
+      Per-axis aspect; the grid is normalized so each axis spans this scale.
+      ``(1, 1, 1)`` yields a cube.
+    camera_azimuth: float
+      Initial camera azimuth angle in degrees.
+    camera_elevation: float
+      Initial camera elevation angle in degrees.
+    opacity: str | float
+      Volume opacity transfer function: a PyVista opacity preset string
+      (e.g. ``'sigmoid_4'``), the special value ``'diverging'`` (linear ramp
+      that is opaque at both ends and transparent in the middle), or a scalar
+      opacity.
+    cmap: str
+      Matplotlib/PyVista colormap name. Overridden to ``'RdBu_r'`` when
+      ``diverging`` is set.
+    xlabel: str | None
+      X-axis label; auto-derived from the data when ``None``.
+    ylabel: str | None
+      Y-axis label; auto-derived from the data when ``None``.
+    zlabel: str | None
+      Z-axis label; auto-derived from the data when ``None``.
+    clabel: str
+      Colorbar (scalar bar) title.
+    title: str | None
+      Text drawn at the top of the render; omitted when ``None``.
+    diverging: bool
+      Use the diverging ``'RdBu_r'`` colormap.
+    cylindrical_to_cartesian: bool
+      Treat grid coordinates as cylindrical ``(R, Z, phi)`` and convert to
+      Cartesian before building the mesh.
+    theme: str
+      PyVista plot theme name; ``'default'`` leaves the theme unchanged.
+    saveas: str
+      Output path. The extension selects the exporter: ``.html``,
+      ``.png``/``.jpg``/``.jpeg`` (screenshot), ``.pdf``/``.svg`` (vector),
+      ``.gltf``, or ``.vtksz``. Empty string disables saving.
+    xscale: float
+      Multiplicative scale applied to the x grid.
+    yscale: float
+      Multiplicative scale applied to the y grid.
+    zscale: float
+      Multiplicative scale applied to the z grid.
+    xshift: float
+      Additive shift applied to the x grid.
+    yshift: float
+      Additive shift applied to the y grid.
+    zshift: float
+      Additive shift applied to the z grid.
+    hide_zeros: bool
+      Hide grid points whose scalar value is exactly zero.
+    **kwargs:
+      Extra keyword arguments accepted for CLI parity (unused).
+
+  Returns:
+    None: The function renders and/or saves the plot for its side effects.
 
   TODO:
   Support for animations

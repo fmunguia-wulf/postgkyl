@@ -665,7 +665,137 @@ def plotly(data: GData | Tuple[list, np.ndarray],
     figsize: tuple | None = None,
     cylindrical_to_cartesian: bool = False,
     cmap: str | None = None):
-  """Plots 3D Gkeyll data, or 2D surface data, using Plotly."""
+  """Render 2D surface or 3D volumetric Gkeyll data with Plotly.
+
+  Builds an interactive Plotly figure. 2D data (``num_dims == 2``) is drawn
+  as a ``go.Surface`` (height map); 3D data (``num_dims == 3``) is drawn as a
+  ``go.Volume`` or, when ``scatter=True``, as a ``go.Scatter3d`` point cloud.
+  Multi-component data is laid out across subplot scenes unless ``squeeze`` is
+  set. Requires the optional Plotly dependency.
+
+  Args:
+    data: GData | tuple[list, np.ndarray]
+      Dataset to plot, either a :class:`GData` or a ``(grid, values)`` tuple.
+    squeeze: bool
+      Collapse all components into a single scene instead of one subplot per
+      component.
+    num_axes: int | None
+      Override for the number of axes/components inferred from the data.
+    num_subplot_row: int | None
+      Force the number of subplot rows; columns are derived from the
+      component count.
+    num_subplot_col: int | None
+      Force the number of subplot columns; rows are derived from the
+      component count. Ignored if ``num_subplot_row`` is given.
+    scatter: bool
+      For 3D data, render a point cloud (``Scatter3d``) instead of a volume.
+      Not allowed for 2D surface data.
+    marker_radius: float
+      Marker radius for scatter mode; the Plotly marker size is
+      ``max(1, 2 * marker_radius)``.
+    markerstyle: str
+      Plotly marker symbol for scatter mode (e.g. ``'circle'``, ``'square'``).
+    diverging: bool
+      Use a diverging colormap centered on zero (color range becomes
+      symmetric about 0).
+    xscale: float
+      Multiplicative scale applied to the x grid.
+    xshift: float
+      Additive shift applied to the x grid (applied before ``xscale``).
+    yscale: float
+      Multiplicative scale applied to the y grid.
+    yshift: float
+      Additive shift applied to the y grid (applied before ``yscale``).
+    zscale: float
+      Multiplicative scale applied to the z axis / values.
+    zshift: float
+      Additive shift applied to the z axis / values.
+    cmin: float | None
+      Lower limit of the color scale; defaults to the data minimum.
+    cmax: float | None
+      Upper limit of the color scale; defaults to the data maximum.
+    cscale: float
+      Multiplicative scale applied to the color values (separate from the
+      z-axis scaling).
+    cshift: float
+      Additive shift applied to the color values.
+    clim: tuple[float, float] | None
+      Explicit ``(cmin, cmax)`` color range; overrides ``cmin``/``cmax`` when
+      provided.
+    style: str | None
+      Matplotlib style file used to seed colors/colormap (default: Postgkyl).
+    rcParams: dict | None
+      Extra Matplotlib rcParams overrides applied when resolving the style.
+    background: str
+      Figure background theme, ``'dark'`` (default) or ``'light'``; controls
+      paper, scene, text and grid colors.
+    invert_cmap: bool
+      Reverse the colormap.
+    legend: bool
+      Show a legend entry for each trace that has a label.
+    label_prefix: str
+      Prefix used to build per-component trace labels (e.g. ``'<prefix>_c0'``).
+    colorbar: bool
+      Show the colorbar (drawn only on the first component).
+    xlabel: str | None
+      X-axis label; auto-derived from the data when ``None``.
+    ylabel: str | None
+      Y-axis label; auto-derived from the data when ``None``.
+    zlabel: str | None
+      Z-axis label; auto-derived from the data when ``None``.
+    clabel: str | None
+      Colorbar label; auto-derived from the data when ``None``.
+    title: str | None
+      Figure title; omitted when falsy.
+    logx: bool
+      Use a logarithmic x axis.
+    logy: bool
+      Use a logarithmic y axis.
+    logz: bool
+      Use a logarithmic z axis (and log-transform volume values).
+    logc: bool
+      Use a logarithmic color scale (log10 of positive values; non-positive
+      values are masked).
+    aspect: str | float | None
+      Scene aspect; a Plotly ``aspectmode`` string (e.g. ``'data'``,
+      ``'cube'``) or a numeric ratio. ``None`` uses the Plotly default.
+    showgrid: bool
+      Show grid lines on the scene axes.
+    hashtag: bool
+      Add a ``#pgkyl`` watermark annotation.
+    xkcd: bool
+      Apply the xkcd hand-drawn style when resolving plot style.
+    color: str | None
+      Force a single solid color for the trace (disables the colorbar).
+    opacity: float | None
+      Trace opacity in ``[0, 1]``.
+    scatter_opacity_range: tuple[float, float] | None
+      For scatter mode, map color values onto an alpha gradient between the
+      given ``(min_alpha, max_alpha)`` instead of a constant opacity.
+    scatter_opacity_log: bool
+      Use a logarithmic mapping for ``scatter_opacity_range``.
+    maximum_points_per_axis: int
+      Downsample volumes/scatter to at most this many points per axis
+      (``0`` disables downsampling).
+    surface_count: int
+      Number of isosurfaces used to render a 3D ``go.Volume``.
+    xrange: tuple[float, float] | None
+      Explicit x-axis range; defaults to the data extent.
+    yrange: tuple[float, float] | None
+      Explicit y-axis range; defaults to the data extent.
+    zrange: tuple[float, float] | None
+      Explicit z-axis range; defaults to the data extent.
+    figsize: tuple | None
+      Figure size; a ``'w,h'`` string (parsed to ints) sized in 100-px units.
+    cylindrical_to_cartesian: bool
+      For 3D data, treat grid coordinates as cylindrical ``(R, Z, phi)`` and
+      convert to Cartesian before plotting.
+    cmap: str | None
+      Matplotlib colormap name to convert into a Plotly colorscale.
+
+  Returns:
+    plotly.graph_objects.Figure: The assembled Plotly figure.
+  """
 
   if go is None or make_subplots is None:
     raise ImportError("Plotly is required for 3D plots")
@@ -1040,7 +1170,36 @@ def plotly_animate(
     redraw: bool = True,
     **plot_kwargs,
 ):
-  """Build a Plotly 3D animation figure from a sequence of datasets."""
+  """Build a Plotly animation figure from a sequence of datasets.
+
+  Renders the first dataset with :func:`plotly` to create the base figure,
+  then renders every subsequent dataset as an animation frame, wiring up Play
+  and Pause buttons and a frame slider. All datasets must produce the same
+  number of traces.
+
+  Args:
+    data_sequence: list[GData | tuple[list, np.ndarray]]
+      Ordered datasets, one per animation frame; must be non-empty.
+    frame_labels: list[str] | None
+      Label shown for each frame on the slider; defaults to the frame index.
+      Must match the length of ``data_sequence`` when provided.
+    frame_duration: int
+      Per-frame display duration in milliseconds during playback.
+    transition_duration: int
+      Transition duration between frames in milliseconds.
+    fromcurrent: bool
+      Resume playback from the currently displayed frame rather than the
+      start.
+    redraw: bool
+      Force a full redraw on each frame (required for 3D scene traces).
+    **plot_kwargs:
+      Extra keyword arguments forwarded unchanged to :func:`plotly` for each
+      frame.
+
+  Returns:
+    plotly.graph_objects.Figure: The base figure with animation frames,
+    playback controls, and a frame slider attached.
+  """
   if not data_sequence:
     raise ValueError("plotly-animate requires at least one dataset")
   # end

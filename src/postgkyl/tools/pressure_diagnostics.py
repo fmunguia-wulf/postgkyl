@@ -51,6 +51,24 @@ def _get_sf(species: GData | Tuple[list, np.ndarray],
 
 def get_p_par(p_in: GData | Tuple[list, np.ndarray],
     b_in: GData | Tuple[list, np.ndarray]) -> Tuple[list, np.ndarray]:
+  """Compute the pressure parallel to the magnetic field.
+
+  Projects the pressure tensor onto the magnetic-field direction:
+  ``p_par = (b . P . b) / |B|**2``.
+
+  Args:
+    p_in: GData | Tuple[list, np.ndarray]
+      Pressure-tensor data with six components in the order
+      ``(P_xx, P_xy, P_xz, P_yy, P_yz, P_zz)``, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    b_in: GData | Tuple[list, np.ndarray]
+      Magnetic-field data with three components ``(Bx, By, Bz)``, as a
+      ``GData`` object or a ``(grid, values)`` tuple.
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the parallel pressure field.
+  """
   _, p_values = input_parser(p_in)
   _, b_values = input_parser(b_in)
 
@@ -74,6 +92,24 @@ def get_p_par(p_in: GData | Tuple[list, np.ndarray],
 
 def get_gkyl_10m_p_par(species: GData | Tuple[list, np.ndarray],
     field: GData | Tuple[list, np.ndarray]) -> Tuple[list, np.ndarray]:
+  """Compute the parallel pressure directly from Gkeyll 10-moment data.
+
+  Convenience wrapper that builds the pressure tensor from raw 10-moment
+  species data and extracts the magnetic field (components 3:6) from the EM
+  field data before calling :func:`get_p_par`.
+
+  Args:
+    species: GData | Tuple[list, np.ndarray]
+      Raw 10-moment species data, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    field: GData | Tuple[list, np.ndarray]
+      Electromagnetic field data whose components 3:6 are ``(Bx, By, Bz)``, as
+      a ``GData`` object or a ``(grid, values)`` tuple.
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the parallel pressure field.
+  """
   p_grid, p_values = get_pij(species)
   field_grid, field_values = input_parser(field)
   b_values = field_values[..., 3:6]
@@ -83,6 +119,25 @@ def get_gkyl_10m_p_par(species: GData | Tuple[list, np.ndarray],
 
 def get_p_perp(p_in: GData | Tuple[list, np.ndarray],
     b_in: GData | Tuple[list, np.ndarray]) -> Tuple[list, np.ndarray]:
+  """Compute the pressure perpendicular to the magnetic field.
+
+  Uses the trace of the pressure tensor and the parallel pressure:
+  ``p_perp = (P_xx + P_yy + P_zz - p_par) / 2``.
+
+  Args:
+    p_in: GData | Tuple[list, np.ndarray]
+      Pressure-tensor data with six components in the order
+      ``(P_xx, P_xy, P_xz, P_yy, P_yz, P_zz)``, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    b_in: GData | Tuple[list, np.ndarray]
+      Magnetic-field data with three components ``(Bx, By, Bz)``, used to
+      compute the parallel pressure, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the perpendicular pressure field.
+  """
   _, p_values = input_parser(p_in)
 
   p_xx = p_values[..., 0, np.newaxis]
@@ -97,6 +152,24 @@ def get_p_perp(p_in: GData | Tuple[list, np.ndarray],
 
 def get_gkyl_10m_p_perp(species: GData | Tuple[list, np.ndarray],
     field: GData | Tuple[list, np.ndarray]) -> Tuple[list, np.ndarray]:
+  """Compute the perpendicular pressure directly from Gkeyll 10-moment data.
+
+  Convenience wrapper that builds the pressure tensor from raw 10-moment
+  species data and extracts the magnetic field (components 3:6) from the EM
+  field data before calling :func:`get_p_perp`.
+
+  Args:
+    species: GData | Tuple[list, np.ndarray]
+      Raw 10-moment species data, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    field: GData | Tuple[list, np.ndarray]
+      Electromagnetic field data whose components 3:6 are ``(Bx, By, Bz)``, as
+      a ``GData`` object or a ``(grid, values)`` tuple.
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the perpendicular pressure field.
+  """
   p_grid, p_values = get_pij(species)
   field_grid, field_values = input_parser(field)
 
@@ -108,6 +181,32 @@ def get_gkyl_10m_p_perp(species: GData | Tuple[list, np.ndarray],
 
 def get_agyro(p_in: GData | Tuple[list, np.ndarray], b_in: GData | Tuple[list, np.ndarray],
     measure: str = "swisdak") -> Tuple[list, np.ndarray]:
+  """Compute the agyrotropy of the pressure tensor.
+
+  The agyrotropy quantifies the departure of the pressure tensor from
+  gyrotropy (symmetry about the magnetic field). Two scalar measures are
+  supported. The ``'swisdak'`` measure uses the tensor invariants and parallel
+  pressure as in Appendix A of Swisdak (2015). The ``'frobenius'`` measure is
+  the Frobenius norm of the non-gyrotropic part of the pressure tensor,
+  normalized by the gyrotropic part.
+
+  Args:
+    p_in: GData | Tuple[list, np.ndarray]
+      Pressure-tensor data with six components in the order
+      ``(P_xx, P_xy, P_xz, P_yy, P_yz, P_zz)``, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    b_in: GData | Tuple[list, np.ndarray]
+      Magnetic-field data with three components ``(Bx, By, Bz)``, as a
+      ``GData`` object or a ``(grid, values)`` tuple.
+    measure: str
+      Agyrotropy measure to use, either ``'swisdak'`` (default) or
+      ``'frobenius'`` (case-insensitive). Any other value raises a
+      ``ValueError``.
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the agyrotropy field.
+  """
   _, p_values = input_parser(p_in)
   _, b_values = input_parser(b_in)
 
@@ -150,6 +249,27 @@ def get_agyro(p_in: GData | Tuple[list, np.ndarray], b_in: GData | Tuple[list, n
 
 def get_gkyl_10m_agyro(species: GData | Tuple[list, np.ndarray], field: GData | Tuple[list, np.ndarray],
     measure: str = "swisdak") -> Tuple[list, np.ndarray]:
+  """Compute the agyrotropy directly from Gkeyll 10-moment data.
+
+  Convenience wrapper that builds the pressure tensor from raw 10-moment
+  species data and extracts the magnetic field (components 3:6) from the EM
+  field data before calling :func:`get_agyro`.
+
+  Args:
+    species: GData | Tuple[list, np.ndarray]
+      Raw 10-moment species data, as a ``GData`` object or a
+      ``(grid, values)`` tuple.
+    field: GData | Tuple[list, np.ndarray]
+      Electromagnetic field data whose components 3:6 are ``(Bx, By, Bz)``, as
+      a ``GData`` object or a ``(grid, values)`` tuple.
+    measure: str
+      Agyrotropy measure to use, either ``'swisdak'`` (default) or
+      ``'frobenius'`` (case-insensitive).
+
+  Returns:
+    Tuple[list, np.ndarray]: A ``(grid, values)`` tuple holding the grid and
+    the agyrotropy field.
+  """
   p_grid, p_values = get_pij(species)
   field_grid, field_values = input_parser(field)
   b_values = field_values[..., 3:6]

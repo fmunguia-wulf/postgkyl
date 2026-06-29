@@ -6,14 +6,58 @@ from typing import Callable, Tuple
 
 
 def linear(x: np.ndarray, a: float, b: float) -> np.ndarray:
+  """Linear model ``a*x + b``.
+
+  Args:
+    x: np.ndarray
+      Independent variable.
+    a: float
+      Slope coefficient.
+    b: float
+      Intercept (constant offset).
+
+  Returns:
+    np.ndarray: The model evaluated at ``x``, i.e. ``a*x + b``.
+  """
   return a * x + b
 
 
 def quadratic(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
+  """Quadratic model ``a*x**2 + b*x + c``.
+
+  Args:
+    x: np.ndarray
+      Independent variable.
+    a: float
+      Quadratic coefficient.
+    b: float
+      Linear coefficient.
+    c: float
+      Constant offset.
+
+  Returns:
+    np.ndarray: The model evaluated at ``x``, i.e. ``a*x**2 + b*x + c``.
+  """
   return a * x**2 + b * x + c
 
 
 def plane(XY: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
+  """Planar model ``a*x + b*y + c`` over two independent variables.
+
+  Args:
+    XY: np.ndarray
+      Independent variables packed as a sequence ``(x, y)`` (e.g. shape
+      ``(2, N)``), unpacked into the ``x`` and ``y`` coordinates.
+    a: float
+      Coefficient of ``x``.
+    b: float
+      Coefficient of ``y``.
+    c: float
+      Constant offset.
+
+  Returns:
+    np.ndarray: The model evaluated at ``(x, y)``, i.e. ``a*x + b*y + c``.
+  """
   x, y = XY
   return a*x + b*y + c
 

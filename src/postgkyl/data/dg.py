@@ -264,20 +264,11 @@ class GInterpNodal(GInterp):
   """Postgkyl class for nodal DG data manipulation.
 
   After the initializations, GInterpNodal object provides the
-  interpolate and differentiate methods.  These returns grid and
-  values by default but could be used to directly push to the GData
-  stack with the stack=True flag.
+  interpolate and differentiate methods.  These return grid and
+  values by default but could be used to directly push the result
+  back onto the GData object with the overwrite=True flag.
 
   Parent: GInterp
-
-  Init Args:
-    data (GData): Data to work with
-    poly_order (int): Order of the polynomial approximation
-    basis (str): Specify the basis. Currently supported is the
-      nodal Serendipity 'ns'
-    num_interp (int): Specify number of points on which to
-      interpolate (default: poly_order + 1)
-    read
 
   Example:
     import postgkyl
@@ -287,6 +278,26 @@ class GInterpNodal(GInterp):
   """
 
   def __init__(self, data, poly_order, basis_type, num_interp=None, read=None):
+    """Initialize a nodal DG interpolator.
+
+    Args:
+      data (GData): Gkeyll dataset (holding DG basis coefficients) to
+        operate on.
+      poly_order (int): Order of the polynomial approximation (e.g. 1
+        or 2).
+      basis_type (str): Short code specifying the nodal basis. The only
+        supported value is 'ns' (nodal Serendipity), which is expanded
+        internally to 'serendipity'. Any other value is passed through
+        unchanged and must already match a name understood by the
+        underlying matrix loaders.
+      num_interp (int, optional): Number of interpolation points per
+        dimension. Defaults to None, in which case poly_order + 1 points
+        are used.
+      read (optional): When None (the default), interpolation matrices
+        are computed on the fly if num_interp is set; otherwise
+        pre-computed matrices are read from the bundled HDF5 files. Used
+        to force reading of the stored matrices rather than recomputing.
+    """
     self.num_dims = data.get_num_dims()
     self.poly_order = poly_order
     self.basis_type = basis_type
@@ -300,6 +311,27 @@ class GInterpNodal(GInterp):
     GInterp.__init__(self, data, num_nodes)
 
   def interpolate(self, comp=0, overwrite=False, stack=False):
+    """Interpolate nodal DG coefficients onto a finer grid.
+
+    Args:
+      comp (int | tuple[int, ...] | slice): Component(s) to interpolate.
+        An int selects a single component; a tuple selects the listed
+        components; a slice selects components from comp.start up to (but
+        not including) comp.stop. Interpolated components are stacked
+        along the last axis of the returned values. Defaults to 0.
+      overwrite (bool): When True, push the interpolated (grid, values)
+        back onto the GData object via data.push and return None. When
+        False (the default), return the (grid, values) tuple instead.
+      stack (bool): DEPRECATED alias for overwrite. If True, it sets
+        overwrite=True and prints a deprecation warning. Defaults to
+        False.
+
+    Returns:
+      tuple | None: When overwrite (or stack) is False, a (grid, values)
+        tuple where grid is a list of 1D numpy arrays (one per
+        dimension) and values is the interpolated N-D numpy array.
+        Returns None when overwrite is True.
+    """
     if stack:
       overwrite = stack
       print("Deprecation warning: The 'stack' parameter is going to be replaced with 'overwrite'")
@@ -340,6 +372,26 @@ class GInterpNodal(GInterp):
     # end
 
   def differentiate(self, direction, comp=0, overwrite=False, stack=False):
+    """Compute the derivative of nodal DG data on a finer grid.
+
+    Args:
+      direction (int | None): Index of the axis along which to take the
+        derivative. When None, derivatives in all directions are
+        computed and stacked.
+      comp (int): Component to differentiate. Defaults to 0.
+      overwrite (bool): When True, push the resulting (grid, values)
+        back onto the GData object via data.push and return None. When
+        False (the default), return the (grid, values) tuple instead.
+      stack (bool): DEPRECATED alias for overwrite. If True, it sets
+        overwrite=True and prints a deprecation warning. Defaults to
+        False.
+
+    Returns:
+      tuple | None: When overwrite (or stack) is False, a (grid, values)
+        tuple where grid is a list of 1D numpy arrays (one per
+        dimension) and values is the differentiated N-D numpy array.
+        Returns None when overwrite is True.
+    """
     if stack:
       overwrite = stack
       print("Deprecation warning: The 'stack' parameter is going to be replaced with 'overwrite'")
@@ -374,20 +426,11 @@ class GInterpModal(GInterp):
   """Postgkyl class for modal DG data manipulation.
 
   After the initializations, GInterpModal object provides the
-  interpolate and differentiate methods.  These returns grid and
-  values by default but could be used to directly push to the GData
-  stack with the stack=True flag.
+  interpolate and differentiate methods.  These return grid and
+  values by default but could be used to directly push the result
+  back onto the GData object with the overwrite=True flag.
 
   Parent: GInterp
-
-  Init Args:
-    data (GData): Data to work with
-    poly_order (int): Order of the polynomial approximation
-    basis (str): Specify the basis. Currently supported are the
-      modal Serendipity 'ms' and the maximal order basis 'mo'
-    num_interp (int): Specify number of points on which to
-      interpolate (default: poly_order + 1)
-    read
 
   Example:
     import postgkyl
@@ -398,6 +441,35 @@ class GInterpModal(GInterp):
 
   def __init__(self, data, poly_order=None, basis_type=None, num_interp=None,
       periodic=False, read=None):
+    """Initialize a modal DG interpolator.
+
+    Args:
+      data (GData): Gkeyll dataset (holding DG basis coefficients) to
+        operate on.
+      poly_order (int, optional): Order of the polynomial approximation.
+        Defaults to None, in which case the value stored in the file's
+        context (data.ctx["poly_order"]) is used; a ValueError is raised
+        if neither is available.
+      basis_type (str, optional): Short code specifying the modal basis.
+        Recognized codes are 'ms' (modal Serendipity), 'mo' (modal
+        maximal-order), 'mt' (modal tensor product), 'gkhyb' (modal
+        GkHybrid), and 'pkpmhyb' (modal PKPM hybrid); these are expanded
+        internally to 'serendipity', 'maximal-order', 'tensor',
+        'gkhybrid', and 'hybrid', respectively. Defaults to None, in
+        which case data.ctx["basis_type"] is used; a ValueError is
+        raised if neither is available. Note: for 1D data a 'hybrid'
+        basis is automatically downgraded to 'serendipity'.
+      num_interp (int, optional): Number of interpolation points per
+        dimension. Defaults to None, in which case poly_order + 1 points
+        are used.
+      periodic (bool): Whether the domain is periodic. Stored on the
+        object and consumed by recovery-style routines. Defaults to
+        False.
+      read (optional): When None (the default), interpolation matrices
+        are computed on the fly if num_interp is set; otherwise
+        pre-computed matrices are read from the bundled HDF5 files. Used
+        to force reading of the stored matrices rather than recomputing.
+    """
     self.num_dims = data.get_num_dims()
     if poly_order is not None:
       self.poly_order = poly_order
@@ -449,6 +521,32 @@ class GInterpModal(GInterp):
     GInterp.__init__(self, data, num_nodes)
 
   def interpolate(self, comp=0, overwrite=False, stack=False):
+    """Interpolate modal DG coefficients onto a finer nodal grid.
+
+    Handles the standard uniform grid as well as the 'c2p' and
+    'c2p_vel' (computational-to-physical) mapped-grid cases, and the
+    'gkhybrid'/'hybrid' bases that use an extra interpolation point in
+    the relevant velocity direction.
+
+    Args:
+      comp (int | tuple[int, ...] | slice): Component(s) to interpolate.
+        An int selects a single component; a tuple selects the listed
+        components; a slice selects components from comp.start up to (but
+        not including) comp.stop. Interpolated components are stacked
+        along the last axis of the returned values. Defaults to 0.
+      overwrite (bool): When True, push the interpolated (grid, values)
+        back onto the GData object via data.push and return None. When
+        False (the default), return the (grid, values) tuple instead.
+      stack (bool): DEPRECATED alias for overwrite. If True, it sets
+        overwrite=True and prints a deprecation warning. Defaults to
+        False.
+
+    Returns:
+      tuple | None: When overwrite (or stack) is False, a (grid, values)
+        tuple where grid is a list of 1D numpy arrays (one per
+        dimension) and values is the interpolated N-D numpy array.
+        Returns None when overwrite is True.
+    """
     if stack:
       overwrite = stack
       print("Deprecation warning: The 'stack' parameter is going to be replaced with 'overwrite'")
@@ -524,6 +622,22 @@ class GInterpModal(GInterp):
     # end
 
   def interpolateGrid(self, overwrite=False):
+    """Interpolate only the grid (node coordinates) onto a finer mesh.
+
+    Unlike interpolate, this operates solely on the grid. For a 'c2p'
+    mapped grid the stored node coordinates are themselves interpolated
+    from their DG representation; for a 'c2p_vel' grid the stored grid is
+    used as-is; otherwise a uniform refined grid is built.
+
+    Args:
+      overwrite (bool): When True, set the new grid on the GData object
+        via data.set_grid and return None. When False (the default),
+        return the computed grid instead.
+
+    Returns:
+      list | None: When overwrite is False, the grid as a list of numpy
+        arrays (one per dimension). Returns None when overwrite is True.
+    """
     if self.data.ctx["grid_type"] == "c2p":
       q = self.data.get_grid()
       num_comp = q[0].shape[-1]
@@ -548,6 +662,26 @@ class GInterpModal(GInterp):
     # end
 
   def differentiate(self, direction=None, comp=0, overwrite=False, stack=False):
+    """Compute the derivative of modal DG data on a finer grid.
+
+    Args:
+      direction (int | None): Index of the axis along which to take the
+        derivative. When None (the default), derivatives in all
+        directions are computed and stacked along the last axis.
+      comp (int): Component to differentiate. Defaults to 0.
+      overwrite (bool): When True, push the resulting (grid, values)
+        back onto the GData object via data.push and return None. When
+        False (the default), return the (grid, values) tuple instead.
+      stack (bool): DEPRECATED alias for overwrite. If True, it sets
+        overwrite=True and prints a deprecation warning. Defaults to
+        False.
+
+    Returns:
+      tuple | None: When overwrite (or stack) is False, a (grid, values)
+        tuple where grid is a list of 1D numpy arrays (one per
+        dimension) and values is the differentiated N-D numpy array.
+        Returns None when overwrite is True.
+    """
     if stack:
       overwrite = stack
       print("Deprecation warning: The 'stack' parameter is going to be replaced with 'overwrite'")

@@ -75,25 +75,136 @@ def _dispatch(name, table, data, variable, gas_gamma, mu_0, inplace, tag, label)
 
 def euler(data: "GData", variable: str, *, gas_gamma: float = 5.0 / 3,
     inplace: bool = False, tag: str | None = None, label: str | None = None) -> "GData":
-  """Five-moment primitive/derived variable (density, vel, pressure, ke, ...)."""
+  """Five-moment (Euler) primitive/derived variable.
+
+  Computes a primitive or derived fluid quantity from five-moment data
+  (density, three momenta, energy). The quantity is selected by ``variable``.
+
+  Args:
+    data: GData
+      Five-moment fluid data (components: rho, rho*ux, rho*uy, rho*uz, E).
+    variable: str
+      Which quantity to extract. One of: 'density', 'xvel', 'yvel', 'zvel',
+      'vel' (the three-component velocity vector), 'pressure', 'ke' (kinetic
+      energy), 'temp' (temperature), 'sound' (sound speed), or 'mach' (Mach
+      number).
+    gas_gamma: float
+      Adiabatic index used for pressure-derived quantities. Defaults to 5/3.
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData of the requested quantity (or the mutated input when
+    inplace=True).
+
+  Raises:
+    ValueError: If ``variable`` is not one of the recognized choices.
+  """
   return _dispatch("euler", _EULER_VARS, data, variable, gas_gamma, 1.0, inplace, tag, label)
 
 
 def tenmoment(data: "GData", variable: str, *, gas_gamma: float = 5.0 / 3,
     inplace: bool = False, tag: str | None = None, label: str | None = None) -> "GData":
-  """Ten-moment primitive/derived variable (adds pressureTensor, pxx..pzz)."""
+  """Ten-moment primitive/derived variable.
+
+  Computes a primitive or derived fluid quantity from ten-moment data
+  (density, three momenta, and the six independent pressure-tensor moments).
+  Supports all the five-moment quantities plus the full pressure tensor and
+  its individual components.
+
+  Args:
+    data: GData
+      Ten-moment fluid data (components: rho, rho*ux, rho*uy, rho*uz, then the
+      six second moments).
+    variable: str
+      Which quantity to extract. One of: 'density', 'xvel', 'yvel', 'zvel',
+      'vel', 'pressure', 'ke', 'temp', 'sound', 'mach', 'pressureTensor' (the
+      six-component symmetric tensor), or its individual components 'pxx',
+      'pxy', 'pxz', 'pyy', 'pyz', 'pzz'.
+    gas_gamma: float
+      Adiabatic index used for pressure-derived quantities. Defaults to 5/3.
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData of the requested quantity (or the mutated input when
+    inplace=True).
+
+  Raises:
+    ValueError: If ``variable`` is not one of the recognized choices.
+  """
   return _dispatch("tenmoment", _TENMOMENT_VARS, data, variable, gas_gamma, 1.0,
       inplace, tag, label)
 
 
 def mhd(data: "GData", variable: str, *, gas_gamma: float = 5.0 / 3, mu_0: float = 1.0,
     inplace: bool = False, tag: str | None = None, label: str | None = None) -> "GData":
-  """Ideal-MHD primitive/derived variable (density, vel, B*, pressure, ...)."""
+  """Ideal-MHD primitive/derived variable.
+
+  Computes a primitive or derived quantity from ideal-MHD conserved variables
+  (density, three momenta, total energy, and the three magnetic-field
+  components). Magnetic and pressure quantities use the permeability ``mu_0``.
+
+  Args:
+    data: GData
+      Ideal-MHD data (components: rho, rho*ux, rho*uy, rho*uz, E, Bx, By, Bz).
+    variable: str
+      Which quantity to extract. One of: 'density', 'xvel', 'yvel', 'zvel',
+      'vel', 'Bx', 'By', 'Bz', 'Bi' (the three-component magnetic field),
+      'magpressure' (magnetic pressure), 'pressure' (thermal pressure),
+      'temp', 'sound', or 'mach'.
+    gas_gamma: float
+      Adiabatic index used for pressure-derived quantities. Defaults to 5/3.
+    mu_0: float
+      Vacuum permeability used for magnetic-pressure and pressure
+      calculations. Defaults to 1.0.
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData of the requested quantity (or the mutated input when
+    inplace=True).
+
+  Raises:
+    ValueError: If ``variable`` is not one of the recognized choices.
+  """
   return _dispatch("mhd", _MHD_VARS, data, variable, gas_gamma, mu_0, inplace, tag, label)
 
 
 def velocity(density: "GData", momentum: "GData", *, inplace: bool = False,
     tag: str | None = None, label: str | None = None) -> "GData":
-  """Velocity from density and momentum moments (momentum / density)."""
+  """Velocity from separate density and momentum moments.
+
+  Computes the flow velocity by dividing the ``momentum`` moments by the
+  ``density`` moment, component-wise. The two inputs are assumed to share the
+  same grid; the result carries the ``density`` dataset's grid.
+
+  Args:
+    density: GData
+      Number/mass density moment (single component); the divisor.
+    momentum: GData
+      Momentum moment(s) to divide by the density.
+    inplace: bool
+      When True, mutate and return ``density``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData of the velocity (or the mutated ``density`` when inplace=True).
+  """
   values = momentum.get_values() / density.get_values()
   return density._result(density.get_grid(), values, inplace=inplace, tag=tag, label=label)

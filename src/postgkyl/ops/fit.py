@@ -22,7 +22,45 @@ if TYPE_CHECKING:
 
 def fit(data: "GData", fit_type: str, *, guess=None, inplace: bool = False,
     tag: str | None = None, label: str | None = None) -> "GData":
-  """Fit ``fit_type`` to ``data`` and return the fitted curve as a ``GData``."""
+  """Fit a model to data and return the fitted curve.
+
+  Fits the model named (or expressed) by ``fit_type`` to each component of
+  ``data`` independently and returns the fitted values evaluated on the data's
+  grid. Axes that have been collapsed to a single cell (e.g. after integrate or
+  select) are dropped, so 1D and 2D fits are supported. The per-component fit
+  parameters and coefficients of determination are stored in the result's
+  ``ctx['fit_params']`` and ``ctx['fit_R2']``.
+
+  Args:
+    data: GData
+      The dataset to fit. Its grid provides the independent variable(s) and
+      each component is fit separately.
+    fit_type: str
+      The model to fit. Either a built-in model name -- 'linear', 'quadratic',
+      'plane' (2D), 'quadratic2d' (2D), 'exp_plateau', 'gaussian', 'power',
+      'sinusoid', or 'tanh_transition' -- or a custom RPN expression string
+      (e.g. 'x a * b +') whose free tokens (not the spatial variables 'x'/'y',
+      operators, or numbers) become fit parameters.
+    guess: str | Sequence[float] | None
+      Initial guess for the fit parameters. A comma-separated string (e.g.
+      '1,0,2') or a sequence of floats. None lets the fitter pick defaults
+      (ones).
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData holding the fitted curve on the (active) grid, with
+    ``ctx['fit_params']`` and ``ctx['fit_R2']`` set (or the mutated input when
+    inplace=True).
+
+  Raises:
+    ValueError: If ``fit_type`` is neither a recognized model name nor a valid
+      RPN expression.
+  """
   grid = data.get_grid()
   values = data.get_values()
   spatial_shape = values.shape[:-1]

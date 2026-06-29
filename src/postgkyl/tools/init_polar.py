@@ -2,6 +2,38 @@ import numpy as np
 
 
 def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
+  """Build a polar (k-perpendicular) binning of a Cartesian wavenumber grid.
+
+  Constructs uniformly spaced polar bins in ``k = sqrt(kx**2 + ky**2 [+ kz**2])``
+  and assigns each Cartesian wavenumber cell to a bin, for later isotropic
+  (shell) averaging of spectra. Works for 2D grids (set ``nkz`` and ``kz`` to
+  ``0``) and 3D grids.
+
+  Args:
+    nkx: int
+      Number of grid points along the ``kx`` axis.
+    nky: int
+      Number of grid points along the ``ky`` axis.
+    nkz: int
+      Number of grid points along the ``kz`` axis; use ``0`` for 2D data.
+    kx: array-like
+      1D array of ``kx`` wavenumbers; ``kx[1]`` sets the spacing ``dkx``.
+    ky: array-like
+      1D array of ``ky`` wavenumbers; ``ky[1]`` sets the spacing ``dky``.
+    kz: array-like
+      1D array of ``kz`` wavenumbers; ``kz[1]`` sets the spacing ``dkz``. Use
+      ``0`` for 2D data.
+    nkpolar: int
+      Number of polar (radial ``k_perp``) bins to create. If ``0``, no binning
+      is performed and empty outputs are returned.
+
+  Returns:
+    tuple: ``(akp, nbin, polar_index, akplim)`` where ``akp`` is the array of
+    polar bin centers (the ``k_perp`` grid), ``nbin`` is the count of Cartesian
+    cells assigned to each bin, ``polar_index`` is an integer array (shape
+    matching the Cartesian grid) giving the bin index of each cell, and
+    ``akplim`` is the array of polar bin edges.
+  """
   # if 2D, nkz and kz = 0
 
   if nkpolar == 0:

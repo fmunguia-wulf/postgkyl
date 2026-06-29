@@ -16,9 +16,41 @@ def mask(data: "GData", *, filename: str | None = None,
     inplace: bool = False, tag: str | None = None, label: str | None = None) -> "GData":
   """Mask out values using a Gkeyll mask file or numeric thresholds.
 
-  - ``filename``: mask where the mask field is negative.
-  - ``lower`` and ``upper``: mask values outside ``[lower, upper]``.
-  - ``lower`` only / ``upper`` only: mask values below / above the threshold.
+  Returns a dataset whose values are a ``numpy.ma`` masked array. Exactly one
+  of the masking modes is applied, with ``filename`` taking precedence:
+
+  - ``filename``: mask cells where the mask field (read from the file and
+    repeated across components) is negative.
+  - ``lower`` and ``upper``: mask values outside the closed range
+    ``[lower, upper]``.
+  - ``lower`` only: mask values below ``lower``.
+  - ``upper`` only: mask values above ``upper``.
+
+  Args:
+    data: GData
+      The dataset to mask.
+    filename: str | None
+      Path to a Gkeyll mask file; cells where its field is negative are
+      masked. Takes precedence over ``lower``/``upper`` when given.
+    lower: float | None
+      Lower threshold. Combined with ``upper`` masks outside the range;
+      alone masks values below it.
+    upper: float | None
+      Upper threshold. Combined with ``lower`` masks outside the range;
+      alone masks values above it.
+    inplace: bool
+      When True, mutate and return ``data``; otherwise return a new GData.
+    tag: str | None
+      Optional tag for the returned dataset.
+    label: str | None
+      Optional label for the returned dataset.
+
+  Returns:
+    A new GData whose values are a masked array (or the mutated input when
+    inplace=True).
+
+  Raises:
+    ValueError: If none of ``filename``, ``lower``, or ``upper`` is provided.
   """
   values = data.get_values()
   if filename:

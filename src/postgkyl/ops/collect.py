@@ -15,10 +15,38 @@ def collect(datasets, *, sumdata: bool = False, period: float | None = None,
     offset: float = 0.0, tag: str | None = None, label: str | None = None) -> "GData":
   """Collect a sequence of datasets into a single dataset.
 
-  The per-dataset time stamp (``ctx['time']``, else ``ctx['frame']``, else the
-  index) becomes a new leading axis. With ``sumdata=True`` each frame is summed
-  over its spatial axes (retaining components). ``period``/``offset`` fold the
-  time axis into an epoch.
+  Stacks many single-frame datasets into one dataset that has a new leading
+  (time) axis. The per-dataset time stamp is taken from ``ctx['time']``, then
+  ``ctx['frame']``, then the position in the sequence as a fallback. Frames are
+  sorted by their (possibly folded) time stamp.
+
+  Args:
+    datasets: Iterable[GData]
+      The datasets to collect. Each is assumed to share the same grid and
+      component layout. Must be non-empty.
+    sumdata: bool
+      When True, sum each frame over all of its spatial axes (keeping
+      components) before stacking, so the output grid is just the time axis.
+      When False, the full spatial data of each frame is retained and the time
+      axis is inserted as a new leading dimension.
+    period: float | None
+      When given (truthy), fold the time stamps into one period via
+      ``(time - offset) % period`` before sorting, producing a phase/epoch
+      axis. None leaves the time axis unfolded.
+    offset: float
+      Phase offset subtracted before the modulo when ``period`` is used.
+      Defaults to 0.0.
+    tag: str | None
+      Tag for the returned dataset. Defaults to 'default' when None.
+    label: str | None
+      Label for the returned dataset. Defaults to 'collect' when None.
+
+  Returns:
+    A new GData with the collected frames stacked along a new leading time
+    axis.
+
+  Raises:
+    ValueError: If ``datasets`` is empty.
   """
   from postgkyl.data.gdata import GData
 

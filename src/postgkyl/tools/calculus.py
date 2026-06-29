@@ -92,12 +92,27 @@ def integrate(data: GData, axis: int | tuple | str,
 
 
 def grad():
+  """Compute the gradient of a field.
+
+  Placeholder: this function is not yet implemented and currently performs no
+  operation. It takes no arguments and returns ``None``.
+  """
   ...
 
 
 def div():
+  """Compute the divergence of a vector field.
+
+  Placeholder: this function is not yet implemented and currently performs no
+  operation. It takes no arguments and returns ``None``.
+  """
   ...
 
 
 def curl():
+  """Compute the curl of a vector field.
+
+  Placeholder: this function is not yet implemented and currently performs no
+  operation. It takes no arguments and returns ``None``.
+  """
   ...
