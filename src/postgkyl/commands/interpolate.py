@@ -57,6 +57,7 @@ def interpolate(ctx, **kwargs):
       )
     # end
 
+
     if is_modal or dat.ctx["is_modal"]:
       dg = GInterpModal(dat, kwargs["poly_order"], kwargs["basis_type"],
           kwargs["interp"], kwargs["read"])

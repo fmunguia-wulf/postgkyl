@@ -15,6 +15,8 @@ import numpy as np
 from postgkyl._gkylsoft_path import resolve_gkylsoft_path
 from postgkyl.data import GData
 import postgkyl.utils.gkeyll_enums as gke
+from postgkyl.data.dg import _getnum_nodes
+from postgkyl.modalDG.kernels import expand_1d
 
 # gkyl_elem_type enum ordinal for double (INT=0, FLOAT=1, DOUBLE=2)
 _GKYL_DOUBLE = ctypes.c_int(2)
@@ -270,7 +272,33 @@ class GkeyllDGops:
     vals       = gdata.get_values()
     poly_order = int(gdata.ctx["poly_order"])
 
-    grid_edges = gdata.get_grid()
+    basis_type = gdata.ctx["basis_type"]
+    grid_type = gdata.ctx["grid_type"]
+
+    ggrid = gdata.get_grid()
+    grid_edges = [np.copy(ggrid[d]) for d in range(ndim)]
+    if basis_type == "gkhybrid" and grid_type == "c2p_vel":
+      # Grid has DG coefficients of v-space mapping along v-dims. Evaluate at cell boundaries.
+      # MF 2026/06/28: I think this should happen outside of this function,
+      # but we do it here for now to avoid modifying other code.
+      poly_order_vmap = 1
+      num_cdim = gdata.ctx["num_cdim"]
+      num_vdim = gdata.ctx["num_vdim"]
+      num_basis_1v = int(_getnum_nodes(1, 1, "serendipity")) # 1D p1 basis for single v dimension.
+      nodes = [-1.0, 1.0]
+      for d in range(num_vdim):
+        q = grid_edges[num_cdim+d]
+        grid_edges_1v = np.zeros(np.size(q,0)+1)
+        for i, vmap_c in enumerate(q):
+          grid_edges_1v[i] = expand_1d[int(poly_order_vmap - 1)](vmap_c, nodes[0])
+        # end
+        # Append upper boundary surface.
+        grid_edges_1v[-1] = expand_1d[int(poly_order_vmap - 1)](q[-1], nodes[1])
+
+        grid_edges[num_cdim+d] = grid_edges_1v
+      # end
+    # end
+
     cells = [len(grid_edges[d]) - 1 for d in range(ndim)]
     lower = [float(grid_edges[d][0])   for d in range(ndim)]
     upper = [float(grid_edges[d][-1])  for d in range(ndim)]
@@ -312,7 +340,7 @@ class GkeyllDGops:
       c_rng_lo_tar = (ctypes.c_int * ndim_tar)(*([1] * ndim_tar))
       c_rng_up_tar = (ctypes.c_int * ndim_tar)(*cells_tar)
       rng_tar_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim_tar), c_rng_lo_tar, c_rng_up_tar)
-      tar_grid     = [grid_edges[d] for d in keep_dirs]
+      tar_grid     = [ggrid[d] for d in keep_dirs] # Use original grid to keep mapping if c2p_vel.
     else:
       c_one       = (ctypes.c_int * 1)(1)
       rng_tar_ptr = self._lib.gkyl_range_new(ctypes.c_int(1), c_one, c_one)
@@ -352,6 +380,8 @@ class GkeyllDGops:
     # Re-set the basis in the context in case it changed.
     out.ctx["basis_type"] = gke.basis_type_gkyl_to_pgkyl(int(_btype_tar.value))
     out.ctx["poly_order"] = int(_poly_order_tar.value)
+    out.ctx["num_cdim"] = int(_cdim_tar.value)
+    out.ctx["num_vdim"] = int(_ndim_tar.value - _cdim_tar.value)
 
     return out
 
