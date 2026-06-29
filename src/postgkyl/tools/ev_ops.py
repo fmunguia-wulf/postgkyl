@@ -1,3 +1,12 @@
+"""RPN operator registry for the ``ev`` verb (pure (grid, values) functions).
+
+This is the L0 numeric core behind the ``ev`` expression evaluator. Each
+operator is a pure function ``f(in_grid, in_values) -> ([out_grid], [out_values])``
+over plain Python lists / NumPy arrays — no ``GData`` dependency. The ``cmds``
+table maps each RPN token to its arity (``num_in``/``num_out``) and function;
+the stack machine that drives them lives in :mod:`postgkyl.ops.ev`.
+"""
+
 import typer
 import numpy as np
 from postgkyl.data.idx_parser import idx_parser

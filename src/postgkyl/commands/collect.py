@@ -2,9 +2,8 @@ from typing import Optional
 
 import typer
 from typing_extensions import Annotated
-import numpy as np
 
-from postgkyl.data import GData
+from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
@@ -24,91 +23,35 @@ def collect(
   Data can be collected in chunks, in which case several datasets are created, each with
   the chunk-sized pieces collected into each new dataset.
   """
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting collect")
   data = ctx.obj["data"]
+  comp_grid = ctx.obj["compgrid"]
 
-  if kwargs["tag"]:
-    out_tags = kwargs["tag"].split(",")
-  # end
+  out_tags = tag.split(",") if tag else None
 
-  tag_cnt = 0
-  for tag in data.tag_iterator(kwargs["use"]):
-    time = [[]]
-    values = [[]]
-    grid = [[]]
-    cnt = 0
-    label = None
-
-    for i, dat in data.iterator(tag, enum=True):
-      cnt += 1
-      if kwargs["chunk"] and cnt > kwargs["chunk"]:
-        cnt = 1
-        time.append([])
-        values.append([])
-        grid.append([])
-      # end
-      if dat.ctx["time"]:
-        time[-1].append(dat.ctx["time"])
-      elif dat.ctx["frame"]:
-        time[-1].append(dat.ctx["frame"])
-      else:
-        time[-1].append(i)
-      # end
-      val = dat.get_values()
-      if kwargs["sumdata"]:
-        num_dims = dat.get_num_dims()
-        axis = tuple(range(num_dims))
-        values[-1].append(np.nansum(val, axis=axis))
-      else:
-        values[-1].append(val)
-      # end
-      if not grid[-1]:
-        grid[-1] = dat.get_grid().copy()
-      # end
-      label = dat.get_custom_label()
+  for tag_cnt, in_tag in enumerate(data.tag_iterator(use)):
+    datasets = list(data.iterator(in_tag))
+    # The result label defaults to the members' custom label (then 'collect',
+    # handled by ops.collect); an explicit --label overrides.
+    resolved_label = label
+    if resolved_label is None and datasets:
+      resolved_label = datasets[-1].get_custom_label()
     # end
 
-    data.deactivate_all(tag)
-
-    out_tag = tag
-    if kwargs["tag"]:
-      if len(out_tags) > 1:
-        out_tag = out_tags[tag_cnt]
-      else:
-        out_tag = out_tags[0]
-      # end
-    # end
-    tag_cnt += 1
-
-    if label is None:
-      label = "collect"
-    # end
-    if kwargs["label"]:
-      label = kwargs["label"]
+    out_tag = in_tag
+    if out_tags:
+      out_tag = out_tags[tag_cnt] if len(out_tags) > 1 else out_tags[0]
     # end
 
-    for i in range(len(time)):
-      time[i] = np.array(time[i])
-      values[i] = np.array(values[i])
+    data.deactivate_all(in_tag)
 
-      if kwargs.get("period"):
-        time[i] = (time[i] - kwargs["offset"]) % kwargs["period"]
-      # end
-
-      sort_idx = np.argsort(time[i])
-      time[i] = time[i][sort_idx]
-      values[i] = values[i][sort_idx]
-
-      if kwargs["sumdata"]:
-        grid[i] = [time[i]]
-      else:
-        grid[i].insert(0, np.array(time[i]))
-      # end
-
-      out = GData(tag=out_tag, label=label, comp_grid=ctx.obj["compgrid"])
-      out.push(grid[i], values[i])
-      data.add(out)
+    # A single dataset by default; --chunk splits the frames into fixed-size
+    # groups, each collected into its own dataset.
+    step = chunk if chunk else len(datasets)
+    for start in range(0, len(datasets), max(step, 1)):
+      data.add(ops.collect(datasets[start:start + step], sumdata=sumdata,
+          period=period, offset=offset, comp_grid=comp_grid, tag=out_tag,
+          label=resolved_label))
     # end
   # end
 

@@ -40,6 +40,7 @@ from postgkyl.ops.extract_input import extract_input
 from postgkyl.ops.laguerre import laguerre_compose
 from postgkyl.ops.fit import fit
 from postgkyl.ops.growth import growth
+from postgkyl.ops.ev import ev
 
 __all__ = [
     "select",
@@ -70,4 +71,5 @@ __all__ = [
     "laguerre_compose",
     "fit",
     "growth",
+    "ev",
 ]

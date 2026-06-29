@@ -1851,6 +1851,33 @@ class GData(object):
     from postgkyl import output
     return output.plotly_animate([self], **kwargs)
 
+  def ev(self, chain: str, *others, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Evaluate an RPN math expression with this dataset as ``f`` / ``f0``.
+
+    Single-dataset entry point mirroring the top-level :func:`postgkyl.ev` and
+    the CLI ``ev`` command. ``f``/``f0`` refers to this dataset; additional
+    datasets passed in ``others`` are ``f1``, ``f2``, ... in order.
+
+    See :func:`postgkyl.ops.ev`.
+
+    Args:
+      chain: str
+        The RPN expression, e.g. ``"f sqrt"`` or ``"f0 f1 -"``.
+      *others: GData
+        Additional datasets bound to ``f1``, ``f2``, ... in order.
+      tag: str or None
+        Tag to assign to the resulting dataset.
+      label: str or None
+        Label to assign to the resulting dataset (defaults to ``chain``).
+
+    Returns:
+      GData
+        A new dataset holding the evaluated result.
+    """
+    from postgkyl import ops
+    return ops.ev(chain, [self, *others], tag=tag, label=label)
+
   def with_(self, *others) -> "object":
     """Group this dataset with others for joint plotting/processing.
 

@@ -1,20 +1,14 @@
 import builtins
-import os
-import shutil
-import tempfile
-from matplotlib.animation import FuncAnimation, FFMpegWriter
-from multiprocessing import Pool
-from PIL import Image
 import enum
-from typing import List, Optional
-import matplotlib
+import shutil
+from typing import Optional
+
 import matplotlib.pyplot as plt
-import numpy as np
 import typer
 from typing_extensions import Annotated
 
+from postgkyl import output
 from postgkyl.utils import verb_print, set_frame
-import postgkyl.output.plot
 
 
 class _Group(str, enum.Enum):
@@ -28,153 +22,6 @@ class _LineStyle(str, enum.Enum):
   dashed = "dashed"
   dotted = "dotted"
   dashdot = "dashdot"
-# end
-
-# Formats written through ffmpeg (PIL cannot produce these video containers).
-VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
-
-
-def _save_frame_worker(args):
-  """Worker for parallel frame saving; each process creates its own figure."""
-  matplotlib.use("Agg")
-  frame_idx, frame_data, kwargs, prefix, dpi, figsize = args
-  fig = plt.figure(figsize=figsize)
-  _update(0, [frame_data], fig, kwargs)
-  plt.savefig(f"{prefix:s}_{frame_idx:d}.png", dpi=dpi)
-  plt.close(fig)
-# end
-
-
-def _save_frames(data_list, num_frames, prefix, kwargs, figsize, fig=None):
-  """Save frames as PNGs, using parallel workers when nproc > 1."""
-  if kwargs["nproc"] > 1:
-    args_list = [(i, data_list[i], kwargs, prefix, kwargs["dpi"], figsize)
-        for i in range(num_frames)]
-    with Pool(kwargs["nproc"]) as pool:
-      pool.map(_save_frame_worker, args_list)
-    # end
-  else:
-    for i in range(num_frames):
-      _update(i, data_list, fig, kwargs)
-      plt.savefig(f"{prefix:s}_{i:d}.png", dpi=kwargs["dpi"])
-    # end
-  # end
-# end
-
-
-def _compile_movie(frame_files, output_file, fps, duration, ctx):
-  """Compile PNG frames into an animation."""
-  ext = os.path.splitext(output_file)[1].lower()
-  verb_print(ctx,f"Creating {output_file}...")
-  if ext in (".gif", ".webp", ".apng"):
-    images = [Image.open(f) for f in frame_files]
-    images[0].save(
-        output_file, save_all=True, append_images=images[1:],
-        duration=duration, loop=0, optimize=False,
-    )
-  elif ext in VIDEO_EXTS:
-    # PIL cannot write video containers; use matplotlib's ffmpeg writer.
-    # duration is in milliseconds per frame, so fall back to it when fps is unset.
-    movie_fps = fps if fps else 1.0e3 / duration
-    writer = FFMpegWriter(fps=movie_fps)
-    first = Image.open(frame_files[0])
-    dpi = 100
-    fig = plt.figure(figsize=(first.width / dpi, first.height / dpi), dpi=dpi)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.axis("off")
-    with writer.saving(fig, output_file, dpi):
-      for frame_file in frame_files:
-        ax.clear()
-        ax.axis("off")
-        ax.imshow(Image.open(frame_file))
-        writer.grab_frame()
-      # end
-    # end
-    plt.close(fig)
-  else:
-    raise ValueError(f"Unsupported output format: {ext}")
-
-  verb_print(ctx,f"{output_file} created.")
-# end
-
-
-def _update(frame, data, fig, kwargs):
-  fig.clear()
-  kwargs["figure"] = fig
-
-  #global range function is called every frame to set scale limits for frame plot
-  if kwargs["multiblock"] and kwargs["float"]:
-    vmin, vmax, num_dims = globalrange(data[frame], kwargs)
-    if num_dims == 1:
-      kwargs["ymin"] = vmin
-      kwargs["ymax"] = vmax
-    else:
-      kwargs["zmin"] = vmin
-      kwargs["zmax"] = vmax
-    # end
-  # end
-
-  #main plotting loop
-  for i, dat in enumerate(data[frame]):
-    kwargs["title"] = ""
-    if not kwargs["notitle"]:
-      if dat.ctx.get("frame") is not None:
-        kwargs["title"] = f"{kwargs['title']:s} frame: {dat.ctx['frame']:d} "
-      # end
-      if dat.ctx.get("time") is not None:
-        kwargs["title"] = f"{kwargs['title']:s} time: {dat.ctx['time']:.4e}"
-      # end
-    # end
-
-    if i == 0:
-      if kwargs.get("arg"):
-        im = postgkyl.output.plot(dat, kwargs["arg"], **kwargs)
-      else:
-        im = postgkyl.output.plot(dat, **kwargs)
-      # end
-    else:
-      kwargs_ncb = kwargs.copy()
-      kwargs_ncb["colorbar"] = False
-      if kwargs.get("arg"):
-        im = postgkyl.output.plot(dat, kwargs["arg"], **kwargs_ncb)
-      else:
-        im = postgkyl.output.plot(dat, **kwargs_ncb)
-      # end
-    # end
-  # end
-  return im
-# end
-
-#Finds global minima and maxima for all inputed data objects
-#also incorporates cutoffglobalrange
-def globalrange(data,kwargs):
-  vmin = float("inf")
-  vmax = float("-inf")
-  v_extrema = np.array([])
-  for dat in data:
-    num_dims = dat.get_num_dims()
-    if num_dims == 1:
-      val = dat.get_values()*kwargs["yscale"]
-    else:
-      val = dat.get_values()*kwargs["zscale"]
-    # end
-    if vmin > np.nanmin(val):
-      vmin = np.nanmin(val)
-    if vmax < np.nanmax(val):
-      vmax = np.nanmax(val)
-    # end
-    v_extrema = np.append(v_extrema, np.nanmin(val))
-    v_extrema = np.append(v_extrema, np.nanmax(val))
-  # end
-  v_extrema = np.sort(v_extrema)
-  if kwargs["cutoffglobalrange"]:
-    boundary = 100 * (1 - kwargs["cutoffglobalrange"]) / 2
-    vmax = np.percentile(v_extrema, 100 - boundary)
-    vmin = np.percentile(v_extrema, boundary)
-    return vmin, vmax, num_dims
-  else:
-    return vmin, vmax, num_dims
-  # end
 # end
 
 
@@ -260,231 +107,75 @@ def animate(
   if kwargs["saveas"]:
     kwargs["saveas"] = str(kwargs["saveas"])
   # end
-  supported_exts = (".gif", ".webp", ".apng") + VIDEO_EXTS
+  supported_exts = (".gif", ".webp", ".apng") + output.VIDEO_EXTS
   if kwargs["saveas"] and not kwargs["saveas"].lower().endswith(supported_exts):
     raise typer.BadParameter(
         "Unsupported output format for --saveas; please use one of: "
         + ", ".join(supported_exts) + ".")
   # end
   # Video containers are written through ffmpeg, which must be on the PATH.
-  if kwargs["saveas"] and kwargs["saveas"].lower().endswith(VIDEO_EXTS) \
+  if kwargs["saveas"] and kwargs["saveas"].lower().endswith(output.VIDEO_EXTS) \
       and shutil.which("ffmpeg") is None:
     raise typer.BadParameter(
-        "ffmpeg is required to write " + ", ".join(VIDEO_EXTS) + " files but was "
+        "ffmpeg is required to write " + ", ".join(output.VIDEO_EXTS) + " files but was "
         "not found. Please install ffmpeg or choose a .gif output instead.")
   # end
 
-  if kwargs["xlim"]:
-    kwargs["xmin"] = builtins.float(kwargs["xlim"].split(",")[0])
-    kwargs["xmax"] = builtins.float(kwargs["xlim"].split(",")[1])
-  # end
-  if kwargs["ylim"]:
-    kwargs["ymin"] = builtins.float(kwargs["ylim"].split(",")[0])
-    kwargs["ymax"] = builtins.float(kwargs["ylim"].split(",")[1])
-  # end
-  if kwargs["zlim"]:
-    kwargs["zmin"] = builtins.float(kwargs["zlim"].split(",")[0])
-    kwargs["zmax"] = builtins.float(kwargs["zlim"].split(",")[1])
-  # end
-
-  if not kwargs["float"] and not kwargs["grouptags"]:
-    vmin, vmax, num_dims = globalrange(data.iterator(kwargs["use"]), kwargs)
-    if num_dims == 1:
-      if kwargs["ymin"] is None:
-        kwargs["ymin"] = vmin
-      # end
-      if kwargs["ymax"] is None:
-        kwargs["ymax"] = vmax
-      # end
-    else:
-      if kwargs["zmin"] is None:
-        kwargs["zmin"] = vmin
-      # end
-      if kwargs["zmax"] is None:
-        kwargs["zmax"] = vmax
-      # end
+  # CLI ``--xlim a,b`` convenience overrides the explicit min/max options.
+  for lim, lo, hi in (("xlim", "xmin", "xmax"), ("ylim", "ymin", "ymax"),
+      ("zlim", "zmin", "zmax")):
+    if kwargs[lim]:
+      kwargs[lo] = builtins.float(kwargs[lim].split(",")[0])
+      kwargs[hi] = builtins.float(kwargs[lim].split(",")[1])
     # end
   # end
-
-  anims = []
-  figs = []
-  kwargs["legend"] = False
 
   figsize = None
   if kwargs["figsize"]:
     figsize = (int(kwargs["figsize"].split(",")[0]), int(kwargs["figsize"].split(",")[1]))
   # end
 
-  # PIL requires duration in miliseconds.
-  duration = int(1.0e3 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
-
-  set_figure = False
-  min_size = np.nan
-  yset = False
+  # Everything that is not orchestration state is forwarded to output.animate
+  # (its explicit params bind by name; the rest reach the per-frame plot call).
+  show_flag = kwargs["show"]
+  saving = bool(kwargs["save"] or kwargs["saveas"])
+  opts = {k: v for k, v in kwargs.items()
+      if k not in ("use", "grouptags", "show", "saveas", "xlim", "ylim", "zlim", "figsize")}
+  opts["figsize"] = figsize
+  opts["fixed_range"] = not kwargs["float"]
+  opts["show"] = False
+  opts["legend"] = False  # animate suppresses the legend (re-enabled per tag below)
 
   if kwargs["grouptags"]:
-    #runs animation for each tag
-    for tag in data.tag_iterator(kwargs["use"]):
-      num_datasets = int(data.get_num_datasets(tag=tag))
-      min_size = int(np.nanmin((min_size, num_datasets)))
+    # One animation per tag; truncate all to the shortest tag's frame count.
+    opts["legend"] = True
+    opts["fixed_range"] = True
+    tag_list = list(data.tag_iterator(kwargs["use"]))
+    min_size = min((int(data.get_num_datasets(tag=t)) for t in tag_list), default=0)
+    for t in tag_list:
+      frames = [[dat] for dat in data.iterator(t)][:min_size]
+      file_name = kwargs["saveas"] or (f"anim_{t:s}.gif" if t is not None else "anim.gif")
+      output.animate(frames, saveas=(file_name if saving else None), **opts)
     # end
-
-    tag_iterator = list(data.tag_iterator(kwargs["use"]))
-    kwargs["legend"] = True
-    set_figure = True
-    fig_num = int(0)
-
-    for tag in tag_iterator:
-      #sets scale for each tag animation
-      vmin, vmax, num_dims = globalrange(data.iterator(tag), kwargs)
-      if num_dims == 1:
-        kwargs["ymin"] = vmin
-        kwargs["ymax"] = vmax
-        yset = True
-      else:
-        if yset: #so that ymin,ymax of 1D anim don't affect 2D anim
-          kwargs["ymin"] = None
-          kwargs["ymax"] = None
-        # end
-        kwargs["zmin"] = vmin
-        kwargs["zmax"] = vmax
-      # end
-
-      #creating min list of lists (non-multiblock case)
-      data_list = []
-      for dat in data.iterator(tag):
-        data_list.append([dat])
-      # end
-      figs.append(plt.figure(fig_num, figsize=figsize))
-      fig_num += 1
-
-      num_frames = int(np.nanmin((min_size, len(data_list))))
-      file_name = f"anim_{tag:s}.gif" if tag is not None else "anim.gif"
-      if kwargs["saveas"]:
-        file_name = str(kwargs["saveas"])
-      # end
-
-      if kwargs["saveframes"]:
-        # Save PNGs, then optionally compile a movie.
-        _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
-        if kwargs["save"] or kwargs["saveas"]:
-          frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-        # end
-        kwargs["show"] = False
-      elif kwargs["nproc"] > 1:
-        # Parallel: use a temp dir, compile, then clean up.
-        with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
-          tmp_prefix = os.path.join(tmpdir, "frame")
-          _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
-          frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-          _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-        # end
-        kwargs["show"] = False
-      else:
-        anims.append(
-            FuncAnimation(figs[-1], _update, num_frames,
-                fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
-                blit=False)
-        )
-        if kwargs["save"] or kwargs["saveas"]:
-          anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
-        # end
-      # end
-    # end
-  #animation code for multiblock case
   elif kwargs["multiblock"]:
-
-    #set ctx frames for all data objects
+    # Group the blocks of each frame together.
     sorted_frame_list = set_frame(ctx)
-
-    #create main list of lists (multiblock case)
-    data_list = []
-    #organize data objects so each interior list includes blocks from one frame
-    for frame in sorted_frame_list:
-      frame_data_list = [dat for dat in data.iterator(kwargs["use"]) if dat.ctx["frame"] == frame]
-      data_list.append(frame_data_list)
+    frames = [[dat for dat in data.iterator(kwargs["use"]) if dat.ctx["frame"] == frame]
+        for frame in sorted_frame_list]
+    # Keep all blocks the same colour in 1D so they read as one curve.
+    if not opts.get("color") and frames and frames[0][0].get_num_dims() == 1:
+      opts["color"] = "tab:blue"
     # end
-
-    figs.append(plt.figure(figsize=figsize))
-    #makes default color blue in 1D cases, this prevents blocks from having different colors
-    if (not kwargs["color"] and data_list[0][0].get_num_dims() == 1):
-      kwargs["color"] = "tab:blue"
-    # end
-
-    num_frames = int(np.nanmin((min_size, len(data_list))))
-    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
-
-    if kwargs["saveframes"]:
-      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
-      if kwargs["save"] or kwargs["saveas"]:
-        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-      # end
-      kwargs["show"] = False
-    elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
-        tmp_prefix = os.path.join(tmpdir, "frame")
-        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
-        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-      # end
-      kwargs["show"] = False
-    else:
-      anims.append(
-          FuncAnimation(figs[-1], _update, num_frames,
-              fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
-              blit=False)
-      )
-      if kwargs["save"] or kwargs["saveas"]:
-        anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
-      # end
-    # end
-
+    file_name = kwargs["saveas"] or "anim.gif"
+    output.animate(frames, saveas=(file_name if saving else None), **opts)
   else:
-
-    #create main list of lists (non-multiblock case)
-    data_list = []
-    for dat in data.iterator(kwargs["use"]):
-      data_list.append([dat])
-    # end
-    if set_figure:
-      figs.append(plt.figure(fig_num, figsize=figsize))
-    else:
-      figs.append(plt.figure(figsize=figsize))
-    # end
-
-    num_frames = int(np.nanmin((min_size, len(data_list))))
-    file_name = kwargs["saveas"] if kwargs["saveas"] else "anim.gif"
-
-    if kwargs["saveframes"]:
-      _save_frames(data_list, num_frames, kwargs["saveframes"], kwargs, figsize, figs[-1])
-      if kwargs["save"] or kwargs["saveas"]:
-        frame_files = [f"{kwargs['saveframes']}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-      # end
-      kwargs["show"] = False
-    elif kwargs["nproc"] > 1:
-      with tempfile.TemporaryDirectory(dir=kwargs["tmpdir"]) as tmpdir:
-        tmp_prefix = os.path.join(tmpdir, "frame")
-        _save_frames(data_list, num_frames, tmp_prefix, kwargs, figsize)
-        frame_files = [f"{tmp_prefix}_{i}.png" for i in range(num_frames)]
-        _compile_movie(frame_files, file_name, kwargs["fps"], duration, ctx)
-      # end
-      kwargs["show"] = False
-    else:
-      anims.append(
-          FuncAnimation(figs[-1], _update, num_frames,
-              fargs=(data_list, figs[-1], kwargs), interval=kwargs["interval"],
-              blit=False)
-      )
-      if kwargs["save"] or kwargs["saveas"]:
-        anims[-1].save(file_name, writer="ffmpeg", fps=kwargs["fps"], dpi=kwargs["dpi"])
-      # end
-    # end
+    frames = [[dat] for dat in data.iterator(kwargs["use"])]
+    file_name = kwargs["saveas"] or "anim.gif"
+    output.animate(frames, saveas=(file_name if saving else None), **opts)
   # end
 
-  if kwargs["show"]:
+  # The frame-dump paths render off-screen; only the live FuncAnimation shows.
+  if show_flag and not kwargs["saveframes"] and not (kwargs["nproc"] and kwargs["nproc"] > 1):
     plt.show()
   # end
   verb_print(ctx, "Finishing animate")

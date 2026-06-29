@@ -1,8 +1,6 @@
 from postgkyl.commands.data_space import DataSpace
 from postgkyl.commands.config import config
 
-from postgkyl.commands import ev_cmd
-
 from postgkyl.commands.agyro import agyro
 from postgkyl.commands.agyro import mom_agyro
 from postgkyl.commands.animate import animate

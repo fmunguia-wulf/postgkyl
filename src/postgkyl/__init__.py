@@ -235,6 +235,67 @@ def animate(*datasets,
       saveas=saveas, fps=fps, dpi=dpi, arg=arg, **plot_kwargs)
 
 
+def collect(*datasets, sumdata: bool = False, period: "float | None" = None,
+    offset: float = 0.0, tag: "str | None" = None, label: "str | None" = None):
+  """Collect one or more datasets into a single dataset along a new time axis.
+
+  Top-level script-API entry point mirroring :func:`postgkyl.ops.collect` and
+  the CLI ``collect`` command. Each ``dataset`` is a :class:`GData` (or an
+  iterable / :class:`DatasetGroup` of them); they are flattened into a single
+  ordered sequence and stacked along a new leading (time) axis.
+
+  Args:
+    sumdata: bool
+      Sum each frame over its spatial axes (keeping components) before
+      stacking, so the result grid is just the time axis.
+    period: float | None
+      If given, fold the time stamps into one period before sorting.
+    offset: float
+      Phase offset subtracted before the modulo when ``period`` is used.
+    tag: str | None
+      Tag for the resulting dataset.
+    label: str | None
+      Label for the resulting dataset.
+
+  Returns:
+    GData: A single dataset combining all the inputs.
+
+  Examples:
+    pg.collect(a, b, c)
+    pg.collect(pg.load.many('elc_M0_*.gkyl').interp().integrate())
+  """
+  return ops.collect(_flatten_datasets(datasets), sumdata=sumdata, period=period,
+      offset=offset, tag=tag, label=label)
+
+
+def ev(chain: str, *datasets, tag: "str | None" = None, label: "str | None" = None):
+  """Evaluate an RPN math expression over one or more datasets.
+
+  Top-level script-API entry point mirroring :func:`postgkyl.ops.ev` and the CLI
+  ``ev`` command. ``f``/``fN`` tokens in ``chain`` refer positionally to the
+  provided datasets (``f`` == ``f0``); operators come from the RPN registry in
+  :mod:`postgkyl.tools.ev_ops`.
+
+  Args:
+    chain: str
+      The RPN expression, e.g. ``"f0 f1 +"`` or ``"f sq 2 *"``.
+    *datasets: GData | DatasetGroup | Iterable
+      The datasets referenced by the ``f``/``fN`` tokens, flattened in order.
+    tag: str | None
+      Tag for the resulting dataset.
+    label: str | None
+      Label for the resulting dataset (defaults to ``chain``).
+
+  Returns:
+    GData: A new dataset holding the evaluated result.
+
+  Examples:
+    pg.ev('f0 f1 +', a, b)
+    pg.ev('f sqrt', pg.load('f.gkyl').interp())
+  """
+  return ops.ev(chain, _flatten_datasets(datasets), tag=tag, label=label)
+
+
 def info(*datasets) -> None:
   """Print the metadata summary for one or more datasets.
 

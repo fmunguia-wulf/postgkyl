@@ -150,7 +150,10 @@ L2 verb or one L4 app. Most are ~3-line shells calling an `ops` verb through **`
   (matplotlib rcParams), `config.py` (one-time `gkylsoft` path), `load.py` (the CLI loader;
   `pg.load` is the script equivalent). These manage REPL/figure state, not numerics, so they
   have no `ops` verb.
-- **`ev_cmd.py` / `ev.py`** — the RPN expression evaluator (`pgkyl ... ev 'f g -'`).
+- **`ev.py`** — the CLI shell for the RPN expression evaluator (`pgkyl ... ev 'f g -'`).
+  It keeps only the DataSpace-specific token resolution (tag selection, push-back); the
+  numeric operator registry lives in `tools/ev_ops.py` (L0) and the stack machine plus the
+  script-facing `ev()` live in `ops/ev.py` (L2).
 
 The CLI entry point itself is **`pgkyl.py`**: `PgkylCommandGroup` (chaining, command
 abbreviation, aliases, bare-filename-as-`load`) and all `cli.add_command(...)` wiring.
@@ -169,5 +172,4 @@ outstanding gaps:
 | `dg_local_poly` (a true `verb(data)->data`) | `commands/` | **L2 `ops/`** + `GData` method |
 | Coordinate-mapping grid construction | inlined in `data/gkyl_reader.load()` (×2) | **L1 `data/mapping.py`** |
 | Load-option global/local resolution | `commands/load.py` (~50 lines) | `commands/_load_opts.py` |
-| `ev` RPN registry (numerics in L5) | `commands/ev_cmd.py` | **L0/L2** (`tools/` or `ops/ev.py`) |
 | Dead code | `commands/temp.py`, `commands/old/`, `data/old/` | deleted |

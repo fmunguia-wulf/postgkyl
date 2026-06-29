@@ -476,3 +476,24 @@ class DatasetGroup:
     from postgkyl import ops
     return ops.collect(self._datasets, sumdata=sumdata, period=period, offset=offset,
         tag=tag, label=label)
+
+  def ev(self, chain: str, *, tag: "str | None" = None, label: "str | None" = None):
+    """Evaluate an RPN math expression over all members together.
+
+    Terminal verb wrapping :func:`postgkyl.ops.ev`. The members are bound to the
+    ``f0``, ``f1``, ... tokens in ``chain`` in order (``f`` == ``f0``). Defined
+    explicitly rather than broadcast, since the expression combines members.
+
+    Args:
+      chain: str
+        The RPN expression, e.g. ``"f0 f1 +"``.
+      tag: str | None
+        Tag to assign to the resulting dataset.
+      label: str | None
+        Label to assign to the resulting dataset (defaults to ``chain``).
+
+    Returns:
+      GData: A single dataset holding the evaluated result.
+    """
+    from postgkyl import ops
+    return ops.ev(chain, self._datasets, tag=tag, label=label)

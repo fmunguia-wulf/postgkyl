@@ -604,63 +604,235 @@ def plot_datasets(datasets, **kwargs):
   return fig
 
 
-def animate(datasets, *, interval: int = 100, fixed_range: bool = True,
-    notitle: bool = False, show: bool = False, save: bool = False,
-    saveas: str | None = None, fps: int | None = None, dpi: int | None = None,
-    arg: str = "", **plot_kwargs):
-  """Animate a sequence of datasets, one frame per dataset (matplotlib).
+# Formats written through ffmpeg (PIL cannot produce these video containers).
+VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
 
-  This is the script-facing core of the CLI ``animate`` command for the common
-  one-dataset-per-frame case. With ``fixed_range`` the value/colour scale is
-  held constant across frames. Returns the ``FuncAnimation`` (keep a reference
-  so it is not garbage-collected). Saving requires ffmpeg.
+
+def _animation_global_range(datasets, kwargs, cutoff: float | None = None):
+  """Scan datasets for a uniform value/colour range across animation frames.
+
+  Returns ``(vmin, vmax, num_dims)`` where the values are scaled by ``yscale``
+  (1D) or ``zscale`` (2D). When ``cutoff`` is given (a central fraction in 0-1),
+  the range is clipped to that percentile band of the per-frame extrema.
+  """
+  vmin, vmax = float("inf"), float("-inf")
+  v_extrema = np.array([])
+  num_dims = 1
+  for dat in datasets:
+    num_dims = dat.get_num_dims()
+    scale = kwargs.get("yscale", 1.0) if num_dims == 1 else kwargs.get("zscale", 1.0)
+    val = dat.get_values() * scale
+    vmin = min(vmin, np.nanmin(val))
+    vmax = max(vmax, np.nanmax(val))
+    v_extrema = np.append(v_extrema, [np.nanmin(val), np.nanmax(val)])
+  # end
+  v_extrema = np.sort(v_extrema)
+  if cutoff:
+    boundary = 100 * (1 - cutoff) / 2
+    vmax = np.percentile(v_extrema, 100 - boundary)
+    vmin = np.percentile(v_extrema, boundary)
+  # end
+  return vmin, vmax, num_dims
+
+
+def _animation_update(frame, frames, fig, kwargs):
+  """Render one animation frame: every dataset in ``frames[frame]`` onto ``fig``.
+
+  Only the first dataset draws a colorbar; subsequent overlays suppress it. The
+  per-frame title is taken from each dataset's ``ctx`` (frame index and time)
+  unless ``kwargs['notitle']`` is set.
+  """
+  fig.clear()
+  kwargs["figure"] = fig
+  arg = kwargs.get("arg")
+
+  # In per-frame ("float") multiblock mode, rescale to the current frame.
+  if kwargs.get("multiblock") and kwargs.get("float"):
+    vmin, vmax, num_dims = _animation_global_range(frames[frame], kwargs)
+    if num_dims == 1:
+      kwargs["ymin"], kwargs["ymax"] = vmin, vmax
+    else:
+      kwargs["zmin"], kwargs["zmax"] = vmin, vmax
+    # end
+  # end
+
+  im = None
+  for i, dat in enumerate(frames[frame]):
+    kwargs["title"] = ""
+    if not kwargs.get("notitle"):
+      if dat.ctx.get("frame") is not None:
+        kwargs["title"] = f"{kwargs['title']:s} frame: {dat.ctx['frame']:d} "
+      # end
+      if dat.ctx.get("time") is not None:
+        kwargs["title"] = f"{kwargs['title']:s} time: {dat.ctx['time']:.4e}"
+      # end
+    # end
+    frame_kwargs = kwargs if i == 0 else {**kwargs, "colorbar": False}
+    if arg:
+      im = plot(dat, arg, **frame_kwargs)
+    else:
+      im = plot(dat, **frame_kwargs)
+    # end
+  # end
+  return im
+
+
+def _save_frame_worker(args):
+  """Worker for parallel frame saving; each process builds its own figure."""
+  import matplotlib
+  matplotlib.use("Agg")
+  frame_idx, frame_data, kwargs, prefix, dpi, figsize = args
+  fig = plt.figure(figsize=figsize)
+  _animation_update(0, [frame_data], fig, kwargs)
+  plt.savefig(f"{prefix:s}_{frame_idx:d}.png", dpi=dpi)
+  plt.close(fig)
+
+
+def _save_frames(frames, num_frames, prefix, kwargs, figsize, *, nproc: int = 1,
+    dpi: int | None = None, fig=None):
+  """Save the first ``num_frames`` animation frames as ``<prefix>_<i>.png``.
+
+  Uses a multiprocessing pool when ``nproc > 1``, otherwise a single reused
+  figure.
+  """
+  if nproc and nproc > 1:
+    from multiprocessing import Pool
+    args_list = [(i, frames[i], kwargs, prefix, dpi, figsize) for i in range(num_frames)]
+    with Pool(nproc) as pool:
+      pool.map(_save_frame_worker, args_list)
+    # end
+  else:
+    if fig is None:
+      fig = plt.figure(figsize=figsize)
+    # end
+    for i in range(num_frames):
+      _animation_update(i, frames, fig, kwargs)
+      plt.savefig(f"{prefix:s}_{i:d}.png", dpi=dpi)
+    # end
+  # end
+
+
+def _compile_movie(frame_files, output_file, fps, duration):
+  """Compile PNG frames into an animation (PIL for gif/webp/apng, ffmpeg for video)."""
+  from PIL import Image
+
+  ext = os.path.splitext(output_file)[1].lower()
+  if ext in (".gif", ".webp", ".apng"):
+    images = [Image.open(f) for f in frame_files]
+    images[0].save(output_file, save_all=True, append_images=images[1:],
+        duration=duration, loop=0, optimize=False)
+  elif ext in VIDEO_EXTS:
+    # PIL cannot write video containers; use matplotlib's ffmpeg writer.
+    # duration is in milliseconds per frame, so fall back to it when fps is unset.
+    from matplotlib.animation import FFMpegWriter
+    movie_fps = fps if fps else 1.0e3 / duration
+    writer = FFMpegWriter(fps=movie_fps)
+    first = Image.open(frame_files[0])
+    dpi = 100
+    fig = plt.figure(figsize=(first.width / dpi, first.height / dpi), dpi=dpi)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    with writer.saving(fig, output_file, dpi):
+      for frame_file in frame_files:
+        ax.clear()
+        ax.axis("off")
+        ax.imshow(Image.open(frame_file))
+        writer.grab_frame()
+      # end
+    # end
+    plt.close(fig)
+  else:
+    raise ValueError(f"Unsupported output format: {ext}")
+  # end
+
+
+def animate(data, *, interval: int = 100, fixed_range: bool = True,
+    cutoffglobalrange: float | None = None, notitle: bool = False,
+    colorbar: bool = True, show: bool = False, save: bool = False,
+    saveas: str | None = None, fps: int | None = None, dpi: int | None = None,
+    nproc: int = 1, saveframes: str | None = None, tmpdir: str | None = None,
+    figsize=None, arg: str = "", **plot_kwargs):
+  """Animate a sequence of frames, one frame per dataset (matplotlib).
+
+  This is the shared rendering core of both the script API (``pg.animate``,
+  ``GData.animate``, ``DatasetGroup.animate``) and the CLI ``animate`` command.
+
+  ``data`` is either a flat iterable of :class:`GData` (each becomes a
+  single-dataset frame) or an iterable of frames, where each frame is itself a
+  list of :class:`GData` drawn together (used for the CLI's grouped-tags and
+  multi-block modes). With ``fixed_range`` the value/colour scale is held
+  constant across frames (optionally clipped to ``cutoffglobalrange``).
+
+  Three output paths are supported. When ``saveframes`` is set, each frame is
+  written to ``<saveframes>_<i>.png`` (and compiled into ``saveas`` when saving
+  is requested); when ``nproc > 1`` the frames are rendered in parallel through
+  a temporary directory and compiled; otherwise a live ``FuncAnimation`` is
+  built and returned (keep a reference so it is not garbage-collected). Saving
+  to a video container (``.mp4``/``.mov``/``.avi``/``.mkv``) requires ffmpeg.
+
+  Returns the ``FuncAnimation`` for the live path, or ``None`` for the
+  frame-dump paths.
   """
   from matplotlib.animation import FuncAnimation
+  from postgkyl.data.gdata import GData
 
-  datasets = list(datasets)
-  if not datasets:
+  # Normalize to a list of frames, each a list of GData.
+  frames = [[item] if isinstance(item, GData) else list(item) for item in data]
+  if not frames:
     raise ValueError("animate: no datasets to animate.")
   # end
 
+  # Flags consumed by the per-frame renderer come through plot_kwargs.
+  plot_kwargs["arg"] = arg
+  plot_kwargs["notitle"] = notitle
+  plot_kwargs["colorbar"] = colorbar
+  plot_kwargs.setdefault("multiblock", False)
+  plot_kwargs.setdefault("float", False)
+
   # Hold a constant value/colour scale across all frames.
   if fixed_range:
-    num_dims = datasets[0].get_num_dims()
-    scale = plot_kwargs.get("zscale", 1.0) if num_dims > 1 else plot_kwargs.get("yscale", 1.0)
-    vmin, vmax = float("inf"), float("-inf")
-    for dat in datasets:
-      val = dat.get_values() * scale
-      vmin = min(vmin, np.nanmin(val))
-      vmax = max(vmax, np.nanmax(val))
-    # end
+    all_datasets = [dat for frame in frames for dat in frame]
+    vmin, vmax, num_dims = _animation_global_range(all_datasets, plot_kwargs,
+        cutoffglobalrange)
     lo_key, hi_key = ("zmin", "zmax") if num_dims > 1 else ("ymin", "ymax")
-    plot_kwargs.setdefault(lo_key, vmin)
-    plot_kwargs.setdefault(hi_key, vmax)
-  # end
-
-  fig = plt.figure()
-
-  def _update(frame):
-    fig.clear()
-    dat = datasets[frame]
-    kwargs = dict(plot_kwargs)
-    kwargs["figure"] = fig
-    if not notitle:
-      title = ""
-      if dat.ctx.get("frame") is not None:
-        title += f" frame: {dat.ctx['frame']:d} "
-      # end
-      if dat.ctx.get("time") is not None:
-        title += f" time: {dat.ctx['time']:.4e}"
-      # end
-      kwargs["title"] = title
+    if plot_kwargs.get(lo_key) is None:
+      plot_kwargs[lo_key] = vmin
     # end
-    return plot(dat, arg, **kwargs)
+    if plot_kwargs.get(hi_key) is None:
+      plot_kwargs[hi_key] = vmax
+    # end
   # end
 
-  anim = FuncAnimation(fig, _update, len(datasets), interval=interval, blit=False)
+  num_frames = len(frames)
+  # PIL requires the per-frame duration in milliseconds.
+  duration = int(1.0e3 / fps) if fps else interval
+  out_file = saveas or "anim.mp4"
 
+  if saveframes:
+    _save_frames(frames, num_frames, saveframes, plot_kwargs, figsize, dpi=dpi)
+    if save or saveas:
+      frame_files = [f"{saveframes}_{i}.png" for i in range(num_frames)]
+      _compile_movie(frame_files, out_file, fps, duration)
+    # end
+    return None
+  # end
+
+  if nproc and nproc > 1:
+    import tempfile
+    with tempfile.TemporaryDirectory(dir=tmpdir) as tmp:
+      prefix = os.path.join(tmp, "frame")
+      _save_frames(frames, num_frames, prefix, plot_kwargs, figsize, nproc=nproc, dpi=dpi)
+      frame_files = [f"{prefix}_{i}.png" for i in range(num_frames)]
+      _compile_movie(frame_files, out_file, fps, duration)
+    # end
+    return None
+  # end
+
+  fig = plt.figure(figsize=figsize)
+  anim = FuncAnimation(fig, _animation_update, num_frames,
+      fargs=(frames, fig, plot_kwargs), interval=interval, blit=False)
   if save or saveas:
-    anim.save(saveas or "anim.mp4", writer="ffmpeg", fps=fps, dpi=dpi)
+    anim.save(out_file, writer="ffmpeg", fps=fps, dpi=dpi)
   # end
   if show:
     plt.show()

@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
 
 def collect(datasets, *, sumdata: bool = False, period: float | None = None,
-    offset: float = 0.0, tag: str | None = None, label: str | None = None) -> "GData":
+    offset: float = 0.0, comp_grid: bool = False, tag: str | None = None,
+    label: str | None = None) -> "GData":
   """Collect a sequence of datasets into a single dataset.
 
   Stacks many single-frame datasets into one dataset that has a new leading
@@ -36,6 +37,9 @@ def collect(datasets, *, sumdata: bool = False, period: float | None = None,
     offset: float
       Phase offset subtracted before the modulo when ``period`` is used.
       Defaults to 0.0.
+    comp_grid: bool
+      Forwarded to the new ``GData``; when True the result disregards any
+      mapped (computational) grid. Defaults to False.
     tag: str | None
       Tag for the returned dataset. Defaults to 'default' when None.
     label: str | None
@@ -98,6 +102,7 @@ def collect(datasets, *, sumdata: bool = False, period: float | None = None,
     out_grid.insert(0, np.array(time))
   # end
 
-  out = GData(tag=(tag or "default"), label=(label if label is not None else "collect"))
+  out = GData(tag=(tag or "default"), label=(label if label is not None else "collect"),
+      comp_grid=comp_grid)
   out.push(out_grid, values)
   return out

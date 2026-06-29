@@ -84,3 +84,6 @@ from .filters import butter_filtering
 
 from .laguerre_compose import laguerre_compose
 from .transform_frame import transform_frame
+
+# RPN operator registry backing the ``ev`` verb
+from . import ev_ops
