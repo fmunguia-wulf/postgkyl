@@ -2,10 +2,10 @@ import enum
 import shutil
 
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
-from postgkyl.utils import verb_print
+from postgkyl.commands._apply import enum_value
+
 
 
 class _Mode(str, enum.Enum):
@@ -30,24 +30,22 @@ def write(
   Files saved as .gkyl or .bp can be later loaded back into pgkyl to further manipulate
   or plot.
   """
-  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting write")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   var_name = None
   append = False
   cleaning = True
-  fn = kwargs["filename"]
-  mode = kwargs["mode"]
+  fn = filename
+  mode = enum_value(mode)
   if len(fn.split(".")) > 1:
     mode = str(fn.split(".")[-1])
     fn = str(fn.split(".")[0])
   # end
 
-  num_files = data.get_num_datasets(tag=kwargs["use"])
-  for i, dat in data.iterator(tag=kwargs["use"], enum=True):
+  num_files = data.get_num_datasets(tag=use)
+  for i, dat in data.iterator(tag=use, enum=True):
     out_name = f"{fn:s}.{mode:s}"
-    if kwargs["single"]:
+    if single:
       var_name = f"{dat.get_tag():s}_{i:d}"
       cleaning = False
     else:
@@ -56,9 +54,9 @@ def write(
       # end
     # end
 
-    dat.write(out_name=out_name, mode=mode, append=append, var_name=var_name, cleaning=cleaning, norm_axes=kwargs["normalize_axes"])
+    dat.write(out_name=out_name, mode=mode, append=append, var_name=var_name, cleaning=cleaning, norm_axes=normalize_axes)
 
-    if kwargs["single"]:
+    if single:
       append = True
     # end
   # end
@@ -68,4 +66,3 @@ def write(
     shutil.move(f"{fn:s}.{mode:s}.dir/{fn:s}.{mode:s}.0", f"{fn:s}.{mode:s}")
     shutil.rmtree(f"{fn:s}.{mode:s}.dir")
   # end
-  verb_print(ctx, "Finishing write")

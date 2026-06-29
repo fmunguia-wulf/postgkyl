@@ -1,6 +1,5 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 import enum
 import importlib
 import numpy as np
@@ -9,7 +8,6 @@ from pathlib import Path
 import tempfile
 import webbrowser
 
-from postgkyl.utils import verb_print
 
 
 def _parse_range_option(value):
@@ -100,10 +98,9 @@ def plotly_animate(ctx: typer.Context,
   for _range_key in ("scatter_opacity_range", "xlim", "ylim", "zlim", "clim"):
     kwargs[_range_key] = _parse_range_option(kwargs[_range_key])
   # end
-  verb_print(ctx, "Starting plotly-animate")
   plot_output_module = importlib.import_module("postgkyl.output.plotly")
 
-  kwargs["rcParams"] = ctx.obj["rcParams"]
+  kwargs["rcParams"] = ctx.obj.rcParams
 
   supported_dims = (2, 3)
 
@@ -124,7 +121,7 @@ def plotly_animate(ctx: typer.Context,
     vmin = float("inf")
     vmax = float("-inf")
     v_extrema = np.array([])
-    for dat in ctx.obj["data"].iterator(kwargs["use"]):
+    for dat in ctx.obj.data.iterator(kwargs["use"]):
       if dat.get_num_dims() not in supported_dims:
         continue
       # end
@@ -186,7 +183,7 @@ def plotly_animate(ctx: typer.Context,
 
   data_sequence = []
   frame_labels = []
-  for i, dat in ctx.obj["data"].iterator(kwargs["use"], enum=True):
+  for i, dat in ctx.obj.data.iterator(kwargs["use"], enum=True):
     if dat.get_num_dims() not in supported_dims:
       raise typer.BadParameter(
           f"plotly-animate only supports 2D or 3D datasets. Dataset {i:d} has {dat.get_num_dims():d} dimensions."
@@ -244,4 +241,3 @@ def plotly_animate(ctx: typer.Context,
     webbrowser.open(Path(out_name).resolve().as_uri())
   # end
 
-  verb_print(ctx, "Finishing plotly-animate")

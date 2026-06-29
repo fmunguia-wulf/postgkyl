@@ -1,6 +1,5 @@
 import typer
-from typing import List, Optional, Tuple
-from typing_extensions import Annotated
+from typing import Annotated, List, Optional, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -113,9 +112,9 @@ def gk_nodes(
   """
   kwargs = {k: v for k, v in locals().items() if k != "ctx"}
 
-  data = ctx.obj["data"]  # Data stack.
-  ctx.obj["plot_handles"] = {}  # Handles to objects in plot.
-  handles = ctx.obj["plot_handles"]
+  data = ctx.obj.data  # Data stack.
+  ctx.obj.plot_handles = {}  # Handles to objects in plot.
+  handles = ctx.obj.plot_handles
 
   verb_print(ctx, "Plotting nodes for " + kwargs["name"])
 
@@ -344,4 +343,3 @@ def gk_nodes(
     plt.show()
   # end
 
-  verb_print(ctx, "Finishing nodes plot.")

@@ -12,6 +12,7 @@ import pytest
 
 import postgkyl as pg
 import postgkyl.commands as cmd
+from postgkyl.commands.state import AppState
 from postgkyl.data.gdata import GData
 from postgkyl.pgkyl import cli
 
@@ -68,17 +69,12 @@ class TestCommands:
   """Tests commands against real .gkyl/.bp files loaded by the CLI."""
 
   ctx = click.core.Context(cli)
-  ctx.obj = {}
-  ctx.obj["in_data_strings"] = [f"{dir_path:s}/twostream-f-p2.gkyl", f"{dir_path:s}/twostream-f-p2.gkyl", f"{dir_path:s}/twostream-f-p2_0.bp"]
-  ctx.obj["in_data_strings_loaded"] = 0
-  ctx.obj["verbose"] = False
-  ctx.obj["data"] = cmd.DataSpace()
-  ctx.obj["fig"] = ""
-  ctx.obj["ax"] = ""
-  ctx.obj["compgrid"] = None
-  ctx.obj["global_var_names"] = None
-  ctx.obj["global_cuts"] = (None, None, None, None, None, None, None)
-  ctx.obj["rcParams"] = {}
+  ctx.obj = AppState(
+      in_data_strings=[f"{dir_path:s}/twostream-f-p2.gkyl",
+                       f"{dir_path:s}/twostream-f-p2.gkyl",
+                       f"{dir_path:s}/twostream-f-p2_0.bp"],
+      compgrid=None,
+  )
 
   adios_loader = importlib.util.find_spec('adios2')
   adios_missing = adios_loader is None
@@ -92,46 +88,46 @@ class TestCommands:
 
   def test_load(self):
     cmd.load(self.ctx)
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     num_cells = data.num_cells
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_array_equal(num_cells, (64, 32))
 
   def test_ev_gkyl(self):
     cmd.load(self.ctx)
     cmd.ev(self.ctx, chain='f[0] f[0] +')
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     values = data.get_values()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_approx_equal(np.max(values), 3.352029)
 
     cmd.load(self.ctx)
     cmd.ev(self.ctx, chain='f f + f -')
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     values = data.get_values()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_approx_equal(np.max(values), 1.676014)
 
     cmd.load(self.ctx, tag='ts0')
     cmd.load(self.ctx, tag='ts1')
     cmd.ev(self.ctx, chain='ts0 ts0 +')
-    data = self.ctx.obj['data'].get_dataset(0, tag='ts0')
+    data = self.ctx.obj.data.get_dataset(0, tag='ts0')
     values = data.get_values()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_approx_equal(np.max(values), 3.3520293)
 
     cmd.load(self.ctx)
     cmd.load(self.ctx)
     cmd.ev(self.ctx, chain='f[:] 2 *')
-    data0 = self.ctx.obj['data'].get_dataset(0)
+    data0 = self.ctx.obj.data.get_dataset(0)
     values0 = data0.get_values()
-    data1 = self.ctx.obj['data'].get_dataset(1)
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    data1 = self.ctx.obj.data.get_dataset(1)
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     values1 = data1.get_values()
     np.testing.assert_approx_equal(np.max(values0), 3.3520293)
     np.testing.assert_approx_equal(np.max(values1), 3.3520293)
@@ -142,38 +138,38 @@ class TestCommands:
     cmd.load(self.ctx)
     cmd.load(self.ctx)
     cmd.ev(self.ctx, chain='f[2] f[2].charge *')
-    data = self.ctx.obj['data'].get_dataset(2)
+    data = self.ctx.obj.data.get_dataset(2)
     values = data.get_values()
     charge = data.ctx["charge"]
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_approx_equal(np.min(values), -1.676014)
     np.testing.assert_approx_equal(charge, -1.0)
 
   def test_interpolate(self):
     cmd.load(self.ctx)
     cmd.interpolate(self.ctx)
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     num_cells = data.num_cells
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_array_equal(num_cells, (192, 96))
 
   def test_select(self):
     cmd.load(self.ctx)
     cmd.select(self.ctx, z0='0:10', z1='0.0', comp='0,3')
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     values_shape = data.values.shape
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_array_equal(values_shape, (10, 1, 2))
 
   def test_plot(self):
     cmd.load(self.ctx)
     cmd.plot(self.ctx, show=False)
     fig = plt.gcf()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     label = fig.figure.get_supylabel()
     plt.close("all")
     assert label == "$z_1$"
@@ -185,8 +181,8 @@ class TestCommands:
     cmd.animate(self.ctx, show=False, saveas=fn)
     fig = plt.gcf()
     label = fig.figure.get_supylabel()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     plt.close("all")
     assert label == "$z_1$"
     assert fn.exists()
@@ -199,8 +195,8 @@ class TestCommands:
     cmd.animate(self.ctx, show=False, saveas=fn)
     fig = plt.gcf()
     label = fig.figure.get_supylabel()
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     plt.close("all")
     assert label == "$z_1$"
     assert fn.exists()
@@ -210,17 +206,17 @@ class TestCommands:
     cmd.load(self.ctx)
     fn = tmp_path / "test_anim3d.html"
     cmd.plotly_animate(self.ctx, show=False, saveas=fn)
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     assert fn.exists()
 
   def test_grid(self):
     cmd.load(self.ctx)
     cmd.grid(self.ctx)
-    data = self.ctx.obj['data'].get_dataset(0)
+    data = self.ctx.obj.data.get_dataset(0)
     values_shape = data.values.shape
-    self.ctx.obj['data'].clean()
-    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.obj.data.clean()
+    self.ctx.obj.in_data_strings_loaded = 0
     np.testing.assert_array_equal(values_shape, (65, 33, 2))
     np.testing.assert_approx_equal(np.max(data.values[...,0]), 6.283185)
     np.testing.assert_approx_equal(np.max(data.values[...,1]), 6)
@@ -234,14 +230,14 @@ class TestIntegrateCommand:
     def test_integrate_overwrite(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.integrate(ctx, axis="0")
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         assert dat.get_values().shape[0] == 1
 
     def test_integrate_with_tag_adds_dataset(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.integrate(ctx, axis="0", tag="integrated")
-        assert len(list(ctx.obj["data"].iterator())) >= 1
-        new_ds = ctx.obj["data"].get_dataset(0, tag="integrated")
+        assert len(list(ctx.obj.data.iterator())) >= 1
+        new_ds = ctx.obj.data.get_dataset(0, tag="integrated")
         assert new_ds is not None
 
 
@@ -253,13 +249,13 @@ class TestMagsqCommand:
     def test_magsq_overwrites(self):
         ctx = _ctx_with_datasets(_vec3_data())
         cmd.magsq(ctx)
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         np.testing.assert_allclose(dat.get_values().flat[0], 14.0)
 
     def test_magsq_with_tag(self):
         ctx = _ctx_with_datasets(_vec3_data())
         cmd.magsq(ctx, tag="mags")
-        assert ctx.obj["data"].get_dataset(0, tag="mags") is not None
+        assert ctx.obj.data.get_dataset(0, tag="mags") is not None
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +270,7 @@ class TestFftCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.fft(ctx)
-        assert ctx.obj["data"].get_dataset(0).get_values() is not None
+        assert ctx.obj.data.get_dataset(0).get_values() is not None
 
     def test_fft_psd(self):
         N = 16
@@ -283,7 +279,7 @@ class TestFftCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.fft(ctx, psd=True)
-        result = ctx.obj["data"].get_dataset(0).get_values()
+        result = ctx.obj.data.get_dataset(0).get_values()
         assert result is not None
 
     def test_fft_with_tag(self):
@@ -293,7 +289,7 @@ class TestFftCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.fft(ctx, tag="fft_result")
-        assert ctx.obj["data"].get_dataset(0, tag="fft_result") is not None
+        assert ctx.obj.data.get_dataset(0, tag="fft_result") is not None
 
 
 # ---------------------------------------------------------------------------
@@ -308,19 +304,19 @@ class TestEulerCommand:
     def test_euler_variables(self, var):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.euler(ctx, variable_name=var)
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         assert dat.get_values() is not None
 
     def test_euler_density_value(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.euler(ctx, variable_name="density")
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         np.testing.assert_allclose(dat.get_values().flat[0], _RHO, rtol=1e-10)
 
     def test_euler_with_tag(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.euler(ctx, variable_name="density", tag="den")
-        den = ctx.obj["data"].get_dataset(0, tag="den")
+        den = ctx.obj.data.get_dataset(0, tag="den")
         np.testing.assert_allclose(den.get_values().flat[0], _RHO, rtol=1e-10)
 
 
@@ -403,7 +399,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, comp="1")
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         np.testing.assert_allclose(result.get_values(), 2.0)
 
     def test_select_z0_slice(self):
@@ -413,7 +409,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, z0="2:5")
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values().shape[0] == 3
 
     def test_select_overwrite_z0(self):
@@ -423,7 +419,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, z0="2:5")
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values().shape[0] == 3
 
     def test_select_with_tag(self):
@@ -433,7 +429,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, comp="1", tag="selected")
-        result = ctx.obj["data"].get_dataset(0, tag="selected")
+        result = ctx.obj.data.get_dataset(0, tag="selected")
         assert result is not None
 
     def test_select_comp_overwrite(self):
@@ -443,7 +439,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, comp="0")
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         np.testing.assert_allclose(result.get_values(), 1.0)
 
     def test_select_z0_int(self):
@@ -453,7 +449,7 @@ class TestSelectCommand:
         dat = _make(grid, values)
         ctx = _ctx_with_datasets(dat)
         cmd.select(ctx, z0="3")
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values() is not None
 
 
@@ -485,7 +481,7 @@ class TestParrotatePerprotateCommands:
         dat_f = _make(GRID1D, field, tag="field")
         ctx = _ctx_with_datasets(dat_u, dat_f)
         cmd.bparrotate(ctx)
-        result = ctx.obj["data"].get_dataset(0, tag="arrayBpar")
+        result = ctx.obj.data.get_dataset(0, tag="arrayBpar")
         assert result is not None
 
     def test_bperprotate(self):
@@ -495,7 +491,7 @@ class TestParrotatePerprotateCommands:
         dat_f = _make(GRID1D, field, tag="field")
         ctx = _ctx_with_datasets(dat_u, dat_f)
         cmd.bperprotate(ctx)
-        result = ctx.obj["data"].get_dataset(0, tag="arrayBperp")
+        result = ctx.obj.data.get_dataset(0, tag="arrayBperp")
         assert result is not None
 
 
@@ -508,14 +504,14 @@ class TestDifferentiateCommand:
         data = pg.GData(f"{dir_path}/shock-f-ser-p1.gkyl")
         ctx = _ctx_with_datasets(data)
         cmd.differentiate(ctx, basis_type="ms", poly_order=1)
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values() is not None
 
     def test_differentiate_direction(self):
         data = pg.GData(f"{dir_path}/shock-f-ser-p1.gkyl")
         ctx = _ctx_with_datasets(data)
         cmd.differentiate(ctx, basis_type="ms", poly_order=1, direction=0)
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values() is not None
 
 
@@ -529,7 +525,7 @@ class TestRelchangeCommand:
         d2 = _make(GRID1D, np.array([[2.0, 4.0, 6.0]]))
         ctx = _ctx_with_datasets(d1, d2)
         cmd.relchange(ctx, tag="rel_change")
-        result = ctx.obj["data"].get_dataset(0, tag="rel_change")
+        result = ctx.obj.data.get_dataset(0, tag="rel_change")
         assert result is not None
 
     def test_relchange_zero_relative_change(self):
@@ -537,7 +533,7 @@ class TestRelchangeCommand:
         d2 = _make(GRID1D, np.array([[1.0, 2.0, 3.0]]))
         ctx = _ctx_with_datasets(d1, d2)
         cmd.relchange(ctx, index=0, tag="rc")
-        result = ctx.obj["data"].get_dataset(0, tag="rc")
+        result = ctx.obj.data.get_dataset(0, tag="rc")
         assert result is not None
 
 
@@ -549,13 +545,13 @@ class TestCurrentCommand:
     def test_current_basic(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.current(ctx, tag="current")
-        result = ctx.obj["data"].get_dataset(0, tag="current")
+        result = ctx.obj.data.get_dataset(0, tag="current")
         assert result is not None
 
     def test_current_produces_values(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.current(ctx)
-        result = ctx.obj["data"].get_dataset(0, tag="current")
+        result = ctx.obj.data.get_dataset(0, tag="current")
         assert result.get_values() is not None
 
 
@@ -571,7 +567,7 @@ class TestVelocityCommand:
         dat_mom = _make(GRID1D, momentum, tag="momentum")
         ctx = _ctx_with_datasets(dat_den, dat_mom)
         cmd.velocity(ctx)
-        result = ctx.obj["data"].get_dataset(0, tag="velocity")
+        result = ctx.obj.data.get_dataset(0, tag="velocity")
         assert result is not None
         np.testing.assert_allclose(result.get_values().flat[0], 0.5, atol=1e-10)
 
@@ -584,13 +580,13 @@ class TestGridCommand:
     def test_grid_1d(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.grid(ctx)
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result.get_values() is not None
 
     def test_grid_1d_with_tag(self):
         ctx = _ctx_with_datasets(_euler_data())
         cmd.grid(ctx, tag="mygrid")
-        result = ctx.obj["data"].get_dataset(0, tag="mygrid")
+        result = ctx.obj.data.get_dataset(0, tag="mygrid")
         assert result is not None
 
     def test_grid_2d(self):
@@ -599,7 +595,7 @@ class TestGridCommand:
         dat = _make(grid_2d, values_2d)
         ctx = _ctx_with_datasets(dat)
         cmd.grid(ctx)
-        result = ctx.obj["data"].get_dataset(0)
+        result = ctx.obj.data.get_dataset(0)
         assert result is not None
 
     def test_grid_2d_uniform(self):
@@ -608,7 +604,7 @@ class TestGridCommand:
         dat = _make(grid_2d, values_2d)
         ctx = _ctx_with_datasets(dat)
         cmd.grid(ctx, tag="g2d")
-        result = ctx.obj["data"].get_dataset(0, tag="g2d")
+        result = ctx.obj.data.get_dataset(0, tag="g2d")
         assert result is not None
         assert result.get_values().shape[-1] == 2
 
@@ -631,7 +627,7 @@ class TestAgyroCommand:
         b = self._make_bfield(bx=0.0, by=0.0, bz=1.0)
         ctx = _ctx_with_datasets(p, b)
         cmd.agyro(ctx, measure="frobenius")
-        result = ctx.obj["data"].get_dataset(0, tag="agyro")
+        result = ctx.obj.data.get_dataset(0, tag="agyro")
         assert result is not None
 
     def test_agyro_swisdak(self):
@@ -639,7 +635,7 @@ class TestAgyroCommand:
         b = self._make_bfield(bx=0.0, by=0.0, bz=1.0)
         ctx = _ctx_with_datasets(p, b)
         cmd.agyro(ctx, measure="swisdak")
-        result = ctx.obj["data"].get_dataset(0, tag="agyro")
+        result = ctx.obj.data.get_dataset(0, tag="agyro")
         assert result is not None
 
 
@@ -656,13 +652,13 @@ class TestTenmomentCommand:
     def test_tenmoment_variables(self, var):
         ctx = _ctx_with_datasets(_10m_data())
         cmd.tenmoment(ctx, variable_name=var)
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         assert dat.get_values() is not None
 
     def test_tenmoment_with_tag(self):
         ctx = _ctx_with_datasets(_10m_data())
         cmd.tenmoment(ctx, variable_name="density", tag="den")
-        result = ctx.obj["data"].get_dataset(0, tag="den")
+        result = ctx.obj.data.get_dataset(0, tag="den")
         assert result is not None
         np.testing.assert_allclose(result.get_values().flat[0], _RHO, rtol=1e-10)
 
@@ -679,19 +675,19 @@ class TestMhdCommand:
     def test_mhd_variables(self, var):
         ctx = _ctx_with_datasets(_mhd_data())
         cmd.mhd(ctx, variable_name=var)
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         assert dat.get_values() is not None
 
     def test_mhd_density_value(self):
         ctx = _ctx_with_datasets(_mhd_data())
         cmd.mhd(ctx, variable_name="density")
-        dat = ctx.obj["data"].get_dataset(0)
+        dat = ctx.obj.data.get_dataset(0)
         np.testing.assert_allclose(dat.get_values().flat[0], _RHO, rtol=1e-10)
 
     def test_mhd_with_tag(self):
         ctx = _ctx_with_datasets(_mhd_data())
         cmd.mhd(ctx, variable_name="density", tag="rho")
-        result = ctx.obj["data"].get_dataset(0, tag="rho")
+        result = ctx.obj.data.get_dataset(0, tag="rho")
         assert result is not None
 
 
@@ -719,7 +715,7 @@ class TestEnergeticsCommand:
         field = self._make_em_field()
         ctx = _ctx_with_datasets(elc, ion, field)
         cmd.energetics(ctx, elc="elc", ion="ion", field="field", tag="energetics")
-        result = ctx.obj["data"].get_dataset(0, tag="energetics")
+        result = ctx.obj.data.get_dataset(0, tag="energetics")
         assert result is not None
 
     def test_energetics_7_components(self):
@@ -728,7 +724,7 @@ class TestEnergeticsCommand:
         field = self._make_em_field()
         ctx = _ctx_with_datasets(elc, ion, field)
         cmd.energetics(ctx, elc="elc", ion="ion", field="field")
-        result = ctx.obj["data"].get_dataset(0, tag="energetics")
+        result = ctx.obj.data.get_dataset(0, tag="energetics")
         assert result.get_values().shape[-1] == 7
 
 
@@ -806,16 +802,16 @@ class TestVerbPrint:
         import time
         dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
-        ctx.obj["verbose"] = True
-        ctx.obj["start_time"] = time.time()
+        ctx.obj.verbose = True
+        ctx.obj.start_time = time.time()
         cmd.euler(ctx, variable_name="density")
 
     def test_integrate_verbose(self):
         import time
         dat = _make(GRID1D, _MOM5)
         ctx = _ctx_with_datasets(dat)
-        ctx.obj["verbose"] = True
-        ctx.obj["start_time"] = time.time()
+        ctx.obj.verbose = True
+        ctx.obj.start_time = time.time()
         cmd.integrate(ctx, axis="0")
 
 

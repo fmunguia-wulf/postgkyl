@@ -1,6 +1,5 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 import enum
 import importlib
 import numpy as np
@@ -9,7 +8,6 @@ from pathlib import Path
 import tempfile
 import webbrowser
 
-from postgkyl.utils import verb_print
 
 
 def _parse_range_option(value):
@@ -101,7 +99,6 @@ def plotly(ctx: typer.Context,
   for _range_key in ("scatter_opacity_range", "xlim", "ylim", "zlim", "clim"):
     kwargs[_range_key] = _parse_range_option(kwargs[_range_key])
   # end
-  verb_print(ctx, "Starting plotly")
   plot_output_module = importlib.import_module("postgkyl.output.plotly")
 
   def _save_output_3d(fig, file_name: str | None = None, base_name: str | None = None,
@@ -143,12 +140,12 @@ def plotly(ctx: typer.Context,
   def _open_html_preview(html_name: str):
     webbrowser.open(Path(html_name).resolve().as_uri())
 
-  kwargs["rcParams"] = ctx.obj["rcParams"]
+  kwargs["rcParams"] = ctx.obj.rcParams
 
   kwargs["num_axes"] = None
   if kwargs["subplots"]:
     kwargs["num_axes"] = 0
-    for dat in ctx.obj["data"].iterator(kwargs["use"]):
+    for dat in ctx.obj.data.iterator(kwargs["use"]):
       kwargs["num_axes"] = kwargs["num_axes"] + dat.get_num_comps()
     # end
   # end
@@ -170,7 +167,7 @@ def plotly(ctx: typer.Context,
     vmin = float("inf")
     vmax = float("-inf")
     v_extrema = np.array([])
-    for dat in ctx.obj["data"].iterator(kwargs["use"]):
+    for dat in ctx.obj.data.iterator(kwargs["use"]):
       if dat.get_num_dims() not in supported_dims:
         continue
       # end
@@ -228,11 +225,11 @@ def plotly(ctx: typer.Context,
   file_name = ""
   last_saved_output = None
 
-  for i, dat in ctx.obj["data"].iterator(kwargs["use"], enum=True):
+  for i, dat in ctx.obj.data.iterator(kwargs["use"], enum=True):
 
     if legend_labels is not None and i < len(legend_labels):
       label = legend_labels[i]
-    elif ctx.obj["data"].get_num_datasets() > 1 or kwargs["forcelegend"]:
+    elif ctx.obj.data.get_num_datasets() > 1 or kwargs["forcelegend"]:
       label = dat.get_label()
     else:
       label = ""
@@ -260,8 +257,8 @@ def plotly(ctx: typer.Context,
       file_name = ""
     # end
 
-    if "batch_mode" in ctx.obj and ctx.obj["batch_mode"]:
-      file_name = f"{ctx.obj['saveframes_prefix']:s}_{i:d}.html"
+    if ctx.obj.batch_mode:
+      file_name = f"{ctx.obj.saveframes_prefix:s}_{i:d}.html"
       last_saved_output = _save_output_3d(fig, file_name)
       kwargs["show"] = False
     # end
@@ -282,4 +279,3 @@ def plotly(ctx: typer.Context,
     _open_html_preview(last_saved_output)
   # end
 
-  verb_print(ctx, "Finishing plotly")

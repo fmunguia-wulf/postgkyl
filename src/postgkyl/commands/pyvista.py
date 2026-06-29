@@ -1,10 +1,8 @@
 import typer
-from typing import List, Optional
-from typing_extensions import Annotated
+from typing import Annotated, List, Optional
 import numpy as np
 import webbrowser
 
-from postgkyl.utils import verb_print
 import postgkyl.output.pyvista
 
 
@@ -78,5 +76,5 @@ def pyvista(
     aspect_ratio=tuple(kwargs["aspect_ratio"]),
     cylindrical_to_cartesian=kwargs["cylindrical_to_cartesian"],
   )
-  for i, dat in ctx.obj["data"].iterator(kwargs["use"], enum=True):
+  for i, dat in ctx.obj.data.iterator(kwargs["use"], enum=True):
     postgkyl.output.pyvista(dat, args, **kwargs)

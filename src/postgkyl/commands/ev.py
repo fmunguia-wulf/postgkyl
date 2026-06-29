@@ -1,13 +1,11 @@
 import numpy as np
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
 from postgkyl.data import GData
 from postgkyl.data import select as pselect
 from postgkyl.ops.ev import apply_operator
 from postgkyl.tools.ev_ops import cmds
-from postgkyl.utils import verb_print
 
 
 help_str = ""
@@ -47,7 +45,7 @@ def _data(ctx, grid_stack, value_stack, ctx_stack, str_in, tags, only_active):
     value_stack.append([])
     ctx_stack.append([])
 
-    for dat in ctx.obj["data"].iterator(tag=tag_nm, select=set_idx, only_active=only_active):
+    for dat in ctx.obj.data.iterator(tag=tag_nm, select=set_idx, only_active=only_active):
       tag_nm = dat.get_tag()
       if ctx_key:
         grid = None
@@ -94,8 +92,7 @@ def ev(
     all: Annotated[bool, typer.Option("--all", "-a", help="Ignore the status of a dataset")] = False,
 ):
   """Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN)."""
-  verb_print(ctx, "Starting evaluate")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   grid_stack, value_stack, ctx_stack = [], [], []
   chain_split = list(filter(None, chain.split(" ")))
@@ -138,7 +135,7 @@ def ev(
   if num_datasets_in_chain == 1 and tag is None:
     cnt = 0
     out_tag = out_data_id[0]
-    for out in ctx.obj["data"].iterator(tag=out_tag, select=out_data_id[1], only_active=only_active):
+    for out in ctx.obj.data.iterator(tag=out_tag, select=out_data_id[1], only_active=only_active):
       out.push(grid_stack[-1][cnt], value_stack[-1][cnt])
       cnt += 1
     # end
@@ -154,7 +151,6 @@ def ev(
     # end
   # end
 
-  verb_print(ctx, "Finishing ev")
 
 
 # Preserve the original dynamic help that lists every supported RPN operator.

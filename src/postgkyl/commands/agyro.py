@@ -1,11 +1,10 @@
 import enum
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
+from postgkyl.commands._apply import enum_value
 
 
 class _AgyroMeasure(str, enum.Enum):
@@ -31,16 +30,13 @@ def agyro(
   Default measure is taken from Swisdak 2015. Optionally computes agyrotropy as
   Frobenius norm of agyrotropic pressure tensor.
   """
-  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting agyro")
-  data = ctx.obj["data"]
-  tag = kwargs["tag"] or "agyro"
+  data = ctx.obj.data
+  tag = tag or "agyro"
 
-  for pressure, bfield in zip(data.iterator(kwargs["pressure"]), data.iterator(kwargs["bfield"])):
-    data.add(ops.agyro(pressure, bfield, measure=kwargs["measure"],
-        tag=tag, label=kwargs["label"]))
+  for pressure_dat, bfield_dat in zip(data.iterator(pressure), data.iterator(bfield)):
+    data.add(ops.agyro(pressure_dat, bfield_dat, measure=enum_value(measure),
+        tag=tag, label=label))
   # end
-  verb_print(ctx, "Finishing agyro")
 
 
 def mom_agyro(
@@ -55,13 +51,10 @@ def mom_agyro(
   Swisdak 2015. Optionally computes agyrotropy as Frobenius norm of
   agyrotropic pressure tensor.
   """
-  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting agyro")
-  data = ctx.obj["data"]
-  tag = kwargs["tag"] or "agyro"
+  data = ctx.obj.data
+  tag = tag or "agyro"
 
-  for species, field in zip(data.iterator(kwargs["species"]), data.iterator(kwargs["field"])):
-    data.add(ops.mom_agyro(species, field, measure=kwargs["measure"],
-        tag=tag, label=kwargs["label"]))
+  for species_dat, field_dat in zip(data.iterator(species), data.iterator(field)):
+    data.add(ops.mom_agyro(species_dat, field_dat, measure=enum_value(measure),
+        tag=tag, label=label))
   # end
-  verb_print(ctx, "Finishing agyro")

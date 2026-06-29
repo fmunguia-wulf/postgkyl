@@ -1,8 +1,6 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
-from postgkyl.utils import verb_print
 
 
 def activate(
@@ -24,19 +22,16 @@ def activate(
   'info' command (especially with the '-ac' flags) can be helpful when
   activating/deactivating multiple datasets.
   """
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting activate")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
-  if not kwargs["focused"]:
+  if not focused:
     data.deactivate_all()
   # end
 
-  for dat in data.iterator(tag=kwargs["tag"], only_active=False, select=kwargs["index"]):
+  for dat in data.iterator(tag=tag, only_active=False, select=index):
     dat.activate()
   # end
 
-  verb_print(ctx, "Finishing activate")
 
 
 def deactivate(
@@ -58,16 +53,13 @@ def deactivate(
   'info' command (especially with the '-ac' flags) can be helpful when
   activating/deactivating multiple datasets.
   """
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting deactivate")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
-  if kwargs["focused"]:
+  if focused:
     data.activate_all()
   # end
 
-  for dat in data.iterator(tag=kwargs["tag"], only_active=False, select=kwargs["index"]):
+  for dat in data.iterator(tag=tag, only_active=False, select=index):
     dat.deactivate()
   # end
 
-  verb_print(ctx, "Finishing deactivate")

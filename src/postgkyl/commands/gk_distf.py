@@ -18,8 +18,7 @@ Script example::
 """
 
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
 from postgkyl.loaders.gk_distf import (
     load_gk_distf,
@@ -50,7 +49,7 @@ def gk_distf(
   distribution (f) times one or multiple Jacobians (jf). Optionally, use mappings (in files)
   to convert the native coordinates of jf to physical velocity space coordinates or
   Cartesian/cyclindrical position space coordinates."""
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   verb_print(ctx, "Building distribution function for " + name)
 

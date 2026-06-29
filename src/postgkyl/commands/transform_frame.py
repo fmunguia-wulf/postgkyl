@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def transformframe(
@@ -16,16 +14,13 @@ def transformframe(
     label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
 ):
   """Shift a PKPM distribution function to the bulk-velocity frame."""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting transformframe")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
-  for f, bulk in zip(data.iterator(kwargs["distribution"]), data.iterator(kwargs["bulk"])):
-    if kwargs["tag"]:
-      data.add(ops.transform_frame(f, bulk, cdim=kwargs["cdim"],
-          tag=kwargs["tag"], label=kwargs["label"]))
+  for f, bulk_dat in zip(data.iterator(distribution), data.iterator(bulk)):
+    if tag:
+      data.add(ops.transform_frame(f, bulk_dat, cdim=cdim,
+          tag=tag, label=label))
     else:
-      ops.transform_frame(f, bulk, cdim=kwargs["cdim"], inplace=True)
+      ops.transform_frame(f, bulk_dat, cdim=cdim, inplace=True)
     # end
   # end
-  verb_print(ctx, "Finishing transformframe")

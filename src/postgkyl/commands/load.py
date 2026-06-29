@@ -1,59 +1,58 @@
 import glob
+from typing import Annotated
 
 import typer
-from typing import List, Optional
-from typing_extensions import Annotated
 
 from postgkyl.data import GData
+from postgkyl.commands import _options as opt
 from postgkyl.commands._load_opts import resolve_load_options
-from postgkyl.utils import verb_print
+from postgkyl.commands.state import AppState
 
 
-def _crush(s : str) -> tuple:  # Temp function used as a sorting key
-  splitted = s.split("_")
-  tmp = splitted[-1].split(".")
-  splitted[-1] = int(tmp[0])
-  splitted.append(tmp[1])
-  return tuple(splitted)
+def _crush(s: str) -> tuple:
+  """Sort key: split a frame name so its trailing ``_<int>`` sorts numerically."""
+  parts = s.split("_")
+  stem, ext = parts[-1].split(".")
+  parts[-1] = int(stem)
+  parts.append(ext)
+  return tuple(parts)
+
+
+def _resolve_files(pattern: str) -> list[str]:
+  """Expand a load pattern into a sorted, restart-free list of file names."""
+  if not any(c in pattern for c in "*?!"):
+    return [pattern]
+  # end
+  files = [f for f in glob.glob(pattern) if "restart" not in f]
+  try:
+    return sorted(files, key=_crush)
+  except Exception:
+    typer.secho("WARNING: The loaded files appear to be of different types. "
+        "Sorting is turned off.", fg=typer.colors.YELLOW)
+    return files
+  # end
 
 
 def load(
     ctx: typer.Context,
-    z0: Annotated[Optional[str], typer.Option("--z0", help="Partial file load: 0th coord (either int or slice).")] = None,
-    z1: Annotated[Optional[str], typer.Option("--z1", help="Partial file load: 1st coord (either int or slice).")] = None,
-    z2: Annotated[Optional[str], typer.Option("--z2", help="Partial file load: 2nd coord (either int or slice).")] = None,
-    z3: Annotated[Optional[str], typer.Option("--z3", help="Partial file load: 3rd coord (either int or slice).")] = None,
-    z4: Annotated[Optional[str], typer.Option("--z4", help="Partial file load: 4th coord (either int or slice).")] = None,
-    z5: Annotated[Optional[str], typer.Option("--z5", help="Partial file load: 5th coord (either int or slice).")] = None,
-    component: Annotated[Optional[str], typer.Option("--component", "-c", help="Partial file load: comps (either int or slice).")] = None,
-    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Specily tag for data.")] = "default",
-    compgrid: Annotated[bool, typer.Option("--compgrid", help="Disregard the mapped grid information")] = False,
-    varname: Annotated[Optional[List[str]], typer.Option("--varname", "-d", help="Allows to specify the Adios variable name. [default: 'CartGridField']")] = None,
-    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Allows to specify the custom label")] = None,
-    reader: Annotated[Optional[str], typer.Option("--reader", "-r", help="Allows to specify the Adios variable name (default is 'CartGridField')")] = None,
-    load: Annotated[bool, typer.Option("--load/--no-load", help="Specify if data should be loaded.")] = True,
+    z0: opt.Z0 = None,
+    z1: opt.Z1 = None,
+    z2: opt.Z2 = None,
+    z3: opt.Z3 = None,
+    z4: opt.Z4 = None,
+    z5: opt.Z5 = None,
+    component: opt.Component = None,
+    tag: Annotated[str, typer.Option("--tag", "-t", help="Specily tag for data.")] = "default",
+    compgrid: opt.CompGrid = False,
+    varname: opt.VarName = None,
+    label: Annotated[str | None, typer.Option("--label", "-l", help="Allows to specify the custom label")] = None,
+    reader: Annotated[str | None, typer.Option("--reader", "-r", help="Allows to specify the Adios variable name (default is 'CartGridField')")] = None,
+    do_load: Annotated[bool, typer.Option("--load/--no-load", help="Specify if data should be loaded.")] = True,
 ):
-  verb_print(ctx, "Starting load")
-  data = ctx.obj["data"]
+  state: AppState = ctx.obj
 
-  idx = ctx.obj["in_data_strings_loaded"]
-  in_data_string = ctx.obj["in_data_strings"][idx]
-
-  # Handling the wildcard characters
-  if "*" in in_data_string or "?" in in_data_string or "!" in in_data_string:
-    files = glob.glob(str(in_data_string))
-    files = [f for f in files if f.find("restart") < 0]
-    try:
-      files = sorted(files, key=_crush)
-    except Exception:
-      typer.echo(
-          typer.style("WARNING: The loaded files appear to be of different types. Sorting is turned off.",
-              fg="yellow")
-      )
-    # end
-  else:
-    files = [in_data_string]
-  # end
+  in_data_string = state.in_data_strings[state.in_data_strings_loaded]
+  files = _resolve_files(in_data_string)
 
   # Resolve global pre-options vs. local options (local wins, with a warning).
   opts = resolve_load_options(ctx, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5,
@@ -63,17 +62,18 @@ def load(
   for var in opts.var_names:
     for fn in files:
       try:
-        dat = GData(file_name=fn, tag=tag, comp_grid=ctx.obj["compgrid"],
-            z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=opts.comp, var_name=var,
-            label=label, reader_name=reader, load=load, cli_mode=True)
-        data.add(dat)
+        state.data.add(GData(
+            file_name=fn, tag=tag, comp_grid=state.compgrid,
+            z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=opts.comp,
+            var_name=var, label=label, reader_name=reader,
+            load=do_load, cli_mode=True))
       except NameError as e:
-        ctx.fail(typer.style(rf"{repr(e):s}", fg="red"))
+        typer.secho(repr(e), fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
       # end
     # end
   # end
 
-  data.set_unique_labels()
+  state.data.set_unique_labels()
 
-  ctx.obj["in_data_strings_loaded"] += 1
-  verb_print(ctx, "Finishing load")
+  state.in_data_strings_loaded += 1

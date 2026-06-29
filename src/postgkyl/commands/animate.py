@@ -1,14 +1,13 @@
 import builtins
 import enum
 import shutil
-from typing import Optional
+from typing import Annotated, Optional
 
 import matplotlib.pyplot as plt
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import output
-from postgkyl.utils import verb_print, set_frame
+from postgkyl.utils import set_frame
 
 
 class _Group(str, enum.Enum):
@@ -100,8 +99,7 @@ def animate(
   the main pgkyl executable.
   """
   kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting animate")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   # Accept str or path-like input for --saveas (e.g. a pathlib.Path).
   if kwargs["saveas"]:
@@ -178,4 +176,3 @@ def animate(
   if show_flag and not kwargs["saveframes"] and not (kwargs["nproc"] and kwargs["nproc"] > 1):
     plt.show()
   # end
-  verb_print(ctx, "Finishing animate")

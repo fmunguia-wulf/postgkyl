@@ -20,7 +20,7 @@ def set_frame(ctx: typer.Context) -> list:
     sorted_frame_list: list
   """
       
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   #load in file names
   files = [dat._file_name for dat in data.iterator()]

@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl.loaders.pkpm import load_pkpm
-from postgkyl.utils import verb_print
 
 
 def pkpm(
@@ -17,7 +15,5 @@ def pkpm(
     label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
 ):
   """Shortcut to load Gkeyll PKPM data, interpolate, and transform."""
-  verb_print(ctx, "Starting Gkyl PKPM")
   gf = load_pkpm(name, species, idx, poly_order, tag=tag, label=label)
-  ctx.obj["data"].add(gf)
-  verb_print(ctx, "Finishing Gkyl PKPM")
+  ctx.obj.data.add(gf)

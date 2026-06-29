@@ -3,10 +3,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
-from postgkyl.utils import verb_print
 
 
 
@@ -15,8 +13,8 @@ def _update(i, ax, ctx, leap, vel, xmin, xmax, ymin, ymax, zmin, zmax, tag):
 
   s = 0
   plt.cla()
-  # for s, dat in ctx.obj['data'].iterator(tag, emum=True):
-  for dat in ctx.obj["data"].iterator(tag):
+  # for s, dat in ctx.obj.data.iterator(tag, emum=True):
+  for dat in ctx.obj.data.iterator(tag):
     time = dat.get_grid()[0]
     coords = dat.get_values()
     t_idx = int(i * leap)
@@ -92,8 +90,7 @@ def trajectory(
 ):
   """Animate a particle trajectory."""
   kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting trajectory")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   tags = list(data.tag_iterator(kwargs["use"]))
   tag = tags[0]
@@ -107,7 +104,7 @@ def trajectory(
   kwargs["figure"] = fig
   kwargs["legend"] = False
 
-  dat = ctx.obj["data"].get_dataset(0, tag)
+  dat = ctx.obj.data.get_dataset(0, tag)
   num_pos = dat.get_num_cells()[0]
 
   jump = 1
@@ -138,4 +135,3 @@ def trajectory(
   if kwargs["show"]:
     plt.show()
   # end
-  verb_print(ctx, "Finishing trajectory")

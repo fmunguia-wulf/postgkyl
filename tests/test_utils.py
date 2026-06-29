@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
+from postgkyl.commands.state import AppState
 from postgkyl.data.gdata import GData
 from postgkyl.gk.gk_utils import get_block_indices, parse_slice_string, read_gfile
 from postgkyl.utils.input_parser import input_parser
@@ -182,20 +183,14 @@ class TestVerbPrint:
         from postgkyl.utils.verb_print import verb_print
 
         ctx = click.core.Context(click.Command("test"))
-        ctx.obj = {
-            "verbose": True,
-            "start_time": time.time(),
-        }
+        ctx.obj = AppState(verbose=True, start_time=time.time())
         verb_print(ctx, "test message")
 
     def test_verb_print_verbose_false(self):
         from postgkyl.utils.verb_print import verb_print
 
         ctx = click.core.Context(click.Command("test"))
-        ctx.obj = {
-            "verbose": False,
-            "start_time": time.time(),
-        }
+        ctx.obj = AppState(verbose=False, start_time=time.time())
         verb_print(ctx, "test message")
 
 
@@ -210,10 +205,10 @@ class TestLoadStyle:
         style_file = tmp_path / "style.rc"
         style_file.write_text("lines.linewidth: 2\n")
         ctx = click.core.Context(click.Command("test"))
-        ctx.obj = {"rcParams": {}}
+        ctx.obj = AppState()
         load_style(ctx, str(style_file))
-        assert "lines.linewidth" in ctx.obj["rcParams"]
-        assert ctx.obj["rcParams"]["lines.linewidth"] == "2"
+        assert "lines.linewidth" in ctx.obj.rcParams
+        assert ctx.obj.rcParams["lines.linewidth"] == "2"
 
     def test_load_style_multiple_keys(self, tmp_path):
         from postgkyl.utils.load_style import load_style
@@ -221,7 +216,7 @@ class TestLoadStyle:
         style_file = tmp_path / "style.rc"
         style_file.write_text("lines.linewidth: 2\nfont.size: 12\n")
         ctx = click.core.Context(click.Command("test"))
-        ctx.obj = {"rcParams": {}}
+        ctx.obj = AppState()
         load_style(ctx, str(style_file))
-        assert "lines.linewidth" in ctx.obj["rcParams"]
-        assert "font.size" in ctx.obj["rcParams"]
+        assert "lines.linewidth" in ctx.obj.rcParams
+        assert "font.size" in ctx.obj.rcParams

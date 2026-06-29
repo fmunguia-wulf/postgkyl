@@ -2,8 +2,7 @@ import os
 import pathlib
 
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
 from postgkyl._gkylsoft_path import default_config_path
 

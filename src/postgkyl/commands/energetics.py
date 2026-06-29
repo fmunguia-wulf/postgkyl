@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def energetics(
@@ -16,17 +14,14 @@ def energetics(
     label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = "E",
 ):
   """Decomposes the components of the energy (kinetic, thermal, electromagnetic) for a two-species (electron, ion) plasma."""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting energetics decomposition")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
-  for elc, ion, em in zip(data.iterator(kwargs["elc"]),
-      data.iterator(kwargs["ion"]), data.iterator(kwargs["field"])):
-    data.add(ops.energetics(elc, ion, em, tag=kwargs["tag"], label=kwargs["label"]))
+  for elc_dat, ion_dat, em in zip(data.iterator(elc),
+      data.iterator(ion), data.iterator(field)):
+    data.add(ops.energetics(elc_dat, ion_dat, em, tag=tag, label=label))
   # end
 
-  data.deactivate_all(tag=kwargs["elc"])
-  data.deactivate_all(tag=kwargs["ion"])
-  data.deactivate_all(tag=kwargs["field"])
+  data.deactivate_all(tag=elc)
+  data.deactivate_all(tag=ion)
+  data.deactivate_all(tag=field)
 
-  verb_print(ctx, "Finishing energetics decomposition")

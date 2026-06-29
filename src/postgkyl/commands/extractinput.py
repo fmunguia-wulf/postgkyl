@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def extractinput(
@@ -12,12 +10,9 @@ def extractinput(
     use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
 ):
   """Extract embedded input file from compatible BP files"""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting extractinput")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
-  for dat in data.iterator(kwargs["use"]):
+  for dat in data.iterator(use):
     inpfile = ops.extract_input(dat)
     typer.echo(inpfile if inpfile else "No embedded input file!")
   # end
-  verb_print(ctx, "Finishing extractinput")

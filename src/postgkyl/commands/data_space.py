@@ -20,8 +20,8 @@ class DataSpace(object):
       only_active: bool = True, select: int | slice | str | None = None) -> Iterator[GData]:
     # Process 'select'
     if enum and select:
-      typer.echo(typer.style("Error: 'select' and 'enum' cannot be selected simultaneously", fg="red"))
-      quit()
+      typer.secho("Error: 'select' and 'enum' cannot be selected simultaneously", fg=typer.colors.RED, err=True)
+      raise typer.Exit(1)
     # end
     idx_sel = slice(None, None)
     if isinstance(select, int):
@@ -75,11 +75,11 @@ class DataSpace(object):
           # end
         # end
       except KeyError as err:
-        typer.echo(typer.style(f"ERROR: Failed to load the specified/default tag {err}", fg="red"))
-        quit()
+        typer.secho(f"ERROR: Failed to load the specified/default tag {err}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
       except IndexError:
-        typer.echo(typer.style("ERROR: Index out of the dataset range", fg="red"))
-        quit()
+        typer.secho("ERROR: Index out of the dataset range", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
       # end
     # end
 

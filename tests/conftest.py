@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 import postgkyl.commands as cmd
+from postgkyl.commands.state import AppState
 from postgkyl.data.gdata import GData
 from postgkyl.pgkyl import cli
 
@@ -65,19 +66,8 @@ def make_gdata(grid, values, tag: str = "default", ctx_extra: dict | None = None
 def ctx_with_datasets(*datasets: GData) -> click.core.Context:
     """Return a minimal Click context with *datasets* pre-loaded."""
     ctx = click.core.Context(cli)
-    ctx.obj = {
-        "verbose": False,
-        "compgrid": None,
-        "global_var_names": None,
-        "global_cuts": (None,) * 7,
-        "rcParams": {},
-        "fig": "",
-        "ax": "",
-        "in_data_strings": [],
-        "in_data_strings_loaded": 0,
-    }
     data = cmd.DataSpace()
     for dat in datasets:
         data.add(dat)
-    ctx.obj["data"] = data
+    ctx.obj = AppState(data=data, compgrid=None)
     return ctx

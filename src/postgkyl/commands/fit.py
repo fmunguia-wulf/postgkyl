@@ -1,8 +1,6 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
-from postgkyl.utils import verb_print
 import postgkyl.tools as tools
 
 
@@ -138,8 +136,7 @@ def fit(
   """
   from postgkyl import ops
 
-  verb_print(ctx, "Starting fit")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
   fit_type = FitTypeParam().convert(fit_type, None, None)
 
   for dat in data.iterator(use):

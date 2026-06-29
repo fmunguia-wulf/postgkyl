@@ -1,6 +1,5 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
 from postgkyl.loaders.gk_quantity import load_gk_quantity, available_quantities
 from postgkyl.utils import verb_print
@@ -39,7 +38,7 @@ def gk_load_quantity(
     return
   # end
 
-  data = ctx.obj["data"]
+  data = ctx.obj.data
   verb_print(ctx, f"Loading quantity {quantity} for {name}")
 
   # Parse --extra into a dict, auto-converting numeric values.

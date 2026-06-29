@@ -1,9 +1,7 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
-from postgkyl.utils import verb_print
 
 
 def info(
@@ -13,16 +11,14 @@ def info(
     allsets: Annotated[bool, typer.Option("-a", "--allsets", help="All data sets.")] = False,
 ):
   """Print info of active datasets."""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting info")
-  data = ctx.obj["data"]
-  if kwargs["allsets"]:
+  data = ctx.obj.data
+  if allsets:
     only_active = False
   else:
     only_active = True
   # end
 
-  for i, dat in data.iterator(kwargs["use"], enum=True, only_active=only_active):
+  for i, dat in data.iterator(use, enum=True, only_active=only_active):
     if dat.get_status():
       color = "green"
       bold = True
@@ -34,10 +30,9 @@ def info(
         typer.style(f"{dat.get_label():s}{' ' if dat.get_label() else '':s}({dat.get_tag():s}#{i:d})",
             fg=color, bold=bold)
     )
-    if not kwargs["compact"]:
+    if not compact:
       dat.info(header=False)  # the colored header above replaces info's own
       typer.echo("")          # trailing blank line between datasets
     # end
   # end
 
-  verb_print(ctx, "Finishing info")

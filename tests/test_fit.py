@@ -9,6 +9,7 @@ import pytest
 
 import postgkyl.commands as cmd
 import postgkyl.tools as tools
+from postgkyl.commands.state import AppState
 from postgkyl.commands.fit import FitTypeParam
 from postgkyl.data.gdata import GData
 from postgkyl.pgkyl import cli
@@ -18,11 +19,11 @@ from postgkyl.pgkyl import cli
 
 def _make_ctx(datasets: list[GData]) -> click.Context:
   ctx = click.core.Context(cli)
-  ctx.obj = {"verbose": False, "compgrid": None}
+  ctx.obj = AppState(verbose=False, compgrid=None)
   data = cmd.DataSpace()
   for dat in datasets:
     data.add(dat)
-  ctx.obj["data"] = data
+  ctx.obj.data = data
   return ctx
 
 
@@ -380,13 +381,13 @@ class TestFitCommand:
   def test_fit_adds_dataset_to_stack(self):
     ctx = _make_ctx([self._linear_dat()])
     cmd.fit(ctx, fit_type="linear")
-    assert len(list(ctx.obj["data"].iterator())) == 2
+    assert len(list(ctx.obj.data.iterator())) == 2
 
   def test_fit_output_matches_input_grid_structure(self):
     dat = self._linear_dat()
     ctx = _make_ctx([dat])
     cmd.fit(ctx, fit_type="linear")
-    datasets = list(ctx.obj["data"].iterator())
+    datasets = list(ctx.obj.data.iterator())
     original, fitted = datasets[0], datasets[1]
     assert fitted.get_grid()[0].shape == original.get_grid()[0].shape
     assert fitted.get_values().shape == (*original.get_values().shape[:-1], 1)
@@ -394,7 +395,7 @@ class TestFitCommand:
   def test_fit_output_values_are_accurate(self):
     ctx = _make_ctx([self._linear_dat()])
     cmd.fit(ctx, fit_type="linear")
-    fitted = list(ctx.obj["data"].iterator())[1]
+    fitted = list(ctx.obj.data.iterator())[1]
     expected = tools.linear(self._x_cc, 3.0, -1.0)
     np.testing.assert_allclose(fitted.get_values()[..., 0], expected, rtol=1e-6)
 

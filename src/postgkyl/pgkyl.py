@@ -12,17 +12,18 @@ file names as implicit ``load`` calls.
 from __future__ import annotations
 
 from glob import glob
-from typing import List, Optional
+from typing import Annotated
+import functools
 import os.path
 import sys
 import time
 
 import typer
 from typer.core import TyperGroup
-from typing_extensions import Annotated
 
 from postgkyl import __version__
-from postgkyl.commands import DataSpace
+from postgkyl.commands import _options as opt
+from postgkyl.commands.state import AppState
 from postgkyl.utils import load_style, verb_print
 import postgkyl.commands as cmd
 
@@ -92,13 +93,13 @@ class PgkylGroup(TyperGroup):
 
     # cmd_name is a data set
     if glob(cmd_name):
-      ctx.obj["in_data_strings"].append(cmd_name)
+      ctx.obj.in_data_strings.append(cmd_name)
       return self.commands.get("load")
     # end
 
     ctx.fail(f"'{cmd_name}' does not match either command name nor a data file")
 
-  def resolve_command(self, ctx: typer.Context, args: List[str]):
+  def resolve_command(self, ctx: typer.Context, args: list[str]):
     cmd_name = args[0]
     command = self.get_command(ctx, cmd_name)
     if command is None and not ctx.resilient_parsing:
@@ -160,48 +161,37 @@ def main(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Turn on verbosity.")] = False,
     batch_mode: Annotated[bool, typer.Option("--batch-mode", help="Run in batch mode (no plots will be shown).")] = False,
     saveframes_prefix: Annotated[str, typer.Option("--saveframes-prefix", help="Output prefix to use for plot output in batch mode.")] = os.path.expanduser("~") + "/pg",
-    version: Annotated[Optional[bool], typer.Option("--version", callback=_print_version, is_eager=True, help="Print the version information.")] = None,
-    z0: Annotated[Optional[str], typer.Option("--z0", help="Partial file load: 0th coord (either int or slice)")] = None,
-    z1: Annotated[Optional[str], typer.Option("--z1", help="Partial file load: 1st coord (either int or slice)")] = None,
-    z2: Annotated[Optional[str], typer.Option("--z2", help="Partial file load: 2nd coord (either int or slice)")] = None,
-    z3: Annotated[Optional[str], typer.Option("--z3", help="Partial file load: 3rd coord (either int or slice)")] = None,
-    z4: Annotated[Optional[str], typer.Option("--z4", help="Partial file load: 4th coord (either int or slice)")] = None,
-    z5: Annotated[Optional[str], typer.Option("--z5", help="Partial file load: 5th coord (either int or slice)")] = None,
-    component: Annotated[Optional[str], typer.Option("--component", "-c", help="Partial file load: comps (either int or slice)")] = None,
-    compgrid: Annotated[bool, typer.Option("--compgrid", help="Disregard the mapped grid information")] = False,
-    varname: Annotated[Optional[List[str]], typer.Option("--varname", "-d", help="Specify the Adios variable name (default is 'CartGridField')")] = None,
-    style: Annotated[Optional[str], typer.Option("--style", help="Sets Maplotlib rcParams style file.")] = None,
+    version: Annotated[bool | None, typer.Option("--version", callback=_print_version, is_eager=True, help="Print the version information.")] = None,
+    z0: opt.Z0 = None,
+    z1: opt.Z1 = None,
+    z2: opt.Z2 = None,
+    z3: opt.Z3 = None,
+    z4: opt.Z4 = None,
+    z5: opt.Z5 = None,
+    component: opt.Component = None,
+    compgrid: opt.CompGrid = False,
+    varname: opt.VarName = None,
+    style: Annotated[str | None, typer.Option("--style", help="Sets Maplotlib rcParams style file.")] = None,
 ):
   """Postprocessing and plotting tool for Gkeyll data."""
-  ctx.obj = {}  # The main context object
-  ctx.obj["start_time"] = time.time()  # Timings are written in the verbose mode
+  # The main context object: a typed AppState (see commands/state.py).
+  ctx.obj = AppState(
+      verbose=bool(verbose),
+      batch_mode=bool(batch_mode),
+      saveframes_prefix=saveframes_prefix,
+      compgrid=compgrid,
+      global_var_names=varname,
+      global_cuts=(z0, z1, z2, z3, z4, z5, component),
+      start_time=time.time(),  # Timings are written in the verbose mode
+  )
+
   if verbose:
-    ctx.obj["verbose"] = True
     # Monty Python references should be a part of any Python code
     verb_print(ctx, "This is Postgkyl running in verbose mode!")
     verb_print(ctx, "Spam! Spam! Spam! Spam! Lovely Spam! Lovely Spam!")
     verb_print(ctx, "And now for something completelly different...")
-  else:
-    ctx.obj["verbose"] = False
   # end
 
-  ctx.obj["batch_mode"] = bool(batch_mode)
-
-  ctx.obj["saveframes_prefix"] = saveframes_prefix
-
-  ctx.obj["in_data_strings"] = []
-  ctx.obj["in_data_strings_loaded"] = 0
-
-  ctx.obj["data"] = DataSpace()
-
-  ctx.obj["fig"] = ""
-  ctx.obj["ax"] = ""
-
-  ctx.obj["compgrid"] = compgrid
-  ctx.obj["global_var_names"] = varname
-  ctx.obj["global_cuts"] = (z0, z1, z2, z3, z4, z5, component)
-
-  ctx.obj["rcParams"] = {}
   fn = style if style else f"{os.path.dirname(os.path.realpath(__file__))}/output/postgkyl.mplstyle"
   load_style(ctx, fn)
 
@@ -259,8 +249,26 @@ _COMMANDS = [
     ("pkpm", cmd.pkpm, False),
 ]
 
+def _traced(name: str, func):
+  """Wrap a command callback to emit verbose Starting/Finishing markers.
+
+  Centralizes the bracketing that used to be hand-written at the top and bottom
+  of every command body. ``functools.wraps`` keeps the signature and docstring
+  intact so Typer's introspection (and ``--help``) is unaffected.
+  """
+  @functools.wraps(func)
+  def wrapper(ctx: typer.Context, *args, **kwargs):
+    verb_print(ctx, f"Starting {name}")
+    try:
+      return func(ctx, *args, **kwargs)
+    finally:
+      verb_print(ctx, f"Finishing {name}")
+    # end
+  return wrapper
+
+
 for _name, _func, _hidden in _COMMANDS:
-  app.command(name=_name, hidden=_hidden)(_func)
+  app.command(name=_name, hidden=_hidden)(_traced(_name, _func))
 # end
 
 # The Click command object exposed via the ``pgkyl`` console-script entry point.

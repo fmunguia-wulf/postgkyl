@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 
 import postgkyl.commands as cmd
+from postgkyl.commands.state import AppState
 import postgkyl.gk.gk_quantities.gkquantity as gkquantity
 from postgkyl.data import GData
 from postgkyl.pgkyl import cli
@@ -98,7 +99,7 @@ class TestGkLoadQuantity:
 
   def _make_ctx(self):
     ctx = click.core.Context(cli)
-    ctx.obj = {"data": cmd.DataSpace(), "verbose": False}
+    ctx.obj = AppState(data=cmd.DataSpace(), verbose=False)
     return ctx
 
   @pytest.mark.parametrize("quantity", gk_quant_registry.list())
@@ -129,5 +130,5 @@ class TestGkLoadQuantity:
         pytest.skip(f"'{quantity}' requires the gkylsoft DG library: {err}")
       raise
 
-    assert ctx.obj["data"].get_num_datasets() >= 1, (
+    assert ctx.obj.data.get_num_datasets() >= 1, (
       f"gk-load-quantity produced no dataset for quantity '{quantity}'")

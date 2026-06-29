@@ -1,10 +1,9 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
+from postgkyl.commands import _options as opt
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def collect(
@@ -13,9 +12,9 @@ def collect(
     period: Annotated[Optional[float], typer.Option("-p", "--period", help="Specify a period to create epoch data instead of time data.")] = None,
     offset: Annotated[Optional[float], typer.Option("--offset", help="Specify an offset to create epoch data instead of time data.")] = 0.0,
     chunk: Annotated[Optional[int], typer.Option("-c", "--chunk", help="Collect into chunks with specified length rather than into a single dataset.")] = None,
-    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
-    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Specify a 'tag' for the result.")] = None,
-    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Specify the custom label for the result.")] = None,
+    use: opt.Use = None,
+    tag: opt.Tag = None,
+    label: opt.Label = None,
 ):
   """Collect data from the active datasets and create a new combined dataset.
 
@@ -23,9 +22,8 @@ def collect(
   Data can be collected in chunks, in which case several datasets are created, each with
   the chunk-sized pieces collected into each new dataset.
   """
-  verb_print(ctx, "Starting collect")
-  data = ctx.obj["data"]
-  comp_grid = ctx.obj["compgrid"]
+  data = ctx.obj.data
+  comp_grid = ctx.obj.compgrid
 
   out_tags = tag.split(",") if tag else None
 
@@ -55,4 +53,3 @@ def collect(
     # end
   # end
 
-  verb_print(ctx, "Finishing collect")

@@ -12,6 +12,6 @@ def load_style(ctx: typer.Context, fn: str) -> None:
       arg = eval(value[16:-1])
       value = cycler(color=arg)
     # end
-    ctx.obj["rcParams"][key] = value
+    ctx.obj.rcParams[key] = value
   # end
   fh.close()

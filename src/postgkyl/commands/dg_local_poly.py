@@ -1,11 +1,9 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.commands._apply import apply
-from postgkyl.utils import verb_print
 
 
 def dg_local_poly(
@@ -22,6 +20,4 @@ def dg_local_poly(
   Example (1D plot of the M0 moment along x at frame 0):
     pgkyl sim_3x2v_p1-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
   """
-  verb_print(ctx, "Starting dg-local-poly")
   apply(ctx, ops.dg_local_poly, use=use, npoints=npoints)
-  verb_print(ctx, "Finishing dg-local-poly")

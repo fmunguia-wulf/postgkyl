@@ -1,6 +1,5 @@
 import typer
-from typing import List, Optional
-from typing_extensions import Annotated
+from typing import Annotated, List, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -140,7 +139,7 @@ def gk_particle_balance(
   # End of hardcoded parameters and auxiliary functions.
   #
 
-  data = ctx.obj["data"]  # Data stack.
+  data = ctx.obj.data  # Data stack.
   
   verb_print(ctx, "Plotting particle balance for " + kwargs["species"] + " species.")
 
@@ -389,4 +388,3 @@ def gk_particle_balance(
   else:
     plt.show()
 
-  verb_print(ctx, "Finishing particle balance.")

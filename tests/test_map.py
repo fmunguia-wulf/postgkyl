@@ -92,5 +92,5 @@ class TestMapCommand:
     data = pg.GData(GEN_DIR / "2d_ms_p1.gkyl").interpolate()
     ctx = ctx_with_datasets(data)
     cmd.map(ctx, file=str(GEN_DIR / "2d_c2p_stretch_ms_p1.gkyl"))
-    out = ctx.obj["data"].get_dataset(0)
+    out = ctx.obj.data.get_dataset(0)
     np.testing.assert_array_equal(out.get_grid()[0].shape, (17, 17))

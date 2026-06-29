@@ -16,6 +16,8 @@ from dataclasses import dataclass
 
 import typer
 
+from postgkyl.commands.state import AppState
+
 
 @dataclass
 class LoadOptions:
@@ -29,9 +31,9 @@ class LoadOptions:
 def _pick(local, global_, name: str):
   """Return the local value if set (warning when it shadows a global), else the global."""
   if local and global_:
-    typer.echo(typer.style(
+    typer.secho(
         f"WARNING: The local '{name:s}' is overwriting the global '{name:s}'",
-        fg="yellow"))
+        fg=typer.colors.YELLOW)
     return local
   # end
   return local if local else (global_ if global_ else None)
@@ -40,12 +42,13 @@ def _pick(local, global_, name: str):
 def resolve_load_options(ctx: typer.Context, *, z0=None, z1=None, z2=None,
     z3=None, z4=None, z5=None, component=None, varname=None) -> LoadOptions:
   """Apply global/local precedence to the load options and package the result."""
+  state: AppState = ctx.obj
   local_cuts = (z0, z1, z2, z3, z4, z5, component)
-  global_cuts = ctx.obj["global_cuts"]
+  global_cuts = state.global_cuts
   names = [f"z{d:d}" for d in range(6)] + ["component"]
   resolved = [_pick(local_cuts[i], global_cuts[i], names[i]) for i in range(7)]
 
-  var_names = _pick(varname, ctx.obj["global_var_names"], "varname") \
+  var_names = _pick(varname, state.global_var_names, "varname") \
       or ["CartGridField"]
   if len(var_names) == 1:
     var_names = var_names[0].split(",")

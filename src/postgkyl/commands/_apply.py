@@ -8,7 +8,18 @@ copy-pasted across every transform command. The actual computation lives in
 
 from __future__ import annotations
 
-from typing import Callable
+import enum
+from typing import Any, Callable
+
+
+def enum_value(v: Any) -> Any:
+  """Return an ``Enum`` member's ``.value``, passing other values through.
+
+  CLI invocations bind Typer ``Enum`` members; direct/programmatic calls (and
+  tests) pass the plain underlying value (e.g. a string). Both must reach the
+  ``ops`` layer as the plain value.
+  """
+  return v.value if isinstance(v, enum.Enum) else v
 
 
 def apply(ctx, op: Callable, *, use: str | None = None,
@@ -18,7 +29,7 @@ def apply(ctx, op: Callable, *, use: str | None = None,
   With ``tag`` set, each result is emitted as a new dataset added to the stack
   under that tag; otherwise the dataset is transformed in place.
   """
-  data = ctx.obj["data"]
+  data = ctx.obj.data
   for dat in data.iterator(use):
     if tag:
       data.add(op(dat, inplace=False, tag=tag, label=label, **op_kwargs))

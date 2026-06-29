@@ -1,12 +1,10 @@
 import enum
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import typer
-from typing_extensions import Annotated
 
-from postgkyl.utils import verb_print
 import postgkyl.output.plot
 
 
@@ -103,14 +101,12 @@ def plot(
   Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) signs.
   """
   kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting plot")
 
   # CLI-supplied context that the shared plot_datasets layer needs.
-  kwargs["rcParams"] = ctx.obj["rcParams"]
-  kwargs["batch_mode"] = ctx.obj.get("batch_mode", False)
-  kwargs["saveframes_prefix"] = ctx.obj.get("saveframes_prefix")
+  kwargs["rcParams"] = ctx.obj.rcParams
+  kwargs["batch_mode"] = ctx.obj.batch_mode
+  kwargs["saveframes_prefix"] = ctx.obj.saveframes_prefix
 
-  datasets = list(ctx.obj["data"].iterator(kwargs.get("use")))
+  datasets = list(ctx.obj.data.iterator(kwargs.get("use")))
   postgkyl.output.plot_datasets(datasets, **kwargs)
 
-  verb_print(ctx, "Finishing plot")

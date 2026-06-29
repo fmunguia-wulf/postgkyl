@@ -1,9 +1,7 @@
 import typer
-from typing import Optional
-from typing_extensions import Annotated
+from typing import Annotated, Optional
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def bperprotate(
@@ -18,16 +16,13 @@ def bperprotate(
   For two arrays u and b, where b is the unit vector in the direction of the magnetic
   field, the operation is u - (u dot b_hat) b_hat.
   """
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting rotation perpendicular to magnetic field")
-  data = ctx.obj["data"]
+  data = ctx.obj.data
 
   # Magnetic field is components 3, 4, & 5 in the field array
-  for a, rot in zip(data.iterator(kwargs["array"]), data.iterator(kwargs["field"])):
-    data.add(ops.perprotate(a, rot, coords="3:6", tag=kwargs["tag"], label=kwargs["label"]))
+  for a, rot in zip(data.iterator(array), data.iterator(field)):
+    data.add(ops.perprotate(a, rot, coords="3:6", tag=tag, label=label))
   # end
 
-  data.deactivate_all(tag=kwargs["array"])
-  data.deactivate_all(tag=kwargs["field"])
+  data.deactivate_all(tag=array)
+  data.deactivate_all(tag=field)
 
-  verb_print(ctx, "Finishing rotation perpendicular to magnetic field")

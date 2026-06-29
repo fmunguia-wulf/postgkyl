@@ -1,35 +1,31 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated
+from postgkyl.commands import _options as opt
 
 from postgkyl import ops
-from postgkyl.utils import verb_print
 
 
 def relchange(
     ctx: typer.Context,
-    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    use: opt.Use = None,
     index: Annotated[Optional[int], typer.Option("--index", "-i", help="Dataset index for computing change relative to.")] = 0,
     comp: Annotated[Optional[str], typer.Option("--comp", "-c", help="Dataset component to be compared to if user only wants to compare to a single component.")] = None,
-    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the result.")] = "rel_change",
-    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result/")] = "delta",
+    tag: opt.Tag = "rel_change",
+    label: opt.Label = "delta",
 ):
   """Computes the relative change between two datasets"""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-  verb_print(ctx, "Starting relative change")
 
-  data = ctx.obj["data"]
-  for tag in data.tag_iterator(kwargs["use"]):
-    reference = data.get_dataset(kwargs["index"], tag)
-    for dat in data.iterator(tag):
-      if kwargs["tag"]:
-        out = ops.relchange(dat, reference, comp=kwargs["comp"], tag=kwargs["tag"])
+  data = ctx.obj.data
+  for src_tag in data.tag_iterator(use):
+    reference = data.get_dataset(index, src_tag)
+    for dat in data.iterator(src_tag):
+      if tag:
+        out = ops.relchange(dat, reference, comp=comp, tag=tag)
         dat.deactivate()
         data.add(out)
       else:
-        ops.relchange(dat, reference, comp=kwargs["comp"], inplace=True)
+        ops.relchange(dat, reference, comp=comp, inplace=True)
       # end
     # end
   # end
-  verb_print(ctx, "Finishing relative change")
