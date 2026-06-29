@@ -243,6 +243,7 @@ _COMMANDS = [
     ("listoutputs", cmd.listoutputs, False),
     ("load", cmd.load, True),
     ("magsq", cmd.magsq, False),
+    ("map", cmd.map, False),
     ("mask", cmd.mask, False),
     ("gk-energy-balance", cmd.gk_energy_balance, False),
     ("gk-particle-balance", cmd.gk_particle_balance, False),

@@ -774,6 +774,46 @@ class GData(object):
     return ops.dg_local_poly(self, npoints=npoints, inplace=inplace, tag=tag,
         label=label)
 
+  def map(self, mapping, *, space: str = "conf", p: int = 1,
+      basis: str = "ms", interp: int | None = None, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Deform this dataset's grid onto non-uniform mapped coordinates.
+
+    Reads a coordinate-mapping DG field and replaces a block of grid axes with
+    the resulting non-uniform coordinates, leaving the values untouched. A
+    configuration-space map (``space='conf'``) deforms the leading axes; a
+    velocity-space map (``space='vel'``) deforms the trailing axes. For a
+    combined map, chain two calls (one per space).
+
+    See :func:`postgkyl.ops.map`.
+
+    Args:
+      mapping: str or GData
+        The coordinate-mapping field (filename or loaded GData); its number of
+        dimensions sets how many axes are replaced.
+      space: str
+        ``'conf'`` or ``'vel'`` (see above).
+      p: int
+        Polynomial order used to interpolate the mapping field.
+      basis: str
+        DG basis of the mapping field.
+      interp: int or None
+        Override for the number of interpolation points.
+      inplace: bool = False
+        Mutate this dataset instead of returning a new one.
+      tag: str or None
+        Tag to assign to the resulting dataset.
+      label: str or None
+        Label to assign to the resulting dataset.
+
+    Returns:
+      GData
+        The dataset with its grid deformed (a new GData unless inplace is True).
+    """
+    from postgkyl import ops
+    return ops.map(self, mapping, space=space, p=p, basis=basis,
+        interp=interp, inplace=inplace, tag=tag, label=label)
+
   def integrate(self, axis=None, *, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
     """Integrate the data over one or more axes.

@@ -21,6 +21,7 @@ from postgkyl.ops.select import select
 from postgkyl.ops.interpolate import interpolate
 from postgkyl.ops.differentiate import differentiate
 from postgkyl.ops.dg_local_poly import dg_local_poly
+from postgkyl.ops.map import map
 from postgkyl.ops.integrate import integrate
 from postgkyl.ops.fft import fft
 from postgkyl.ops.magsq import magsq
@@ -44,6 +45,8 @@ __all__ = [
     "select",
     "interpolate",
     "differentiate",
+    "dg_local_poly",
+    "map",
     "integrate",
     "fft",
     "magsq",

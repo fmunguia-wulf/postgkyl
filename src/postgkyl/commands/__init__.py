@@ -28,6 +28,7 @@ from postgkyl.commands.laguerre_compose import laguerrecompose
 from postgkyl.commands.listoutputs import listoutputs
 from postgkyl.commands.load import load
 from postgkyl.commands.magsq import magsq
+from postgkyl.commands.map import map
 from postgkyl.commands.mask import mask
 from postgkyl.commands.mhd import mhd
 from postgkyl.commands.parrotate import parrotate

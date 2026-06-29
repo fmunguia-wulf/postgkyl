@@ -20,47 +20,10 @@ import typer
 from typing import Optional
 from typing_extensions import Annotated
 
+from postgkyl import ops
 from postgkyl.data import GData, GInterpModal
 from postgkyl.utils import verb_print
 
-# mc2nu grid deformation helpers
-# This is a result of the gkyl_reader not having support for both mapc2p and mapc2p-vel grids.
-# Particularly, the gkyl_reader does not support mapping phase space arrays with mapc2p
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26
-def _convert_cell_centered_to_nodal(cell_centers: np.ndarray) -> np.ndarray:
-  """ Given an array defined at cell centers, return the corresponding nodal values
-   by interpolating half a cell width at the boundaries."""
-  nodes = np.zeros(cell_centers.size + 1, dtype=cell_centers.dtype)
-  nodes[1:-1] = 0.5 * (cell_centers[:-1] + cell_centers[1:])
-  nodes[0]  = cell_centers[0]  + (cell_centers[0]  - nodes[1]) # Cell center plus half a cell width
-  nodes[-1] = cell_centers[-1] + (cell_centers[-1] - nodes[-2]) # Cell center plus half a cell width
-  return nodes
-# end
-
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26
-def _extract_values_along_dimension(mapped_values: np.ndarray, axis: int, cdim: int) -> np.ndarray:
-  """Decompose mapped_values into a 1D array along the specified axis"""
-  idx = [0] * (cdim + 1)  # Initialize indexing array. mc2nu has cdim+1 dimensions.
-  idx[axis] = slice(None)  # Define a slice along the desired axis.
-  idx[-1] = axis  # Select the appropriate component of mc2nu
-  return mapped_values[tuple(idx)].reshape(-1)  # Apply indices and flatten to 1D.
-# end
-
-# Nearly 100% by LLMs, commented and verified by MR 3/16/26, removing extra code.
-def _apply_mc2nu_grid(uniform_grid: list, mc2nu_file: str, interp: int | None = None) -> list:
-  """Replace computational configuration-space grid with non-uniform spatial coordinates."""
-  mc2nu_data = GData(mc2nu_file)
-  cdim = mc2nu_data.get_num_dims()
-
-  _, mc2nu_values = GInterpModal(mc2nu_data, 1, "ms", interp).interpolate(tuple(range(cdim)))
-
-  nonuniform_grid = list(uniform_grid)
-  for d in range(cdim):
-    mc2nu_single_axis = _extract_values_along_dimension(mc2nu_values, d, cdim)
-    nonuniform_grid[d] = _convert_cell_centered_to_nodal(mc2nu_single_axis)
-  # end
-  return nonuniform_grid
-# end
 
 def _resolve_optional_file_option(option_value: str | None) -> tuple[bool, str | None]:
   """Interpret an optional-value CLI option as (enabled, override_file)."""
@@ -179,24 +142,19 @@ def load_gk_distf(
   # Add 1 dimension to represent 1 component
   f_values = f_values.reshape(f_values.shape + (1,))
 
-  if use_mc2nu:
-    out_grid = _apply_mc2nu_grid(out_grid, mc2nu_file, interp)
-    if use_c2p_vel:
-      jf_data.ctx["grid_type"] = "c2p_vel + mc2nu"
-    else:
-      jf_data.ctx["grid_type"] = "mc2nu"
-    # end
-  elif use_mapc2p:
-    out_grid = _apply_mc2nu_grid(out_grid, mapc2p_file, interp)
-    if use_c2p_vel:
-      jf_data.ctx["grid_type"] = "c2p_vel + mapc2p"
-    else:
-      jf_data.ctx["grid_type"] = "mapc2p"
-    # end
-  # end
-
   out = GData(tag=tag, ctx=jf_data.ctx)
   out.push(out_grid, f_values)
+
+  # Deform the (uniform) configuration-space grid onto the physical coordinates
+  # via the shared map verb. Velocity-space mapping (c2p_vel) is applied at
+  # load time by the reader above; a combined map is two map applications.
+  if use_mc2nu:
+    ops.map(out, mc2nu_file, space="conf", interp=interp, inplace=True)
+    out.ctx["grid_type"] = "c2p_vel + mc2nu" if use_c2p_vel else "mc2nu"
+  elif use_mapc2p:
+    ops.map(out, mapc2p_file, space="conf", interp=interp, inplace=True)
+    out.ctx["grid_type"] = "c2p_vel + mapc2p" if use_c2p_vel else "mapc2p"
+  # end
   return out
 # end
 
