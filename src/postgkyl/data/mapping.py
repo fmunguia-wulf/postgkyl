@@ -1,17 +1,14 @@
-"""Grid construction for Gkeyll output — uniform and coordinate-mapped (c2p).
+"""Grid construction for Gkeyll output.
 
-A Gkeyll field stores only its *values*; the grid is either built uniformly
-from the stored bounds or read from a companion ``mapc2p`` file. The readers
-differ in *how* they read that companion file (the binary reader nests another
-``GkylReader``; the ADIOS reader uses ``adios2``), but the grid *math* — how
-those node values become a per-dimension grid, and how a uniform grid accounts
-for ghost cells — is identical. That shared math lives here so it is written and
-tested once, and the readers only decide which strategy to apply.
+A Gkeyll field stores only its *values*; at read time the grid is built
+uniformly from the stored bounds (corrected for ghost cells). Coordinate
+(computational-to-physical) mappings are *not* applied while reading — they are
+applied afterwards, on already-loaded data, by the ``map`` verb
+(:mod:`postgkyl.ops.map`).
 
-Grid strategies (mirrored by ``ctx['grid_type']``):
-  - ``uniform``  : evenly spaced from bounds, corrected for ghost cells.
-  - ``c2p``      : node coordinates from a configuration-space mapping file.
-  - ``c2p_vel``  : uniform configuration grid + non-uniform velocity grid.
+``uniform_grid``/``adjust_for_ghost_cells`` build the read-time uniform grid;
+``c2p_grid`` splits a mapping field's packed node coordinates into a per-
+dimension grid and is used by the DG machinery behind the ``map`` verb.
 """
 
 from __future__ import annotations
@@ -50,7 +47,7 @@ def uniform_grid(lower: np.ndarray, upper: np.ndarray,
 
 
 def c2p_grid(nodes: np.ndarray, num_dims: int) -> list:
-  """Split a configuration-space ``mapc2p`` node array into a per-dim grid.
+  """Split a ``mapc2p`` node array into a per-dimension block of coefficients.
 
   The mapping file packs every dimension's node coordinates on the last axis;
   this slices that axis into ``num_dims`` equal blocks.
@@ -59,31 +56,3 @@ def c2p_grid(nodes: np.ndarray, num_dims: int) -> list:
   num_coeff = num_comps / num_dims
   return [nodes[..., int(d * num_coeff):int((d + 1) * num_coeff)]
       for d in range(num_dims)]
-
-
-def c2p_vel_grid(nodes: np.ndarray, lower: np.ndarray, upper: np.ndarray,
-    cells: np.ndarray, num_dims: int) -> tuple:
-  """Build a grid from a velocity-space mapping (uniform config + mapped vel).
-
-  Configuration dimensions get a uniform grid from the bounds; velocity
-  dimensions get their (non-uniform) node coordinates from ``nodes``.
-
-  Returns ``(grid, num_cdim, num_vdim)``.
-  """
-  num_vdim = len(nodes.shape) - 1
-  num_cdim = num_dims - num_vdim
-
-  # Uniform configuration-space grid.
-  grid = [np.linspace(lower[d], upper[d], cells[d] + 1)
-      for d in range(num_cdim)]
-
-  # Non-uniform velocity-space grid.
-  num_comps = nodes.shape[-1]
-  num_coeff = num_comps / num_vdim
-  for d in range(num_vdim):
-    idx = [0] * (num_vdim + 1)
-    idx[d] = slice(None)
-    idx[-1] = slice(int(d * num_coeff), int((d + 1) * num_coeff))
-    grid.append(nodes[tuple(idx)])
-  # end
-  return grid, num_cdim, num_vdim

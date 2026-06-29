@@ -5,7 +5,6 @@ from typing import List, Optional
 from typing_extensions import Annotated
 
 from postgkyl.data import GData
-from postgkyl.data import GInterpModal
 from postgkyl.commands._load_opts import resolve_load_options
 from postgkyl.utils import verb_print
 
@@ -31,9 +30,6 @@ def load(
     compgrid: Annotated[bool, typer.Option("--compgrid", help="Disregard the mapped grid information")] = False,
     varname: Annotated[Optional[List[str]], typer.Option("--varname", "-d", help="Allows to specify the Adios variable name. [default: 'CartGridField']")] = None,
     label: Annotated[Optional[str], typer.Option("--label", "-l", help="Allows to specify the custom label")] = None,
-    c2p: Annotated[Optional[str], typer.Option("--c2p", help="Specify the file name containing c2p mapped coordinates")] = None,
-    c2p_vel: Annotated[Optional[str], typer.Option("--c2p-vel", help="Specify the file name containing c2p mapped coordinates")] = None,
-    fv: Annotated[bool, typer.Option("--fv", help="Tag finite volume data when using c2p mapped coordinates")] = False,
     reader: Annotated[Optional[str], typer.Option("--reader", "-r", help="Allows to specify the Adios variable name (default is 'CartGridField')")] = None,
     load: Annotated[bool, typer.Option("--load/--no-load", help="Specify if data should be loaded.")] = True,
 ):
@@ -61,7 +57,7 @@ def load(
 
   # Resolve global pre-options vs. local options (local wins, with a warning).
   opts = resolve_load_options(ctx, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5,
-      component=component, varname=varname, c2p=c2p, c2p_vel=c2p_vel)
+      component=component, varname=varname)
   z0, z1, z2, z3, z4, z5 = opts.cuts
 
   for var in opts.var_names:
@@ -69,13 +65,7 @@ def load(
       try:
         dat = GData(file_name=fn, tag=tag, comp_grid=ctx.obj["compgrid"],
             z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=opts.comp, var_name=var,
-            label=label, mapc2p_name=opts.mapc2p_name,
-            mapc2p_vel_name=opts.mapc2p_vel_name,
-            reader_name=reader, load=load, cli_mode=True)
-        if fv:
-          dg = GInterpModal(dat, 0, "ms")
-          dg.interpolateGrid(overwrite=True)
-        # end
+            label=label, reader_name=reader, load=load, cli_mode=True)
         data.add(dat)
       except NameError as e:
         ctx.fail(typer.style(rf"{repr(e):s}", fg="red"))

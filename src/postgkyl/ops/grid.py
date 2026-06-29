@@ -17,8 +17,8 @@ def grid(data: "GData", *, inplace: bool = False, tag: str | None = None,
 
   Builds a new dataset whose values, at each node, are the physical
   coordinates of ``data``'s grid (one component per dimension). Handles
-  uniform meshes, velocity-space c2p mappings, and full computational-to-
-  physical (c2p) mapped grids.
+  uniform meshes, separable (velocity) mappings, and full curvilinear
+  mapped grids produced by the ``map`` verb.
 
   Args:
     data: GData
@@ -44,11 +44,11 @@ def grid(data: "GData", *, inplace: bool = False, tag: str | None = None,
   values = np.zeros(shape)
   if num_dims == 1:
     values[..., 0] = grid_in[0]
-  elif len(grid_in[0].shape) == 1:  # uniform mesh or vel c2p mapping
+  elif len(grid_in[0].shape) == 1:  # uniform mesh or separable mapping
     for d, t in enumerate(np.meshgrid(*grid_in, indexing="ij")):
       values[..., d] = t
     # end
-  else:  # c2p mapping
+  else:  # curvilinear mapped grid
     for d, t in enumerate(grid_in):
       values[..., d] = t
     # end

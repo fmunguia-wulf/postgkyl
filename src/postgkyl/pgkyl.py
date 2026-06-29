@@ -170,8 +170,6 @@ def main(
     component: Annotated[Optional[str], typer.Option("--component", "-c", help="Partial file load: comps (either int or slice)")] = None,
     compgrid: Annotated[bool, typer.Option("--compgrid", help="Disregard the mapped grid information")] = False,
     varname: Annotated[Optional[List[str]], typer.Option("--varname", "-d", help="Specify the Adios variable name (default is 'CartGridField')")] = None,
-    c2p: Annotated[Optional[str], typer.Option("--c2p", help="Specify the file name containing c2p mapped coordinates")] = None,
-    c2p_vel: Annotated[Optional[str], typer.Option("--c2p-vel", help="Specify the file name containing c2p mapped velocity coordinates")] = None,
     style: Annotated[Optional[str], typer.Option("--style", help="Sets Maplotlib rcParams style file.")] = None,
 ):
   """Postprocessing and plotting tool for Gkeyll data."""
@@ -202,8 +200,6 @@ def main(
   ctx.obj["compgrid"] = compgrid
   ctx.obj["global_var_names"] = varname
   ctx.obj["global_cuts"] = (z0, z1, z2, z3, z4, z5, component)
-  ctx.obj["global_c2p"] = c2p
-  ctx.obj["global_c2p_vel"] = c2p_vel
 
   ctx.obj["rcParams"] = {}
   fn = style if style else f"{os.path.dirname(os.path.realpath(__file__))}/output/postgkyl.mplstyle"

@@ -78,8 +78,6 @@ class TestCommands:
   ctx.obj["compgrid"] = None
   ctx.obj["global_var_names"] = None
   ctx.obj["global_cuts"] = (None, None, None, None, None, None, None)
-  ctx.obj["global_c2p"] = None
-  ctx.obj["global_c2p_vel"] = None
   ctx.obj["rcParams"] = {}
 
   adios_loader = importlib.util.find_spec('adios2')

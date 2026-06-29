@@ -123,7 +123,7 @@ def load_gk_distf(
     jacobtot_inv_file = f"{prefix}-jacobtot_inv.gkyl"
   # end
 
-  jf_data           = GData(jf_file, mapc2p_vel_name=mapc2p_vel_file if use_c2p_vel else None)
+  jf_data           = GData(jf_file)
   jacobvel_data     = GData(jacobvel_file)
   jacobtot_inv_data = GData(jacobtot_inv_file)
 
@@ -148,15 +148,24 @@ def load_gk_distf(
   out = GData(tag=tag, ctx=jf_data.ctx)
   out.push(out_grid, f_values)
 
-  # Deform the (uniform) configuration-space grid onto the physical coordinates
-  # via the shared map verb. Velocity-space mapping (c2p_vel) is applied at
-  # load time by the reader above; a combined map is two map applications.
+  # All coordinate maps run on the already-interpolated data via the shared map
+  # verb. Velocity space (c2p_vel) deforms the trailing axes; configuration
+  # space (mc2nu / mapc2p) deforms the leading ones. A combined map is just two
+  # map applications, so the grid_type label records which were applied.
+  grid_type = []
+  if use_c2p_vel:
+    ops.map(out, mapc2p_vel_file, space="vel", inplace=True)
+    grid_type.append("c2p_vel")
+  # end
   if use_mc2nu:
     ops.map(out, mc2nu_file, space="conf", interp=interp, inplace=True)
-    out.ctx["grid_type"] = "c2p_vel + mc2nu" if use_c2p_vel else "mc2nu"
+    grid_type.append("mc2nu")
   elif use_mapc2p:
     ops.map(out, mapc2p_file, space="conf", interp=interp, inplace=True)
-    out.ctx["grid_type"] = "c2p_vel + mapc2p" if use_c2p_vel else "mapc2p"
+    grid_type.append("mapc2p")
+  # end
+  if grid_type:
+    out.ctx["grid_type"] = " + ".join(grid_type)
   # end
   return out
 # end

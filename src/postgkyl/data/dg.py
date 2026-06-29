@@ -4,6 +4,7 @@ import tables
 
 from postgkyl.data.computeDerivativeMatrices import createDerivativeMatrix
 from postgkyl.data.computeInterpolationMatrices import createInterpMatrix
+from postgkyl.data.mapping import c2p_grid
 
 # from postgkyl.data.recovData import recovC0Fn, recovC1Fn, recovEdFn
 
@@ -217,6 +218,70 @@ def _interpOnMesh(cMat, qIn, nInterpIn, basis_type, c2p=False):
     qOut[tuple(idxs)] = temp
   # end
   return np.array(qOut)
+
+
+def interp_c2p_conf_grid(map_data, num_interp=None, read=None) -> list:
+  """Interpolate a configuration-space mapping field onto node coordinates.
+
+  ``map_data`` is a coordinate-mapping :class:`GData` whose components pack the
+  physical coordinate of every node (one block of DG coefficients per
+  dimension). This interpolates each block onto the refined mesh, returning a
+  list of ``map_dim`` full N-D node-coordinate arrays. Because every coordinate
+  is interpolated over all of the map's dimensions, this supports general
+  *curvilinear* maps (e.g. a rotation), not just separable ones.
+
+  ``num_interp`` is the number of interpolation points per cell; when omitted it
+  defaults to the mapping basis ``poly_order + 1``. The resulting node count per
+  dimension is ``cells * num_interp + 1``, matching a field interpolated at the
+  same ``num_interp``.
+  """
+  map_dim = map_data.get_num_dims()
+  blocks = c2p_grid(map_data.get_values(), map_dim)
+  num_comp = blocks[0].shape[-1]
+  basis, poly_order = _get_basis_p(map_dim, num_comp)
+  if num_interp is None:
+    num_interp = poly_order + 1
+  # end
+  cMat = _loadInterpMatrix(map_dim, poly_order, basis, num_interp, read, True, True)
+  return [_interpOnMesh(cMat, blocks[d], num_interp + 1, basis, True)
+      for d in range(map_dim)]
+
+
+def interp_c2p_vel_grid(map_data, num_interp=None, read=None) -> list:
+  """Interpolate a velocity-space mapping field onto node coordinates.
+
+  ``map_data`` is a velocity coordinate-mapping :class:`GData`; each velocity
+  dimension's coordinate is taken to depend only on its own index (a separable
+  map), so each is interpolated independently in 1D. Returns a list of
+  ``map_dim`` 1D node-coordinate arrays.
+
+  ``num_interp`` may be a scalar (applied to every dimension) or a per-dimension
+  sequence; when omitted it defaults to the mapping basis ``poly_order + 1``.
+  Per-dimension control matters for hybrid bases, where the parallel-velocity
+  direction carries one extra interpolation point.
+  """
+  raw = map_data.get_values()
+  map_dim = map_data.get_num_dims()
+  num_comps = raw.shape[-1]
+  num_coeff = int(num_comps // map_dim)
+  basis, poly_order = _get_basis_p(1, num_coeff)
+  coords = []
+  for d in range(map_dim):
+    if num_interp is None:
+      ni = poly_order + 1
+    elif np.ndim(num_interp) == 0:
+      ni = int(num_interp)
+    else:
+      ni = int(num_interp[d])
+    # end
+    idx = [0] * (map_dim + 1)
+    idx[d] = slice(None)
+    idx[-1] = slice(d * num_coeff, (d + 1) * num_coeff)
+    block = raw[tuple(idx)]
+    cMat = _loadInterpMatrix(1, poly_order, basis, ni, read, True, True)
+    coords.append(_interpOnMesh(cMat, block, ni + 1, basis, True))
+  # end
+  return coords
 
 
 class GInterp(object):
@@ -525,10 +590,10 @@ class GInterpModal(GInterp):
   def interpolate(self, comp=0, overwrite=False, stack=False):
     """Interpolate modal DG coefficients onto a finer nodal grid.
 
-    Handles the standard uniform grid as well as the 'c2p' and
-    'c2p_vel' (computational-to-physical) mapped-grid cases, and the
-    'gkhybrid'/'hybrid' bases that use an extra interpolation point in
-    the relevant velocity direction.
+    Builds a uniform refined grid, including the 'gkhybrid'/'hybrid' bases
+    that use an extra interpolation point in the relevant velocity direction.
+    Coordinate (computational-to-physical) mappings are applied separately,
+    after interpolation, via the ``map`` verb.
 
     Args:
       comp (int | tuple[int, ...] | slice): Component(s) to interpolate.
@@ -577,45 +642,20 @@ class GInterpModal(GInterp):
             axis=-1)
       # end
     # end
-    if self.data.ctx["grid_type"] == "c2p":
-      q = self.data.get_grid()
-      num_comp = q[0].shape[-1]
-      basis, poly_order = _get_basis_p(self.num_dims, num_comp)
-      cMat = _loadInterpMatrix(self.num_dims, poly_order, basis, self.num_interp,
-          self.read, True, True)
-      grid = []
-      for d in range(self.num_dims):
-        grid.append(_interpOnMesh(cMat, q[d], self.num_interp + 1, basis, True))
-      # end
+    if self.basis_type == "gkhybrid":
+      # 1x1v, 1x2v, 2x2v, 3x2v cases, with p=2 in the first velocity dim.
+      vpardir = (1 if (self.num_dims == 2 or self.num_dims == 3)
+          else (2 if self.num_dims == 4 else (3 if self.num_dims == 5 else 99)))
+      num_interp = [self.num_interp] * self.num_dims
+      num_interp[vpardir] = self.num_interp + 1
+    elif self.basis_type == "hybrid":
+      num_interp = [self.num_interp] * self.num_dims
+      num_interp[-1] = self.num_interp + 1
     else:
-      if self.basis_type == "gkhybrid":
-        # 1x1v, 1x2v, 2x2v, 3x2v cases, with p=2 in the first velocity dim.
-        vpardir = (1 if (self.num_dims == 2 or self.num_dims == 3)
-            else (2 if self.num_dims == 4 else (3 if self.num_dims == 5 else 99)))
-        num_interp = [self.num_interp] * self.num_dims
-        num_interp[vpardir] = self.num_interp + 1
-      elif self.basis_type == "hybrid":
-        num_interp = [self.num_interp] * self.num_dims
-        num_interp[-1] = self.num_interp + 1
-      else:
-        num_interp = [int(round(cMat.shape[0] ** (1.0 / self.num_dims)))] * self.num_dims
-      # end
-
-      grid = _make1Dgrids(num_interp, self.Xc, self.num_dims, None)
-      if self.data.ctx["grid_type"] == "c2p_vel":
-        num_cdim = self.data.ctx["num_cdim"]
-        num_vdim = self.data.ctx["num_vdim"]
-        q = self.data.get_grid()
-        num_comp = q[-1].shape[-1]
-        basis, poly_order = _get_basis_p(1, num_comp)
-        for d in range(num_vdim):
-          cMat = _loadInterpMatrix(1, poly_order, basis, num_interp[num_cdim + d],
-              self.read, True, True)
-          grid[num_cdim + d] = _interpOnMesh(cMat, q[num_cdim + d],
-              num_interp[num_cdim + d] + 1, basis, True)
-        # end
-      # end
+      num_interp = [int(round(cMat.shape[0] ** (1.0 / self.num_dims)))] * self.num_dims
     # end
+
+    grid = _make1Dgrids(num_interp, self.Xc, self.num_dims, None)
 
     if overwrite:
       self.data.push(grid, values)
@@ -626,10 +666,9 @@ class GInterpModal(GInterp):
   def interpolateGrid(self, overwrite=False):
     """Interpolate only the grid (node coordinates) onto a finer mesh.
 
-    Unlike interpolate, this operates solely on the grid. For a 'c2p'
-    mapped grid the stored node coordinates are themselves interpolated
-    from their DG representation; for a 'c2p_vel' grid the stored grid is
-    used as-is; otherwise a uniform refined grid is built.
+    Unlike interpolate, this operates solely on the grid, building a uniform
+    refined grid. Coordinate (computational-to-physical) mappings are applied
+    separately via the ``map`` verb.
 
     Args:
       overwrite (bool): When True, set the new grid on the GData object
@@ -640,22 +679,8 @@ class GInterpModal(GInterp):
       list | None: When overwrite is False, the grid as a list of numpy
         arrays (one per dimension). Returns None when overwrite is True.
     """
-    if self.data.ctx["grid_type"] == "c2p":
-      q = self.data.get_grid()
-      num_comp = q[0].shape[-1]
-      basis, poly_order = _get_basis_p(self.num_dims, num_comp)
-      cMat = _loadInterpMatrix(self.num_dims, poly_order, basis, self.num_interp,
-          self.read, True, True)
-      grid = []
-      for d in range(self.num_dims):
-        grid.append(_interpOnMesh(cMat, q[d], self.num_interp, self.basis_type, True))
-      # end
-    elif self.data.ctx["grid_type"] == "c2p_vel":
-      q = self.data.get_grid()
-    else:
-      num_interp = [self.num_interp] * self.num_dims
-      grid = _make1Dgrids(num_interp, self.Xc, self.num_dims, self.gridType)
-    # end
+    num_interp = [self.num_interp] * self.num_dims
+    grid = _make1Dgrids(num_interp, self.Xc, self.num_dims, self.gridType)
 
     if overwrite:
       self.data.set_grid(grid)

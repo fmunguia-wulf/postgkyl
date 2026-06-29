@@ -70,8 +70,6 @@ def ctx_with_datasets(*datasets: GData) -> click.core.Context:
         "compgrid": None,
         "global_var_names": None,
         "global_cuts": (None,) * 7,
-        "global_c2p": None,
-        "global_c2p_vel": None,
         "rcParams": {},
         "fig": "",
         "ax": "",

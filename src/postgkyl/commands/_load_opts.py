@@ -1,10 +1,10 @@
 """Resolve the CLI ``load`` command's options against the global pre-options.
 
-``pgkyl`` accepts cuts (``--z0``..``--z5``/``-c``), variable names, and c2p
-mapping files both as *global* pre-options on the root group and as *local*
-options on the ``load`` command. The precedence rule is the same for every one
-of them: a local value wins, but warns when it shadows a global value;
-otherwise the global value (or a default) is used.
+``pgkyl`` accepts cuts (``--z0``..``--z5``/``-c``) and variable names both as
+*global* pre-options on the root group and as *local* options on the ``load``
+command. The precedence rule is the same for every one of them: a local value
+wins, but warns when it shadows a global value; otherwise the global value (or a
+default) is used.
 
 This module collects that single rule into one helper so the ``load`` command
 is a thin shell instead of a dozen copy-pasted ``if/elif/elif`` blocks.
@@ -24,8 +24,6 @@ class LoadOptions:
   cuts: tuple          # (z0, z1, z2, z3, z4, z5)
   comp: str | None     # component cut
   var_names: list      # ADIOS variable names to load
-  mapc2p_name: str | None
-  mapc2p_vel_name: str | None
 
 
 def _pick(local, global_, name: str):
@@ -40,8 +38,7 @@ def _pick(local, global_, name: str):
 
 
 def resolve_load_options(ctx: typer.Context, *, z0=None, z1=None, z2=None,
-    z3=None, z4=None, z5=None, component=None, varname=None,
-    c2p=None, c2p_vel=None) -> LoadOptions:
+    z3=None, z4=None, z5=None, component=None, varname=None) -> LoadOptions:
   """Apply global/local precedence to the load options and package the result."""
   local_cuts = (z0, z1, z2, z3, z4, z5, component)
   global_cuts = ctx.obj["global_cuts"]
@@ -57,6 +54,4 @@ def resolve_load_options(ctx: typer.Context, *, z0=None, z1=None, z2=None,
   return LoadOptions(
       cuts=tuple(resolved[:6]),
       comp=resolved[6],
-      var_names=var_names,
-      mapc2p_name=_pick(c2p, ctx.obj["global_c2p"], "c2p"),
-      mapc2p_vel_name=_pick(c2p_vel, ctx.obj["global_c2p_vel"], "c2p_vel"))
+      var_names=var_names)

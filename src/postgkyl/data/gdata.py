@@ -40,7 +40,7 @@ class GData(object):
       var_name: str = "CartGridField",
       tag: str = "default", label: str = "",
       ctx: dict | None = None,
-      comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
+      comp_grid: bool = False,
       reader_name: str = "", load: bool = True, cli_mode: bool = False):
     """Initializes the Data class with a Gkeyll output file.
 
@@ -65,10 +65,6 @@ class GData(object):
         Copy content of the specified ctx dictionary.
       comp_grid: bool
         A flag to ignore grid mapping.
-      mapc2p_name: str
-        The name of the file containg the c2p mapping.
-      mapc2p_vel_name: str
-        The name of the file containg the c2p mapping just for velocity.
       reader_name: str
         Reader can be specified to bypass the automatic selection.
       load: bool = True
@@ -95,8 +91,6 @@ class GData(object):
     self._custom_label = label
     self._var_name = var_name
     self._file_name = str(file_name)
-    self._mapc2p_name = mapc2p_name
-    self._mapc2p_vel_name = mapc2p_vel_name
     self.color = None
 
     self._neighbors = []
@@ -121,8 +115,7 @@ class GData(object):
       # end
       for key, rd in readers.items():
         self._reader = rd(file_name=self._file_name, ctx=self.ctx, var_name=var_name,
-          c2p=mapc2p_name, c2p_vel=mapc2p_vel_name, axes=zs, comp=comp,
-          cli_mode=cli_mode)
+          axes=zs, comp=comp, cli_mode=cli_mode)
         if self._reader.is_compatible():
           reader_set = True
           break
@@ -774,31 +767,30 @@ class GData(object):
     return ops.dg_local_poly(self, npoints=npoints, inplace=inplace, tag=tag,
         label=label)
 
-  def map(self, mapping, *, space: str = "conf", p: int = 1,
-      basis: str = "ms", interp: int | None = None, inplace: bool = False,
+  def map(self, mapping, *, space: str = "conf",
+      interp: int | None = None, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
     """Deform this dataset's grid onto non-uniform mapped coordinates.
 
     Reads a coordinate-mapping DG field and replaces a block of grid axes with
     the resulting non-uniform coordinates, leaving the values untouched. A
-    configuration-space map (``space='conf'``) deforms the leading axes; a
-    velocity-space map (``space='vel'``) deforms the trailing axes. For a
-    combined map, chain two calls (one per space).
+    configuration-space map (``space='conf'``) deforms the leading axes
+    curvilinearly; a velocity-space map (``space='vel'``) deforms the trailing
+    axes separably. For a combined map, chain two calls (one per space).
+    Typically called after :meth:`interpolate`.
 
     See :func:`postgkyl.ops.map`.
 
     Args:
       mapping: str or GData
         The coordinate-mapping field (filename or loaded GData); its number of
-        dimensions sets how many axes are replaced.
+        dimensions sets how many axes are replaced and its basis is inferred
+        from its component count.
       space: str
         ``'conf'`` or ``'vel'`` (see above).
-      p: int
-        Polynomial order used to interpolate the mapping field.
-      basis: str
-        DG basis of the mapping field.
       interp: int or None
-        Override for the number of interpolation points.
+        Interpolation points per cell for the mapping field; defaults to
+        matching this dataset's grid.
       inplace: bool = False
         Mutate this dataset instead of returning a new one.
       tag: str or None
@@ -811,7 +803,7 @@ class GData(object):
         The dataset with its grid deformed (a new GData unless inplace is True).
     """
     from postgkyl import ops
-    return ops.map(self, mapping, space=space, p=p, basis=basis,
+    return ops.map(self, mapping, space=space,
         interp=interp, inplace=inplace, tag=tag, label=label)
 
   def integrate(self, axis=None, *, inplace: bool = False,

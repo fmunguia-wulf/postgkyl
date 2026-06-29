@@ -56,7 +56,7 @@ class _Loader:
       var_name: str = "CartGridField",
       tag: str = "default", label: str = "",
       ctx: dict | None = None,
-      comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
+      comp_grid: bool = False,
       reader_name: str = "", load: bool = True, cli_mode: bool = False) -> GData:
     """Load a single file into a :class:`postgkyl.GData`.
 
@@ -81,10 +81,6 @@ class _Loader:
         Copy content of the specified ctx dictionary.
       comp_grid: bool
         A flag to ignore grid mapping.
-      mapc2p_name: str
-        The name of the file containg the c2p mapping.
-      mapc2p_vel_name: str
-        The name of the file containg the c2p mapping just for velocity.
       reader_name: str
         Reader can be specified to bypass the automatic selection.
       load: bool = True
@@ -100,8 +96,7 @@ class _Loader:
     return GData(file_name, comp=comp,
         z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5,
         var_name=var_name, tag=tag, label=label, ctx=ctx,
-        comp_grid=comp_grid, mapc2p_name=mapc2p_name,
-        mapc2p_vel_name=mapc2p_vel_name, reader_name=reader_name,
+        comp_grid=comp_grid, reader_name=reader_name,
         load=load, cli_mode=cli_mode)
 
   def many(self, pattern: str,
@@ -112,7 +107,7 @@ class _Loader:
       var_name: str = "CartGridField",
       tag: str = "default", label: str = "",
       ctx: dict | None = None,
-      comp_grid: bool = False, mapc2p_name: str = "", mapc2p_vel_name: str = "",
+      comp_grid: bool = False,
       reader_name: str = "", load: bool = True,
       cli_mode: bool = False) -> DatasetGroup:
     """Load every file matching a glob ``pattern`` into a ``DatasetGroup``.
@@ -139,8 +134,7 @@ class _Loader:
     return DatasetGroup([GData(f, comp=comp,
         z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5,
         var_name=var_name, tag=tag, label=label, ctx=ctx,
-        comp_grid=comp_grid, mapc2p_name=mapc2p_name,
-        mapc2p_vel_name=mapc2p_vel_name, reader_name=reader_name,
+        comp_grid=comp_grid, reader_name=reader_name,
         load=load, cli_mode=cli_mode) for f in files])
 
   def gk_distf(self, name: str, species: str,

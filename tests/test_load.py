@@ -20,10 +20,13 @@ class TestGkyl:
         z0='16', z1='8:-8', comp='0')
     np.testing.assert_array_equal(data.values.shape, (1, 16, 1))
 
-  def test_gkyl_type1_c2p(self):  # Frame with coordinate mapping
-    data = pg.GData(f"{self.dir_path:s}/shock-f-ser-p1.gkyl",
-        mapc2p_name=f"{self.dir_path:s}/shock-rtheta-ser.gkyl")
+  def test_gkyl_type1_c2p(self):  # Coordinate mapping applied via the map verb
+    data = pg.GData(f"{self.dir_path:s}/shock-f-ser-p1.gkyl")
     np.testing.assert_array_equal(data.num_cells, (8, 8))
+    mapped = data.interpolate(p=1, basis="ms").map(
+        f"{self.dir_path:s}/shock-rtheta-ser.gkyl", space="conf")
+    # A configuration-space map deforms the grid into curvilinear (N-D) axes.
+    np.testing.assert_array_equal(mapped.get_grid()[0].shape, (17, 17))
 
   def test_gkyl_type2(self):  # Dynvector
     data = pg.GData(f"{self.dir_path:s}/twostream-field-energy.gkyl")
@@ -43,12 +46,13 @@ class TestGkyl:
     np.testing.assert_equal(data.ctx["frame"], 1)
 
   def test_gkyl_c2p_vel(self):
-    data = pg.GData(f"{self.dir_path:s}/bimaxwellian-elc.gkyl",
-        mapc2p_vel_name=f"{self.dir_path:s}/bimaxwellian-mapc2p-vel.gkyl")
-    dg = pg.GInterpModal(data, poly_order=1, basis_type="gkhyb")
-    dg.interpolate(overwrite=True)
-    np.testing.assert_approx_equal(data.bounds[0][1], -1.060964e07)
-    np.testing.assert_approx_equal(data.bounds[1][2], 1.206345e-16)
+    # Velocity-space mapping is now a separable map applied after interpolation.
+    data = pg.GData(f"{self.dir_path:s}/bimaxwellian-elc.gkyl").interpolate(
+        p=1, basis="gkhyb")
+    mapped = data.map(f"{self.dir_path:s}/bimaxwellian-mapc2p-vel.gkyl",
+        space="vel")
+    np.testing.assert_approx_equal(mapped.bounds[0][1], -1.060964e07)
+    np.testing.assert_approx_equal(mapped.bounds[1][2], 1.206345e-16)
 class TestAdios:
   """Test Gkeyll's ADIOS2 output format."""
   dir_path =  f"{os.path.dirname(__file__)}/test_data"

@@ -20,7 +20,7 @@ class GkylAdiosReader(object):
   """Provides a framework to read gkyl ADIOS output."""
 
   def __init__(self, file_name: str, ctx: dict | None = None,
-      var_name: str = "CartGridField", c2p: str = "",
+      var_name: str = "CartGridField",
       axes: tuple | None = (None, None, None, None, None, None),
       comp: int | slice | None = None, cli_mode: bool = False,
       **kwargs):
@@ -31,8 +31,6 @@ class GkylAdiosReader(object):
       ctx: dict
         Passes context variable with metadata.
       var_name: str = "CartGridField"
-      c2p: str
-        Allows to specify a name of the file containing c2p mapping.
       axes: tuple
         Coordinate indices for partial loading.
       comp: int
@@ -46,7 +44,6 @@ class GkylAdiosReader(object):
     """
     self._file_name = file_name
     self.var_name = var_name
-    self.c2p = c2p
 
     self.axes = axes
     self.comp = comp
@@ -233,27 +230,12 @@ class GkylAdiosReader(object):
       # end
     # end
 
-    # Check for mapped grid ...
-    if self.c2p:
-      grid_fh = adios2.FileReader(self.c2p)
-      grid_dims = grid_fh.available_variables()["CartGridField"]["Shape"]
-      grid_dims = [int(v) for v in grid_dims.split(",")]
-      offset, count = self._create_offset_count(grid_dims, self.axes, None)
-      if offset:
-        tmp = grid_fh.read("CartGridField", start=offset, count=count)
-      else:
-        tmp = grid_fh.read("CartGridField")
-      grid = mapping.c2p_grid(tmp, num_dims)
-      if self.ctx:
-        self.ctx["grid_type"] = "c2p"
-      # end
-    else:
-      # Create sparse uniform grid, corrected for ghost cells.
-      mapping.adjust_for_ghost_cells(self.lower, self.upper, self.cells, data.shape)
-      grid = mapping.uniform_grid(self.lower, self.upper, self.cells)
-      if self.ctx:
-        self.ctx["grid_type"] = "uniform"
-      # end
+    # Create sparse uniform grid, corrected for ghost cells. Coordinate maps are
+    # applied afterwards by the ``map`` verb, not while reading.
+    mapping.adjust_for_ghost_cells(self.lower, self.upper, self.cells, data.shape)
+    grid = mapping.uniform_grid(self.lower, self.upper, self.cells)
+    if self.ctx:
+      self.ctx["grid_type"] = "uniform"
     # end
 
     fh.close()

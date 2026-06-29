@@ -6,12 +6,18 @@ space, ``mapc2p_vel`` maps velocity space. This verb reads such a mapping field,
 interpolates it, and replaces the corresponding block of grid axes of the target
 dataset with the resulting non-uniform coordinates.
 
-Unlike the load-time mapping in :mod:`postgkyl.data.mapping` (which builds the
-grid *while reading* a file), ``map`` operates on already-loaded data, so it
-composes with the rest of the verb pipeline. A configuration-space map deforms
-the leading ``cdim`` axes; a velocity-space map deforms the trailing ``vdim``
-axes. There is no dedicated "both" mode — for a combined map, apply the verb
-twice, once per space::
+Coordinate mapping used to happen *while reading* a file (the old ``c2p`` /
+``c2p_vel`` load options). It now lives here, as an ordinary verb that operates
+on already-loaded — typically already-interpolated — data, so it composes with
+the rest of the verb pipeline and keeps the readers free of grid math.
+
+A configuration-space map (``space='conf'``) deforms the leading ``cdim`` axes
+and is fully *curvilinear*: each physical coordinate is interpolated over all of
+the map's dimensions, so non-separable maps (e.g. a rotation) are handled. A
+velocity-space map (``space='vel'``) deforms the trailing ``vdim`` axes and is
+*separable* (each velocity coordinate depends only on its own index). There is
+no dedicated "both" mode — for a combined map, apply the verb twice, once per
+space::
 
     f.map('sim-mc2nu.gkyl', space='conf') \\
      .map('sim-mapc2p_vel.gkyl', space='vel')
@@ -21,59 +27,40 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-
-from postgkyl.data import GData, GInterpModal
+from postgkyl.data import GData
+from postgkyl.data.dg import interp_c2p_conf_grid, interp_c2p_vel_grid
 
 if TYPE_CHECKING:
   from postgkyl.data import GData as _GData
 # end
 
 
-def _cell_centered_to_nodal(cell_centers: np.ndarray) -> np.ndarray:
-  """Convert cell-centered coordinates to nodal ones (half a cell at each end)."""
-  nodes = np.zeros(cell_centers.size + 1, dtype=cell_centers.dtype)
-  nodes[1:-1] = 0.5 * (cell_centers[:-1] + cell_centers[1:])
-  nodes[0] = cell_centers[0] + (cell_centers[0] - nodes[1])
-  nodes[-1] = cell_centers[-1] + (cell_centers[-1] - nodes[-2])
-  return nodes
-
-
-def _extract_axis(mapped_values: np.ndarray, axis: int, map_dim: int) -> np.ndarray:
-  """Extract the 1D coordinate profile of mapped component ``axis`` along ``axis``."""
-  idx = [0] * (map_dim + 1)  # the mapping field has map_dim dims + 1 component axis
-  idx[axis] = slice(None)
-  idx[-1] = axis
-  return mapped_values[tuple(idx)].reshape(-1)
-
-
 def map(data: "_GData", mapping: "str | _GData", *, space: str = "conf",
-    p: int = 1, basis: str = "ms", interp: int | None = None,
-    inplace: bool = False, tag: str | None = None,
+    interp: "int | None" = None, inplace: bool = False, tag: str | None = None,
     label: str | None = None) -> "_GData":
   """Replace a block of ``data``'s grid axes with non-uniform mapped coordinates.
 
-  Reads a coordinate-mapping DG field, interpolates it, and for each of its
-  dimensions replaces the matching grid axis of ``data`` with the corresponding
-  non-uniform (cell-centered -> nodal) coordinate. The values array is left
-  untouched; only the grid changes.
+  Reads a coordinate-mapping DG field, interpolates it onto node coordinates,
+  and replaces the matching grid axes of ``data``. The values array is left
+  untouched; only the grid changes. The interpolation resolution is matched to
+  ``data``'s current grid automatically (so this lines up with already-
+  interpolated data); pass ``interp`` to override it.
 
   Args:
     data: GData
       The dataset whose grid is deformed.
     mapping: str | GData
       The coordinate-mapping field, as a filename or an already-loaded GData.
-      Its number of dimensions sets how many of ``data``'s axes are replaced.
+      Its number of dimensions sets how many of ``data``'s axes are replaced;
+      the basis is inferred from its component count.
     space: str
-      ``'conf'`` deforms the leading axes (offset 0); ``'vel'`` deforms
-      the trailing axes (offset ``data.num_dims - mapping.num_dims``). For a
-      combined configuration+velocity map, apply the verb twice.
-    p: int
-      Polynomial order used to interpolate the mapping field (default 1).
-    basis: str
-      DG basis of the mapping field (default 'ms').
+      ``'conf'`` deforms the leading axes (offset 0) curvilinearly; ``'vel'``
+      deforms the trailing axes (offset ``data.num_dims - mapping.num_dims``)
+      separably. For a combined map, apply the verb twice.
     interp: int | None
-      Optional override for the number of interpolation points.
+      Number of interpolation points per cell for the mapping field. When None
+      (the default), it is derived per axis from ``data``'s value shape so the
+      mapped grid aligns with the (already-interpolated) data.
     inplace: bool
       When True, mutate and return ``data``; otherwise return a new GData.
     tag: str | None
@@ -102,13 +89,30 @@ def map(data: "_GData", mapping: "str | _GData", *, space: str = "conf",
         f"map: a {map_dim}D {space} map does not fit a {num_dims}D dataset.")
   # end
 
-  _, map_values = GInterpModal(map_data, p, basis, interp).interpolate(
-      tuple(range(map_dim)))
+  # Match the mapping's interpolation resolution to the target grid so the new
+  # axes line up with the data: a field interpolated at num_interp points/cell
+  # has cells*num_interp value points, and the mapping (on the same cells)
+  # needs the same factor to produce cells*num_interp+1 aligned nodes.
+  value_cells = data.get_values().shape
+  map_cells = map_data.get_num_cells()
+  if interp is None:
+    num_interp = [int(value_cells[offset + d] // map_cells[d])
+        for d in range(map_dim)]
+  else:
+    num_interp = [int(interp)] * map_dim
+  # end
+
+  if space == "conf":
+    # Curvilinear maps share a single interpolation matrix across dims; the
+    # per-cell factor is uniform over configuration space.
+    coords = interp_c2p_conf_grid(map_data, num_interp[0])
+  else:
+    coords = interp_c2p_vel_grid(map_data, num_interp)
+  # end
 
   new_grid = list(data.get_grid())
   for d in range(map_dim):
-    coords = _extract_axis(map_values, d, map_dim)
-    new_grid[offset + d] = _cell_centered_to_nodal(coords)
+    new_grid[offset + d] = coords[d]
   # end
 
   return data._result(new_grid, data.get_values(), inplace=inplace,

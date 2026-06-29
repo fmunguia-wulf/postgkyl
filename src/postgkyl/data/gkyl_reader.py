@@ -84,7 +84,6 @@ class GkylReader(object):
   """Provides a framework to read Gkeyll binary output."""
 
   def __init__(self, file_name: str, ctx: dict | None = None,
-      c2p: str = "", c2p_vel: str = "",
       axes: tuple | None = (None, None, None, None, None, None),
       comp: str | int | None = None,
       **kwargs):
@@ -95,11 +94,6 @@ class GkylReader(object):
       ctx: dict
         Passes context variable with metadata.
       var_name: str = "CartGridField"
-      c2p: str
-        Allows to specify a name of the file containing c2p mapping.
-      c2p_vel: str
-        Allows to specify a name of the file containing c2p mapping for only the
-        velocity dimension.
       axes: tuple
         Allows to specify the axes to be loaded.
       comp: int or slice
@@ -109,8 +103,6 @@ class GkylReader(object):
         we use.
     """
     self.file_name = file_name
-    self.c2p = c2p
-    self.c2p_vel = c2p_vel
 
     self.dtf = np.dtype("f8")
     self.dti = np.dtype("i8")
@@ -500,25 +492,6 @@ class GkylReader(object):
       grid = [time]
       if self.ctx:
         self.ctx["grid_type"] = "nodal"
-      #end
-    elif self.c2p:
-      grid_reader = GkylReader(self.c2p)
-      grid_reader.preload()
-      _, tmp = grid_reader.load()
-      grid = mapping.c2p_grid(tmp, num_dims)
-      if self.ctx:
-        self.ctx["grid_type"] = "c2p"
-      #end
-    elif self.c2p_vel:
-      grid_reader = GkylReader(self.c2p_vel)
-      grid_reader.preload()
-      _, tmp = grid_reader.load()
-      grid, num_cdim, num_vdim = mapping.c2p_vel_grid(
-          tmp, self.lower, self.upper, self.cells, num_dims)
-      if self.ctx:
-        self.ctx["num_vdim"] = num_vdim
-        self.ctx["num_cdim"] = num_cdim
-        self.ctx["grid_type"] = "c2p_vel"
       #end
     else:  # Create sparse unifrom grid
       mapping.adjust_for_ghost_cells(self.lower, self.upper, self.cells, data.shape)
