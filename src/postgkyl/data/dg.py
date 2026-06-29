@@ -184,11 +184,7 @@ def _interpOnMesh(cMat, qIn, nInterpIn, basis_type, c2p=False):
     # 1x1v, 1x2v, 2x2v, 3x2v cases, with p=2 in the first velocity dim.
     vpardir = (1 if (num_dims == 2 or num_dims == 3) else
                 (2 if num_dims == 4 else
-                  (3 if num_dims == 5 else
-                    99
-                  )
-                )
-              )
+                  (3 if num_dims == 5 else 99 ) ) )
     num_interp[vpardir] = nInterpIn + 1
   # end
   if basis_type == "gkhybrid_vel":
