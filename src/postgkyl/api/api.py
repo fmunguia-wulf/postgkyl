@@ -21,6 +21,21 @@ def _cmd(name: str):
   return cli.commands[name]
 
 
+def _flag(value, flag_value):
+  """Translate an API boolean for a click optional-value flag.
+
+  ``True`` enables the flag with its default behaviour (click's ``flag_value``),
+  ``False`` disables it (``None``); a string passes straight through as an
+  explicit override. This lets the friendly ``bool`` API default map onto what
+  the command already expects without the commands needing to know about it.
+  """
+  if value is True:
+    return flag_value
+  if value is False:
+    return None
+  return value
+
+
 class PgkylSession(_Session):
   def activate(self,
       tag: str | None = None,
@@ -283,6 +298,35 @@ activating/deactivating multiple datasets.
     """
     return self._run(_cmd("deactivate"), tag=tag, index=index, focused=focused)
 
+  def dg_evproj(self,
+      z0: float | None = None,
+      z1: float | None = None,
+      z2: float | None = None,
+      z3: float | None = None,
+      z4: float | None = None,
+      z5: float | None = None,
+      comp: str | None = None,
+      use: str | None = None,
+      tag: str | None = None,
+      label: str | None = None):
+    """Evaluate a DG field at specified coordinates and project onto a lower-dimensional basis.
+
+Coordinates specified with --z0, --z1, ... --z5.
+
+    Args:
+      z0: (--z0) Physical coord to evaluate in direction 0.
+      z1: (--z1) Physical coord to evaluate in direction 1.
+      z2: (--z2) Physical coord to evaluate in direction 2.
+      z3: (--z3) Physical coord to evaluate in direction 3.
+      z4: (--z4) Physical coord to evaluate in direction 4.
+      z5: (--z5) Physical coord to evaluate in direction 5.
+      comp: (--comp, -c) Component index to select from the result (int or slice).
+      use: (--use, -u) Tag to apply to. [default: all active]
+      tag: (--tag, -t) Tag for the output dataset.
+      label: (--label, -l) Label for the output dataset.
+    """
+    return self._run(_cmd("dg-evproj"), z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=comp, use=use, tag=tag, label=label)
+
   def dg_local_poly(self,
       use: str | None = None,
       npoints: int = 2):
@@ -411,32 +455,44 @@ Only works on 1D data at present.
       jacobtot_inv_file: str | None = None,
       frame: str | None = None,
       interp: int | None = None,
-      c2p_vel: bool = False,
-      mc2nu: bool = False,
-      mapc2p: bool = False,
+      c2p_vel: bool | str | None = None,
+      mc2nu: bool | str | None = None,
+      mapc2p: bool | str | None = None,
       block: int | None = None,
       tag: str = 'f'):
-    """Gyrokinetics: loads and interpolates distribution function from files containing the
-distribution (f) times one or multiple Jacobians (jf). Optionally, use mappings (in files)
-to convert the native coordinates of jf to physical velocity space coordinates or
-Cartesian/cyclindrical position space coordinates.
+    """Gyrokinetics: load the distribution function from files containing the
+distribution (f) times one or multiple Jacobians (J). The Jacobians are
+divided out in order to output f. The distribution is interpolated, and
+the interpolation can optionally use mappings to convert from computational
+to physical coordinates.
+
+
+Command line example:
+  pgkyl gk-distf -n gk_lorentzian_mirror -s ion -f 0
+
+
+Script example:
+  import postgkyl as pg
+  from postgkyl.commands import load_gk_distf
+
+  distf = pg.commands.load_gk_distf(name="gk_lorentzian_mirror", species="ion", frame=0)
 
     Args:
       name: (--name, -n) Simulation name prefix (e.g. gk_lorentzian_mirror).
       species: (--species, -s) Species name (e.g. ion or elc).
       suffix: (--suffix) Use <name>-<species>_<suffix>_<frame>.gkyl as the input distribution.
-      jf_file: (--jf-file) Jf filename override. If omitted, the default naming convention is used.
+      jf_file: (--Jf-file) Jf filename override. If omitted, the default naming convention is used.
       jacobvel_file: (--jacobvel-file) jacobvel filename override. If omitted, the default naming convention is used.
       jacobtot_inv_file: (--jacobtot-inv-file) jacobtot_inv filename override. If omitted, the default naming convention is used.
       frame: (--frame, -f) Frame number, comma separated values, or range. Use ':' for all frames and 'start:stop[:step]' for ranges.
-      interp: (--interp, -i) Interpolation onto a general mesh of specified amount.
+      interp: (--interp, -i) Interpolation onto a general mesh of specified amount. User -i 0 for no interpolation.
       c2p_vel: (--c2p-vel, -v) Convert velocity-space computational to physical coordinates, using mapping in (optionally) given file (default *_mapc2p_vel.gkyl).
-      mc2nu: (--mc2nu, -m) Convert non-uniform computational to field-aligned coordinates using mapping  in (optionally) given file (default: *_mc2nu_pos_deflated.gkyl).
-      mapc2p: (--mapc2p, -p) Convert position-space computational to Cartesian (GKYL_GEOMETRY_MAPC2P) or  cylindrical (GKYL_GEOMETRY_TOKAMAK, GKYL_GEOMETRY_MIRROR) coordinates, using  mapping in (optionally) given file (default: *_mapc2p.gkyl)
+      mc2nu: (--mc2nu, -m) Convert non-uniform computational to field-aligned coordinates using mapping  in (optionally) given file (default: *-geo_corn_mc2nu_pos_deflated.gkyl).
+      mapc2p: (--mapc2p, -p) Convert position-space computational to Cartesian (GKYL_GEOMETRY_MAPC2P) or  cylindrical (GKYL_GEOMETRY_TOKAMAK, GKYL_GEOMETRY_MIRROR) coordinates, using  mapping in (optionally) given file (default: *-geo_corn_mapc2p.gkyl)
       block: (--block, -b) Use block-specific files with _b<idx> prefix, e.g. -b 1 loads <name>_b1-*.gkyl.
       tag: (--tag, -t) Tag for output dataset.
     """
-    return self._run(_cmd("gk-distf"), name=name, species=species, suffix=suffix, jf_file=jf_file, jacobvel_file=jacobvel_file, jacobtot_inv_file=jacobtot_inv_file, frame=frame, interp=interp, c2p_vel=c2p_vel, mc2nu=mc2nu, mapc2p=mapc2p, block=block, tag=tag)
+    return self._run(_cmd("gk-distf"), name=name, species=species, suffix=suffix, jf_file=jf_file, jacobvel_file=jacobvel_file, jacobtot_inv_file=jacobtot_inv_file, frame=frame, interp=interp, c2p_vel=_flag(c2p_vel, ''), mc2nu=_flag(mc2nu, ''), mapc2p=_flag(mapc2p, ''), block=block, tag=tag)
 
   def gk_energy_balance(self,
       name: str | None = None,
@@ -807,7 +863,7 @@ energy.
     return self._run(_cmd("integrate"), axis=axis, use=use, tag=tag, label=label)
 
   def interpolate(self,
-      basis_type: Literal['ms', 'ns', 'mo', 'mt', 'gkhyb', 'pkpmhyb'] | None = None,
+      basis_type: Literal['ms', 'ns', 'mo', 'mt', 'gkhyb', 'gkhyb_vel', 'pkpmhyb'] | None = None,
       poly_order: int | None = None,
       interp: int | None = None,
       use: str | None = None,
@@ -844,14 +900,16 @@ energy.
 
   def listoutputs(self,
       extensions: str = 'bp,gkyl',
-      path: str = '.'):
+      path: str = '.',
+      prefixes: bool = False):
     """List Gkeyll filename stems in the current directory.
 
     Args:
       extensions: (--extensions, -e) Output file extension(s)
       path: (--path, -p) Path to search for outputs
+      prefixes: (--prefixes) List unique simulation prefixes (the names before the first '-') instead of filename stems.
     """
-    return self._run(_cmd("listoutputs"), extensions=extensions, path=path)
+    return self._run(_cmd("listoutputs"), extensions=extensions, path=path, prefixes=prefixes)
 
   def magsq(self,
       use: str | None = None,
