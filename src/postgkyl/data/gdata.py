@@ -319,20 +319,13 @@ class GData(object):
       # end
     # end
 
-  def __dict_has_key_from_group__(self, dict_in, group_members_in):
-    # Check if a dictionary with key-value pairs, where the key is the name of a group and
-    # the value a list of group members (as strings), has a member from a given
-    # group.
-    #  dict_in: input dictionary.
-    #  group_members_in: group members to check for in dict_in.
-    dict_keys = dict_in.keys()
-    for key in group_members_in:
-      if key in dict_keys:
-        return True
-      #end
-    #end
-    return False
-      
+  def _dict_has_key_from_group(self, dict_in, group_members_in):
+    """
+    Check if a dictionary with key-value pairs, where the key is the name of a group and
+    the value a list of group members (as strings), has a member from a given
+    group.
+    """
+    return not dict_in.keys().isdisjoint(group_members_in)
 
   # ---- Info -----
   def info(self) -> str:
@@ -361,6 +354,7 @@ class GData(object):
       "basis_info" : ["poly_order","basis_type","is_modal","num_comps"],
       "build_info" : ["changeset","builddate"], 
       "geometry_info": ["geometry_type", "geqdsk_sign_convention"],
+      "species_info": ["mass","charge","adiabatic_gamma","vdim"],
     }
 
     output = ""
@@ -379,7 +373,7 @@ class GData(object):
 
     output += f"├─ Number of components: {num_comps:d}\n"
     output += f"├─ Number of dimensions: {num_dims:d}\n"
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["grid_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["grid_info"]):
       output += f"├─ Grid: ({self.get_grid_type():s})\n"
       if "lower" in self.ctx.keys() and "upper" in self.ctx.keys() and "cells" in self.ctx.keys():
         for d in range(num_dims - 1):
@@ -413,7 +407,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["basis_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["basis_info"]):
       output += "\n├─ DG info:"
       if "poly_order" in self.ctx.keys():
         printed_keys.append("poly_order")
@@ -429,7 +423,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["build_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["build_info"]):
       output += "\n├─ Created with Gkeyll:"
       if "changeset" in self.ctx.keys():
         printed_keys.append("changeset")
@@ -441,7 +435,7 @@ class GData(object):
       # end
     # end
 
-    if self.__dict_has_key_from_group__(self.ctx, info_groups["geometry_info"]):
+    if self._dict_has_key_from_group(self.ctx, info_groups["geometry_info"]):
       output += "\n├─ Geometry info:"
       if "geometry_type" in self.ctx.keys():
         printed_keys.append("geometry_type")
@@ -457,6 +451,26 @@ class GData(object):
     for key, val in self.ctx.items():
       if key not in sum(info_groups.values(), []):
         output += f"\n├─ {key:s}: {val}"
+      # end
+    # end
+
+    if self._dict_has_key_from_group(self.ctx, info_groups["species_info"]):
+      output += "\n├─ Species properties:"
+      if "mass" in self.ctx.keys():
+        printed_keys.append("mass")
+        output += f"\n│  ├─ Mass: {self.ctx['mass']:e}"
+      # end
+      if "charge" in self.ctx.keys():
+        printed_keys.append("charge")
+        output += f"\n│  ├─ Charge: {self.ctx['charge']:e}"
+      # end
+      if "gas_gamma" in self.ctx.keys():
+        printed_keys.append("gas_gamma")
+        output += f"\n│  ├─ Adiabatic index: {self.ctx['gas_gamma']:e}"
+      # end
+      if "vdim" in self.ctx.keys():
+        printed_keys.append("vdim")
+        output += f"\n│  ├─ Velocity dimensions: {self.ctx['vdim']:d}"
       # end
     # end
 

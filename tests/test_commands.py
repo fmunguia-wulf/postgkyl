@@ -180,8 +180,21 @@ class TestCommands:
     plt.close("all")
     assert label == "$z_1$"
 
-  @pytest.mark.skipif(ffmpeg_missing, reason="ffmpeg is not installed")
-  def test_animate_save(self, tmp_path):
+  def test_animate_save_gif(self, tmp_path):
+    self.ctx.invoke(cmd.load)
+    self.ctx.invoke(cmd.load)
+    fn = tmp_path / "test_anim.gif"
+    self.ctx.invoke(cmd.animate, show=False, saveas=fn)
+    fig = plt.gcf()
+    label = fig.figure.get_supylabel()
+    self.ctx.obj['data'].clean()
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    plt.close("all")
+    assert label == "$z_1$"
+    assert fn.exists()
+
+@pytest.mark.skipif(ffmpeg_missing, reason="ffmpeg is not installed")
+  def test_animate_save_mp4(self, tmp_path):
     self.ctx.invoke(cmd.load)
     self.ctx.invoke(cmd.load)
     fn = tmp_path / "test_anim.mp4"

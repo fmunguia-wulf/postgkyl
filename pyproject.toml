@@ -63,3 +63,6 @@ version = {attr = "postgkyl.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src/"]
+
+[tool.setuptools.package-data]
+"postgkyl.output" = ["*.mplstyle", "*.js"]

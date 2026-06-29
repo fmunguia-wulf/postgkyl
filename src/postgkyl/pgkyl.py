@@ -149,6 +149,7 @@ def cli(ctx, **kwargs):
 
 
 # Hook the individual commands into pgkyl
+cli.add_command(cmd.config)
 cli.add_command(cmd.activate)
 cli.add_command(cmd.agyro)
 cli.add_command(cmd.mom_agyro)
@@ -166,7 +167,9 @@ cli.add_command(cmd.extractinput)
 cli.add_command(cmd.fft)
 cli.add_command(cmd.fit)
 cli.add_command(cmd.gk_nodes)
+cli.add_command(cmd.dg_local_poly)
 cli.add_command(cmd.gk_distf)
+cli.add_command(cmd.gk_load_quantity)
 cli.add_command(cmd.grid)
 cli.add_command(cmd.growth)
 cli.add_command(cmd.info)
