@@ -2,7 +2,7 @@ import typer
 from typing import Optional
 from typing_extensions import Annotated
 
-from postgkyl.gk.load_quantity import load_gk_quantity, available_quantities
+from postgkyl.loaders.gk_quantity import load_gk_quantity, available_quantities
 from postgkyl.utils import verb_print
 
 def gk_load_quantity(
@@ -30,8 +30,8 @@ def gk_load_quantity(
 
   \b
   Script example:
-    from postgkyl.commands.gk_load_quantity import load_gk_quantity
-    gdat = load_gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
+    import postgkyl as pg
+    gdat = pg.load.gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
   """
   if qlist:
     # Print accepted quantities and exit.

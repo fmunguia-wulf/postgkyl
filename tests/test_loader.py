@@ -53,19 +53,19 @@ class TestLoadMany:
 
 class TestResolveFrames:
     def test_single_int(self):
-        from postgkyl.commands.gk_distf import resolve_frames
+        from postgkyl.loaders.gk_distf import resolve_frames
         assert resolve_frames(5, name="n", species="ion") == [5]
 
     def test_list(self):
-        from postgkyl.commands.gk_distf import resolve_frames
+        from postgkyl.loaders.gk_distf import resolve_frames
         assert resolve_frames([1, 2, 3], name="n", species="ion") == [1, 2, 3]
 
     def test_csv_string(self):
-        from postgkyl.commands.gk_distf import resolve_frames
+        from postgkyl.loaders.gk_distf import resolve_frames
         assert resolve_frames("0,2,4", name="n", species="ion") == [0, 2, 4]
 
     def test_range_discovers_files(self, tmp_path, monkeypatch):
-        from postgkyl.commands.gk_distf import resolve_frames
+        from postgkyl.loaders.gk_distf import resolve_frames
         # Lay down files matching the default naming convention for a few frames.
         for f in (0, 1, 2, 3):
             (tmp_path / f"sim-ion_{f}.gkyl").touch()
@@ -95,7 +95,7 @@ class TestLoadGkDistf:
             return d
 
         import importlib
-        gk_distf_mod = importlib.import_module("postgkyl.commands.gk_distf")
+        gk_distf_mod = importlib.import_module("postgkyl.loaders.gk_distf")
         monkeypatch.setattr(gk_distf_mod, "load_gk_distf", fake_load_gk_distf)
         return calls
 

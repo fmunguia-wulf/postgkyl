@@ -17,8 +17,9 @@ L2  ops/        one function per verb                     ← the single seam
     utils/      generic, cross-cutting support
     gk/         gyrokinetics domain reference             (constants, enums, quantity registry)
 L3  GData / DatasetGroup / loader / group                 fluent script API
-L4  apps/       composed diagnostics & workflows          (script-callable)
-L5  commands/   Click CLI shells                          (thin: argv → ops / apps)
+    loaders/    data-returning compositions               (loader-workflows)
+L4  apps/       figure/analysis-returning compositions    (composed diagnostics)
+L5  commands/   Click CLI shells                          (thin: argv → ops / loaders / apps)
 ```
 
 The two front-ends enter at different heights, and that is the whole point of the ordering:
@@ -97,9 +98,12 @@ Pure support code consumed across layers, no `GData` orchestration of its own:
 - **Plotting/IO support** used by `output/` and commands: `axis_and_grid_prep.py`,
   `load_plot_data.py`, `downsample.py`, `latex_conversion.py`, `load_style.py`,
   `verb_print.py`, `nodal_to_cell_centered_grid.py`, `input_parser.py`, `set_frame.py`.
-- **Gkeyll/gyrokinetics domain reference** (the `gk_quantities/` registry of ~50 pre-named
-  GK quantities, `gkeyll_const.py`, `gkeyll_enums.py`, `gk_utils.py`). This is reference
-  data — naming conventions and physical constants — consulted by L3 loaders and L4 apps.
+- **Gkeyll/gyrokinetics domain reference** (`gk/`: the `gk_quantities/` registry of ~50
+  pre-named GK quantities, `gkeyll_const.py`, `gkeyll_enums.py`, `gk_utils.py`). This is
+  reference data — naming conventions and physical constants — *consulted* by L3 loaders and
+  L4 apps. It imports from `data/` only and **never orchestrates `ops`**; the gyrokinetic
+  *workflows* that do (build a distribution function, compose a named quantity) are
+  compositions and live in L3 `loaders/`, not here.
 
 ---
 
@@ -114,15 +118,23 @@ a folder:
   methods are 1-line delegations to `ops/`.
 - **`group.py`** — `DatasetGroup`: an ordered set of `GData`; non-terminal verbs broadcast,
   terminal verbs (`plot`, `animate`, `collect`, …) act on all members. Backs `.with_()`/`&`.
-- **`loader.py`** — `pg.load`: a callable singleton and the home of every *loader-workflow*
-  (read-by-naming-convention → interpolate/transform → return ready data):
-  `pg.load(...)`, `.many()`, `.gk_distf()`, `.pkpm()`, `.gk_quantity()`, `.outputs()`.
-  Loader-workflows return a `GData`/`DatasetGroup`, so they belong here rather than in L4.
+- **`loader.py`** — `pg.load`: a callable singleton and the public *face* of every
+  *loader-workflow* (read-by-naming-convention → interpolate/transform → return ready data):
+  `pg.load(...)`, `.many()`, `.gk_distf()`, `.pkpm()`, `.gk_quantity()`, `.outputs()`. The
+  bare-file readers (`__call__`, `many`) live here; the multi-file workflow *bodies* are thin
+  delegations down into `loaders/`.
+- **`loaders/`** — the implementation home for loader-workflows: `gk_distf.py`, `pkpm.py`,
+  `gk_quantity.py`. Each loads files by Gkeyll's naming conventions, runs them through `ops`
+  verbs, and returns a ready `GData`/`DatasetGroup`. Because they *compose* `ops` (rather
+  than merely being consulted like the `gk/` reference data), they sit at L3, above the verb
+  seam — which is why a loader importing `ops` is ordinary, not a smell. Both front-ends point
+  *down* here: `pg.load.<workflow>` (script) and the matching CLI command each delegate to one
+  `loaders/` function. They are the data-returning sibling of L4 `apps/` (figure-returning).
 - **`_gkylsoft_path.py`** — locates the `gkylsoft` installation.
 
 ---
 
-## L4 — `apps/`, composed diagnostics & workflows
+## L4 — `apps/`, composed diagnostics
 
 Higher-level programs assembled **from** the script API. An app loads (often many) files,
 computes, and produces a finished diagnostic — typically a figure or an analysis result.
@@ -133,9 +145,13 @@ The rule that keeps this layer honest: an app may call L0–L3 freely but **must
 `commands/`, and its compute logic is kept separate from any CLI/argv glue. Today's
 mini-applications belong here: `energy_balance`, `particle_balance`, `nodes`, `trajectory`.
 
-This is the layer the older codebase lacked — which is why these programs were trapped
-inside `commands/` as CLI-only code. Giving them their own layer between the script API and
-the CLI is what makes them reusable.
+`apps/` and L3 `loaders/` are the two composition layers above the verb primitives, split by
+**what they return**: a loader-workflow returns ready `GData` for further composition, so it
+sits at L3 where the script API can chain off it; an app returns a finished figure/analysis,
+the end of the pipeline, so it sits at L4. Both were once trapped inside `commands/` as
+CLI-only code — `apps/` rescued the figure-returning half, `loaders/` the data-returning
+half. Giving each its own layer between the script API and the CLI is what makes them
+reusable from a script or notebook.
 
 ---
 

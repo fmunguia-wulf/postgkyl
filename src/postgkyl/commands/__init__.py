@@ -31,7 +31,6 @@ from postgkyl.commands.mask import mask
 from postgkyl.commands.mhd import mhd
 from postgkyl.commands.parrotate import parrotate
 from postgkyl.apps.gk_energy_balance import gk_energy_balance
-from postgkyl.commands.gk_distf import load_gk_distf
 from postgkyl.commands.gk_distf import gk_distf
 from postgkyl.commands.dg_local_poly import dg_local_poly
 from postgkyl.commands.gk_load_quantity import gk_load_quantity

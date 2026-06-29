@@ -198,7 +198,7 @@ class _Loader:
       A :class:`postgkyl.GData` for a single frame, otherwise a
       :class:`postgkyl.DatasetGroup` with one member per frame.
     """
-    from postgkyl.commands.gk_distf import load_gk_distf, resolve_frames
+    from postgkyl.loaders.gk_distf import load_gk_distf, resolve_frames
 
     frames = resolve_frames(frame, name=name, species=species,
         suffix=suffix, block_idx=block_idx)
@@ -248,7 +248,7 @@ class _Loader:
     Returns:
       A populated, interpolated :class:`postgkyl.GData` instance.
     """
-    from postgkyl.gk.pkpm import load_pkpm
+    from postgkyl.loaders.pkpm import load_pkpm
     return load_pkpm(name, species, idx, poly_order, tag=tag, label=label)
 
   def gk_quantity(self, quantity: str, species: str | None, name: str,
@@ -289,7 +289,7 @@ class _Loader:
       A :class:`postgkyl.GData` for a single result, otherwise a
       :class:`postgkyl.DatasetGroup`.
     """
-    from postgkyl.gk.load_quantity import load_gk_quantity
+    from postgkyl.loaders.gk_quantity import load_gk_quantity
     datasets = load_gk_quantity(quantity, species, name, frame, path=path,
         tag=tag, label=label, **extra)
     if len(datasets) == 1:
@@ -299,7 +299,7 @@ class _Loader:
 
   def gk_quantities(self) -> list:
     """Return the list of registered gyrokinetic quantity names."""
-    from postgkyl.gk.load_quantity import available_quantities
+    from postgkyl.loaders.gk_quantity import available_quantities
     return available_quantities()
 
   def outputs(self, extensions: str = "bp,gkyl") -> dict:

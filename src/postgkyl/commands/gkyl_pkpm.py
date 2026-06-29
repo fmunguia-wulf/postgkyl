@@ -3,7 +3,7 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
-from postgkyl.gk.pkpm import load_pkpm
+from postgkyl.loaders.pkpm import load_pkpm
 from postgkyl.utils import verb_print
 
 
