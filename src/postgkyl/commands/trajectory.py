@@ -1,8 +1,10 @@
 from matplotlib.animation import FuncAnimation
-import click
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl.utils import verb_print
 
@@ -69,33 +71,34 @@ def _update(i, ax, ctx, leap, vel, xmin, xmax, ymin, ymax, zmin, zmax, tag):
   ax.set_zlim3d(zmin, zmax)
 
 
-@click.command()
-@click.option("--fix-aspect", "fixaspect",is_flag=True, help="Enforce the same scaling on both axes.")
-@click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF (default: ON).")
-@click.option("-i", "--interval", default=100, help="Specify the animation interval.")
-@click.option("--save", is_flag=True, help="Save figure as PNG.")
-@click.option("--velocity/--no-velocity", default=True, help="Plot velocity vectors.")
-@click.option("--saveas", type=click.STRING, default=None, help="Name to save the plot as.")
-@click.option("-e", "--elevation", type=click.FLOAT, help="Set elevation.")
-@click.option("-a", "--azimuth", type=click.FLOAT, help="Set azimuth.")
-@click.option("-n", "--numframes", type=click.INT, help="Set number of frames for the animation.")
-@click.option("--xmin", type=click.FLOAT, help="Minimum value of the x-coordinate")
-@click.option("--xmax", type=click.FLOAT, help="Maximum value of the x-coordinate")
-@click.option("--ymin", type=click.FLOAT, help="Minimum value of the y-coordinate")
-@click.option("--ymax", type=click.FLOAT, help="Maximum value of the y-coordinate")
-@click.option("--zmin", type=click.FLOAT, help="Minimum value of the z-coordinate")
-@click.option("--zmax", type=click.FLOAT, help="Maximum value of the z-coordinate")
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.pass_context
-def trajectory(ctx, **kwargs):
+def trajectory(
+    ctx: typer.Context,
+    fixaspect: Annotated[bool, typer.Option("--fix-aspect", help="Enforce the same scaling on both axes.")] = False,
+    show: Annotated[bool, typer.Option("--show/--no-show", help="Turn showing of the plot ON and OFF (default: ON).")] = True,
+    interval: Annotated[Optional[int], typer.Option("-i", "--interval", help="Specify the animation interval.")] = 100,
+    save: Annotated[bool, typer.Option("--save", help="Save figure as PNG.")] = False,
+    velocity: Annotated[bool, typer.Option("--velocity/--no-velocity", help="Plot velocity vectors.")] = True,
+    saveas: Annotated[Optional[str], typer.Option("--saveas", help="Name to save the plot as.")] = None,
+    elevation: Annotated[Optional[float], typer.Option("-e", "--elevation", help="Set elevation.")] = None,
+    azimuth: Annotated[Optional[float], typer.Option("-a", "--azimuth", help="Set azimuth.")] = None,
+    numframes: Annotated[Optional[int], typer.Option("-n", "--numframes", help="Set number of frames for the animation.")] = None,
+    xmin: Annotated[Optional[float], typer.Option("--xmin", help="Minimum value of the x-coordinate")] = None,
+    xmax: Annotated[Optional[float], typer.Option("--xmax", help="Maximum value of the x-coordinate")] = None,
+    ymin: Annotated[Optional[float], typer.Option("--ymin", help="Minimum value of the y-coordinate")] = None,
+    ymax: Annotated[Optional[float], typer.Option("--ymax", help="Maximum value of the y-coordinate")] = None,
+    zmin: Annotated[Optional[float], typer.Option("--zmin", help="Minimum value of the z-coordinate")] = None,
+    zmax: Annotated[Optional[float], typer.Option("--zmax", help="Maximum value of the z-coordinate")] = None,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+):
   """Animate a particle trajectory."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting trajectory")
   data = ctx.obj["data"]
 
   tags = list(data.tag_iterator(kwargs["use"]))
   tag = tags[0]
   if len(tags) > 1:
-    ctx.fail(click.echo(f"'trajectory' supports only one 'tag', was provided {len(tags):d}",
+    ctx.fail(typer.echo(f"'trajectory' supports only one 'tag', was provided {len(tags):d}",
         color="red"))
   # end
 

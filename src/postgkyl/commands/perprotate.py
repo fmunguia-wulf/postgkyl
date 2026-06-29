@@ -1,24 +1,23 @@
-import click
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--array", "-a", default="array", show_default=True,
-    help="Tag for array to be rotated")
-@click.option("--rotator", "-r", default="rotator", show_default=True,
-    help="Tag for rotator (data used for the rotation)")
-@click.option("--tag", "-t", default="rotarrayperp", show_default=True,
-    help="Tag for the resulting rotated array perpendicular to rotator")
-@click.option("--label", "-l", default="rotarrayperp", show_default=True,
-    help="Custom label for the result")
-@click.pass_context
-def perprotate(ctx, **kwargs):
+def perprotate(
+    ctx: typer.Context,
+    array: Annotated[Optional[str], typer.Option("--array", "-a", help="Tag for array to be rotated")] = "array",
+    rotator: Annotated[Optional[str], typer.Option("--rotator", "-r", help="Tag for rotator (data used for the rotation)")] = "rotator",
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the resulting rotated array perpendicular to rotator")] = "rotarrayperp",
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = "rotarrayperp",
+):
   """Rotate an array perpendicular to the unit vectors of a second array.
 
   For two arrays u and v, where v is the rotator, operation is u - (u dot v_hat) v_hat.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting rotation perpendicular to rotator array")
   data = ctx.obj["data"]
 

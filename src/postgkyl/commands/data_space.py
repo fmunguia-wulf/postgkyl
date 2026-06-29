@@ -1,7 +1,7 @@
 """Postgkyl submodule to provide iterators in hte command line mode."""
 from __future__ import annotations
 
-import click
+import typer
 import numpy as np
 from typing import Iterator, TYPE_CHECKING
 
@@ -20,7 +20,7 @@ class DataSpace(object):
       only_active: bool = True, select: int | slice | str | None = None) -> Iterator[GData]:
     # Process 'select'
     if enum and select:
-      click.echo(click.style("Error: 'select' and 'enum' cannot be selected simultaneously", fg="red"))
+      typer.echo(typer.style("Error: 'select' and 'enum' cannot be selected simultaneously", fg="red"))
       quit()
     # end
     idx_sel = slice(None, None)
@@ -75,10 +75,10 @@ class DataSpace(object):
           # end
         # end
       except KeyError as err:
-        click.echo(click.style(f"ERROR: Failed to load the specified/default tag {err}", fg="red"))
+        typer.echo(typer.style(f"ERROR: Failed to load the specified/default tag {err}", fg="red"))
         quit()
       except IndexError:
-        click.echo(click.style("ERROR: Index out of the dataset range", fg="red"))
+        typer.echo(typer.style("ERROR: Index out of the dataset range", fg="red"))
         quit()
       # end
     # end

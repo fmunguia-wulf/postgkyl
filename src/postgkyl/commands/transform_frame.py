@@ -1,20 +1,22 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--distribution", "-f", type=click.STRING, prompt=True,
-    help="Specify the PKPM distribution function.")
-@click.option("--bulk", "-u", type=click.STRING, prompt=True, help="Specify the PKPM moments.")
-@click.option("--cdim", "-c", type=click.INT, prompt=True,
-    help="Specify the number of configuration space dimensions.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array.")
-@click.option("--label", "-l", help="Custom label for the result.")
-@click.pass_context
-def transformframe(ctx, **kwargs):
+def transformframe(
+    ctx: typer.Context,
+    distribution: Annotated[Optional[str], typer.Option("--distribution", "-f", prompt=True, help="Specify the PKPM distribution function.")] = None,
+    bulk: Annotated[Optional[str], typer.Option("--bulk", "-u", prompt=True, help="Specify the PKPM moments.")] = None,
+    cdim: Annotated[Optional[int], typer.Option("--cdim", "-c", prompt=True, help="Specify the number of configuration space dimensions.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
+):
   """Shift a PKPM distribution function to the bulk-velocity frame."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting transformframe")
   data = ctx.obj["data"]
 

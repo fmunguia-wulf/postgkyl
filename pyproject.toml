@@ -11,7 +11,7 @@ authors = [
 ]
 description = "Python library and command-line tool for postprocessing (not only) Gkeyll data"
 dependencies = [
-  "click>=8.4.1",
+  "typer>=0.15.0",
   "matplotlib>=3.10.9",
   "msgpack>=1.1.2",
   "numpy>=2.2.6",

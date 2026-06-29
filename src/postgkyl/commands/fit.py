@@ -1,5 +1,7 @@
-import click
 import numpy as np
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl.data.gdata import GData
 from postgkyl.utils import verb_print
@@ -7,8 +9,11 @@ import postgkyl.tools as tools
 from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 
-class FitTypeParam(click.ParamType):
+class FitTypeParam:
   name = "fit_type"
+
+  def fail(self, message, param=None, ctx=None):
+    raise typer.BadParameter(message)
 
   def convert(self, value, param, ctx):
     choices = list(tools.FIT_FUNCTIONS.keys())
@@ -37,27 +42,27 @@ def _print_result(fit_type, params, std, R2, param_names=None):
   p = params
   s = std
   if fit_type == "linear":
-    click.echo(
+    typer.echo(
         f"Linear:      y = ({p[0]:.6e} ± {s[0]:.2e})*x"
         f" + ({p[1]:.6e} ± {s[1]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "quadratic":
-    click.echo(
+    typer.echo(
         f"Quadratic:   y = ({p[0]:.6e} ± {s[0]:.2e})*x²"
         f" + ({p[1]:.6e} ± {s[1]:.2e})*x"
         f" + ({p[2]:.6e} ± {s[2]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "plane":
-    click.echo(
+    typer.echo(
         f"Plane:       z = ({p[0]:.6e} ± {s[0]:.2e})*x"
         f" + ({p[1]:.6e} ± {s[1]:.2e})*y"
         f" + ({p[2]:.6e} ± {s[2]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "quadratic2d":
-    click.echo(
+    typer.echo(
         f"2D quadratic: z = ({p[0]:.6e} ± {s[0]:.2e})*x²"
         f" + ({p[1]:.6e} ± {s[1]:.2e})*y²"
         f" + ({p[2]:.6e} ± {s[2]:.2e})*x*y"
@@ -67,32 +72,32 @@ def _print_result(fit_type, params, std, R2, param_names=None):
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "exp_plateau":
-    click.echo(
+    typer.echo(
         f"Exp plateau: y = ({p[0]:.6e} ± {s[0]:.2e})*exp(({p[1]:.6e} ± {s[1]:.2e})*x)"
         f" + ({p[2]:.6e} ± {s[2]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "gaussian":
-    click.echo(
+    typer.echo(
         f"Gaussian:    y = ({p[0]:.6e} ± {s[0]:.2e})"
         f"*exp(-0.5*((x - ({p[1]:.6e} ± {s[1]:.2e}))/({p[2]:.6e} ± {s[2]:.2e}))²)"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "power":
-    click.echo(
+    typer.echo(
         f"Power law:   y = ({p[0]:.6e} ± {s[0]:.2e})*x^({p[1]:.6e} ± {s[1]:.2e})"
         f" + ({p[2]:.6e} ± {s[2]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "sinusoid":
-    click.echo(
+    typer.echo(
         f"Sinusoid:    y = ({p[0]:.6e} ± {s[0]:.2e})"
         f"*sin(({p[1]:.6e} ± {s[1]:.2e})*x + ({p[2]:.6e} ± {s[2]:.2e}))"
         f" + ({p[3]:.6e} ± {s[3]:.2e})"
         f"    R² = {R2:.6f}"
     )
   elif fit_type == "tanh_transition":
-    click.echo(
+    typer.echo(
         f"Tanh:        y = ({p[0]:.6e} ± {s[0]:.2e})"
         f"*tanh((x - ({p[1]:.6e} ± {s[1]:.2e}))/({p[2]:.6e} ± {s[2]:.2e}))"
         f" + ({p[3]:.6e} ± {s[3]:.2e})"
@@ -101,7 +106,7 @@ def _print_result(fit_type, params, std, R2, param_names=None):
   else:
     names = param_names or tools.rpn_param_names(fit_type)
     parts = "  ".join(f"{n} = {p[i]:.6e} ± {s[i]:.2e}" for i, n in enumerate(names))
-    click.echo(f"Custom ({fit_type}):  {parts}    R² = {R2:.6f}")
+    typer.echo(f"Custom ({fit_type}):  {parts}    R² = {R2:.6f}")
 
 
 def _auto_guess(fit_type, xdata, ydata):
@@ -193,12 +198,12 @@ def _auto_guess(fit_type, xdata, ydata):
   return None
 
 
-@click.command()
-@click.argument("fit_type", type=FitTypeParam())
-@click.option("--use", "-u", default=None, help="Specify a 'tag' to apply to. [default: all]")
-@click.option("--guess", "-g", default=None, help="Comma-separated initial parameter guess.")
-@click.pass_context
-def fit(ctx, **kwargs):
+def fit(
+    ctx: typer.Context,
+    fit_type: Annotated[str, typer.Argument()],
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to. [default: all]")] = None,
+    guess: Annotated[Optional[str], typer.Option("--guess", "-g", help="Comma-separated initial parameter guess.")] = None,
+):
   """Fit data with a model and print parameters + R².
 
   Model types (prefix-matched, same mechanism as pgkyl commands):
@@ -223,6 +228,7 @@ def fit(ctx, **kwargs):
   (e.g. after integrate) are automatically ignored. Adds the fitted curve as a
   new dataset on the stack (same tag, same nodal grid, values at cell centers).
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting fit")
   data = ctx.obj["data"]
   fit_type = FitTypeParam().convert(kwargs["fit_type"], None, None)
@@ -231,7 +237,7 @@ def fit(ctx, **kwargs):
   for dat in data.iterator(kwargs["use"]):
     label = dat.get_label()
     tag = dat.get_tag()
-    click.echo(click.style(f"{label} ({tag})" if label else tag, bold=True))
+    typer.echo(typer.style(f"{label} ({tag})" if label else tag, bold=True))
 
     grid = dat.get_grid()
     values = dat.get_values()
@@ -273,7 +279,7 @@ def fit(ctx, **kwargs):
     fit_values_list = []
     for comp in range(n_components):
       if n_components > 1:
-        click.echo(f"  Component {comp}:")
+        typer.echo(f"  Component {comp}:")
       ydata = values[..., comp].flatten()
       p0 = user_p0 if user_p0 is not None else _auto_guess(fit_type, xdata, ydata)
       params, cov, R2 = tools.fit(xdata, ydata, fit_type, p0=p0)

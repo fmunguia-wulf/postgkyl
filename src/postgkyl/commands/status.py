@@ -1,15 +1,16 @@
-import click
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--tag", "-t", type=click.STRING, help="Tag(s) to apply to (comma-separated).")
-@click.option("--index", "-i", type=click.STRING,
-    help="Dataset indices (e.g., '1', '0,2,5', or '1:6:2').")
-@click.option("--focused", "-f", is_flag=True, help="Leave unspecified datasets untouched.")
-@click.pass_context
-def activate(ctx, **kwargs):
+def activate(
+    ctx: typer.Context,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag(s) to apply to (comma-separated).")] = None,
+    index: Annotated[Optional[str], typer.Option("--index", "-i", help="Dataset indices (e.g., '1', '0,2,5', or '1:6:2').")] = None,
+    focused: Annotated[bool, typer.Option("--focused", "-f", help="Leave unspecified datasets untouched.")] = False,
+):
   """Select datasets(s) to pass further down the command chain.
 
   Datasets are indexed starting 0. Multiple datasets can be selected using a comma
@@ -23,6 +24,7 @@ def activate(ctx, **kwargs):
   'info' command (especially with the '-ac' flags) can be helpful when
   activating/deactivating multiple datasets.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting activate")
   data = ctx.obj["data"]
 
@@ -37,13 +39,12 @@ def activate(ctx, **kwargs):
   verb_print(ctx, "Finishing activate")
 
 
-@click.command()
-@click.option("--tag", "-t", type=click.STRING, help="Tag(s) to apply to (comma-separated).")
-@click.option("--index", "-i", type=click.STRING,
-    help="Dataset indices (e.g., '1', '0,2,5', or '1:6:2').")
-@click.option("--focused", "-f", is_flag=True, help="Leave unspecified datasets untouched.")
-@click.pass_context
-def deactivate(ctx, **kwargs):
+def deactivate(
+    ctx: typer.Context,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag(s) to apply to (comma-separated).")] = None,
+    index: Annotated[Optional[str], typer.Option("--index", "-i", help="Dataset indices (e.g., '1', '0,2,5', or '1:6:2').")] = None,
+    focused: Annotated[bool, typer.Option("--focused", "-f", help="Leave unspecified datasets untouched.")] = False,
+):
   """Select datasets(s) to pass further down the command chain.
 
   Datasets are indexed starting 0. Multiple datasets can be selected using a comma
@@ -57,6 +58,7 @@ def deactivate(ctx, **kwargs):
   'info' command (especially with the '-ac' flags) can be helpful when
   activating/deactivating multiple datasets.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting deactivate")
   data = ctx.obj["data"]
 

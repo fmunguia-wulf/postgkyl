@@ -1,7 +1,7 @@
 """Module including Gkeyll ADIOS reader class."""
 
 from typing import Tuple
-import click
+import typer
 import numpy as np
 import re
 
@@ -178,7 +178,7 @@ class GkylAdiosReader(object):
       if self.click_mode:
         var_name = self.var_name
         while True:
-          var_name = click.prompt(f"Variable name '{var_name:s}' is not available, please select from the available ones: {self.ctx['var_names']:s}")
+          var_name = typer.prompt(f"Variable name '{var_name:s}' is not available, please select from the available ones: {self.ctx['var_names']:s}")
           if var_name in fh.available_variables():
             self.var_name = var_name
             self.ctx.pop("var_names", None)

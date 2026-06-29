@@ -1,8 +1,8 @@
 import numpy as np
-import click
+import typer
 
 #sets frame in block ctx attribute using block file name
-def set_frame(ctx: click.core.Context) -> list:
+def set_frame(ctx: typer.Context) -> list:
   """Utility function which sets data ctx frames in multiblock data situations
 
   This function uses gkyl's default file name output in multiblock cases to
@@ -14,7 +14,7 @@ def set_frame(ctx: click.core.Context) -> list:
   objects in plotting and animation.
 
   Args:
-    ctx: click.core.context | Object
+    ctx: typer.Context | Object
       Context from loaded data / previous commands
   Returns:
     sorted_frame_list: list

@@ -1,25 +1,24 @@
-import click
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--array", "-a", default="array", show_default=True,
-    help="Tag for array to be rotated.")
-@click.option("--field", "-r", default="field", show_default=True,
-    help="Tag for EM field data (data used for the rotation).")
-@click.option("--tag", "-t", default="arrayBperp", show_default=True,
-    help="Tag for the resulting rotated array perpendicular to magnetic field.")
-@click.option("--label", "-l", default="arrayBperp", show_default=True,
-    help="Custom label for the result.")
-@click.pass_context
-def bperprotate(ctx, **kwargs):
+def bperprotate(
+    ctx: typer.Context,
+    array: Annotated[Optional[str], typer.Option("--array", "-a", help="Tag for array to be rotated.")] = "array",
+    field: Annotated[Optional[str], typer.Option("--field", "-r", help="Tag for EM field data (data used for the rotation).")] = "field",
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the resulting rotated array perpendicular to magnetic field.")] = "arrayBperp",
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = "arrayBperp",
+):
   """Rotate an array perpendicular to the unit vectors of the magnetic field.
 
   For two arrays u and b, where b is the unit vector in the direction of the magnetic
   field, the operation is u - (u dot b_hat) b_hat.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting rotation perpendicular to magnetic field")
   data = ctx.obj["data"]
 

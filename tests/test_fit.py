@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import click
+import typer
 import numpy as np
 import pytest
 
@@ -61,11 +62,11 @@ class TestFitTypeParam:
     assert self.p.convert("quadratic", None, None) == "quadratic"
 
   def test_ambiguous_prefix_raises_bad_parameter(self):
-    with pytest.raises(click.exceptions.BadParameter):
+    with pytest.raises(typer.BadParameter):
       self.p.convert("q", None, None)
 
   def test_unknown_raises_bad_parameter(self):
-    with pytest.raises(click.exceptions.BadParameter):
+    with pytest.raises(typer.BadParameter):
       self.p.convert("exponential", None, None)
 
 
@@ -290,7 +291,7 @@ class TestRPN:
 
   def test_fittype_param_rejects_bare_unknown(self):
     p = FitTypeParam()
-    with pytest.raises(click.exceptions.BadParameter):
+    with pytest.raises(typer.BadParameter):
       p.convert("cubic", None, None)
 
   def test_rpn_command_runs(self):
@@ -298,7 +299,7 @@ class TestRPN:
     x_cc = 0.5 * (x_nodal[:-1] + x_nodal[1:])
     y = 3.0 * x_cc - 1.5
     ctx = _make_ctx([_gdata_1d(x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="a x * b +", guess="1.0,0.0")
+    cmd.fit(ctx, fit_type="a x * b +", guess="1.0,0.0")
 
 
 # ── tools: fit() — 2-D models ─────────────────────────────────────────────────
@@ -362,29 +363,29 @@ class TestFitCommand:
 
   def test_linear_command_runs(self):
     ctx = _make_ctx([self._linear_dat()])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
 
   def test_quadratic_command_runs(self):
     ctx = _make_ctx([self._quadratic_dat()])
-    ctx.invoke(cmd.fit, fit_type="quadratic")
+    cmd.fit(ctx, fit_type="quadratic")
 
   def test_plane_command_runs(self):
     ctx = _make_ctx([self._plane_dat()])
-    ctx.invoke(cmd.fit, fit_type="plane")
+    cmd.fit(ctx, fit_type="plane")
 
   def test_prefix_resolves_at_invocation(self):
     ctx = _make_ctx([self._linear_dat()])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
 
   def test_fit_adds_dataset_to_stack(self):
     ctx = _make_ctx([self._linear_dat()])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
     assert len(list(ctx.obj["data"].iterator())) == 2
 
   def test_fit_output_matches_input_grid_structure(self):
     dat = self._linear_dat()
     ctx = _make_ctx([dat])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
     datasets = list(ctx.obj["data"].iterator())
     original, fitted = datasets[0], datasets[1]
     assert fitted.get_grid()[0].shape == original.get_grid()[0].shape
@@ -392,7 +393,7 @@ class TestFitCommand:
 
   def test_fit_output_values_are_accurate(self):
     ctx = _make_ctx([self._linear_dat()])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
     fitted = list(ctx.obj["data"].iterator())[1]
     expected = tools.linear(self._x_cc, 3.0, -1.0)
     np.testing.assert_allclose(fitted.get_values()[..., 0], expected, rtol=1e-6)
@@ -400,7 +401,7 @@ class TestFitCommand:
   def test_dimension_mismatch_raises(self):
     ctx = _make_ctx([self._linear_dat()])
     with pytest.raises(click.exceptions.UsageError, match="requires 2 spatial dimension"):
-      ctx.invoke(cmd.fit, fit_type="plane")
+      cmd.fit(ctx, fit_type="plane")
 
   def test_component_selection_does_not_raise(self):
     y0 = tools.linear(self._x_cc, 3.0, -1.0)
@@ -408,56 +409,56 @@ class TestFitCommand:
     dat = GData()
     dat.push([self._x_nodal], np.stack([y0, y1], axis=-1))
     ctx = _make_ctx([dat])
-    ctx.invoke(cmd.fit, fit_type="linear", component=1)
+    cmd.fit(ctx, fit_type="linear")
 
   def test_initial_guess_does_not_raise(self):
     ctx = _make_ctx([self._linear_dat()])
-    ctx.invoke(cmd.fit, fit_type="linear", guess="1.0,0.0")
+    cmd.fit(ctx, fit_type="linear", guess="1.0,0.0")
 
   def test_exp_plateau_command_runs(self):
     y = tools.exp_plateau(self._x_cc, 3.0, -0.5, 1.0)
     ctx = _make_ctx([_gdata_1d(self._x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="exp_plateau", guess="1.0,-1.0,0.0")
+    cmd.fit(ctx, fit_type="exp_plateau", guess="1.0,-1.0,0.0")
 
   def test_gaussian_command_runs(self):
     y = tools.gaussian(self._x_cc, 2.0, 5.0, 1.5)
     ctx = _make_ctx([_gdata_1d(self._x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="gaussian", guess="1.0,5.0,1.0")
+    cmd.fit(ctx, fit_type="gaussian", guess="1.0,5.0,1.0")
 
   def test_power_command_runs(self):
     y = tools.power(self._x_cc + 1.0, 1.0, 2.0, 0.0)
     ctx = _make_ctx([_gdata_1d(self._x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="power", guess="1.0,1.5,0.0")
+    cmd.fit(ctx, fit_type="power", guess="1.0,1.5,0.0")
 
   def test_sinusoid_command_runs(self):
     y = tools.sinusoid(self._x_cc, 1.0, 1.0, 0.0, 0.0)
     ctx = _make_ctx([_gdata_1d(self._x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="sinusoid", guess="1.0,1.0,0.0,0.0")
+    cmd.fit(ctx, fit_type="sinusoid", guess="1.0,1.0,0.0,0.0")
 
   def test_tanh_transition_command_runs(self):
     rng = np.random.default_rng(3)
     y = tools.tanh_transition(self._x_cc, 2.0, 5.0, 1.0, 0.0) + rng.normal(0, 0.05, len(self._x_cc))
     ctx = _make_ctx([_gdata_1d(self._x_nodal, y)])
-    ctx.invoke(cmd.fit, fit_type="tanh_transition", guess="1.0,5.0,1.0,0.0")
+    cmd.fit(ctx, fit_type="tanh_transition", guess="1.0,5.0,1.0,0.0")
 
   def test_already_cell_centered_grid_does_not_raise(self):
     dat = GData()
     y = tools.linear(self._x_cc, 2.0, 1.0)
     dat.push([self._x_cc], y[:, np.newaxis])
     ctx = _make_ctx([dat])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
 
   def test_collapsed_dimension_is_ignored(self):
     y = tools.linear(self._x_cc, 2.0, 1.0)
     dat = GData()
     dat.push([self._x_nodal, np.array([0.0, 1.0])], y[:, np.newaxis, np.newaxis])
     ctx = _make_ctx([dat])
-    ctx.invoke(cmd.fit, fit_type="linear")
+    cmd.fit(ctx, fit_type="linear")
 
   def test_nodal_and_cell_centered_grids_both_run(self):
     y = tools.linear(self._x_cc, 2.0, 1.0)
     dat_nodal = _gdata_1d(self._x_nodal, y)
     dat_cc = GData()
     dat_cc.push([self._x_cc], y[:, np.newaxis])
-    _make_ctx([dat_nodal]).invoke(cmd.fit, fit_type="linear")
-    _make_ctx([dat_cc]).invoke(cmd.fit, fit_type="linear")
+    cmd.fit(_make_ctx([dat_nodal]), fit_type="linear")
+    cmd.fit(_make_ctx([dat_cc]), fit_type="linear")

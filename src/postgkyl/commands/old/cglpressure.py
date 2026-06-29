@@ -1,4 +1,5 @@
-import click
+import typer
+from typing_extensions import Annotated
 import numpy as np
 
 from postgkyl.commands import tm
@@ -66,15 +67,11 @@ def getAgyro(pij, B):
   return tmp
 
 
-@click.command()
-@click.option(
-    "--agyro",
-    is_flag=True,
-    default=False,
-    help="Compute the agyrotropic part of pressure tensor instead",
-)
-@click.pass_context
-def cglpressure(ctx, **inputs):
+def cglpressure(
+    ctx: typer.Context,
+    agyro: Annotated[bool, typer.Option("--agyro",
+        help="Compute the agyrotropic part of pressure tensor instead")] = False,
+):
   """Extract parallel and perpendicular pressures from pressure-tensor
   and magnetic field. Pressure-tensor must be the first dataset and
   magnetic field the second dataset. A two component field
@@ -83,6 +80,7 @@ def cglpressure(ctx, **inputs):
   tensor.
 
   """
+  inputs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting CGL pressure")
 
   coords, pij = peakStack(ctx, ctx.obj["sets"][0])

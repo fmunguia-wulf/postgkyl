@@ -1,4 +1,4 @@
-import click
+import typer
 import numpy as np
 from postgkyl.data.idx_parser import idx_parser
 
@@ -271,8 +271,8 @@ def divergence(in_grid, in_values):
   num_dims = len(in_grid[0])
   num_comps = in_values[0].shape[-1]
   if num_comps > num_dims:
-    click.echo(
-        click.style(f"WARNING in 'ev div': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} component(s) of the vector will be disregarded.",
+    typer.echo(
+        typer.style(f"WARNING in 'ev div': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} component(s) of the vector will be disregarded.",
             fg="yellow")
     )
     # end
@@ -309,8 +309,8 @@ def curl(in_grid, in_values):
     if num_comps < 2:
       raise ValueError(f"ERROR in 'ev curl': Length of the provided vector ({num_comps:d}) is smaller than number of dimensions ({num_dims:d}). Curl can't be calculated." )
     elif num_comps == 2:
-      click.echo(
-          click.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). Only the third component of curl will be calculated.",
+      typer.echo(
+          typer.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). Only the third component of curl will be calculated.",
               fg="yellow")
       )
       out_shape[-1] = 1
@@ -321,8 +321,8 @@ def curl(in_grid, in_values):
     else:
       if num_comps > 3:
         print("here")
-        click.echo(
-            click.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} components of the vector will be disregarded.",
+        typer.echo(
+            typer.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} components of the vector will be disregarded.",
                 fg="yellow")
         )
       # end
@@ -332,8 +332,8 @@ def curl(in_grid, in_values):
       out_values[..., 2] = np.gradient( in_values[0][..., 1], zc0, edge_order=2, axis=0) - np.gradient(in_values[0][..., 0], zc1, edge_order=2, axis=1)
   else:  # 3D
     if num_comps > 3:
-      click.echo(
-          click.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} component(s) of the vector will be disregarded.",
+      typer.echo(
+          typer.style(f"WARNING in 'ev curl': Length of the provided vector ({num_comps:d}) is longer than number of dimensions ({num_dims:d}). The last {num_comps - num_dims:d} component(s) of the vector will be disregarded.",
               fg="yellow")
       )
     elif num_comps < 3:

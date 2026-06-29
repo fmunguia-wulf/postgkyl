@@ -1,4 +1,7 @@
-import click
+import typer
+from typing import Optional
+from typing_extensions import Annotated
+import enum
 import importlib
 import numpy as np
 import os.path
@@ -9,115 +12,95 @@ import webbrowser
 from postgkyl.utils import verb_print
 
 
-def _parse_range_option(_ctx, _param, value):
+def _parse_range_option(value):
   if value is None:
     return None
+  # end
+  if not isinstance(value, str):
+    return value
   # end
   # Convert "lower,upper" or "lower:upper" into a tuple of floats (lower, upper)
   parts = [part.strip() for part in str(value).replace(":", ",").split(",") if part.strip()]
   return (float(parts[0]), float(parts[1]))
 
-@click.command(name="plotly")
-@click.option("--use", "-u", default=None, help="Tag to plot from the active dataset stack.")
-@click.option("--squeeze", is_flag=True, help="Draw all components in a single 3D scene.")
-@click.option("--subplots", "-b", is_flag=True, help="Draw components in separate 3D subplots.")
-@click.option("--nsubplotrow", "num_subplot_row", type=click.INT,
-    help="Number of subplot rows for multi-component 3D plots.")
-@click.option("--nsubplotcol", "num_subplot_col", type=click.INT,
-    help="Number of subplot columns for multi-component 3D plots.")
-@click.option("-s", "--scatter", is_flag=True,
-  help="Render point samples as sphere-like colored markers.")
-@click.option("--marker-radius", type=click.FLOAT, default=4.0, show_default=True,
-  help="Scatter marker radius in pixels.")
-@click.option("--markerstyle", type=click.Choice([
-    "circle", "square", "diamond", "cross", "x",
-]), default="circle", show_default=True,
-  help="Marker shape for scatter points.")
-@click.option("-o", "--opacity", type=click.FLOAT, default=1.0, show_default=True,
-    help="Volume and contour opacity in [0, 1].")
-@click.option("--scatter-opacity-range", type=click.STRING, callback=_parse_range_option, default=None,
-  help="Scatter alpha range as 'min,max' (or 'min:max'); enables opacity-gradient colorscale only when set.")
-@click.option("--scatter-opacity-log/--no-scatter-opacity-log", default=False, show_default=True,
-  help="Use logarithmic mapping for scatter opacity ramp (rapid low-end change, flatter high-end).")
-@click.option("--surface-count", type=click.INT, default=32, show_default=True,
-    help="Number of Plotly volume isosurfaces.")
-@click.option("--maximum-points-per-axis", "--mppa", "maximum_points_per_axis", type=click.INT, default=0, show_default=True,
-    help="Maximum points per axis for 3D downsampling; 0 disables downsampling.")
-@click.option("--background", type=click.Choice(["dark", "light"]), default="dark", show_default=True,
-    help="3D scene background theme.")
-@click.option("-d", "--diverging", is_flag=True, help="Use a diverging colorscale.")
-@click.option("--aspect", default=None,
-    help="Aspect mode: auto, data, cube, or a numeric uniform ratio.")
-@click.option("--logx", is_flag=True, help="Use log scaling on x axis.")
-@click.option("--logy", is_flag=True, help="Use log scaling on y axis.")
-@click.option("--logz", is_flag=True, help="Use log scaling on z axis.")
-@click.option("--logc", is_flag=True, help="Use log scaling for scalar coloring.")
-@click.option("--xshift", default=0.0, type=click.FLOAT, show_default=True,
-    help="Additive shift for x coordinates.")
-@click.option("--yshift", default=0.0, type=click.FLOAT, show_default=True,
-    help="Additive shift for y coordinates.")
-@click.option("--zshift", default=0.0, type=click.FLOAT, show_default=True,
-    help="Additive shift for scalar values before coloring.")
-@click.option("--cshift", default=0.0, type=click.FLOAT, show_default=True,
-    help="Additive shift for color-mapped values.")
-@click.option("--xscale", default=1.0, type=click.FLOAT, show_default=True,
-    help="Multiplicative scale for x coordinates.")
-@click.option("--yscale", default=1.0, type=click.FLOAT, show_default=True,
-    help="Multiplicative scale for y coordinates.")
-@click.option("--zscale", default=1.0, type=click.FLOAT, show_default=True,
-    help="Multiplicative scale for scalar values before coloring.")
-@click.option("--cscale", default=1.0, type=click.FLOAT, show_default=True,
-    help="Multiplicative scale for color-mapped values.")
-@click.option("--xlim", default=None, type=click.STRING, callback=_parse_range_option,
-    help="x-axis limits as 'lower,upper' (or 'lower:upper').")
-@click.option("--ylim", default=None, type=click.STRING, callback=_parse_range_option,
-    help="y-axis limits as 'lower,upper' (or 'lower:upper').")
-@click.option("--zlim", default=None, type=click.STRING, callback=_parse_range_option,
-    help="z-axis limits as 'lower,upper' (or 'lower:upper').")
-@click.option("--clim", default=None, type=click.STRING, callback=_parse_range_option,
-    help="Color limits as 'lower,upper' (or 'lower:upper').")
-@click.option("--cmax", default=None, type=click.FLOAT, help="Maximum color value.")
-@click.option("--cmin", default=None, type=click.FLOAT, help="Minimum color value.")
-@click.option("--globalrange", "-r", is_flag=True,
-    help="Compute a shared color range across selected 3D datasets.")
-@click.option("--cutoffglobalrange", "-cogr", default=None, type=click.FLOAT,
-    help="Percentile cutoff for shared color range (e.g. 0.98).")
-@click.option("--legend", default=None, type=click.STRING,
-    help="Comma-separated legend labels for datasets.")
-@click.option("--no-legend", is_flag=True, help="Hide legend labels.")
-@click.option("--force-legend", "forcelegend", is_flag=True,
-    help="Force legend labels even for single dataset plots.")
-@click.option("--color", type=click.STRING, help="Use a fixed color (bypasses colorscale).")
-@click.option("-x", "--xlabel", type=click.STRING, help="x-axis label.")
-@click.option("-y", "--ylabel", type=click.STRING, help="y-axis label.")
-@click.option("-z", "--zlabel", type=click.STRING, help="z-axis label.")
-@click.option("--clabel", type=click.STRING, help="Colorbar label.")
-@click.option("--title", type=click.STRING, help="Figure title.")
-@click.option("--save", is_flag=True, help="Save output instead of opening preview only.")
-@click.option("--saveas", type=click.STRING, default=None, help="Output path for saved figure.")
-@click.option("--starting-azimuthal-angle", "azimuthal_angle", "--azimuthal-angle",
-    type=click.FLOAT, default=0.0, show_default=True,
-    help="Starting azimuthal camera angle in degrees for rotating exports.")
-@click.option("--polar-angle", type=click.FLOAT, default=85.0, show_default=True,
-    help="Polar camera angle in degrees for rotating exports.")
-@click.option("--rotation-period", type=click.FLOAT, default=40.0, show_default=True,
-    help="Seconds per full camera rotation for rotating exports.")
-@click.option("--fps", type=click.INT, default=1, show_default=True,
-    help="Frames-per-second for rotating mp4/gif output.")
-@click.option("--showgrid/--no-showgrid", default=True, help="Show 3D axis grid planes.")
-@click.option("--hashtag", is_flag=True, help="Add '#pgkyl' annotation to the figure.")
-@click.option("--show/--no-show", default=True,
-    help="Open the output preview in a browser.")
-@click.option("--figsize", help="Figure size as 'width,height' (scaled to pixels for Plotly).")
-@click.option("--cmap", type=click.STRING, default=None,
-    help="Set a matplotlib colormap name for Plotly colorscale conversion.")
-@click.option("--invert-cmap", is_flag=True,
-    help="Invert the chosen colormap.")
-@click.option("--cylindrical-to-cartesian", is_flag=True,
-  help="Interpret (z0, z1, z2) as (R, Z, phi) and convert to Cartesian (x, y, z).")
-@click.pass_context
-def plotly(ctx, **kwargs):
+
+class _MarkerStyle(str, enum.Enum):
+  circle = "circle"
+  square = "square"
+  diamond = "diamond"
+  cross = "cross"
+  x = "x"
+
+
+class _Background(str, enum.Enum):
+  dark = "dark"
+  light = "light"
+
+
+def plotly(ctx: typer.Context,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Tag to plot from the active dataset stack.")] = None,
+    squeeze: Annotated[bool, typer.Option("--squeeze", help="Draw all components in a single 3D scene.")] = False,
+    subplots: Annotated[bool, typer.Option("--subplots", "-b", help="Draw components in separate 3D subplots.")] = False,
+    num_subplot_row: Annotated[Optional[int], typer.Option("--nsubplotrow", help="Number of subplot rows for multi-component 3D plots.")] = None,
+    num_subplot_col: Annotated[Optional[int], typer.Option("--nsubplotcol", help="Number of subplot columns for multi-component 3D plots.")] = None,
+    scatter: Annotated[bool, typer.Option("-s", "--scatter", help="Render point samples as sphere-like colored markers.")] = False,
+    marker_radius: Annotated[Optional[float], typer.Option("--marker-radius", help="Scatter marker radius in pixels.")] = 4.0,
+    markerstyle: Annotated[Optional[_MarkerStyle], typer.Option("--markerstyle", help="Marker shape for scatter points.")] = _MarkerStyle.circle,
+    opacity: Annotated[Optional[float], typer.Option("-o", "--opacity", help="Volume and contour opacity in [0, 1].")] = 1.0,
+    scatter_opacity_range: Annotated[Optional[str], typer.Option("--scatter-opacity-range", help="Scatter alpha range as 'min,max' (or 'min:max'); enables opacity-gradient colorscale only when set.")] = None,
+    scatter_opacity_log: Annotated[bool, typer.Option("--scatter-opacity-log/--no-scatter-opacity-log", help="Use logarithmic mapping for scatter opacity ramp (rapid low-end change, flatter high-end).")] = False,
+    surface_count: Annotated[Optional[int], typer.Option("--surface-count", help="Number of Plotly volume isosurfaces.")] = 32,
+    maximum_points_per_axis: Annotated[Optional[int], typer.Option("--maximum-points-per-axis", "--mppa", help="Maximum points per axis for 3D downsampling; 0 disables downsampling.")] = 0,
+    background: Annotated[Optional[_Background], typer.Option("--background", help="3D scene background theme.")] = _Background.dark,
+    diverging: Annotated[bool, typer.Option("-d", "--diverging", help="Use a diverging colorscale.")] = False,
+    aspect: Annotated[Optional[str], typer.Option("--aspect", help="Aspect mode: auto, data, cube, or a numeric uniform ratio.")] = None,
+    logx: Annotated[bool, typer.Option("--logx", help="Use log scaling on x axis.")] = False,
+    logy: Annotated[bool, typer.Option("--logy", help="Use log scaling on y axis.")] = False,
+    logz: Annotated[bool, typer.Option("--logz", help="Use log scaling on z axis.")] = False,
+    logc: Annotated[bool, typer.Option("--logc", help="Use log scaling for scalar coloring.")] = False,
+    xshift: Annotated[Optional[float], typer.Option("--xshift", help="Additive shift for x coordinates.")] = 0.0,
+    yshift: Annotated[Optional[float], typer.Option("--yshift", help="Additive shift for y coordinates.")] = 0.0,
+    zshift: Annotated[Optional[float], typer.Option("--zshift", help="Additive shift for scalar values before coloring.")] = 0.0,
+    cshift: Annotated[Optional[float], typer.Option("--cshift", help="Additive shift for color-mapped values.")] = 0.0,
+    xscale: Annotated[Optional[float], typer.Option("--xscale", help="Multiplicative scale for x coordinates.")] = 1.0,
+    yscale: Annotated[Optional[float], typer.Option("--yscale", help="Multiplicative scale for y coordinates.")] = 1.0,
+    zscale: Annotated[Optional[float], typer.Option("--zscale", help="Multiplicative scale for scalar values before coloring.")] = 1.0,
+    cscale: Annotated[Optional[float], typer.Option("--cscale", help="Multiplicative scale for color-mapped values.")] = 1.0,
+    xlim: Annotated[Optional[str], typer.Option("--xlim", help="x-axis limits as 'lower,upper' (or 'lower:upper').")] = None,
+    ylim: Annotated[Optional[str], typer.Option("--ylim", help="y-axis limits as 'lower,upper' (or 'lower:upper').")] = None,
+    zlim: Annotated[Optional[str], typer.Option("--zlim", help="z-axis limits as 'lower,upper' (or 'lower:upper').")] = None,
+    clim: Annotated[Optional[str], typer.Option("--clim", help="Color limits as 'lower,upper' (or 'lower:upper').")] = None,
+    cmax: Annotated[Optional[float], typer.Option("--cmax", help="Maximum color value.")] = None,
+    cmin: Annotated[Optional[float], typer.Option("--cmin", help="Minimum color value.")] = None,
+    globalrange: Annotated[bool, typer.Option("--globalrange", "-r", help="Compute a shared color range across selected 3D datasets.")] = False,
+    cutoffglobalrange: Annotated[Optional[float], typer.Option("--cutoffglobalrange", "-cogr", help="Percentile cutoff for shared color range (e.g. 0.98).")] = None,
+    legend: Annotated[Optional[str], typer.Option("--legend", help="Comma-separated legend labels for datasets.")] = None,
+    no_legend: Annotated[bool, typer.Option("--no-legend", help="Hide legend labels.")] = False,
+    forcelegend: Annotated[bool, typer.Option("--force-legend", help="Force legend labels even for single dataset plots.")] = False,
+    color: Annotated[Optional[str], typer.Option("--color", help="Use a fixed color (bypasses colorscale).")] = None,
+    xlabel: Annotated[Optional[str], typer.Option("-x", "--xlabel", help="x-axis label.")] = None,
+    ylabel: Annotated[Optional[str], typer.Option("-y", "--ylabel", help="y-axis label.")] = None,
+    zlabel: Annotated[Optional[str], typer.Option("-z", "--zlabel", help="z-axis label.")] = None,
+    clabel: Annotated[Optional[str], typer.Option("--clabel", help="Colorbar label.")] = None,
+    title: Annotated[Optional[str], typer.Option("--title", help="Figure title.")] = None,
+    save: Annotated[bool, typer.Option("--save", help="Save output instead of opening preview only.")] = False,
+    saveas: Annotated[Optional[str], typer.Option("--saveas", help="Output path for saved figure.")] = None,
+    azimuthal_angle: Annotated[Optional[float], typer.Option("--starting-azimuthal-angle", "--azimuthal-angle", help="Starting azimuthal camera angle in degrees for rotating exports.")] = 0.0,
+    polar_angle: Annotated[Optional[float], typer.Option("--polar-angle", help="Polar camera angle in degrees for rotating exports.")] = 85.0,
+    rotation_period: Annotated[Optional[float], typer.Option("--rotation-period", help="Seconds per full camera rotation for rotating exports.")] = 40.0,
+    fps: Annotated[Optional[int], typer.Option("--fps", help="Frames-per-second for rotating mp4/gif output.")] = 1,
+    showgrid: Annotated[bool, typer.Option("--showgrid/--no-showgrid", help="Show 3D axis grid planes.")] = True,
+    hashtag: Annotated[bool, typer.Option("--hashtag", help="Add '#pgkyl' annotation to the figure.")] = False,
+    show: Annotated[bool, typer.Option("--show/--no-show", help="Open the output preview in a browser.")] = True,
+    figsize: Annotated[Optional[str], typer.Option("--figsize", help="Figure size as 'width,height' (scaled to pixels for Plotly).")] = None,
+    cmap: Annotated[Optional[str], typer.Option("--cmap", help="Set a matplotlib colormap name for Plotly colorscale conversion.")] = None,
+    invert_cmap: Annotated[bool, typer.Option("--invert-cmap", help="Invert the chosen colormap.")] = False,
+    cylindrical_to_cartesian: Annotated[bool, typer.Option("--cylindrical-to-cartesian", help="Interpret (z0, z1, z2) as (R, Z, phi) and convert to Cartesian (x, y, z).")] = False):
   """Plot active 3D datasets, or 2D datasets as 3D surfaces, with Plotly."""
+  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
+  for _range_key in ("scatter_opacity_range", "xlim", "ylim", "zlim", "clim"):
+    kwargs[_range_key] = _parse_range_option(kwargs[_range_key])
+  # end
   verb_print(ctx, "Starting plotly")
   plot_output_module = importlib.import_module("postgkyl.output.plotly")
 
@@ -130,7 +113,7 @@ def plotly(ctx, **kwargs):
       # end
       file_name = os.path.join(tempfile.gettempdir(), f"{safe_base}_preview.html")
     elif file_name is None:
-      raise click.ClickException("Internal error: missing output file name for 3D save.")
+      raise typer.BadParameter("Internal error: missing output file name for 3D save.")
     # end
 
     root, ext = os.path.splitext(file_name)

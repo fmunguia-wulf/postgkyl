@@ -1,20 +1,24 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.data import GData, GInterpModal
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--name", "-n", type=click.STRING, prompt=True, help="Set the root name for files.")
-@click.option("--species", "-s", type=click.STRING, prompt=True, help="Set species name.")
-@click.option("--idx", "-i", type=click.STRING, prompt=True, help="Set the file number.")
-@click.option("--poly_order", "-p", type=click.INT, prompt=True, help="Set the polynomial order.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array.")
-@click.option("--label", "-l", help="Custom label for the result.")
-@click.pass_context
-def pkpm(ctx, **kwargs):
+def pkpm(
+    ctx: typer.Context,
+    name: Annotated[Optional[str], typer.Option("--name", "-n", prompt=True, help="Set the root name for files.")] = None,
+    species: Annotated[Optional[str], typer.Option("--species", "-s", prompt=True, help="Set species name.")] = None,
+    idx: Annotated[Optional[str], typer.Option("--idx", "-i", prompt=True, help="Set the file number.")] = None,
+    poly_order: Annotated[Optional[int], typer.Option("--poly_order", "-p", prompt=True, help="Set the polynomial order.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
+):
   """Shortcut to load Gkeyll PKPM data, interpolate, and transform."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting Gkyl PKPM")
   data = ctx.obj["data"]
 

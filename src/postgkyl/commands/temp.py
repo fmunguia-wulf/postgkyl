@@ -1,15 +1,18 @@
-import click
 import numpy as np
+import typer
+from typing_extensions import Annotated
 
 from postgkyl.utils import verb_print
 
 
 
 # ---- Math ----
-@click.command(help="Multiply data by a factor")
-@click.argument("factor", nargs=1, type=click.FLOAT)
-@click.pass_context
-def mult(ctx, **kwargs):
+def mult(
+    ctx: typer.Context,
+    factor: Annotated[float, typer.Argument()],
+):
+  """Multiply data by a factor"""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, f"Multiplying by {kwargs['factor']:f}")
   for s in ctx.obj["sets"]:
     values = ctx.obj["dataSets"][s].get_values()
@@ -18,10 +21,12 @@ def mult(ctx, **kwargs):
   # end
 
 
-@click.command(help="Calculate power of data")
-@click.argument("power", nargs=1, type=click.FLOAT)
-@click.pass_context
-def pow(ctx, **kwargs):
+def pow(
+    ctx: typer.Context,
+    power: Annotated[float, typer.Argument()],
+):
+  """Calculate power of data"""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, f"Calculating the power of {kwargs['power']:f}")
   for s in ctx.obj["sets"]:
     values = ctx.obj["dataSets"][s].get_values()
@@ -30,9 +35,8 @@ def pow(ctx, **kwargs):
   # end
 
 
-@click.command(help="Calculate natural log of data")
-@click.pass_context
-def log(ctx):
+def log(ctx: typer.Context):
+  """Calculate natural log of data"""
   verb_print(ctx, "Calculating the natural log")
   for s in ctx.obj["sets"]:
     values = ctx.obj["dataSets"][s].get_values()
@@ -41,9 +45,8 @@ def log(ctx):
   # end
 
 
-@click.command(help="Calculate absolute values of data")
-@click.pass_context
-def abs(ctx):
+def abs(ctx: typer.Context):
+  """Calculate absolute values of data"""
   verb_print(ctx, "Calculating the absolute value")
   for s in ctx.obj["sets"]:
     values = ctx.obj["dataSets"][s].get_values()
@@ -52,12 +55,13 @@ def abs(ctx):
   # end
 
 
-@click.command(help="Normalize data")
-@click.option("--shift/--no-shift", default=False, show_default=True,
-    help="Shift minimal value to zero.")
-@click.option("--usefirst", is_flag=True, default=False, help="Normalize to first value in field.")
-@click.pass_context
-def norm(ctx, **kwargs):
+def norm(
+    ctx: typer.Context,
+    shift: Annotated[bool, typer.Option("--shift/--no-shift", help="Shift minimal value to zero.")] = False,
+    usefirst: Annotated[bool, typer.Option("--usefirst", help="Normalize to first value in field.")] = False,
+):
+  """Normalize data"""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Normalizing data")
   for s in ctx.obj["sets"]:
     values = ctx.obj["dataSets"][s].get_values()

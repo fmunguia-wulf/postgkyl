@@ -1,26 +1,27 @@
-import click
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl.loader import find_output_stems
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--extensions", "-e", type=click.STRING,  default="bp,gkyl",
-    show_default=True, help="Output file extension(s)")
-@click.option("--path", "-p", type=click.Path(exists=True, file_okay=False),
-    default=".", show_default=True, help="Path to search for outputs")
-@click.pass_context
-def listoutputs(ctx, **kwargs):
+def listoutputs(
+    ctx: typer.Context,
+    extensions: Annotated[Optional[str], typer.Option("--extensions", "-e", help="Output file extension(s)")] = "bp,gkyl",
+    path: Annotated[Optional[str], typer.Option("--path", "-p", help="Path to search for outputs")] = ".",
+):
   """List Gkeyll filename stems in the current directory."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting listoutputs")
 
   stems_by_ext = find_output_stems(kwargs["extensions"], kwargs["path"])
   for ext, stems in stems_by_ext.items():
     if stems:
-      click.echo(f"{ext:s}:")
+      typer.echo(f"{ext:s}:")
     # end
     for stem in stems:
-      click.echo(f"- {stem:s}")
+      typer.echo(f"- {stem:s}")
     # end
   # end
   verb_print(ctx, "Finishing listoutputs")

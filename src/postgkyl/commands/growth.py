@@ -1,4 +1,7 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -8,23 +11,23 @@ import postgkyl.tools
 from postgkyl.utils import verb_print
 
 
-
-@click.command()
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("-g", "--guess", help="Specify comma-separated initial guess.")
-@click.option("--minn", type=click.INT, help="Set minimal number of points to fit.")
-@click.option("-d", "--dataset", is_flag=True, help="Create a new dataset with fitted exponential.")
-@click.option("-i", "--instantaneous", is_flag=True, help="Plot instantaneous growth rate vs time.")
-@click.option("--dir", type=click.INT, help="Choose direction for multi-D data.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array.")
-@click.option("--label", "-l", help="Custom label for the result.")
-@click.pass_context
-def growth(ctx, **kwargs):
+def growth(
+    ctx: typer.Context,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    guess: Annotated[Optional[str], typer.Option("-g", "--guess", help="Specify comma-separated initial guess.")] = None,
+    minn: Annotated[Optional[int], typer.Option("--minn", help="Set minimal number of points to fit.")] = None,
+    dataset: Annotated[bool, typer.Option("-d", "--dataset", help="Create a new dataset with fitted exponential.")] = False,
+    instantaneous: Annotated[bool, typer.Option("-i", "--instantaneous", help="Plot instantaneous growth rate vs time.")] = False,
+    dir: Annotated[Optional[int], typer.Option("--dir", help="Choose direction for multi-D data.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
+):
   """Attempts to compute growth rate (i.e. fit e^(2x)) from DynVector data.
 
   the DynVector is typically an integrated quantity like electric or magnetic field
   energy.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting growth")
   data = ctx.obj["data"]
 

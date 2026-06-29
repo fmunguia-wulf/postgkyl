@@ -1,18 +1,21 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--distribution", "-f", type=click.STRING, prompt=True,
-    help="Specify the PKPM distribution function dataset.")
-@click.option("--tm", type=click.STRING, prompt=True, help="Specify the PKPM vars dataset.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array")
-@click.option("--label", "-l", help="Custom label for the result")
-@click.pass_context
-def laguerrecompose(ctx, **kwargs):
+def laguerrecompose(
+    ctx: typer.Context,
+    distribution: Annotated[Optional[str], typer.Option("--distribution", "-f", prompt=True, help="Specify the PKPM distribution function dataset.")] = None,
+    tm: Annotated[Optional[str], typer.Option("--tm", prompt=True, help="Specify the PKPM vars dataset.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = None,
+):
   """Compose PKPM Laguerre coefficients together."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting laguerrecompose")
   data = ctx.obj["data"]
 

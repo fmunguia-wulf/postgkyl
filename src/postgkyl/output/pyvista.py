@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import os.path
 
-from click import Tuple
+from typing import Tuple
 import numpy as np
 import postgkyl as pg
 import pyvista as pv

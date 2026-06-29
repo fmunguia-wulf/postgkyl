@@ -1,26 +1,37 @@
-import click
+import enum
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--measure", "-m", default="frobenius", show_default=True,
-    type=click.Choice(["swisdak", "frobenius"]),
-    help="Specify how to calculate agyrotropy.")
-@click.option("--pressure", "-p", default="pressure", show_default=True,
-    help="Tag for input pressure.")
-@click.option("--bfield", "-b", default="field", show_default=True,
-    help="Tag for input EM field.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array")
-@click.option("--label", "-l", help="Custom label for the result")
-@click.pass_context
-def agyro(ctx, **kwargs):
+class _AgyroMeasure(str, enum.Enum):
+  swisdak = "swisdak"
+  frobenius = "frobenius"
+
+
+class _MomAgyroMeasure(str, enum.Enum):
+  swidak = "swidak"
+  frobenius = "frobenius"
+
+
+def agyro(
+    ctx: typer.Context,
+    measure: Annotated[Optional[_AgyroMeasure], typer.Option("--measure", "-m", help="Specify how to calculate agyrotropy.")] = _AgyroMeasure.frobenius,
+    pressure: Annotated[Optional[str], typer.Option("--pressure", "-p", help="Tag for input pressure.")] = "pressure",
+    bfield: Annotated[Optional[str], typer.Option("--bfield", "-b", help="Tag for input EM field.")] = "field",
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = None,
+):
   """Compute a measure of agyrotropy.
 
   Default measure is taken from Swisdak 2015. Optionally computes agyrotropy as
   Frobenius norm of agyrotropic pressure tensor.
   """
+  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting agyro")
   data = ctx.obj["data"]
   tag = kwargs["tag"] or "agyro"
@@ -32,20 +43,19 @@ def agyro(ctx, **kwargs):
   verb_print(ctx, "Finishing agyro")
 
 
-@click.command()
-@click.option("--measure", "-m", default="frobenius", show_default=True,
-    type=click.Choice(["swidak", "frobenius"]),
-    help="Specify how to calculate agyrotropy.")
-@click.option("--species", "-s", help="Tag for input pressure.")
-@click.option("--field", "-f", help="Tag for input EM field.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array")
-@click.option("--label", "-l", help="Custom label for the result")
-@click.pass_context
-def mom_agyro(ctx, **kwargs):
+def mom_agyro(
+    ctx: typer.Context,
+    measure: Annotated[Optional[_MomAgyroMeasure], typer.Option("--measure", "-m", help="Specify how to calculate agyrotropy.")] = _MomAgyroMeasure.frobenius,
+    species: Annotated[Optional[str], typer.Option("--species", "-s", help="Tag for input pressure.")] = None,
+    field: Annotated[Optional[str], typer.Option("--field", "-f", help="Tag for input EM field.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = None,
+):
   """Compute a measure of agyrotropy. Default measure is taken from
   Swisdak 2015. Optionally computes agyrotropy as Frobenius norm of
   agyrotropic pressure tensor.
   """
+  kwargs = {k: (v.value if isinstance(v, enum.Enum) else v) for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting agyro")
   data = ctx.obj["data"]
   tag = kwargs["tag"] or "agyro"

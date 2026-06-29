@@ -1,19 +1,21 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--qbym", "-q", default=False, show_default=True,
-    help="Flag for multiplying by charge/mass ratio instead of just charge.")
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--tag", "-t", default="current", show_default=True,
-    help="Tag for the resulting current array.")
-@click.option("--label", "-l", default="J", show_default=True, help="Custom label for the result.")
-@click.pass_context
-def current(ctx, **kwargs):
+def current(
+    ctx: typer.Context,
+    qbym: Annotated[Optional[bool], typer.Option("--qbym", "-q", help="Flag for multiplying by charge/mass ratio instead of just charge.")] = False,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the resulting current array.")] = "current",
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = "J",
+):
   """Accumulate current, sum over species of charge multiplied by flow."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting current accumulation")
   data = ctx.obj["data"]
 

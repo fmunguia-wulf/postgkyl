@@ -1,11 +1,12 @@
-import click
+import typer
+from typing import List, Optional, Tuple
+from typing_extensions import Annotated
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import glob
 from matplotlib.collections import LineCollection
 from itertools import cycle
-from typing import Tuple
 
 from postgkyl.data import GData
 from postgkyl.utils import verb_print
@@ -70,48 +71,30 @@ def str_append_multib_suffix_sb(str_in, suffix, bidx):
   # Just return the input string.
   return str_in
 
-@click.command()
-@click.option("--name", "-n", required=True, type=click.STRING, default=None,
-  help="Simulation name (also the file prefix, e.g. gk_sheath_1x2v_p1).")
-@click.option("--path", "-p", type=click.STRING, default='./.',
-  help="Path to simulation data.")
-@click.option("--multib", "-m", type=click.STRING, is_flag=False, flag_value="-1", default="-10",
-  help="Multiblock. Optional: pass block indices as comma-separated list or slice (start:stop:step). If no indices are given, all blocks are used.")
-@click.option("--nodes_file", type=click.STRING, default=None,
-  help="Grid nodes (.gkyl format).")
-@click.option("--psi_file", type=click.STRING, default=None,
-  help="Poloidal flux (.gkyl format).")
-@click.option("--wall_file", type=click.STRING, default=None,
-  help="Vacuum vessel wall (.csv format).")
-@click.option("--contour", "-c", is_flag=True, help="Plot contours of psi.")
-@click.option("--clevels", type=click.STRING,
-  help="Specify levels for contours: comma-separated level values or start:end:nlevels.")
-@click.option("--cnlevels", type=click.INT, default=11, help="Specify the number of levels for contours.")
-@click.option("--fix_aspect", "-a", "fixaspect", is_flag=True,
-  help="Enforce the same scaling on both axes.")
-@click.option("--xlim", default=None, type=click.STRING,
-  help="Set limits for the x-coordinate (lower,upper)")
-@click.option("--ylim", default=None, type=click.STRING,
-  help="Set limits for the y-coordinate (lower,upper).")
-@click.option("--xlabel", type=click.STRING, default="R (m)",
-  help="Label for the x axis.")
-@click.option("--ylabel", type=click.STRING, default="Z (m)",
-  help="Label for the y axis.")
-@click.option("--zlabel", type=click.STRING, default=r"$\psi$",
-  help="Label for the color bar.")
-@click.option("--title", type=click.STRING, default=None,
-  help="Title for the figure.")
-@click.option("--indent_left", type=click.FLOAT, default=0.0,
-  help="A number in the [-0.11,0.88] range by which to shift the left boundary of the plot.")
-@click.option("--add_width", type=click.FLOAT, default=0.0,
-  help="A number in the [-0.86,0.13] range by which to increase the width the plot.")
-@click.option("--multib_unicolor", is_flag=True, default=False, help="Use one color for all blocks.")
-@click.option("--saveas", type=click.STRING, default=None,
-  help="Name of figure file.")
-@click.option("--no_show", is_flag=True, default=False,
-  help="Suppreses showing the figure.")
-@click.pass_context
-def gk_nodes(ctx, **kwargs):
+def gk_nodes(
+    ctx: typer.Context,
+    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Simulation name (also the file prefix, e.g. gk_sheath_1x2v_p1).")] = None,
+    path: Annotated[Optional[str], typer.Option("--path", "-p", help="Path to simulation data.")] = "./.",
+    multib: Annotated[Optional[str], typer.Option("--multib", "-m", help="Multiblock. Optional: pass block indices as comma-separated list or slice (start:stop:step). If no indices are given, all blocks are used.")] = "-10",
+    nodes_file: Annotated[Optional[str], typer.Option("--nodes_file", help="Grid nodes (.gkyl format).")] = None,
+    psi_file: Annotated[Optional[str], typer.Option("--psi_file", help="Poloidal flux (.gkyl format).")] = None,
+    wall_file: Annotated[Optional[str], typer.Option("--wall_file", help="Vacuum vessel wall (.csv format).")] = None,
+    contour: Annotated[bool, typer.Option("--contour", "-c", help="Plot contours of psi.")] = False,
+    clevels: Annotated[Optional[str], typer.Option("--clevels", help="Specify levels for contours: comma-separated level values or start:end:nlevels.")] = None,
+    cnlevels: Annotated[Optional[int], typer.Option("--cnlevels", help="Specify the number of levels for contours.")] = 11,
+    fixaspect: Annotated[bool, typer.Option("--fix_aspect", "-a", help="Enforce the same scaling on both axes.")] = False,
+    xlim: Annotated[Optional[str], typer.Option("--xlim", help="Set limits for the x-coordinate (lower,upper)")] = None,
+    ylim: Annotated[Optional[str], typer.Option("--ylim", help="Set limits for the y-coordinate (lower,upper).")] = None,
+    xlabel: Annotated[Optional[str], typer.Option("--xlabel", help="Label for the x axis.")] = "R (m)",
+    ylabel: Annotated[Optional[str], typer.Option("--ylabel", help="Label for the y axis.")] = "Z (m)",
+    zlabel: Annotated[Optional[str], typer.Option("--zlabel", help="Label for the color bar.")] = r"$\psi$",
+    title: Annotated[Optional[str], typer.Option("--title", help="Title for the figure.")] = None,
+    indent_left: Annotated[float, typer.Option("--indent_left", help="A number in the [-0.11,0.88] range by which to shift the left boundary of the plot.")] = 0.0,
+    add_width: Annotated[float, typer.Option("--add_width", help="A number in the [-0.86,0.13] range by which to increase the width the plot.")] = 0.0,
+    multib_unicolor: Annotated[bool, typer.Option("--multib_unicolor", help="Use one color for all blocks.")] = False,
+    saveas: Annotated[Optional[str], typer.Option("--saveas", help="Name of figure file.")] = None,
+    no_show: Annotated[bool, typer.Option("--no_show", help="Suppreses showing the figure.")] = False,
+):
   """
   \b
   Gyrokinetics: Plot nodes of the grid, with an option to overlay
@@ -128,6 +111,7 @@ def gk_nodes(ctx, **kwargs):
 
   NOTE: this command cannot be combined with other postgkyl commands.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
 
   data = ctx.obj["data"]  # Data stack.
   ctx.obj["plot_handles"] = {}  # Handles to objects in plot.

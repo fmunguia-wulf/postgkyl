@@ -1,5 +1,7 @@
-import click
 import numpy as np
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl.commands import ev_cmd as cmd_base
 from postgkyl.data import GData
@@ -45,7 +47,7 @@ def _data(ctx, grid_stack, value_stack, ctx_stack, str_in, tags, only_active):
         if ctx_key in dat.ctx:
           values = np.array(dat.ctx[ctx_key])
         else:
-          ctx.fail(click.style(f"Wrong ctx key '{ctx_key:s}' specified", fg="red"))
+          ctx.fail(typer.style(f"Wrong ctx key '{ctx_key:s}' specified", fg="red"))
         # end
       else:
         grid, values = pselect(dat, comp=comp_idx)
@@ -117,7 +119,7 @@ def _command(ctx, grid_stack, value_stack, ctx_stack, str_in):
     try:
       out_grid, out_values = func(tmp_grid, tmp_values)
     except Exception as err:
-      ctx.fail(click.style(f"{err}", fg="red"))
+      ctx.fail(typer.style(f"{err}", fg="red"))
     # end
 
     # Compare the ctx data of all the inputs and copy them to a
@@ -153,15 +155,15 @@ def _command(ctx, grid_stack, value_stack, ctx_stack, str_in):
   return True
 
 
-@click.command(
-    help=f"Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN).\n Supported operators are: {help_str[:-1]}"
-)
-@click.argument("chain", nargs=1, type=click.STRING)
-@click.option("--tag", "-t", help="Tag for the result")
-@click.option("--label", "-l", show_default=True, help="Custom label for the result")
-@click.option("--all", "-a", is_flag=True, help="Ignore the status of a dataset")
-@click.pass_context
-def ev(ctx, **kwargs):
+def ev(
+    ctx: typer.Context,
+    chain: Annotated[str, typer.Argument()],
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the result")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = None,
+    all: Annotated[bool, typer.Option("--all", "-a", help="Ignore the status of a dataset")] = False,
+):
+  """Manipulate datasets using math expressions. Expressions are specified using Reverse Polish Notation (RPN)."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting evaluate")
   data = ctx.obj["data"]
 
@@ -192,16 +194,16 @@ def ev(ctx, **kwargs):
       is_command = _command(ctx, grid_stack, value_stack, ctx_stack, s)
     # end
     if not is_data and not is_command:
-      ctx.fail(click.style(f"Evaluate input '{s:s}' represents neither data nor commad",
+      ctx.fail(typer.style(f"Evaluate input '{s:s}' represents neither data nor commad",
           fg="red"))
     # end
   # end
 
   if len(value_stack) == 0:
-    ctx.fail(click.style("Evaluate stack is empty, there is nothing to return", fg="red"))
+    ctx.fail(typer.style("Evaluate stack is empty, there is nothing to return", fg="red"))
   elif len(value_stack) > 1:
-    click.echo(
-        click.style("WARNING: Length of the evaluate stack is bigger than 1, there is a posibility of unintended behavior",
+    typer.echo(
+        typer.style("WARNING: Length of the evaluate stack is bigger than 1, there is a posibility of unintended behavior",
             fg="yellow" ))
   # end
   if num_datasets_in_chain == 1 and kwargs["tag"] is None:
@@ -227,3 +229,10 @@ def ev(ctx, **kwargs):
   # end
 
   verb_print(ctx, "Finishing ev")
+
+
+# Preserve the original dynamic help that lists every supported RPN operator.
+ev.__doc__ = (
+    "Manipulate datasets using math expressions. Expressions are specified using "
+    f"Reverse Polish Notation (RPN).\n Supported operators are: {help_str[:-1]}"
+)

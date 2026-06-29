@@ -1,26 +1,28 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--tag", "-t", help="Tag for the result.")
-@click.option("--label", "-l", help="Custom label for the result.")
-@click.option("-x", type=click.STRING,
-    help="Select components that will became the grid of the new dataset.")
-@click.option("-y", type=click.STRING,
-    help="Select components that will became the values of the new dataset.")
-@click.option("--periodic", "-p", is_flag=True, help="Set the last component to match the first one.")
-@click.pass_context
-def val2coord(ctx, **kwargs):
+def val2coord(
+    ctx: typer.Context,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the result.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
+    x: Annotated[Optional[str], typer.Option("-x", help="Select components that will became the grid of the new dataset.")] = None,
+    y: Annotated[Optional[str], typer.Option("-y", help="Select components that will became the values of the new dataset.")] = None,
+    periodic: Annotated[bool, typer.Option("--periodic", "-p", help="Set the last component to match the first one.")] = False,
+):
   """Given a dataset (typically a DynVector) selects columns from it to create new datasets.
 
   For example, you can choose say column 1 to be the X-axis of the new dataset and
   column 2 to be the Y-axis. Multiple columns can be choosen using range specifiers and
   as many datasets are then created.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting val2coord")
   data = ctx.obj["data"]
 

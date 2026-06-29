@@ -115,8 +115,8 @@ class TestGkLoadQuantity:
 
     ctx = self._make_ctx()
     try:
-      ctx.invoke(
-        cmd.gk_load_quantity,
+      cmd.gk_load_quantity(
+        ctx,
         quantity=quantity,
         name=self.name,
         species=self.species,

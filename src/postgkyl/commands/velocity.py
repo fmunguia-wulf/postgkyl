@@ -1,17 +1,20 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--density", "-d", default="density", show_default=True, help="Tag for density.")
-@click.option("--momentum", "-m", default="momentum", show_default=True, help="Tag for momentum.")
-@click.option("--tag", "-t", default="velocity", show_default=True, help="Tag for the result.")
-@click.option("--label", "-l", default="velocity", show_default=True,
-    help="Custom label for the result.")
-@click.pass_context
-def velocity(ctx, **kwargs):
+def velocity(
+    ctx: typer.Context,
+    density: Annotated[Optional[str], typer.Option("--density", "-d", help="Tag for density.")] = "density",
+    momentum: Annotated[Optional[str], typer.Option("--momentum", "-m", help="Tag for momentum.")] = "momentum",
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Tag for the result.")] = "velocity",
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = "velocity",
+):
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting velocity")
   data = ctx.obj["data"]
 

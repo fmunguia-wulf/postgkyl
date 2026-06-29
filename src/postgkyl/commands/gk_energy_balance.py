@@ -1,4 +1,6 @@
-import click
+import typer
+from typing import List, Optional
+from typing_extensions import Annotated
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -7,63 +9,37 @@ import glob
 from postgkyl.data import GData
 from postgkyl.utils import verb_print
 
-@click.command()
-@click.option("--name", "-n", required=True, type=click.STRING, default=None,
-  help="Simulation name (also the file prefix, e.g. gk_sheath_1x2v_p1).")
-@click.option("--species", "-s", required=True, default=None,
-  help="Comma-separated list of species names.")
-@click.option("--path", "-p", type=click.STRING, default='./',
-  help="Path to simulation data.")
-@click.option("--relative_error", "-r", is_flag=True,
-  help="Plot the relative error only.")
-@click.option("--multib", "-m", is_flag=False, default="-10", flag_value="-1", 
-  help="Multiblock. Optional: pass block indices as comma-separated list or slice (start:stop:step). If no indices are given, all blocks are used.")
-@click.option("--field_dot_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated field energy rate of change.")
-@click.option("--apar_dot_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated apar energy rate of change.")
-@click.option("--fdot_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of change in f over a time step.")
-@click.option("--source_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of the source(s).")
-@click.option("--bflux_xlower_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through lower x boundary.")
-@click.option("--bflux_ylower_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through lower y boundary.")
-@click.option("--bflux_zlower_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through lower z boundary.")
-@click.option("--bflux_xupper_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through upper x boundary.")
-@click.option("--bflux_yupper_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through upper y boundary.")
-@click.option("--bflux_zupper_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of boundary flux through upper z boundary.")
-@click.option("--f_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated moments of f.")
-@click.option("--field_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated field energy.")
-@click.option("--apar_file", type=click.STRING, default=None, multiple=True,
-  help="Integrated apar energy.")
-@click.option("--dt_file", type=click.STRING, default=None,
-  help="Time step.")
-@click.option("--logy", is_flag=True, default=False,
-  help="Logarithmic scale for y axis.")
-@click.option("--absy", is_flag=True, default=False,
-  help="Take absolute value of time traces.")
-@click.option("--xlabel", type=click.STRING, default="Time (s)",
-  help="Label for the x axis.")
-@click.option("--ylabel", type=click.STRING, default=None,
-  help="Label for the y axis.")
-@click.option("--title", type=click.STRING, default=None,
-  help="Take absolute value of time traces.")
-@click.option("--indent_left", type=click.FLOAT, default=0.0,
-  help="A number in the [-0.11,0.88] range by which to shift the left boundary of the plot.")
-@click.option("--add_width", type=click.FLOAT, default=0.0,
-  help="A number in the [-0.86,0.13] range by which to increase the width the plot.")
-@click.option("--saveas", type=click.STRING, default=None,
-  help="Name of figure file.")
-@click.pass_context
-def gk_energy_balance(ctx, **kwargs):
+
+def gk_energy_balance(
+    ctx: typer.Context,
+    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Simulation name (also the file prefix, e.g. gk_sheath_1x2v_p1).")] = None,
+    species: Annotated[Optional[str], typer.Option("--species", "-s", help="Comma-separated list of species names.")] = None,
+    path: Annotated[Optional[str], typer.Option("--path", "-p", help="Path to simulation data.")] = "./",
+    relative_error: Annotated[bool, typer.Option("--relative_error", "-r", help="Plot the relative error only.")] = False,
+    multib: Annotated[Optional[str], typer.Option("--multib", "-m", help="Multiblock. Optional: pass block indices as comma-separated list or slice (start:stop:step). If no indices are given, all blocks are used.")] = "-10",
+    field_dot_file: Annotated[Optional[List[str]], typer.Option("--field_dot_file", help="Integrated field energy rate of change.")] = None,
+    apar_dot_file: Annotated[Optional[List[str]], typer.Option("--apar_dot_file", help="Integrated apar energy rate of change.")] = None,
+    fdot_file: Annotated[Optional[List[str]], typer.Option("--fdot_file", help="Integrated moments of change in f over a time step.")] = None,
+    source_file: Annotated[Optional[List[str]], typer.Option("--source_file", help="Integrated moments of the source(s).")] = None,
+    bflux_xlower_file: Annotated[Optional[List[str]], typer.Option("--bflux_xlower_file", help="Integrated moments of boundary flux through lower x boundary.")] = None,
+    bflux_ylower_file: Annotated[Optional[List[str]], typer.Option("--bflux_ylower_file", help="Integrated moments of boundary flux through lower y boundary.")] = None,
+    bflux_zlower_file: Annotated[Optional[List[str]], typer.Option("--bflux_zlower_file", help="Integrated moments of boundary flux through lower z boundary.")] = None,
+    bflux_xupper_file: Annotated[Optional[List[str]], typer.Option("--bflux_xupper_file", help="Integrated moments of boundary flux through upper x boundary.")] = None,
+    bflux_yupper_file: Annotated[Optional[List[str]], typer.Option("--bflux_yupper_file", help="Integrated moments of boundary flux through upper y boundary.")] = None,
+    bflux_zupper_file: Annotated[Optional[List[str]], typer.Option("--bflux_zupper_file", help="Integrated moments of boundary flux through upper z boundary.")] = None,
+    f_file: Annotated[Optional[List[str]], typer.Option("--f_file", help="Integrated moments of f.")] = None,
+    field_file: Annotated[Optional[List[str]], typer.Option("--field_file", help="Integrated field energy.")] = None,
+    apar_file: Annotated[Optional[List[str]], typer.Option("--apar_file", help="Integrated apar energy.")] = None,
+    dt_file: Annotated[Optional[str], typer.Option("--dt_file", help="Time step.")] = None,
+    logy: Annotated[bool, typer.Option("--logy", help="Logarithmic scale for y axis.")] = False,
+    absy: Annotated[bool, typer.Option("--absy", help="Take absolute value of time traces.")] = False,
+    xlabel: Annotated[Optional[str], typer.Option("--xlabel", help="Label for the x axis.")] = "Time (s)",
+    ylabel: Annotated[Optional[str], typer.Option("--ylabel", help="Label for the y axis.")] = None,
+    title: Annotated[Optional[str], typer.Option("--title", help="Take absolute value of time traces.")] = None,
+    indent_left: Annotated[float, typer.Option("--indent_left", help="A number in the [-0.11,0.88] range by which to shift the left boundary of the plot.")] = 0.0,
+    add_width: Annotated[float, typer.Option("--add_width", help="A number in the [-0.86,0.13] range by which to increase the width the plot.")] = 0.0,
+    saveas: Annotated[Optional[str], typer.Option("--saveas", help="Name of figure file.")] = None,
+):
   """
   \b
   Gyrokinetics: Plot the energy balance of a simulation.
@@ -97,6 +73,7 @@ def gk_energy_balance(ctx, **kwargs):
 
   NOTE: this command cannot be combined with other postgkyl commands.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
 
   #
   # Hardcoded parameters and auxiliary functions.

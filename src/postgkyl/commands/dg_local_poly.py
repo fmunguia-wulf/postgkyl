@@ -1,4 +1,7 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 import numpy as np
 
 from postgkyl.utils import verb_print
@@ -6,21 +9,21 @@ from postgkyl.data.dg import _getnum_nodes
 from postgkyl.modalDG.kernels import expand_1d, expand_2d, expand_3d, expand_4d, expand_5d, expand_6d
 
 
-@click.command()
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--npoints", "-n", type=click.INT, default=2,
-    help="Number of evaluation points per cell.")
-@click.pass_context
-def dg_local_poly(ctx, **kwargs):
+def dg_local_poly(
+    ctx: typer.Context,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    npoints: Annotated[Optional[int], typer.Option("--npoints", "-n", help="Number of evaluation points per cell.")] = 2,
+):
   """
   Generate a discontinuous DG polynomial cellwise representation of the data.
   The modal DG decomposition is evaluated with npoints per cell from one face
-  to the other. A NaN is inserted at every cell interface so that, when plotted, 
+  to the other. A NaN is inserted at every cell interface so that, when plotted,
   the curve is broken at each interface and the inter-cell discontinuities of the DG solution
   are visible.
   Example (1D plot of the M0 moment along x at frame 0):
     pgkyl sim_3x2v_p1-ion_M0_0.gkyl dg-local-poly sel --z1=0.0 --z2=0.0 pl
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting dg-local-poly")
   data = ctx.obj["data"]
 
@@ -28,7 +31,7 @@ def dg_local_poly(ctx, **kwargs):
     poly_order = dat.ctx.get("poly_order")
 
     if poly_order is None:
-      ctx.fail(click.style(
+      ctx.fail(typer.style(
           "ERROR in dg-local-poly: no 'poly_order' was specified and dataset "
           f"{dat.get_label():s} does not have the required information.",
           fg="red"))

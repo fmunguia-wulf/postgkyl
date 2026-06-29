@@ -1,22 +1,24 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.commands._apply import apply
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--filename", "-f", type=click.STRING, help="Specify the file with a mask.")
-@click.option("--lower", type=click.FLOAT,
-    help="Specify the lower threshold; values below it are masked out.")
-@click.option("--upper", type=click.FLOAT,
-    help="Specify the upper threshold; values above it are masked out.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array.")
-@click.option("--label", "-l", help="Custom label for the result.")
-@click.pass_context
-def mask(ctx, **kwargs):
+def mask(
+    ctx: typer.Context,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    filename: Annotated[Optional[str], typer.Option("--filename", "-f", help="Specify the file with a mask.")] = None,
+    lower: Annotated[Optional[float], typer.Option("--lower", help="Specify the lower threshold; values below it are masked out.")] = None,
+    upper: Annotated[Optional[float], typer.Option("--upper", help="Specify the upper threshold; values above it are masked out.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
+):
   """Mask data with a Gkeyll mask file or by numeric thresholds."""
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting mask")
   apply(ctx, ops.mask, use=kwargs["use"], tag=kwargs["tag"], label=kwargs["label"],
       filename=kwargs["filename"], lower=kwargs["lower"], upper=kwargs["upper"])

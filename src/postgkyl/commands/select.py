@@ -1,5 +1,7 @@
-import click
 import numpy as np
+import typer
+from typing import Optional
+from typing_extensions import Annotated
 
 from postgkyl import ops
 from postgkyl.commands._apply import apply
@@ -9,30 +11,28 @@ from postgkyl.utils import verb_print, set_frame
 import postgkyl.data.select
 
 
-@click.command()
-@click.option("--z0", default=None, help="Indices for 0th coord (either int, float, or slice).")
-@click.option("--z1", default=None, help="Indices for 1st coord (either int, float, or slice).")
-@click.option("--z2", default=None, help="Indices for 2nd coord (either int, float, or slice).")
-@click.option("--z3", default=None, help="Indices for 3rd coord (either int, float, or slice).")
-@click.option("--z4", default=None, help="Indices for 4th coord (either int, float, or slice).")
-@click.option("--z5", default=None, help="Indices for 5th coord (either int, float, or slice).")
-@click.option("--comp", "-c", default=None,
-    help="Indices for components (either int, slice, or coma-separated).")
-@click.option("--use", "-u", help="Specify a 'tag' to apply to.")
-@click.option("--tag", "-t", help="Optional tag for the resulting array.")
-@click.option("--label", "-l", help="Custom label for the result")
-@click.option("--multiblock", "-m", is_flag=True,
-              help="Necessary parameter for multiblock lineouts in z0 or z1 dims")
-@click.option("--multiframe", "-f", is_flag=True,
-              help="Specify if performing select on multiple multiblock frames")
-@click.pass_context
-def select(ctx, **kwargs):
+def select(
+    ctx: typer.Context,
+    z0: Annotated[Optional[str], typer.Option("--z0", help="Indices for 0th coord (either int, float, or slice).")] = None,
+    z1: Annotated[Optional[str], typer.Option("--z1", help="Indices for 1st coord (either int, float, or slice).")] = None,
+    z2: Annotated[Optional[str], typer.Option("--z2", help="Indices for 2nd coord (either int, float, or slice).")] = None,
+    z3: Annotated[Optional[str], typer.Option("--z3", help="Indices for 3rd coord (either int, float, or slice).")] = None,
+    z4: Annotated[Optional[str], typer.Option("--z4", help="Indices for 4th coord (either int, float, or slice).")] = None,
+    z5: Annotated[Optional[str], typer.Option("--z5", help="Indices for 5th coord (either int, float, or slice).")] = None,
+    comp: Annotated[Optional[str], typer.Option("--comp", "-c", help="Indices for components (either int, slice, or coma-separated).")] = None,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to.")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Optional tag for the resulting array.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result")] = None,
+    multiblock: Annotated[bool, typer.Option("--multiblock", "-m", help="Necessary parameter for multiblock lineouts in z0 or z1 dims")] = False,
+    multiframe: Annotated[bool, typer.Option("--multiframe", "-f", help="Specify if performing select on multiple multiblock frames")] = False,
+):
   """Subselect data from the active dataset(s).
 
   This command allows, for example, to choose a specific component of a multi-component
   dataset, select a index or coordinate range. Index ranges can also be specified using
   python slice notation (start:end:stride).
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting select")
   data = ctx.obj["data"]
 

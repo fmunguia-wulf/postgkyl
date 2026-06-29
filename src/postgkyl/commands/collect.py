@@ -1,30 +1,30 @@
-import click
+from typing import Optional
+
+import typer
+from typing_extensions import Annotated
 import numpy as np
 
 from postgkyl.data import GData
 from postgkyl.utils import verb_print
 
 
-@click.command()
-@click.option("-s", "--sumdata", is_flag=True,
-   help="Sum data in the collected datasets (retain components).")
-@click.option("-p", "--period", type=click.FLOAT,
-   help="Specify a period to create epoch data instead of time data.")
-@click.option("--offset", default=0.0, type=click.FLOAT, show_default=True,
-    help="Specify an offset to create epoch data instead of time data.")
-@click.option("-c", "--chunk", type=click.INT,
-    help="Collect into chunks with specified length rather than into a single dataset.")
-@click.option("--use", "-u", default=None, help="Specify a 'tag' to apply to (default all tags).")
-@click.option("--tag", "-t", default=None, help="Specify a 'tag' for the result.")
-@click.option("--label", "-l", default=None, help="Specify the custom label for the result.")
-@click.pass_context
-def collect(ctx, **kwargs):
+def collect(
+    ctx: typer.Context,
+    sumdata: Annotated[bool, typer.Option("-s", "--sumdata", help="Sum data in the collected datasets (retain components).")] = False,
+    period: Annotated[Optional[float], typer.Option("-p", "--period", help="Specify a period to create epoch data instead of time data.")] = None,
+    offset: Annotated[Optional[float], typer.Option("--offset", help="Specify an offset to create epoch data instead of time data.")] = 0.0,
+    chunk: Annotated[Optional[int], typer.Option("-c", "--chunk", help="Collect into chunks with specified length rather than into a single dataset.")] = None,
+    use: Annotated[Optional[str], typer.Option("--use", "-u", help="Specify a 'tag' to apply to (default all tags).")] = None,
+    tag: Annotated[Optional[str], typer.Option("--tag", "-t", help="Specify a 'tag' for the result.")] = None,
+    label: Annotated[Optional[str], typer.Option("--label", "-l", help="Specify the custom label for the result.")] = None,
+):
   """Collect data from the active datasets and create a new combined dataset.
 
   The time-stamp in each of the active datasets is collected and used as the new X-axis.
   Data can be collected in chunks, in which case several datasets are created, each with
   the chunk-sized pieces collected into each new dataset.
   """
+  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting collect")
   data = ctx.obj["data"]
 
