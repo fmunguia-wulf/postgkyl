@@ -193,7 +193,7 @@ class TestCommands:
     assert label == "$z_1$"
     assert fn.exists()
 
-@pytest.mark.skipif(ffmpeg_missing, reason="ffmpeg is not installed")
+  @pytest.mark.skipif(ffmpeg_missing, reason="ffmpeg is not installed")
   def test_animate_save_mp4(self, tmp_path):
     self.ctx.invoke(cmd.load)
     self.ctx.invoke(cmd.load)

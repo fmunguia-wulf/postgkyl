@@ -8,19 +8,19 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl.output.axis_and_grid_prep import (
+from postgkyl.utils.axis_and_grid_prep import (
     _default_axis_labels,
     _format_axis_label,
     _resolve_plot_labels,
     axis_and_grid_prep,
 )
-from postgkyl.output.downsample import downsample
-from postgkyl.output.latex_conversion import latex_to_html, latex_to_unicode
-from postgkyl.output.load_plot_data import load_plot_data
-from postgkyl.output.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+from postgkyl.utils.downsample import downsample
+from postgkyl.utils.latex_conversion import latex_to_html, latex_to_unicode
+from postgkyl.utils.load_plot_data import load_plot_data
+from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 
-load_plot_data_module = importlib.import_module("postgkyl.output.load_plot_data")
+load_plot_data_module = importlib.import_module("postgkyl.utils.load_plot_data")
 
 
 class _FakeGData:
@@ -470,5 +470,5 @@ class TestLatexConversion:
 # ---------------------------------------------------------------------------
 
 def test_output_module_exports_helpers():
-    assert pg.output.downsample is downsample
-    assert pg.output.nodal_to_cell_centered_grid is nodal_to_cell_centered_grid
+    assert pg.utils.downsample is downsample
+    assert pg.utils.nodal_to_cell_centered_grid is nodal_to_cell_centered_grid

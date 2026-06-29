@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from postgkyl.tools.fit import fit as _fit, fit_evaluate as _fit_evaluate
-from postgkyl.output.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 if TYPE_CHECKING:
   from postgkyl.data import GData

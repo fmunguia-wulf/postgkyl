@@ -328,14 +328,19 @@ class GData(object):
     return not dict_in.keys().isdisjoint(group_members_in)
 
   # ---- Info -----
-  def info(self) -> str:
+  def info(self, index: int = 0, header: bool = True) -> str:
     """Prints GData object information.
 
     Prints time (only when available), number of components, dimension
     spans, extremes for a GData object.
 
     Args:
-      none
+      index: int = 0
+        Dataset index shown in the header (the dataset's position within its
+        tag); defaults to 0 for a standalone dataset.
+      header: bool = True
+        Prepend a ``label (tag#index)`` header line. The CLI sets this False
+        because it prints its own colored header.
 
     Returns:
       output: str
@@ -358,7 +363,12 @@ class GData(object):
     }
 
     output = ""
-    
+
+    if header:
+      lbl = self.get_label()
+      output += f"{lbl:s}{' ' if lbl else '':s}({self.get_tag():s}#{index:d})\n"
+    # end
+
     printed_keys = []
 
     if "time" in self.ctx.keys():

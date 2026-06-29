@@ -14,6 +14,7 @@ documentation on autocomplete.
 
 from __future__ import annotations
 
+import os
 import re
 from glob import glob
 
@@ -21,16 +22,16 @@ from postgkyl.data.gdata import GData
 from postgkyl.group import DatasetGroup
 
 
-def find_output_stems(extensions: str = "bp,gkyl") -> dict:
-  """Map each extension to the sorted unique Gkeyll filename stems in the CWD.
+def find_output_stems(extensions: str = "bp,gkyl", path: str = ".") -> dict:
+  """Map each extension to the sorted unique Gkeyll filename stems in ``path``.
 
   Frame indices and a trailing ``_restart`` are stripped from each stem.
   """
   result = {}
   for ext in extensions.split(","):
     unique = []
-    for fn in glob(f"*.{ext:s}"):
-      stem = fn[: -(len(ext) + 1)]
+    for fn in glob(f"{path}/*.{ext:s}"):
+      stem = os.path.basename(fn)[: -(len(ext) + 1)]
       if stem.endswith("_restart"):
         stem = stem[:-8]
       # end

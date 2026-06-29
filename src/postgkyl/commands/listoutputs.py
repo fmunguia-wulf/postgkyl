@@ -14,7 +14,7 @@ def listoutputs(ctx, **kwargs):
   """List Gkeyll filename stems in the current directory."""
   verb_print(ctx, "Starting listoutputs")
 
-  stems_by_ext = find_output_stems(kwargs["extensions"])
+  stems_by_ext = find_output_stems(kwargs["extensions"], kwargs["path"])
   for ext, stems in stems_by_ext.items():
     if stems:
       click.echo(f"{ext:s}:")

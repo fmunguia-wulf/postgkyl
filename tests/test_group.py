@@ -110,6 +110,9 @@ class TestTerminal:
         pg.plot(g, show=False)
         assert len(plt.figure(0).axes[0].lines) == 2
 
+    @pytest.mark.filterwarnings(
+        "ignore:Animation was deleted without rendering anything:UserWarning"
+    )
     def test_animate_returns_funcanimation(self):
         from matplotlib.animation import FuncAnimation
         g = DatasetGroup([_line("a", 0.0), _line("b", 1.0), _line("c", 2.0)])

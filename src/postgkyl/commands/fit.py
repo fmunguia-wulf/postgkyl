@@ -4,7 +4,7 @@ import numpy as np
 from postgkyl.data.gdata import GData
 from postgkyl.utils import verb_print
 import postgkyl.tools as tools
-from postgkyl.output.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
+from postgkyl.utils.nodal_to_cell_centered_grid import nodal_to_cell_centered_grid
 
 
 class FitTypeParam(click.ParamType):
