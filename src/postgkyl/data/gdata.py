@@ -287,6 +287,50 @@ class GData(object):
 
   values = property(get_values, set_values)
 
+  def __getitem__(self, comp):
+    """Subscript the dataset by component, then by grid index.
+
+    The values array is stored as an (N+1)D array with shape
+    ``(cells_0, ..., cells_{N-1}, num_comps)`` where the last axis is the
+    component axis. The first subscript selects the component(s) along that
+    last axis; chaining a second subscript then indexes the leading grid
+    axes of the returned array.
+
+    Examples:
+      data[2][:]  -> component 2, all grid values along it
+      data[:][0]  -> all components at z0 = 0
+
+    Args:
+      comp: int or slice
+        Component index or slice to select along the component axis.
+
+    Returns:
+      A numpy array view selecting the requested component(s). Subsequent
+      subscripts apply standard numpy indexing to the grid axes.
+    """
+    if self._values is None:
+      raise ValueError("GData values are not loaded; cannot subscript.")
+    return self._values[..., comp]
+
+  def __setitem__(self, comp, value):
+    """Assign to component(s) of the dataset in place.
+
+    Mirrors :meth:`__getitem__`: the subscript selects the component(s)
+    along the last (component) axis and writes ``value`` into them.
+
+    Example:
+      data[2:4] = data[2:4] * mi / eV  # rescale components 2 and 3
+
+    Args:
+      comp: int or slice
+        Component index or slice to assign along the component axis.
+      value:
+        Array (or scalar) broadcastable to the selected component(s).
+    """
+    if self._values is None:
+      raise ValueError("GData values are not loaded; cannot subscript.")
+    self._values[..., comp] = value
+
   def push(self, grid, values):
     self.set_values(values)
     self.set_grid(grid)
@@ -1663,6 +1707,52 @@ class GData(object):
         if key not in ("self", "output", "kwargs")}
     opts.update(kwargs)
     return output.pyvista(self, **opts)
+
+  def animate(self, *, interval: int = 100, fixed_range: bool = True,
+      notitle: bool = False, show: bool = False, save: bool = False,
+      saveas: "str | None" = None, fps: "int | None" = None,
+      dpi: "int | None" = None, arg: str = "", **plot_kwargs):
+    """Matplotlib animation with this dataset as a single frame.
+
+    Single-dataset entry point mirroring the top-level :func:`postgkyl.animate`
+    and the CLI ``animate`` command. For a multi-frame animation group the
+    frames first (``a.with_(b).animate()``, ``pg.load.many(...).animate()``, or
+    ``DatasetGroup.animate``).
+
+    See :func:`postgkyl.output.animate`.
+
+    Args:
+      interval: int
+        Delay between frames in milliseconds.
+      fixed_range: bool
+        Hold the value/colour scale constant across all frames.
+      notitle: bool
+        Suppress the per-frame title (otherwise the frame number and time from
+        the dataset's context are shown).
+      show: bool
+        Call ``plt.show()`` when done.
+      save: bool
+        Save the animation to disk (uses ``anim.mp4`` if ``saveas`` is unset).
+      saveas: str | None
+        Explicit output filename for the saved animation.
+      fps: int | None
+        Frames per second for the saved animation.
+      dpi: int | None
+        Resolution in dots per inch for the saved animation.
+      arg: str
+        Matplotlib format string forwarded to each frame's plot call.
+      **plot_kwargs:
+        Additional keyword arguments forwarded to :func:`postgkyl.output.plot`
+        for each frame.
+
+    Returns:
+      matplotlib.animation.FuncAnimation: The constructed animation object (keep
+      a reference so it is not garbage-collected).
+    """
+    from postgkyl import output
+    return output.animate([self], interval=interval, fixed_range=fixed_range,
+        notitle=notitle, show=show, save=save, saveas=saveas, fps=fps, dpi=dpi,
+        arg=arg, **plot_kwargs)
 
   def plotly_animate(self, **kwargs):
     """Plotly animation with this dataset as a single frame.

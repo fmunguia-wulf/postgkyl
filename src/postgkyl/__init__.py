@@ -185,6 +185,55 @@ def plot(*datasets,
   return output.plot_datasets(_flatten_datasets(datasets), **opts)
 
 
+def animate(*datasets,
+    interval: int = 100, fixed_range: bool = True, notitle: bool = False,
+    show: bool = False, save: bool = False, saveas: "str | None" = None,
+    fps: "int | None" = None, dpi: "int | None" = None, arg: str = "",
+    **plot_kwargs):
+  """Animate one or more datasets, one frame per dataset (matplotlib).
+
+  Top-level script-API entry point. Each ``dataset`` is a :class:`GData`
+  (or an iterable / :class:`DatasetGroup` of them); they are flattened into a
+  single ordered frame sequence. The keyword arguments mirror the underlying
+  :func:`postgkyl.output.animate` renderer and the CLI ``animate`` command.
+
+  Args:
+    interval: int
+      Delay between frames in milliseconds.
+    fixed_range: bool
+      Hold the value/colour scale constant across all frames.
+    notitle: bool
+      Suppress the per-frame title (otherwise the frame number and time from
+      each dataset's context are shown).
+    show: bool
+      Call ``plt.show()`` when done.
+    save: bool
+      Save the animation to disk (uses ``anim.mp4`` if ``saveas`` is unset).
+    saveas: str | None
+      Explicit output filename for the saved animation.
+    fps: int | None
+      Frames per second for the saved animation.
+    dpi: int | None
+      Resolution in dots per inch for the saved animation.
+    arg: str
+      Matplotlib format string forwarded to each frame's plot call.
+    **plot_kwargs:
+      Any remaining options are forwarded verbatim to
+      :func:`postgkyl.output.plot` for each frame.
+
+  Returns:
+    matplotlib.animation.FuncAnimation: The constructed animation object (keep
+    a reference so it is not garbage-collected).
+
+  Examples:
+    pg.animate(data_a, data_b, data_c)
+    pg.load.many('elc_M0_*.gkyl').interp().sel(z0=0.0)  # -> pg.animate(group)
+  """
+  return output.animate(_flatten_datasets(datasets), interval=interval,
+      fixed_range=fixed_range, notitle=notitle, show=show, save=save,
+      saveas=saveas, fps=fps, dpi=dpi, arg=arg, **plot_kwargs)
+
+
 def info(*datasets) -> None:
   """Print the metadata summary for one or more datasets.
 

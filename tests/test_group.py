@@ -118,3 +118,29 @@ class TestTerminal:
         g = DatasetGroup([_line("a", 0.0), _line("b", 1.0), _line("c", 2.0)])
         anim = g.animate(show=False)
         assert isinstance(anim, FuncAnimation)
+
+    @pytest.mark.filterwarnings(
+        "ignore:Animation was deleted without rendering anything:UserWarning"
+    )
+    def test_pg_animate_varargs(self):
+        from matplotlib.animation import FuncAnimation
+        a, b, c = _line("a", 0.0), _line("b", 1.0), _line("c", 2.0)
+        anim = pg.animate(a, b, c, show=False)
+        assert isinstance(anim, FuncAnimation)
+
+    @pytest.mark.filterwarnings(
+        "ignore:Animation was deleted without rendering anything:UserWarning"
+    )
+    def test_pg_animate_accepts_group(self):
+        from matplotlib.animation import FuncAnimation
+        g = DatasetGroup([_line("a", 0.0), _line("b", 1.0)])
+        anim = pg.animate(g, show=False)
+        assert isinstance(anim, FuncAnimation)
+
+    @pytest.mark.filterwarnings(
+        "ignore:Animation was deleted without rendering anything:UserWarning"
+    )
+    def test_gdata_animate_single_frame(self):
+        from matplotlib.animation import FuncAnimation
+        anim = _line("a", 0.0).animate(show=False)
+        assert isinstance(anim, FuncAnimation)
