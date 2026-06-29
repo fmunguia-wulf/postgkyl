@@ -13,6 +13,7 @@ from postgkyl import utils
 from postgkyl import tools
 from postgkyl import output
 from postgkyl import ops
+from postgkyl import apps
 
 # import selected classes to the root
 from postgkyl.data.gdata import GData

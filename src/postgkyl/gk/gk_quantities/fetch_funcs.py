@@ -22,7 +22,7 @@ import operator
 from postgkyl.data import GData
 from postgkyl.data.dg import get_num_basis
 from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
-import postgkyl.utils.gkeyll_const as gkc
+import postgkyl.gk.gkeyll_const as gkc
 
 def _get_ctx_val(gdata : GData, key : str, **kwargs):
   if key in gdata.ctx:

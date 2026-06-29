@@ -19,10 +19,10 @@ import numpy as np
 import pytest
 
 import postgkyl.commands as cmd
-import postgkyl.utils.gk_quantities.gkquantity as gkquantity
+import postgkyl.gk.gk_quantities.gkquantity as gkquantity
 from postgkyl.data import GData
 from postgkyl.pgkyl import cli
-from postgkyl.utils.gk_quantities.registry import gk_quant_registry
+from postgkyl.gk.gk_quantities.registry import gk_quant_registry
 
 # Synthetic DG dataset parameters: 1D, p1 serendipity (num_basis = 2), four
 # physical components so that fetch functions selecting up to component 3 work.

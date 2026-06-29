@@ -12,7 +12,7 @@ import pytest
 
 import postgkyl as pg
 from postgkyl.data.gdata import GData
-import postgkyl.utils.gkeyll_enums as gkenums
+import postgkyl.gk.gkeyll_enums as gkenums
 
 
 dir_path = f"{os.path.dirname(__file__)}/test_data"

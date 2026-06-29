@@ -16,7 +16,7 @@ from postgkyl.data.gkyl_adios_reader import GkylAdiosReader
 from postgkyl.data.gkyl_h5_reader import GkylH5Reader
 from postgkyl.data.flash_h5_reader import FlashH5Reader
 from postgkyl.data.write import write as write_impl
-import postgkyl.utils.gkeyll_enums as gkenums
+import postgkyl.gk.gkeyll_enums as gkenums
 
 
 class GData(object):
@@ -745,6 +745,34 @@ class GData(object):
         direction=direction, inplace=inplace, tag=tag, label=label)
 
   diff = differentiate
+
+  def dg_local_poly(self, *, npoints: int = 2, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Discontinuous cellwise DG polynomial representation of the data.
+
+    Evaluates the modal DG decomposition at ``npoints`` per cell and inserts a
+    NaN at every cell interface, so a plot breaks the curve at each interface
+    and shows the inter-cell DG discontinuities.
+
+    See :func:`postgkyl.ops.dg_local_poly`.
+
+    Args:
+      npoints: int = 2
+        Number of evaluation points per cell.
+      inplace: bool = False
+        Mutate this dataset instead of returning a new one.
+      tag: str or None
+        Tag to assign to the resulting dataset.
+      label: str or None
+        Label to assign to the resulting dataset.
+
+    Returns:
+      GData
+        The cellwise-polynomial dataset (a new GData unless inplace is True).
+    """
+    from postgkyl import ops
+    return ops.dg_local_poly(self, npoints=npoints, inplace=inplace, tag=tag,
+        label=label)
 
   def integrate(self, axis=None, *, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":

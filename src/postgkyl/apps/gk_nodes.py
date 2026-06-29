@@ -10,8 +10,8 @@ from itertools import cycle
 
 from postgkyl.data import GData
 from postgkyl.utils import verb_print
-import postgkyl.utils.gk_utils as gku
-import postgkyl.utils.gkeyll_enums as gkenums
+import postgkyl.gk.gk_utils as gku
+import postgkyl.gk.gkeyll_enums as gkenums
 
 
 def is_geo_mapc2p(gdata):

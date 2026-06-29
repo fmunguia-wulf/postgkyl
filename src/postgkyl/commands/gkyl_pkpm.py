@@ -3,8 +3,7 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
-from postgkyl import ops
-from postgkyl.data import GData, GInterpModal
+from postgkyl.gk.pkpm import load_pkpm
 from postgkyl.utils import verb_print
 
 
@@ -18,26 +17,7 @@ def pkpm(
     label: Annotated[Optional[str], typer.Option("--label", "-l", help="Custom label for the result.")] = None,
 ):
   """Shortcut to load Gkeyll PKPM data, interpolate, and transform."""
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
   verb_print(ctx, "Starting Gkyl PKPM")
-  data = ctx.obj["data"]
-
-  gf = GData(f"{kwargs['name']:s}-{kwargs['species']:s}_{kwargs['idx']:s}.gkyl")
-  gvars = GData(f"{kwargs['name']:s}-{kwargs['species']:s}_pkpm_vars_{kwargs['idx']:s}.gkyl")
-
-  c_dim = gf.get_num_dims() - 1
-
-  GInterpModal(gf, kwargs["poly_order"], "pkpmhyb").interpolate((0, 1), overwrite=True)
-
-  dg_vars = GInterpModal(gvars, kwargs["poly_order"], "ms")
-  grid_and_T_m = dg_vars.interpolate(3)
-  grid_and_us = dg_vars.interpolate((0, 1, 2))
-
-  ops.laguerre_compose(gf, grid_and_T_m, inplace=True)
-  ops.transform_frame(gf, grid_and_us, cdim=c_dim, inplace=True)
-
-  gf.set_tag(kwargs["tag"])
-  gf.set_label(kwargs["label"])
-  data.add(gf)
-
+  gf = load_pkpm(name, species, idx, poly_order, tag=tag, label=label)
+  ctx.obj["data"].add(gf)
   verb_print(ctx, "Finishing Gkyl PKPM")

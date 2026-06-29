@@ -2,7 +2,7 @@ import typer
 from typing import Optional
 from typing_extensions import Annotated
 
-from postgkyl.utils.gk_quantities.registry import gk_quant_registry
+from postgkyl.gk.load_quantity import load_gk_quantity, available_quantities
 from postgkyl.utils import verb_print
 
 def gk_load_quantity(
@@ -33,28 +33,19 @@ def gk_load_quantity(
     from postgkyl.commands.gk_load_quantity import load_gk_quantity
     gdat = load_gk_quantity("n", "ion", "gk_sheath_2x2v_p1", frame=9)
   """
-  kwargs = {k: v for k, v in locals().items() if k != "ctx"}
-
-  if kwargs['qlist']:
+  if qlist:
     # Print accepted quantities and exit.
-    valid = gk_quant_registry.list()
-    print(f"Available quantities: {', '.join(valid)}.")
+    print(f"Available quantities: {', '.join(available_quantities())}.")
     return
+  # end
 
   data = ctx.obj["data"]
-  verb_print(ctx, f"Loading quantity {kwargs['quantity']} for {kwargs['name']}")
-
-  if not gk_quant_registry.has(kwargs['quantity']):
-    valid = gk_quant_registry.list()
-    raise ValueError(f"Unknown quantity '{kwargs['quantity']}'. "
-                     f"Available quantities: {', '.join(valid)}.")
-
-  gkquant = gk_quant_registry.get(kwargs['quantity'])
+  verb_print(ctx, f"Loading quantity {quantity} for {name}")
 
   # Parse --extra into a dict, auto-converting numeric values.
   user_extra = {}
-  if kwargs.get('extra'):
-    for pair in kwargs['extra'].split(","):
+  if extra:
+    for pair in extra.split(","):
       key, _, val = pair.partition("=")
       key = key.strip()
       val = val.strip()
@@ -65,56 +56,15 @@ def gk_load_quantity(
           val = float(val)
         except ValueError:
           pass
-      user_extra[key] = val
-
-  path = kwargs['path'].rstrip("/") + "/"
-
-  # Create species list.
-  species_inp = kwargs['species']
-  species_list = [s.strip() for s in species_inp.split(",")] if species_inp else [None]
-
-  verb_print(ctx, f"Species: {species_list}")
-
-  for species in species_list:
-    # Determine which source combination and frames to use for this species.
-    src_combo_idx, frames = gkquant.get_avail_source(path, kwargs['name'], species, kwargs['frame'])
-
-    verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
-
-    for frame in frames:
-
-      # Load required datasets (sources) and compute the quantity.
-      out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
-
-      # Set label.
-      default_label = gkquant.get_label(species=species, direction=user_extra.get("dir", None))
-
-      out_label = ''
-      if kwargs['label'] is not None:
-        out_label = kwargs['label']
-        if len(species_list) > 1:
-          out_label += f" {species}"
         # end
-      else:
-        out_label = default_label
-
-      if len(frames) > 1:
-        out_label += f" f{frame}"
       # end
+      user_extra[key] = val
+    # end
+  # end
 
-      out.set_label(out_label)
-
-      # Set tag.
-      out_tag = kwargs['tag']
-      if len(species_list) > 1:
-        out_tag += f"_{species}"
-      # end
-
-      out.set_tag(out_tag)
-
-      data.add(out) # Push data to stack.
-    # end frame loop
-  # end species loop
-
-  verb_print(ctx, f"Finished loading '{gkquant.name}'")
+  datasets = load_gk_quantity(quantity, species, name, frame, path=path,
+      tag=tag, label=label, log=lambda m: verb_print(ctx, m), **user_extra)
+  for out in datasets:
+    data.add(out)
+  # end
 

@@ -222,6 +222,86 @@ class _Loader:
     # end
     return DatasetGroup(datasets)
 
+  def pkpm(self, name: str, species: str, idx: str | int, poly_order: int, *,
+      tag: str | None = None, label: str | None = None) -> GData:
+    """Load, interpolate, and frame-transform Gkeyll PKPM data.
+
+    The script-side equivalent of the CLI ``pkpm`` command: it loads the PKPM
+    distribution and its companion ``pkpm_vars`` file, interpolates them, and
+    applies the Laguerre-compose + frame-transform pipeline, returning a
+    :class:`postgkyl.GData` ready for array math and plotting.
+
+    Args:
+      name: str
+        Root name (file prefix) of the simulation.
+      species: str
+        Species name.
+      idx: str | int
+        Frame/file number.
+      poly_order: int
+        Polynomial order of the DG representation.
+      tag: str | None
+        Optional tag for the resulting dataset.
+      label: str | None
+        Optional label for the resulting dataset.
+
+    Returns:
+      A populated, interpolated :class:`postgkyl.GData` instance.
+    """
+    from postgkyl.gk.pkpm import load_pkpm
+    return load_pkpm(name, species, idx, poly_order, tag=tag, label=label)
+
+  def gk_quantity(self, quantity: str, species: str | None, name: str,
+      frame: int | str | None = None, *, path: str = "./",
+      tag: str = "default", label: str | None = None,
+      **extra) -> "GData | DatasetGroup":
+    """Load a pre-named gyrokinetic quantity from simulation output files.
+
+    The script-side equivalent of the CLI ``gk-load-quantity`` command: it
+    resolves ``quantity`` through the gyrokinetic quantity registry, loads the
+    required source files, computes the quantity, and returns ready data.
+
+    A single resulting dataset is returned as a :class:`postgkyl.GData`;
+    multiple (several species and/or frames) are returned as a
+    :class:`postgkyl.DatasetGroup`.
+
+    Args:
+      quantity: str
+        Registered quantity name (use ``pg.load.gk_quantities()`` to list).
+      species: str | None
+        Species name or comma-separated list; ``None`` for species-independent
+        quantities.
+      name: str
+        Simulation name prefix (e.g. ``'gk_sheath_2x2v_p1'``).
+      frame: int | str | None
+        Frame number, comma-separated indices, or a ``'start:stop[:step]'`` /
+        ``':'`` range (``None`` selects all available frames).
+      path: str
+        Directory containing the simulation files.
+      tag: str
+        Tag for the output dataset(s).
+      label: str | None
+        Label override; defaults to the quantity's registered label.
+      **extra:
+        Extra per-quantity parameters (e.g. ``dir=1``, ``mass=0.1``).
+
+    Returns:
+      A :class:`postgkyl.GData` for a single result, otherwise a
+      :class:`postgkyl.DatasetGroup`.
+    """
+    from postgkyl.gk.load_quantity import load_gk_quantity
+    datasets = load_gk_quantity(quantity, species, name, frame, path=path,
+        tag=tag, label=label, **extra)
+    if len(datasets) == 1:
+      return datasets[0]
+    # end
+    return DatasetGroup(datasets)
+
+  def gk_quantities(self) -> list:
+    """Return the list of registered gyrokinetic quantity names."""
+    from postgkyl.gk.load_quantity import available_quantities
+    return available_quantities()
+
   def outputs(self, extensions: str = "bp,gkyl") -> dict:
     """Discover Gkeyll output filename stems in the current directory.
 

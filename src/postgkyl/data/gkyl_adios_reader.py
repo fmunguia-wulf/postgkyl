@@ -13,6 +13,7 @@ except ModuleNotFoundError:
 # end
 
 import postgkyl.data.idx_parser as idx_parser
+from postgkyl.data import mapping
 
 
 class GkylAdiosReader(object):
@@ -242,32 +243,14 @@ class GkylAdiosReader(object):
         tmp = grid_fh.read("CartGridField", start=offset, count=count)
       else:
         tmp = grid_fh.read("CartGridField")
-      num_comps = tmp.shape[-1]
-      num_coeff = num_comps / num_dims
-      grid = [
-          tmp[..., int(d * num_coeff) : int((d + 1) * num_coeff)]
-          for d in range(num_dims)
-      ]
+      grid = mapping.c2p_grid(tmp, num_dims)
       if self.ctx:
         self.ctx["grid_type"] = "c2p"
       # end
     else:
-      # Create sparse unifrom grid
-      # Adjust for ghost cells
-      dz = (self.upper - self.lower) / self.cells
-      for d in range(num_dims):
-        if self.cells[d] != data.shape[d]:
-          ngl = int(np.floor((self.cells[d] - data.shape[d]) * 0.5))
-          ngu = int(np.ceil((self.cells[d] - data.shape[d]) * 0.5))
-          self.cells[d] = data.shape[d]
-          self.lower[d] = self.lower[d] - ngl * dz[d]
-          self.upper[d] = self.upper[d] + ngu * dz[d]
-        # end
-      # end
-      grid = [
-          np.linspace(self.lower[d], self.upper[d], self.cells[d] + 1)
-          for d in range(num_dims)
-      ]
+      # Create sparse uniform grid, corrected for ghost cells.
+      mapping.adjust_for_ghost_cells(self.lower, self.upper, self.cells, data.shape)
+      grid = mapping.uniform_grid(self.lower, self.upper, self.cells)
       if self.ctx:
         self.ctx["grid_type"] = "uniform"
       # end

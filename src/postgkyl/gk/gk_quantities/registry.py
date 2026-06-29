@@ -4,7 +4,7 @@ Registry of pre-named gyrokinetic quantities.
 Each entry is an instance of the GkQuantity class.
 """
 
-import postgkyl.utils.gk_quantities.fetch_funcs as ff
+import postgkyl.gk.gk_quantities.fetch_funcs as ff
 from .gkquantity import GkQuantity, GkQuantityRegistry
 
 # Instance that will hold all available gyrokinetic quantities.

@@ -15,7 +15,7 @@ Full documentation of the Gkeyll project is available at
 
 Postgkyl requires the following packages:
 
-* [click](https://pypi.org/project/click/)
+* [typer](https://pypi.org/project/typer/)
 * [matplotlib](https://pypi.org/project/matplotlib/)
 * [msgpack](https://pypi.org/project/msgpack/)
 * [numpy](https://pypi.org/project/numpy/)
@@ -23,8 +23,8 @@ Postgkyl requires the following packages:
 * [sympy](https://pypi.org/project/sympy/)
 * [tables](https://pypi.org/project/tables/)
 
-Note that Posgkyl currently does not work with NumPy >= 2.0; the update is in
-the works. In addition, there are two optional dependencies:
+Postgkyl requires NumPy >= 2.2.6. In addition, there are two optional
+dependencies:
 
 * [adios2](https://pypi.org/project/adios2/)
 * [pytest](https://pypi.org/project/pytest/)

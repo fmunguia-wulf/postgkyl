@@ -18,7 +18,7 @@ from postgkyl.commands.extractinput import extractinput
 from postgkyl.commands.fft import fft
 from postgkyl.commands.fit import fit
 from postgkyl.commands.gkyl_pkpm import pkpm
-from postgkyl.commands.gk_nodes import gk_nodes
+from postgkyl.apps.gk_nodes import gk_nodes
 from postgkyl.commands.grid import grid
 from postgkyl.commands.growth import growth
 from postgkyl.commands.info import info
@@ -31,12 +31,12 @@ from postgkyl.commands.magsq import magsq
 from postgkyl.commands.mask import mask
 from postgkyl.commands.mhd import mhd
 from postgkyl.commands.parrotate import parrotate
-from postgkyl.commands.gk_energy_balance import gk_energy_balance
+from postgkyl.apps.gk_energy_balance import gk_energy_balance
 from postgkyl.commands.gk_distf import load_gk_distf
 from postgkyl.commands.gk_distf import gk_distf
 from postgkyl.commands.dg_local_poly import dg_local_poly
 from postgkyl.commands.gk_load_quantity import gk_load_quantity
-from postgkyl.commands.gk_particle_balance import gk_particle_balance
+from postgkyl.apps.gk_particle_balance import gk_particle_balance
 from postgkyl.commands.perprotate import perprotate
 from postgkyl.commands.plot import plot
 from postgkyl.commands.plotly import plotly
@@ -49,10 +49,8 @@ from postgkyl.commands.status import activate
 from postgkyl.commands.status import deactivate
 from postgkyl.commands.style import style
 from postgkyl.commands.tenmoment import tenmoment
-from postgkyl.commands.trajectory import trajectory
+from postgkyl.apps.trajectory import trajectory
 from postgkyl.commands.transform_frame import transformframe
 from postgkyl.commands.val2coord import val2coord
 from postgkyl.commands.velocity import velocity
 from postgkyl.commands.write import write
-
-from postgkyl.commands import temp

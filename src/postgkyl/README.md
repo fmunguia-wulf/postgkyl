@@ -32,13 +32,6 @@ The two front-ends enter at different heights, and that is the whole point of th
   `ops` verb (most commands) or one `apps` function (the mini-applications). Nothing in the
   library imports `commands/`.
 
-The golden script every layer exists to support:
-
-```python
-import postgkyl as pg
-pg.load('elc_M0_0.gkyl').interp().sel(z0=0.0).plot()
-```
-
 ---
 
 ## L0 — `tools/`, pure numerics
@@ -99,20 +92,14 @@ Terminal/visual layer. `plot.py` (matplotlib) also hosts **`plot_datasets(list, 
 `pg.plot` and the CLI `plot` command. `plotly.py` (interactive 3D) and `pyvista.py`
 (scientific 3D) are the other backends.
 
-### `utils/` — generic, cross-cutting support
-Pure support code consumed across layers, no `GData` orchestration and no domain physics of
-its own: `axis_and_grid_prep.py`, `load_plot_data.py`, `downsample.py`,
-`latex_conversion.py`, `load_style.py`, `verb_print.py`, `nodal_to_cell_centered_grid.py`,
-`input_parser.py`, `set_frame.py`.
-
-### `gk/` — gyrokinetics domain reference
-The one place that encodes Gkeyll's gyrokinetic conventions: physical constants
-(`gkeyll_const.py`), enums (`gkeyll_enums.py`), helpers (`gk_utils.py`), and the
-**`gk_quantities/`** registry of ~50 pre-named GK quantities (`gkquantity.py`,
-`fetch_funcs.py`, `registry.py`). It is reference data — file-naming conventions and
-constants — consulted by the L3 loaders (`pg.load.gk_distf` / `.gk_quantity`) and the L4
-apps. Keeping it separate from `utils/` stops generic support and domain physics from
-bleeding together.
+### `utils/` — shared, cross-cutting helpers
+Pure support code consumed across layers, no `GData` orchestration of its own:
+- **Plotting/IO support** used by `output/` and commands: `axis_and_grid_prep.py`,
+  `load_plot_data.py`, `downsample.py`, `latex_conversion.py`, `load_style.py`,
+  `verb_print.py`, `nodal_to_cell_centered_grid.py`, `input_parser.py`, `set_frame.py`.
+- **Gkeyll/gyrokinetics domain reference** (the `gk_quantities/` registry of ~50 pre-named
+  GK quantities, `gkeyll_const.py`, `gkeyll_enums.py`, `gk_utils.py`). This is reference
+  data — naming conventions and physical constants — consulted by L3 loaders and L4 apps.
 
 ---
 
@@ -183,5 +170,4 @@ outstanding gaps:
 | Coordinate-mapping grid construction | inlined in `data/gkyl_reader.load()` (×2) | **L1 `data/mapping.py`** |
 | Load-option global/local resolution | `commands/load.py` (~50 lines) | `commands/_load_opts.py` |
 | `ev` RPN registry (numerics in L5) | `commands/ev_cmd.py` | **L0/L2** (`tools/` or `ops/ev.py`) |
-| Gyrokinetics domain reference | `utils/gk_quantities/`, `utils/gk_utils.py`, `utils/gkeyll_*` | **L2 `gk/`** |
 | Dead code | `commands/temp.py`, `commands/old/`, `data/old/` | deleted |

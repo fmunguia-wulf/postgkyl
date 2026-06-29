@@ -11,7 +11,7 @@ import pytest
 
 import postgkyl as pg
 from postgkyl.data.gdata import GData
-from postgkyl.utils.gk_utils import get_block_indices, parse_slice_string, read_gfile
+from postgkyl.gk.gk_utils import get_block_indices, parse_slice_string, read_gfile
 from postgkyl.utils.input_parser import input_parser
 
 

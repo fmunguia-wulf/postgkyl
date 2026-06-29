@@ -6,6 +6,8 @@ import msgpack as mp
 import numpy as np
 import os.path
 
+from postgkyl.data import mapping
+
 # Format description for raw Gkeyll output file from
 # gkyl_array_rio_format_desc.h
 
@@ -503,9 +505,7 @@ class GkylReader(object):
       grid_reader = GkylReader(self.c2p)
       grid_reader.preload()
       _, tmp = grid_reader.load()
-      num_comps = tmp.shape[-1]
-      num_coeff = num_comps / num_dims
-      grid = [tmp[..., int(d * num_coeff) : int((d + 1)*num_coeff)] for d in range(num_dims)]
+      grid = mapping.c2p_grid(tmp, num_dims)
       if self.ctx:
         self.ctx["grid_type"] = "c2p"
       #end
@@ -513,43 +513,16 @@ class GkylReader(object):
       grid_reader = GkylReader(self.c2p_vel)
       grid_reader.preload()
       _, tmp = grid_reader.load()
-
-      num_vdim = len(tmp.shape) - 1
-      num_cdim = num_dims - num_vdim
+      grid, num_cdim, num_vdim = mapping.c2p_vel_grid(
+          tmp, self.lower, self.upper, self.cells, num_dims)
       if self.ctx:
         self.ctx["num_vdim"] = num_vdim
         self.ctx["num_cdim"] = num_cdim
-      #end
-
-      # Create uniform configuration space grid
-      grid = [np.linspace(self.lower[d], self.upper[d], self.cells[d] + 1) for d in range(num_cdim)]
-
-      # Create non-uniform velocity grid
-      num_comps = tmp.shape[-1]
-      num_coeff = num_comps / num_vdim
-      for d in range(num_vdim):
-        idx = [0] * (num_vdim + 1)
-        idx[d] = slice(None)
-        idx[-1] = slice(int(d * num_coeff), int((d + 1) * num_coeff))
-        grid.append(tmp[tuple(idx)])
-      #end
-
-      if self.ctx:
         self.ctx["grid_type"] = "c2p_vel"
       #end
     else:  # Create sparse unifrom grid
-      # Adjust for ghost cells
-      dz = (self.upper - self.lower) / self.cells
-      for d in range(num_dims):
-        if self.cells[d] != data.shape[d]:
-          ngl = int(np.floor((self.cells[d] - data.shape[d]) * 0.5))
-          ngu = int(np.ceil((self.cells[d] - data.shape[d]) * 0.5))
-          self.cells[d] = data.shape[d]
-          self.lower[d] = self.lower[d] - ngl * dz[d]
-          self.upper[d] = self.upper[d] + ngu * dz[d]
-        #end
-      #end
-      grid = [np.linspace(self.lower[d], self.upper[d], self.cells[d] + 1) for d in range(num_dims)]
+      mapping.adjust_for_ghost_cells(self.lower, self.upper, self.cells, data.shape)
+      grid = mapping.uniform_grid(self.lower, self.upper, self.cells)
       if self.ctx:
         self.ctx["grid_type"] = "uniform"
       #end
