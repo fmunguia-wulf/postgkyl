@@ -22,5 +22,5 @@ from postgkyl.data.dg import GInterpModal
 from postgkyl import pgkyl
 
 # high-level scriptable interface (typed; mirrors the command chain)
-from postgkyl.api import PgkylSession
+from postgkyl.clap import PgkylSession
 

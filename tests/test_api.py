@@ -1,19 +1,19 @@
-"""Tests for the high-level scriptable pgkyl API (``postgkyl.api``)."""
+"""Tests for the high-level scriptable pgkyl API (``postgkyl.clap``)."""
 import os
 
 import postgkyl as pg
-from postgkyl.api import _api_gen
+from postgkyl.clap import _clap_gen
 
 
 class TestApiGeneration:
-  """The generated ``api.py`` must stay in sync with the click commands."""
+  """The generated ``clap.py`` must stay in sync with the click commands."""
 
-  def test_api_in_sync(self):
-    path = _api_gen._target_path()
+  def test_clap_in_sync(self):
+    path = _clap_gen._target_path()
     with open(path, "r") as fh:
       current = fh.read()
-    assert current == _api_gen.render(), (
-        "postgkyl/api/api.py is stale; run 'python -m postgkyl.api._api_gen'.")
+    assert current == _clap_gen.render(), (
+        "postgkyl/clap/api.py is stale; run 'python -m postgkyl.clap._api_gen'.")
 
 
 class TestApiSession:

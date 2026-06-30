@@ -5,13 +5,13 @@ commands operating on a shared dataset stack. This module exposes that same
 chain to Python/Jupyter as a stateful session object so each command can be
 called as a typed method:
 
-    from postgkyl.api import PgkylSession
+    from postgkyl.clap import PgkylSession
     pg = PgkylSession()
     pg.load("file.gkyl")
     pg.gk_rz(phi_tor=0.0)
     pg.plot(fixaspect=True)
 
-The typed methods themselves live in the generated ``postgkyl.api`` module; this
+The typed methods themselves live in the generated ``postgkyl.clap`` module; this
 file holds the stable runtime core they build on. See ``postgkyl._api_gen`` for
 the generator that keeps ``api.py`` in sync with the click commands.
 """
@@ -39,7 +39,7 @@ class _Session:
   command line. Drop to ``session.data`` to reach the underlying ``GData``
   objects and their raw NumPy arrays.
 
-  This class is inherited by ``PgkylSession`` in ``postgkyl.api``. Since 
+  This class is inherited by ``PgkylSession`` in ``postgkyl.clap``. Since 
   ``PgkylSession`` is generated automatically, this class is a space where one 
   can add stable, hand-written features to the session API.
   """
