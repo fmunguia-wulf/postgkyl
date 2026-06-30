@@ -15,10 +15,12 @@ class GkQuantity:
     is_time_dep: If the quantity is time-dependent (i.e. written in frames).
     is_species_dep: If the quantity is species-dependent.
     is_vector: If the quantity is a vector (i.e. has multiple components).
+    loader_func: Optional custom loader which bypasses the fetch machinery.
   """
   name = None
   source = None
   fetch_func = None
+  loader_func = None
   label = None
   is_time_dep = None
   is_species_dep = None
@@ -29,10 +31,12 @@ class GkQuantity:
 
   def __init__(self, name : str, source : list, fetch_func : callable, label : str,
                is_time_dep : bool = False, is_species_dep : bool = False, is_vector : bool = False,
-               is_tensor : bool = False, is_integrated : bool = False, is_geo : bool = False):
+               is_tensor : bool = False, is_integrated : bool = False, is_geo : bool = False,
+               loader_func : callable = None):
     self.name = name
     self.source = source
     self.fetch_func = fetch_func
+    self.loader_func = loader_func
     self.label = label
     self.is_time_dep = is_time_dep
     self.is_species_dep = is_species_dep
@@ -51,7 +55,8 @@ class GkQuantity:
     if self.is_geo:
       return os.path.join(path, f"{name}-{src}")
     elif self.is_species_dep:
-      return os.path.join(path, f"{name}-{species}_{src}_")
+      src_ = f"{src}_" if src else ""
+      return os.path.join(path, f"{name}-{species}_{src_}")
     else:
       return os.path.join(path, f"{name}-{src}_")
 
@@ -209,9 +214,12 @@ class GkQuantity:
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
     """
-    Load this quantity's sources for the given combination and frame, then
-    compute and return the resulting GData.
+    Return the GData associated with this quantity, either with a custom
+    loader_func or by fetching the source files and computing the quantity.
     """
+    if self.loader_func is not None:
+      return self.loader_func(path, name, species, frame, **extra)
+
     combo = self.source[combo_idx]
     fetch_func = self.fetch_func[combo_idx]
     gdatas = [self.get_src_gdata(src, path, name, species, frame, **extra) for src in combo]

@@ -528,3 +528,35 @@ def fetch_diamag_vel(gdatas, **kwargs):
   out.set_values(out.get_values()/charge)
 
   return out
+
+# -------------------------------------------------------------------------
+# --- Custom loaders (loader_func signature: path, name, species, frame) ---
+# -------------------------------------------------------------------------
+
+def load_distf(path: str, name: str, species: str, frame: int, **extra) -> GData:
+  """
+  Loader for the registry 'distf' quantity. Wraps load_gk_distf with defaults
+  tailored to registry use: never interpolate (interp=0) and convert velocity
+  coordinates (c2p_vel) on by default.
+
+  Defaults can be overridden via --extra, e.g.:
+    -e suffix=source      use <name>-<species>_source_<frame>.gkyl as input
+    -e c2p_vel=0          disable velocity-space mapping
+    -e mc2nu=1            apply non-uniform -> field-aligned position mapping
+    -e mapc2p=1           apply position-space -> Cartesian/cylindrical mapping
+    -e block=2            load only the 2nd block of a multi-block file
+  """
+  from postgkyl.commands.gk_distf import load_gk_distf
+  from postgkyl.utils.gk_utils import dict_get_bool
+
+  prefix = path.rstrip("/") + "/" + name
+
+  return load_gk_distf(
+    name=prefix, species=species, frame=int(frame),
+    suffix=str(extra.get("suffix", "")),
+    use_c2p_vel=dict_get_bool(extra, "c2p_vel", True),
+    use_mc2nu=dict_get_bool(extra, "mc2nu", False),
+    use_mapc2p=dict_get_bool(extra, "mapc2p", False),
+    block_idx=extra.get("block", None),
+    interp=0,  # registry distf always works with non-interpolated DG data
+  )
