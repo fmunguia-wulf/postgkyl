@@ -273,6 +273,18 @@ _gradB_vel : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_gradB_vel)
 
+# Diamagnetic drift velocity.
+_diamag_vel : GkQuantity = GkQuantity(
+  name = "diamag_vel",
+  source = [[_geo_int_jacobtot_inv,_geo_int_bmag,_geo_int_b_i, _M0, _pressperp]],
+  fetch_func= [ff.fetch_diamag_vel],
+  label = r"$v_{dia,%s}$ (m/s)",
+  is_time_dep = True,
+  is_species_dep = True,
+  is_vector = True
+)
+gk_quant_registry.register(_diamag_vel)
+
 # ------------------------------
 # --- Phase space quantities ---
 # ------------------------------
@@ -288,15 +300,3 @@ _distf : GkQuantity = GkQuantity(
   is_species_dep = True,
 )
 gk_quant_registry.register(_distf)
-
-# Diamagnetic drift velocity.
-_diamag_vel : GkQuantity = GkQuantity(
-  name = "diamag_vel",
-  source = [[_geo_int_jacobtot_inv,_geo_int_bmag,_geo_int_b_i, _M0, _pressperp]],
-  fetch_func= [ff.fetch_diamag_vel],
-  label = r"$v_{dia,%s}$ (m/s)",
-  is_time_dep = True,
-  is_species_dep = True,
-  is_vector = True
-)
-gk_quant_registry.register(_diamag_vel)
