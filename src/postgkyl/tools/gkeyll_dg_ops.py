@@ -144,7 +144,7 @@ class GkeyllDGops:
     values = np.squeeze(gdata.get_values())
     # Ensure C-contiguous float64 layout expected by gkyl kernels
     values = np.ascontiguousarray(values, dtype=np.float64)
-    size  = ctypes.c_size_t(int(np.prod(values.shape)))
+    size  = ctypes.c_size_t(int(np.prod(values.shape[:-1])))
     ncomp = ctypes.c_size_t(int(values.shape[-1]))
     data_ptr = values.ctypes.data_as(ctypes.c_void_p)
     arr_ptr = self._lib.gkyl_array_new_from_buff(_GKYL_DOUBLE, ncomp, size, data_ptr)

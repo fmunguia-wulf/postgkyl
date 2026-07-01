@@ -578,11 +578,7 @@ def fetch_diamag_vel(gdatas, **kwargs):
 
   return out
 
-# -------------------------------------------------------------------------
-# --- Custom loaders (loader_func signature: path, name, species, frame) ---
-# -------------------------------------------------------------------------
-
-def load_distf(path: str, name: str, species: str, frame: int, **extra) -> GData:
+def load_distf(gdatas, **kwargs) -> GData:
   """
   Loader for the registry 'distf' quantity. Wraps load_gk_distf with defaults
   tailored to registry use: never interpolate (interp=0) and convert velocity
@@ -598,10 +594,11 @@ def load_distf(path: str, name: str, species: str, frame: int, **extra) -> GData
   from postgkyl.commands.gk_distf import load_gk_distf
   from postgkyl.utils.gk_utils import dict_get_bool
 
-  prefix = path.rstrip("/") + "/" + name
+  prefix = kwargs.get("path", "").rstrip("/") + "/" + kwargs.get("name", "")
+  extra = kwargs.get("extra", {})
 
   return load_gk_distf(
-    name=prefix, species=species, frame=int(frame),
+    name=prefix, species=kwargs.get("species", ""), frame=int(kwargs.get("frame", 0)),
     suffix=str(extra.get("suffix", "")),
     use_c2p_vel=dict_get_bool(extra, "c2p_vel", True),
     use_mc2nu=dict_get_bool(extra, "mc2nu", False),

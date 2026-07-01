@@ -318,8 +318,7 @@ gk_quant_registry.register(_diamag_vel)
 _distf : GkQuantity = GkQuantity(
   name = "distf",
   source = [[""]],
-  fetch_func = [None],
-  loader_func = ff.load_distf,
+  fetch_func = [ff.load_distf],
   label = r"$f_{%s}$",
   is_time_dep = True,
   is_species_dep = True,
