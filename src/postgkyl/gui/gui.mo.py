@@ -106,9 +106,7 @@ def _(mo, os):
 def _(base64, mo, os):
     # --- header logo (embedded as base64 so it survives the raw-HTML pane) ---
     _candidates = [
-        "logogui.png",
-        os.path.join("notebooks", "logogui.png"),
-        "notebooks/logogui.png",
+        os.path.join(os.path.dirname(__file__), "logogui.png"),
     ]
     _logo = next((p for p in _candidates if os.path.exists(p)), None)
     if _logo:
