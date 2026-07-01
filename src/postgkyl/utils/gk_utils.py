@@ -72,6 +72,17 @@ def read_interp_gfile(file_name, poly_order, basis_type, comp=0):
 
   return grid_out, np.squeeze(vals), pgData
 
+def dict_get_bool(dict_in, key, default):
+  # Interpret a dictionary value as a bool, returning 'default' if the key is
+  # absent. String values '1'/'true' (case-insensitive) are True, anything
+  # else false. Non string values are converted using bool().
+  if key not in dict_in:
+    return default
+  val = dict_in[key]
+  if isinstance(val, str):
+    return val.strip().lower() in ("1", "true")
+  return bool(val)
+
 def parse_slice_string(value):
   # Parse a 'slice()' from string, like 'start:stop:step'.
   parts = value.split(':')

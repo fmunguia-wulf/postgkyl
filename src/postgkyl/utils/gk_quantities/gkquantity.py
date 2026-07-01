@@ -51,7 +51,8 @@ class GkQuantity:
     if self.is_geo:
       return os.path.join(path, f"{name}-{src}")
     elif self.is_species_dep:
-      return os.path.join(path, f"{name}-{species}_{src}_")
+      src_ = f"{src}_" if src else ""
+      return os.path.join(path, f"{name}-{species}_{src_}")
     else:
       return os.path.join(path, f"{name}-{src}_")
 
@@ -209,12 +210,17 @@ class GkQuantity:
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
     """
-    Load this quantity's sources for the given combination and frame, then
-    compute and return the resulting GData.
+    Return the GData associated with this quantit by fetching the source files 
+    and computing the quantity.
     """
     combo = self.source[combo_idx]
     fetch_func = self.fetch_func[combo_idx]
     gdatas = [self.get_src_gdata(src, path, name, species, frame, **extra) for src in combo]
+    # Pass the path, name, species, and frame to the fetch function in case it needs them.
+    extra["path"] = path
+    extra["name"] = name
+    extra["species"] = species
+    extra["frame"] = frame
     return fetch_func(gdatas, **extra)
 
 
