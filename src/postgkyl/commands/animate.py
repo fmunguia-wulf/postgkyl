@@ -322,7 +322,7 @@ def animate(ctx, **kwargs):
   duration = int(1.0e3 / kwargs["fps"]) if kwargs["fps"] else kwargs["interval"]
 
   set_figure = False
-  min_size = np.NAN
+  min_size = np.nan
   yset = False
 
   if kwargs["grouptags"]:
