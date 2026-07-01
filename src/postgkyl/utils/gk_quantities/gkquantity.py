@@ -15,7 +15,6 @@ class GkQuantity:
     is_time_dep: If the quantity is time-dependent (i.e. written in frames).
     is_species_dep: If the quantity is species-dependent.
     is_vector: If the quantity is a vector (i.e. has multiple components).
-    loader_func: Optional custom loader which bypasses the fetch machinery.
   """
   name = None
   source = None
