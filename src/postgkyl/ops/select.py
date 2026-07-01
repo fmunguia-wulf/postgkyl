@@ -1,59 +1,63 @@
-"""The ``select`` verb — subselect coordinates and components from a dataset."""
+"""The ``select`` (``sel``) verb — subselect coordinates and components."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from postgkyl.data.select import select as _select_arrays
+import numpy as np
+
+from postgkyl.numerics import idx_parser
 
 if TYPE_CHECKING:
-  from postgkyl.data import GData
+  from postgkyl.core.state import GDataState
 # end
 
 
-def select(data: "GData", *, comp: int | str | None = None,
+def select(data: "GDataState", *, comp=None,
     z0=None, z1=None, z2=None, z3=None, z4=None, z5=None,
-    inplace: bool = False, tag: str | None = None, label: str | None = None) -> "GData":
-  """Subselect part of a dataset (coordinate indices/values and components).
+    inplace: bool = False, tag: str | None = None, label: str | None = None):
+  """Select part of a dataset by coordinate (``z0``-``z5``) and/or component.
 
-  Selects a sub-region of a dataset along any of its coordinate axes
-  (``z0``-``z5``) and/or a subset of its components (``comp``). Each selector
-  accepts an integer index, a float coordinate value (matched against the
-  grid), or a numpy-style slice string ``'start:end:stride'``. Negative
-  indices wrap around the axis length. A single integer collapses that axis to
-  a single cell.
-
-  Args:
-    data: GData
-      The dataset to subselect from.
-    comp: int | str | None
-      Component selector. An integer index, a 'lo:hi:step' slice string, or
-      comma-separated indices (e.g. '0,2,4'). None keeps all components.
-    z0: int | float | str | None
-      Selector for the first coordinate axis. An integer index, a float
-      coordinate value, or a 'lo:hi:step' slice string. None keeps the whole
-      axis.
-    z1: int | float | str | None
-      Selector for the second coordinate axis (see ``z0``).
-    z2: int | float | str | None
-      Selector for the third coordinate axis (see ``z0``).
-    z3: int | float | str | None
-      Selector for the fourth coordinate axis (see ``z0``).
-    z4: int | float | str | None
-      Selector for the fifth coordinate axis (see ``z0``).
-    z5: int | float | str | None
-      Selector for the sixth coordinate axis (see ``z0``).
-    inplace: bool
-      When True, mutate and return ``data``; otherwise return a new GData.
-    tag: str | None
-      Optional tag for the returned dataset.
-    label: str | None
-      Optional label for the returned dataset.
-
-  Returns:
-    A new GData holding the selected sub-region (or the mutated input when
-    inplace=True).
+  Each selector accepts an int index, a float coordinate value, or a slice
+  string ``"start:end"``; ``comp`` additionally accepts ``"a,b"``. Unspecified
+  axes are kept in full. The selected dimension is retained (length-1), matching
+  the legacy behaviour.
   """
-  grid, values = _select_arrays(data, comp=comp,
-      z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5)
-  return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+  zs = (z0, z1, z2, z3, z4, z5)
+  grid = list(data.grid)
+  values = data.values
+  num_dims = data.num_dims
+  values_idx = [slice(0, values.shape[d]) for d in range(num_dims + 1)]
+
+  for d, z in enumerate(zs):
+    if d >= num_dims or z is None:
+      continue
+    # end
+    len_grid = grid[d].shape[0]
+    is_matching = values.shape[d] == len_grid  # grid holds edges (cells+1) -> usually False
+    idx = idx_parser(z, grid[d], is_matching)
+    if isinstance(idx, int):
+      if idx < 0:
+        idx = values.shape[d] + idx
+      v_idx = slice(idx, idx + 1)
+      g_idx = slice(idx, idx + 1) if is_matching else slice(idx, idx + 2)
+    elif isinstance(idx, slice):
+      v_idx = idx
+      g_idx = idx if is_matching else slice(idx.start, idx.stop + 1)
+    else:
+      raise TypeError("Coordinate selector must be a single index or a slice.")
+    # end
+    grid[d] = grid[d][g_idx]
+    values_idx[d] = v_idx
+  # end
+
+  if comp is not None:
+    values_idx[-1] = idx_parser(comp)
+  # end
+
+  values_out = values[tuple(values_idx)]
+  if num_dims == values_out.ndim:  # restore the squeezed component axis
+    values_out = values_out[..., np.newaxis]
+  # end
+
+  return data._result(grid, values_out, inplace=inplace, tag=tag, label=label)
