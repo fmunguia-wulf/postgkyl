@@ -34,6 +34,7 @@ num_nodesTensor = np.array([
     [64, 729, 4096, 15625]])
 
 num_nodesGkHybrid = np.array([1, 6, 12, 24, 48])
+num_nodesGkHybridVel = np.array([3, 6])
 num_nodeshybrid = np.array([1, 6, 12, 24, 48])
 
 
@@ -60,6 +61,8 @@ def _getnum_nodes(dim, poly_order, basis_type):
     num_nodes = num_nodesTensor[dim - 1, poly_order - 1]
   elif basis_type.lower() == "gkhybrid":
     num_nodes = num_nodesGkHybrid[dim - 1]
+  elif basis_type.lower() == "gkhybrid_vel":
+    num_nodes = num_nodesGkHybridVel[dim - 1]
   elif basis_type.lower() == "hybrid":
     num_nodes = num_nodeshybrid[dim - 1]
   else:
@@ -68,7 +71,7 @@ def _getnum_nodes(dim, poly_order, basis_type):
         "Supported basis are currently 'ns' (Nodal Serendipity),"
         " 'ms' (Modal Serendipity), 'mt' (Modal Tensor product),"
         " 'mo' (Modal maximal Order), 'gkhybrid' (Modal GkHybrid),"
-        " and 'hybrid' (Modal PKPM hybrid)".format(basis_type)
+        " 'gkhybrid_vel' (Modal GkHybridVel), and 'hybrid' (Modal hybrid)".format(basis_type)
     )
   # end
   return num_nodes
@@ -89,6 +92,9 @@ def _loadInterpMatrix(dim, poly_order, basis_type, interp, read, modal, c2p=Fals
     return mat
   elif basis_type == "gkhybrid":
     mat = createInterpMatrix(dim, poly_order, "gkhybrid", poly_order + 1, True, c2p)
+    return mat
+  elif basis_type == "gkhybrid_vel":
+    mat = createInterpMatrix(dim, poly_order, "gkhybrid_vel", poly_order + 1, True, c2p)
     return mat
   elif basis_type == "hybrid":
     mat = createInterpMatrix(dim, poly_order, "hybrid", poly_order + 1, True, c2p)
@@ -176,8 +182,14 @@ def _interpOnMesh(cMat, qIn, nInterpIn, basis_type, c2p=False):
   num_interp = np.array([max(nInterpIn, 2)] * num_dims)
   if basis_type == "gkhybrid":
     # 1x1v, 1x2v, 2x2v, 3x2v cases, with p=2 in the first velocity dim.
-    vpardir = (1 if (num_dims == 2 or num_dims == 3)
-        else (2 if num_dims == 4 else (3 if num_dims == 5 else 99)))
+    vpardir = (1 if (num_dims == 2 or num_dims == 3) else
+                (2 if num_dims == 4 else
+                  (3 if num_dims == 5 else 99 ) ) )
+    num_interp[vpardir] = nInterpIn + 1
+  # end
+  if basis_type == "gkhybrid_vel":
+    # 1v, 2v with p=2 in the first velocity dim.
+    vpardir = 0
     num_interp[vpardir] = nInterpIn + 1
   # end
   if basis_type == "hybrid":
@@ -409,6 +421,8 @@ class GInterpModal(GInterp):
         self.basis_type = "tensor"
       elif basis_type == "gkhyb":
         self.basis_type = "gkhybrid"
+      elif basis_type == "gkhyb_vel":
+        self.basis_type = "gkhybrid_vel"
       elif basis_type == "pkpmhyb":
         self.basis_type = "hybrid"
       # end
@@ -485,6 +499,11 @@ class GInterpModal(GInterp):
         # 1x1v, 1x2v, 2x2v, 3x2v cases, with p=2 in the first velocity dim.
         vpardir = (1 if (self.num_dims == 2 or self.num_dims == 3)
             else (2 if self.num_dims == 4 else (3 if self.num_dims == 5 else 99)))
+        num_interp = [self.num_interp] * self.num_dims
+        num_interp[vpardir] = self.num_interp + 1
+      elif self.basis_type == "gkhybrid_vel":
+        # 1v, 2v, with p=2 in the first velocity dim.
+        vpardir = 0
         num_interp = [self.num_interp] * self.num_dims
         num_interp[vpardir] = self.num_interp + 1
       elif self.basis_type == "hybrid":
