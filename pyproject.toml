@@ -11,12 +11,11 @@ authors = [
 ]
 description = "Python library and command-line tool for postprocessing (not only) Gkeyll data"
 dependencies = [
-  "typer>=0.15.0",
+  "click>=8.1.7",
   "matplotlib>=3.10.9",
   "msgpack>=1.1.2",
   "numpy>=2.2.6",
   "scipy>=1.15.3",
-  "sympy>=1.14.0",
   "tables>=3.10.1",
   "plotly>=6.7.0",
   "kaleido>=1.3.0",
@@ -56,7 +55,7 @@ Repository = "https://github.com/ammarhakim/postgkyl"
 "Bug Tracker" = "https://github.com/ammarhakim/postgkyl/issues"
 
 [project.scripts]
-pgkyl = "postgkyl.pgkyl:cli"
+pgkyl = "postgkyl.cli.app:cli"
 
 [tool.setuptools.dynamic]
 version = {attr = "postgkyl.__version__"}

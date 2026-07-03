@@ -8,11 +8,16 @@ dict and return ``(grid, values)`` so the container can construct itself on top.
 from __future__ import annotations
 
 from . import mapping
+from .gkyl_c_reader import GkylCReader
 from .gkyl_reader import GkylReader
 from .writer import write
 
-# Reader registry — extend by adding (predicate, reader) entries.
+# Reader registry — tried in order; extend by adding (name, reader) entries.
+# The Gkeyll-native reader goes first: it returns modal data as a native
+# GkylArray. The pure-Python reader is the no-libg0core fallback and the
+# handler for partial loads and dynvector files.
 _READERS = {
+    "gkyl_c": GkylCReader,
     "gkyl": GkylReader,
 }
 
@@ -39,4 +44,4 @@ def read(file_name: str, ctx: dict | None = None, **kwargs):
       f"'{file_name}' cannot be read with any known reader: {list(_READERS)}")
 
 
-__all__ = ["read", "write", "mapping", "GkylReader"]
+__all__ = ["read", "write", "mapping", "GkylCReader", "GkylReader"]

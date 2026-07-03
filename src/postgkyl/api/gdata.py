@@ -52,6 +52,24 @@ class GData(GDataState):
 
   # ``info`` is inherited from GDataState (a pure state reader).
 
+  # ----------------------------------------------------------- modal verbs
+  # Explicit spellings of the weak algebra (the * and / operators dispatch to
+  # the same Gkeyll kernels when both operands are modal).
+  def mul(self, other) -> "GData":
+    """Weak (DG) multiply — runs inside Gkeyll on modal data."""
+    return ops.arithmetic.binary(operator.mul, self, other)
+
+  def div(self, other) -> "GData":
+    """Weak (DG) divide — runs inside Gkeyll on modal data."""
+    return ops.arithmetic.binary(operator.truediv, self, other)
+
+  def integrate(self, *, op: str = "none"):
+    """Grid integral of modal data via ``gkyl_array_integrate`` (terminal).
+
+    ``op`` is ``"none"``, ``"abs"``, or ``"sq"``; returns a float (one field)
+    or a NumPy array (one value per field)."""
+    return ops.integrate(self, op=op)
+
   # ------------------------------------------------------ binary operators
   def __add__(self, o):      return ops.arithmetic.binary(operator.add, self, o)
   def __sub__(self, o):      return ops.arithmetic.binary(operator.sub, self, o)
@@ -66,7 +84,7 @@ class GData(GDataState):
   def __rpow__(self, o):     return ops.arithmetic.binary(operator.pow, o, self)
 
   # ----------------------------------------------------------------- unary
-  def __neg__(self): return ops.arithmetic.apply_ufunc(np.negative, "__call__", self)
+  def __neg__(self): return ops.arithmetic.binary(operator.mul, self, -1.0)
   def __abs__(self): return ops.arithmetic.apply_ufunc(np.absolute, "__call__", self)
   def __pos__(self): return self.copy()
 

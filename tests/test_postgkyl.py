@@ -65,9 +65,104 @@ def test_arithmetic_and_ufunc():
   assert np.asarray(a).shape == a.values.shape  # __array__
 
 
-def test_arithmetic_guardrail_on_raw_modal():
+def test_capability_guardrails_on_modal_data():
+  """Modal data supports the Gkeyll verbs; everything NumPy-shaped refuses."""
+  a = pg.load(F1)
   with pytest.raises(ValueError):
-    _ = pg.load(F1) + pg.load(F2)                # raw modal -> refused
+    np.sqrt(a)                                   # general ufunc: no modal meaning
+  with pytest.raises(ValueError):
+    np.asarray(a)                                # coefficients are not point values
+  with pytest.raises(ValueError):
+    a.sel(comp=0)                                # slicing would mix basis functions
+  with pytest.raises(ValueError):
+    _ = a + a.interp()                           # mixed modal + field domains
+
+
+# --------------------------------------------------------------------------
+# The modal domain: DG operations running inside Gkeyll (REFACTOR_GKEYLL_FFI.md)
+# --------------------------------------------------------------------------
+from postgkyl import ffi  # noqa: E402
+
+needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+    reason="no compiled Gkeyll (libg0core.so) found")
+
+
+@needs_gkeyll
+def test_load_lands_in_the_modal_domain():
+  d = pg.load(F1)
+  assert d.backend == "gkyl"                     # native gkyl_array storage
+  assert d.native is not None
+  assert d.values.shape == (400, 6)              # read-only view for inspection
+  assert not d.values.flags.writeable
+  g = d.interp()                                 # the one-way bridge
+  assert g.backend == "numpy"                    # ...to a by-value NumPy array
+  assert g.values.flags.writeable
+
+
+@needs_gkeyll
+def test_ffi_abi_guard():
+  """Layout-exact struct mirrors: C writes where Python reads."""
+  import ctypes
+  b = ffi.basis.get_basis("serendipity", 2, 1)
+  assert (b.ndim, b.poly_order, b.num_basis) == (2, 1, 4)
+  assert b.id == b"serendipity"
+  lib = ffi.require()
+  rng = ffi.structs.GkylRange()
+  lo, up = (ctypes.c_int * 2)(1, 1), (ctypes.c_int * 2)(8, 50)
+  lib.gkyl_range_init(ctypes.byref(rng), 2, lo, up)
+  assert rng.volume == 400 and rng.ndim == 2
+
+
+@needs_gkeyll
+def test_interp_matrix_matches_analytic_basis():
+  """Matrices built from Gkeyll's eval() match the normalized Legendre basis."""
+  m = ffi.basis.interp_matrix("serendipity", 1, 1, 2)   # points z = -+1/2
+  expect = np.array([[1 / np.sqrt(2), -np.sqrt(3.0 / 2.0) / 2],
+                     [1 / np.sqrt(2), +np.sqrt(3.0 / 2.0) / 2]])
+  assert np.allclose(m, expect)
+  m2 = ffi.basis.interp_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
+  z = np.array([-2.0 / 3.0, 0.0, 2.0 / 3.0])
+  assert np.allclose(m2[:, 2], 2.371708245126285 * z ** 2 - 0.7905694150420951)
+
+
+@needs_gkeyll
+def test_weak_algebra_identities():
+  """div(mul(a, b), b) == a — Gkeyll's weak kernels are exact inverses."""
+  a, b = pg.load(F1), pg.load(F1)
+  back = (a * b / b).interp().values
+  ref = a.interp().values
+  for f in (0, 2):  # density and T; field 1 (u_par) is identically ~0 -> 0/0
+    scale = np.abs(ref[..., f]).max()
+    assert np.abs(back[..., f] - ref[..., f]).max() / scale < 1e-12
+
+
+@needs_gkeyll
+def test_modal_linear_ops_commute_with_interp():
+  """interp is linear: modal +,-,scalar* agree with their NumPy counterparts."""
+  a, b = pg.load(F1), pg.load(F1)
+  assert np.allclose((a + b).interp().values, a.interp().values + b.interp().values)
+  assert np.allclose((a - b).interp().values, 0.0)
+  assert np.allclose((2.5 * a).interp().values, 2.5 * a.interp().values)
+  assert np.allclose((-a).interp().values, -(a.interp().values))
+  assert np.allclose((a ** 2).interp().values, (a * a).interp().values)
+  shifted = (a + 1.0e18).interp().values - a.interp().values
+  assert np.allclose(shifted, 1.0e18, rtol=1e-6)
+
+
+@needs_gkeyll
+def test_integrate_via_gkeyll():
+  """pg-level integrate == the coefficient-space formula (exact for DG)."""
+  a = pg.load(F1)
+  result = a.integrate()
+  v = a.values                                   # (cells, nfields*num_basis) view
+  dx = float((a.bounds[1][0] - a.bounds[0][0]) / a.num_cells[0])
+  nb = 2                                         # serendipity 1D p1
+  manual = np.array([v[:, f * nb].sum() * dx / np.sqrt(2.0)
+                     for f in range(v.shape[-1] // nb)])
+  assert np.allclose(result, manual)
+  assert np.all(a.integrate(op="abs") >= np.abs(result) * (1 - 1e-12))
+  with pytest.raises(ValueError):
+    a.interp().integrate()                       # field domain: not a modal verb
 
 
 def test_write_roundtrip(tmp_path):
@@ -108,8 +203,11 @@ def test_cli_abbreviation_and_info():
 # Architecture contract: the layering is a strict, cycle-free DAG.
 # --------------------------------------------------------------------------
 _ALLOWED = {
-    "numerics": set(), "dg": set(), "io": set(),
-    "core":   {"io"},
+    "ffi":    set(),                                # the foreign floor (only ctypes owner)
+    "numerics": set(),
+    "dg":     {"ffi"},                              # interp bridge + modal ops -> kernels
+    "io":     {"ffi"},                              # C-native reader -> gkyl_array_rio
+    "core":   {"io", "ffi"},                        # container holds a GkylArray backend
     "render": {"core", "numerics"},
     "ops":    {"core", "dg", "numerics", "render"},
     "api":    {"core", "ops", "io"},
@@ -147,7 +245,7 @@ def _build_edges():
   violations = []
   for dp, _, files in os.walk(pkg_root):
     for f in files:
-      if not f.endswith(".py") or f == "matrices.py":  # vendored sympy file
+      if not f.endswith(".py"):
         continue
       p = os.path.join(dp, f)
       src = _layer(p, pkg_root)
@@ -173,6 +271,27 @@ def test_facade_is_pure_reexport():
 def test_import_contract_no_violations():
   _, violations = _build_edges()
   assert not violations, "layer contract violations:\n" + "\n".join(violations)
+
+
+def test_ctypes_confined_to_ffi():
+  """ffi/ is the only package that may touch ctypes (or native memory)."""
+  pkg_root = os.path.join(SRC, "postgkyl")
+  offenders = []
+  for dp, _, files in os.walk(pkg_root):
+    for f in files:
+      if not f.endswith(".py"):
+        continue
+      p = os.path.join(dp, f)
+      if _layer(p, pkg_root) == "ffi":
+        continue
+      for node in ast.walk(ast.parse(open(p).read(), p)):
+        if isinstance(node, ast.Import) and any(
+            n.name.split(".")[0] == "ctypes" for n in node.names):
+          offenders.append(os.path.relpath(p, pkg_root))
+        elif isinstance(node, ast.ImportFrom) and (
+            (node.module or "").split(".")[0] == "ctypes"):
+          offenders.append(os.path.relpath(p, pkg_root))
+  assert not offenders, f"ctypes leaked above the ffi floor: {offenders}"
 
 
 def test_import_graph_is_acyclic():

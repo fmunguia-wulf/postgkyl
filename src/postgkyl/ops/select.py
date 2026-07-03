@@ -23,6 +23,10 @@ def select(data: "GDataState", *, comp=None,
   axes are kept in full. The selected dimension is retained (length-1), matching
   the legacy behaviour.
   """
+  if data.backend == "gkyl":
+    raise ValueError(
+        "select operates on interpolated (NumPy) values; call .interp() "
+        "first — slicing raw DG coefficients would mix basis functions.")
   zs = (z0, z1, z2, z3, z4, z5)
   grid = list(data.grid)
   values = data.values

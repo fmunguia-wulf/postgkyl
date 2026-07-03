@@ -1,13 +1,18 @@
 """``GDataState`` — the verb-less data container (the CONTAINER layer).
 
-Holds a Gkeyll dataset: a nodal ``grid`` (list of 1-D edge arrays) plus an
-``(N+1)``-D ``values`` array, with all metadata in ``ctx``. It constructs itself
-by delegating to the :mod:`postgkyl.io` leaf, and exposes only *state* — shape
-properties, ``push``/``copy``/``_result``, ``info``, and the pure NumPy reader
-``__array__``.
+Holds a Gkeyll dataset: a nodal ``grid`` (list of 1-D edge arrays) plus values
+in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.md:
 
-Crucially it imports **nothing upward** (no ``ops``/``render``/``api``). The
-fluent verb methods and the computing operators live on the
+- ``backend == "gkyl"``: modal DG coefficients held as a native
+  :class:`~postgkyl.ffi.array.GkylArray`. Gkeyll owns the memory and all math
+  on it (weak ops, coefficient lin-combs, integrate). ``values`` exposes a
+  read-only NumPy *view* for inspection; ``__array__`` refuses (interp first).
+- ``backend == "numpy"``: post-``interp`` (or never-modal) values as a plain
+  ``np.ndarray`` — the field domain, where all NumPy math applies.
+
+It constructs itself by delegating to the :mod:`postgkyl.io` leaf and exposes
+only *state*. Crucially it imports **nothing upward** (no ``ops``/``render``/
+``api``). The fluent verb methods and the computing operators live on the
 :class:`postgkyl.api.gdata.GData` subclass, one layer up. That is what keeps
 the dependency graph a strict, cycle-free DAG — see HIERARCHY_2.md / HIERARCHY_3.md.
 """
@@ -19,7 +24,8 @@ from typing import Tuple
 
 import numpy as np
 
-from postgkyl import io  # leaf layer (below); top-level import — never a cycle
+from postgkyl import io   # leaf layer (below); top-level import — never a cycle
+from postgkyl import ffi  # foreign floor (below): GkylArray backend type
 
 
 class GDataState:
@@ -28,7 +34,7 @@ class GDataState:
   def __init__(self, file_name: str = "", *, ctx: dict | None = None,
       tag: str = "default", label: str = "", **read_kwargs):
     self._grid: list | None = None
-    self._values: np.ndarray | None = None
+    self._values: np.ndarray | ffi.GkylArray | None = None
     self.ctx: dict = {}
     if ctx:
       self.ctx.update(ctx)
@@ -66,7 +72,7 @@ class GDataState:
   def get_num_cells(self) -> np.ndarray:
     if self.ctx.get("cells") is not None:
       return np.asarray(self.ctx["cells"])
-    if self._values is not None:
+    if isinstance(self._values, np.ndarray):
       return np.array(self._values.shape[:-1], dtype=np.int64)
     return np.array([], dtype=np.int64)
 
@@ -75,6 +81,8 @@ class GDataState:
   def get_num_comps(self) -> int:
     if self.ctx.get("num_comps"):
       return int(self.ctx["num_comps"])
+    if isinstance(self._values, ffi.GkylArray):
+      return self._values.ncomp
     if self._values is not None:
       return int(self._values.shape[-1])
     return 0
@@ -84,7 +92,7 @@ class GDataState:
   def get_num_dims(self) -> int:
     if self.ctx.get("cells") is not None:
       return len(self.ctx["cells"])
-    if self._values is not None:
+    if isinstance(self._values, np.ndarray):
       return int(self._values.ndim - 1)
     return 0
 
@@ -117,20 +125,41 @@ class GDataState:
 
   grid = property(get_grid, set_grid)
 
+  @property
+  def backend(self) -> str:
+    """``"gkyl"`` (native modal storage) or ``"numpy"`` (field domain)."""
+    return "gkyl" if isinstance(self._values, ffi.GkylArray) else "numpy"
+
+  @property
+  def native(self) -> ffi.GkylArray | None:
+    """The native ``GkylArray`` when gkyl-backed; None otherwise. This is the
+    handle the modal verbs pass to the Gkeyll kernels."""
+    return self._values if isinstance(self._values, ffi.GkylArray) else None
+
   def get_values(self) -> np.ndarray:
+    """Values for *reading*: gkyl-backed data yields a read-only NumPy view of
+    the C buffer (valid while this dataset is alive); numpy-backed data yields
+    the array itself. Mutation of modal data must go through the kernels."""
+    if isinstance(self._values, ffi.GkylArray):
+      return self._values.view(self.ctx.get("cells"))
     return self._values
 
-  def set_values(self, values: np.ndarray) -> None:
+  def set_values(self, values) -> None:
     self._values = values
-    self.ctx["cells"] = np.array(values.shape[:-1], dtype=np.int64)
-    self.ctx["num_comps"] = int(values.shape[-1])
+    if isinstance(values, ffi.GkylArray):
+      # Cell layout is not derivable from the flat native array; it comes from
+      # ctx (set by the reader, and carried through copy(data=False)).
+      self.ctx["num_comps"] = values.ncomp
+    else:
+      self.ctx["cells"] = np.array(values.shape[:-1], dtype=np.int64)
+      self.ctx["num_comps"] = int(values.shape[-1])
 
   values = property(get_values, set_values)
 
   def __getitem__(self, comp):
     if self._values is None:
       raise ValueError("GData values are not loaded; cannot subscript.")
-    return self._values[..., comp]
+    return self.get_values()[..., comp]
 
   def push(self, grid, values):
     """Set values (updating cell/comp ctx) then the grid (updating bounds)."""
@@ -147,8 +176,9 @@ class GDataState:
     new._file_name = self._file_name
     new.color = self.color
     if data and self._values is not None:
-      new.push([np.array(g, copy=True) for g in self._grid],
-               np.array(self._values, copy=True))
+      dup = (self._values.clone() if isinstance(self._values, ffi.GkylArray)
+             else np.array(self._values, copy=True))
+      new.push([np.array(g, copy=True) for g in self._grid], dup)
     # end
     return new
 
@@ -183,7 +213,8 @@ class GDataState:
       raise ValueError("GData has no values to operate on.")
     if not self.is_interpolated:
       raise ValueError(
-          "Cannot do array math on raw modal DG data; call .interp() first.")
+          "Cannot do NumPy math on raw modal DG data; call .interp() first "
+          "(native modal data supports + - * / and .integrate() via Gkeyll).")
 
   # ----------------------------------------------------- numpy interop (read)
   _HANDLED_TYPES = (numbers.Number, np.ndarray, np.generic)
@@ -193,13 +224,18 @@ class GDataState:
 
     This is a pure *reader* (no ``ops``), so it lives on the container; the
     computing operators (``__add__``, ``__array_ufunc__``) live on the fluent
-    subclass — see HIERARCHY_3.md."""
+    subclass — see HIERARCHY_3.md. Native modal data refuses: silently handing
+    out DG coefficients as if they were point values is a correctness trap."""
+    if isinstance(self._values, ffi.GkylArray):
+      raise ValueError(
+          "This dataset holds modal DG coefficients in native Gkeyll storage; "
+          "call .interp() to obtain NumPy values.")
     return np.asarray(self._values, dtype=dtype)
 
   # -------------------------------------------------------------- reporting
   def info(self, index: int = 0, header: bool = True) -> str:
     """Build (and print) a human-readable summary of the dataset."""
-    values, num_comps = self._values, self.num_comps
+    values, num_comps = self.get_values(), self.num_comps
     num_dims, num_cells = self.num_dims, self.num_cells
     lo, up = self.bounds
     out = ""
@@ -252,6 +288,8 @@ class GDataState:
       elif self.ctx.get("is_modal"):
         dg += " modal"
       parts.append(dg)
+    if self.backend == "gkyl":
+      parts.append("gkyl-native")
     parts.append(f"tag '{self._tag}'")
     return " | ".join(parts) + ">"
 
@@ -261,4 +299,5 @@ class GDataState:
   def __str__(self) -> str:
     if self._values is None:
       return self._summary()
-    return f"{self._summary()}\n{np.array2string(self._values, threshold=20, edgeitems=2)}"
+    return (f"{self._summary()}\n"
+            f"{np.array2string(self.get_values(), threshold=20, edgeitems=2)}")
