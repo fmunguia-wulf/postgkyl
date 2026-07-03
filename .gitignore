@@ -5,3 +5,11 @@ postgkyl.egg-info/
 src/postgkyl/version.py
 .DS_Store
 tests/test_data/generated/
+
+src_bak/
+tests_bak/
+CLAUDE.md
+*.gkyl
+*.md
+*.py
+*.json

@@ -1,0 +1,4 @@
+[submodule "gkeyll"]
+	path = gkeyll
+	url = https://github.com/ammarhakim/gkeyll.git
+	branch = lapack_lite

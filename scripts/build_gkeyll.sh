@@ -1,0 +1,46 @@
+#!/bin/sh
+# Fetches (if needed) and builds the vendored GkeyllZero `core` app as
+# libg0core.so, for the future ffi/ layer to bind against (see
+# FFI_REDESIGN.md). Invoked automatically by `pip install`/`pip install -e`
+# via setup.py, and safe to re-run by hand.
+#
+# The gkeyll/ submodule tracks branch lapack_lite (zero external deps: no
+# MPI/CUDA/SuperLU/Lua, LAPACK replaced by the bundled lapack-lite). Only
+# core/ is needed to build libg0core.so, so moments/, vlasov/, gyrokinetic/,
+# and pkpm/ (~200MB combined) are excluded via sparse-checkout and are never
+# fetched, not merely deleted after the fact.
+set -e
+
+REPO_URL="https://github.com/ammarhakim/gkeyll.git"
+BRANCH="lapack_lite"
+SPARSE_DIRS="core gkeyll install-deps machines"
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT_DIR=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
+GKEYLL_DIR="${ROOT_DIR}/gkeyll"
+
+if [ ! -e "${GKEYLL_DIR}/.git" ]; then
+    echo "# gkeyll/ not present -- cloning ${BRANCH} (core-only, sparse + blobless)"
+    rmdir "${GKEYLL_DIR}" 2>/dev/null || true
+    git clone --no-checkout --filter=blob:none --sparse --depth 1 \
+        -b "${BRANCH}" "${REPO_URL}" "${GKEYLL_DIR}"
+    (cd "${GKEYLL_DIR}" && git sparse-checkout set ${SPARSE_DIRS} && git checkout "${BRANCH}")
+else
+    echo "# gkeyll/ already present -- ensuring sparse-checkout excludes heavy apps"
+    (cd "${GKEYLL_DIR}" && git sparse-checkout init --cone >/dev/null 2>&1 || true
+     git -C "${GKEYLL_DIR}" sparse-checkout set ${SPARSE_DIRS})
+fi
+
+CC="${CC:-clang}"
+echo "# Configuring gkeyll core (CC=${CC}, lapack-lite, app=core)"
+(cd "${GKEYLL_DIR}" && ./configure "CC=${CC}" --use-lapack-lite=yes --app=core)
+
+echo "# Building libg0core.so"
+(cd "${GKEYLL_DIR}" && make core -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)")
+
+SO_PATH="${GKEYLL_DIR}/build/core/libg0core.so"
+if [ ! -f "${SO_PATH}" ]; then
+    echo "error: expected ${SO_PATH} after build, but it is missing" >&2
+    exit 1
+fi
+echo "# Built ${SO_PATH}"
