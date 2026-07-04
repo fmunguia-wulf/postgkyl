@@ -209,12 +209,20 @@ class GDataState:
     return (not self.ctx.get("is_modal", False)) or self.ctx.get("interpolated", False)
 
   def _require_operable(self) -> None:
+    """Pointwise math is allowed exactly where the data are point values:
+    the NumPy field domain, or the nodal/quad representations. Modal
+    coefficients refuse — a pointwise operation has no basis-space meaning."""
     if self._values is None:
       raise ValueError("GData has no values to operate on.")
+    if self.backend == "gkyl" and self.ctx.get("representation",
+        "modal") != "modal":
+      return  # nodal/quad: the values ARE the field at points
     if not self.is_interpolated:
       raise ValueError(
-          "Cannot do NumPy math on raw modal DG data; call .interp() first "
-          "(native modal data supports + - * / and .integrate() via Gkeyll).")
+          "Cannot do NumPy math on modal DG coefficients. Convert explicitly: "
+          ".to_nodal()/.to_quad() (pointwise, stays native), .apply(fn) "
+          "(pointwise via quadrature, projects back to modal), or .interp() "
+          "(leave for the NumPy field domain).")
 
   # ----------------------------------------------------- numpy interop (read)
   _HANDLED_TYPES = (numbers.Number, np.ndarray, np.generic)
@@ -224,12 +232,15 @@ class GDataState:
 
     This is a pure *reader* (no ``ops``), so it lives on the container; the
     computing operators (``__add__``, ``__array_ufunc__``) live on the fluent
-    subclass — see HIERARCHY_3.md. Native modal data refuses: silently handing
-    out DG coefficients as if they were point values is a correctness trap."""
+    subclass — see HIERARCHY_3.md. Nodal/quad data expose their point values;
+    native *modal* data refuses: silently handing out DG coefficients as if
+    they were point values is a correctness trap."""
     if isinstance(self._values, ffi.GkylArray):
+      if self.ctx.get("representation", "modal") != "modal":
+        return np.asarray(self.get_values(), dtype=dtype)
       raise ValueError(
           "This dataset holds modal DG coefficients in native Gkeyll storage; "
-          "call .interp() to obtain NumPy values.")
+          ".to_nodal()/.to_quad() for point values, or .interp() for NumPy.")
     return np.asarray(self._values, dtype=dtype)
 
   # -------------------------------------------------------------- reporting
@@ -266,6 +277,12 @@ class GDataState:
       modal = "modal" if self.ctx.get("is_modal") else "nodal"
       if self.ctx.get("interpolated"):
         modal = "interpolated"
+      elif self.backend == "gkyl":
+        rep = self.ctx.get("representation", "modal")
+        if rep != "modal":
+          modal = f"{rep} representation"
+          if rep == "quad" and self.ctx.get("num_quad"):
+            modal += f", num_quad={self.ctx['num_quad']}"
       out += f"├─ DG: {self.ctx['basis_type']} p{self.ctx.get('poly_order', '?')} ({modal})\n"
     print(out)
     return out
@@ -289,7 +306,8 @@ class GDataState:
         dg += " modal"
       parts.append(dg)
     if self.backend == "gkyl":
-      parts.append("gkyl-native")
+      rep = self.ctx.get("representation", "modal")
+      parts.append("gkyl-native" if rep == "modal" else f"gkyl-native ({rep})")
     parts.append(f"tag '{self._tag}'")
     return " | ".join(parts) + ">"
 

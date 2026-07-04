@@ -16,5 +16,7 @@ from .select import select
 from .info import info
 from .integrate import integrate
 from .plot import plot
+from .represent import apply, represent
 
-__all__ = ["interpolate", "select", "info", "integrate", "plot", "arithmetic"]
+__all__ = ["interpolate", "select", "info", "integrate", "plot", "arithmetic",
+    "represent", "apply"]

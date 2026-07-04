@@ -70,6 +70,27 @@ class GData(GDataState):
     or a NumPy array (one value per field)."""
     return ops.integrate(self, op=op)
 
+  # --------------------------------------- representation changes (explicit)
+  # Conversions never happen implicitly — these verbs are the only doorway
+  # between the modal / nodal / quadrature representations (all gkyl-native).
+  def to_modal(self, **kwargs) -> "GData":
+    """Convert to modal coefficients (exact from nodal; projection from quad)."""
+    return ops.represent(self, to="modal", **kwargs)
+
+  def to_nodal(self, **kwargs) -> "GData":
+    """Convert to values at the basis nodes (exact, invertible)."""
+    return ops.represent(self, to="nodal", **kwargs)
+
+  def to_quad(self, num_quad: int | None = None, **kwargs) -> "GData":
+    """Convert to values at Gauss–Legendre points (default ``p+1`` per dim)."""
+    return ops.represent(self, to="quad", num_quad=num_quad, **kwargs)
+
+  def apply(self, fn, *, num_quad: int | None = None, **kwargs) -> "GData":
+    """Pointwise ``fn`` via quadrature (modal -> quad -> fn -> modal), e.g.
+    ``d.apply(np.sqrt)``. The explicit spelling of nonlinear pointwise math
+    on DG data; raise ``num_quad`` to de-alias."""
+    return ops.apply(self, fn, num_quad=num_quad, **kwargs)
+
   # ------------------------------------------------------ binary operators
   def __add__(self, o):      return ops.arithmetic.binary(operator.add, self, o)
   def __sub__(self, o):      return ops.arithmetic.binary(operator.sub, self, o)

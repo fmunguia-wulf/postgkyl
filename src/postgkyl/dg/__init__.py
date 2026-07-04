@@ -7,9 +7,11 @@ Two modules, one per domain boundary:
 - :mod:`.modal` — operations that stay in the modal domain (weak algebra,
   coefficient linear combinations, integration), all executed by Gkeyll
   kernels on native arrays.
+- :mod:`.rep` — explicit representation changes (modal · nodal · quad) and
+  pointwise functions via quadrature; the field never leaves the native domain.
 """
 
 from .interp import interpolate, num_basis
-from . import modal
+from . import modal, rep
 
-__all__ = ["interpolate", "num_basis", "modal"]
+__all__ = ["interpolate", "num_basis", "modal", "rep"]

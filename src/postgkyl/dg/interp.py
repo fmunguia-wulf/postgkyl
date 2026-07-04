@@ -55,17 +55,15 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
     grid: list of 1-D nodal edge arrays (one per dimension).
     poly_order: polynomial order of the basis.
     basis_type: long basis name (``"serendipity"`` or ``"tensor"``; the
-      hybrid/nodal bases are not wired through the FFI in this minimal core).
-    modal: must be True (nodal-basis files are not supported yet).
+      hybrid bases are not wired through the FFI in this minimal core).
+    modal: False for nodal-basis data (field-blocked node values per cell);
+      converted through the exact ``nodal_to_modal`` matrix first.
     num_interp: interpolation points per cell; defaults to ``poly_order + 1``.
 
   Returns:
     ``(grid_out, values_out)`` — the refined edge grid and a **new**
     ``(refined_cells..., num_fields)`` NumPy value array.
   """
-  if not modal:
-    raise NotImplementedError(
-        "nodal-basis interpolation is not wired through the Gkeyll FFI yet")
   num_dims = len(grid)
   if num_dims == 1 and basis_type == "hybrid":
     basis_type = "serendipity"  # PKPM hybrid degenerates to serendipity in 1D
@@ -78,9 +76,13 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
   num_fields = values.shape[-1] // nodes
   c_mat = ffi_basis.interp_matrix(basis_type, num_dims, poly_order, num_interp)
 
+  n2m = (None if modal else
+         ffi_basis.nodal_to_modal_matrix(basis_type, num_dims, poly_order))
   out = None
   for c in range(num_fields):
     q = values[..., c * nodes:(c + 1) * nodes]
+    if n2m is not None:
+      q = np.einsum("jk,...k->...j", n2m, q)
     interp_c = _interp_on_mesh(c_mat, q, num_interp)[..., np.newaxis]
     out = interp_c if out is None else np.append(out, interp_c, axis=-1)
   # end

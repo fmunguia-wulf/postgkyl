@@ -45,6 +45,12 @@ def interpolate(data: "GDataState", *, basis: str | None = None,
     raise ValueError("No polynomial order given and none stored in the dataset.")
   # end
 
+  if data.backend == "gkyl" and data.ctx.get("representation", "modal") != "modal":
+    raise ValueError(
+        f"interp expects the modal representation, not "
+        f"'{data.ctx['representation']}'; call .to_modal() first.")
+  # end
+
   grid, values = dg.interpolate(data.values, data.grid, poly_order=poly_order,
       basis_type=basis_type, modal=modal, num_interp=interp)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,

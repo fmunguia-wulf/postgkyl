@@ -149,6 +149,120 @@ def test_modal_linear_ops_commute_with_interp():
   assert np.allclose(shifted, 1.0e18, rtol=1e-6)
 
 
+def _relerr(x, y):
+  x, y = np.asarray(x, float), np.asarray(y, float)
+  return np.abs(x - y).max() / np.abs(y).max()
+
+
+@needs_gkeyll
+def test_representation_round_trips():
+  """modal <-> nodal is exact; modal <-> quad is exact for num_quad >= p+1."""
+  a = pg.load(F1)
+  n = a.to_nodal()
+  assert n.ctx["representation"] == "nodal"
+  assert n.backend == "gkyl"                     # never leaves the native domain
+  assert _relerr(n.to_modal().values, a.values) < 1e-14
+  q = a.to_quad()
+  assert (q.ctx["representation"], q.ctx["num_quad"]) == ("quad", 2)
+  assert _relerr(q.to_modal().values, a.values) < 1e-14
+  # nodal -> quad composes through modal
+  assert _relerr(n.to_quad().to_modal().values, a.values) < 1e-14
+  # nodal values are the field evaluated at the basis node_list points
+  m2n = ffi.basis.modal_to_nodal_matrix("serendipity", 1, 1)
+  manual = np.einsum("pk,cfk->cfp", m2n,
+      np.asarray(a.values).reshape(24, 3, 2)).reshape(24, 6)
+  assert np.allclose(n.values, manual)
+
+
+@needs_gkeyll
+def test_apply_pointwise_via_quadrature():
+  """.apply(fn): modal -> quad -> fn -> modal, exact where quadrature is."""
+  a = pg.load(F1)
+  assert _relerr(a.apply(lambda v: v).values, a.values) < 1e-13
+  # p=1: p+1 Gauss points integrate the square exactly -> matches the weak kernel
+  assert _relerr(a.apply(np.square).values, (a * a).values) < 1e-13
+  chained = a.apply(np.abs).apply(np.sqrt)       # stays modal + gkyl-native
+  assert chained.backend == "gkyl"
+  assert chained.ctx.get("representation", "modal") == "modal"
+  with pytest.raises(ValueError):
+    a.apply(lambda v: v.sum(axis=-1))            # fn must act pointwise
+
+
+@needs_gkeyll
+def test_conversions_are_always_explicit():
+  """No implicit representation change, ever (REFACTOR_GKEYLL_FFI.md §3b)."""
+  a = pg.load(F1)
+  n, q = a.to_nodal(), a.to_quad()
+  with pytest.raises(ValueError):
+    _ = a + n                                    # mixed representations
+  with pytest.raises(ValueError):
+    _ = np.add(n, q)                             # mixed reps through a ufunc
+  with pytest.raises(ValueError):
+    q.interp()                                   # interp needs modal
+  with pytest.raises(ValueError):
+    n.integrate()                                # integrate needs modal
+  with pytest.raises(ValueError):
+    np.sqrt(a)                                   # ufuncs have no modal meaning
+  with pytest.raises(ValueError):
+    np.asarray(a)                                # coefficients are not values
+  with pytest.raises(ValueError):
+    a.plot(show=False)                           # coefficients are not plottable
+
+
+@needs_gkeyll
+def test_pointwise_numpy_on_point_values():
+  """NumPy math is exact on nodal/quad data and stays native, in-rep."""
+  a = pg.load(F1)
+  n, q = a.to_nodal(), a.to_quad()
+  s = np.sqrt(np.abs(n))                         # ufunc on nodal
+  assert (s.backend, s.ctx["representation"]) == ("gkyl", "nodal")
+  assert np.allclose(s.values, np.sqrt(np.abs(np.asarray(n.values))))
+  assert np.allclose((n ** 2).values, np.asarray(n.values) ** 2)
+  assert np.allclose((q * q).values, np.asarray(q.values) ** 2)
+  # pointwise-at-quad then one projection == the weak kernel (p1 exactness)
+  assert _relerr((q * q).to_modal().values, (a * a).values) < 1e-13
+  # chain at the points, project once — identical to the one-shot .apply()
+  fn = lambda v: np.sqrt(np.abs(v))
+  assert _relerr(np.sqrt(np.abs(q)).to_modal().values, a.apply(fn).values) < 1e-15
+  assert np.asarray(n).shape == (24, 6)          # __array__ allowed on points
+
+
+@needs_gkeyll
+def test_plot_point_values_directly():
+  """Nodal/quad datasets plot at their true point locations."""
+  a = pg.load(F1)
+  assert a.to_nodal().plot(show=False) is not None
+  assert a.to_quad().plot(show=False) is not None
+  b = pg.load(F2D)
+  assert b.to_quad().plot(show=False) is not None
+  assert b.to_nodal().plot(show=False) is not None   # p1 corners: tensor set
+  p2 = pg.load(os.path.join(DATA, "generated", "2d_ms_p2.gkyl"))
+  with pytest.raises(ValueError):
+    p2.to_nodal().plot(show=False)               # non-tensor node set -> to_quad
+
+
+@needs_gkeyll
+def test_linear_ops_valid_in_any_representation():
+  """+ - and scalar ops act pointwise in nodal/quad and agree with modal."""
+  a = pg.load(F1)
+  n = a.to_nodal()
+  assert _relerr((2 * n - n + n).to_modal().values, (2 * a).values) < 1e-13
+  assert _relerr((n + 5.0e17).to_modal().values, (a + 5.0e17).values) < 1e-13
+
+
+@needs_gkeyll
+def test_values_view_pins_native_memory():
+  """Regression: `dataset.values` on a temporary must stay valid after GC."""
+  import gc
+  a = pg.load(F1)
+  expected = a.values.copy()
+  v = pg.load(F1).values                         # dataset is garbage immediately
+  got = (2 * pg.load(F1).to_nodal()).to_modal().values  # temporaries galore
+  gc.collect()
+  assert np.array_equal(v, expected)
+  assert _relerr(got, 2 * expected) < 1e-13
+
+
 @needs_gkeyll
 def test_integrate_via_gkeyll():
   """pg-level integrate == the coefficient-space formula (exact for DG)."""
