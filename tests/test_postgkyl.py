@@ -22,9 +22,9 @@ matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
 
-F1 = os.path.join(ROOT, "gk_lorentzian_mirror-elc_MaxwellianMoments_65.gkyl")
-F2 = os.path.join(ROOT, "gk_lorentzian_mirror-ion_BiMaxwellianMoments_65.gkyl")
-F2D = os.path.join(ROOT, "gk_lorentzian_mirror_2x-ion_BiMaxwellianMoments_65.gkyl")
+DATA = os.path.join(ROOT, "tests", "test_data")
+F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
+F2D = os.path.join(DATA, "generated", "2d_ms_p1.gkyl")
 
 
 def test_load_metadata():
@@ -40,7 +40,7 @@ def test_golden_script_1d():
   assert g.is_interpolated
   assert g.num_comps == 1
   assert g.num_dims == 1
-  assert g.values.shape[0] == 800       # 400 cells * (p+1=2) interp points
+  assert g.values.shape[0] == 48         # 24 cells * (p+1=2) interp points
   assert type(g).__name__ == "GData"    # subclass propagated through verbs
   fig = g.plot(show=False)
   assert fig is not None
@@ -49,13 +49,13 @@ def test_golden_script_1d():
 def test_golden_script_2d():
   g = pg.load(F2D).interp().sel(comp=0)
   assert g.num_dims == 2
-  assert g.values.shape == (8, 800, 1)
+  assert g.values.shape == (16, 16, 1)
   assert g.plot(show=False) is not None
 
 
 def test_arithmetic_and_ufunc():
   a = pg.load(F1).interp().sel(comp=0)
-  b = pg.load(F2).interp().sel(comp=0)
+  b = pg.load(F1).interp().sel(comp=0)
   assert isinstance(a + b, pg.GData)
   assert isinstance(a * 2.0, pg.GData)
   assert isinstance(2.0 * a, pg.GData)          # reflected
@@ -92,7 +92,7 @@ def test_load_lands_in_the_modal_domain():
   d = pg.load(F1)
   assert d.backend == "gkyl"                     # native gkyl_array storage
   assert d.native is not None
-  assert d.values.shape == (400, 6)              # read-only view for inspection
+  assert d.values.shape == (24, 6)                # read-only view for inspection
   assert not d.values.flags.writeable
   g = d.interp()                                 # the one-way bridge
   assert g.backend == "numpy"                    # ...to a by-value NumPy array
