@@ -370,7 +370,7 @@ class GkylReader(object):
   #end
 
   def _read_t1_v1_data(self) -> np.ndarray:
-    """Reat field data for file type 1."""
+    """Read field data for file type 1."""
     data, _ = self._get_data(self.asize*self.num_comps)
     return data
 

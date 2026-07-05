@@ -11,7 +11,9 @@ Two modules, one per domain boundary:
   pointwise functions via quadrature; the field never leaves the native domain.
 """
 
+from ..ffi import rep
+
 from .interp import interpolate, num_basis
-from . import modal, rep
+from . import modal
 
 __all__ = ["interpolate", "num_basis", "modal", "rep"]
