@@ -100,17 +100,17 @@ def test_load_lands_in_the_modal_domain():
 
 
 @needs_gkeyll
-def test_ffi_abi_guard():
-  """Layout-exact struct mirrors: C writes where Python reads."""
-  import ctypes
+def test_shim_handshake():
+  """The compiled pg0 shim pairs with this postgkyl (GKEYLL_C_SHIM.md).
+
+  There are no struct layouts to guard anymore — the C compiler checked the
+  whole contract when pg0.c built. What remains testable at runtime is the
+  version handshake plus a behavioral probe through the shim."""
+  g0 = ffi.require()
+  assert g0.api_version() == g0.PG0_API_VERSION
   b = ffi.basis.get_basis("serendipity", 2, 1)
   assert (b.ndim, b.poly_order, b.num_basis) == (2, 1, 4)
-  assert b.id == b"serendipity"
-  lib = ffi.require()
-  rng = ffi.structs.GkylRange()
-  lo, up = (ctypes.c_int * 2)(1, 1), (ctypes.c_int * 2)(8, 50)
-  lib.gkyl_range_init(ctypes.byref(rng), 2, lo, up)
-  assert rng.volume == 400 and rng.ndim == 2
+  assert b.id == "serendipity"
 
 
 @needs_gkeyll
@@ -387,8 +387,11 @@ def test_import_contract_no_violations():
   assert not violations, "layer contract violations:\n" + "\n".join(violations)
 
 
-def test_ctypes_confined_to_ffi():
-  """ffi/ is the only package that may touch ctypes (or native memory)."""
+def test_foreign_floor_confined_to_ffi():
+  """The foreign world is the compiled ``_g0py`` extension, importable only
+  under ffi/ — and ctypes appears nowhere at all: the C contract is enforced
+  by the compiler when the pg0 shim builds, never re-declared in Python
+  (GKEYLL_C_SHIM.md)."""
   pkg_root = os.path.join(SRC, "postgkyl")
   offenders = []
   for dp, _, files in os.walk(pkg_root):
@@ -396,16 +399,22 @@ def test_ctypes_confined_to_ffi():
       if not f.endswith(".py"):
         continue
       p = os.path.join(dp, f)
-      if _layer(p, pkg_root) == "ffi":
-        continue
+      in_ffi = _layer(p, pkg_root) == "ffi"
       for node in ast.walk(ast.parse(open(p).read(), p)):
-        if isinstance(node, ast.Import) and any(
-            n.name.split(".")[0] == "ctypes" for n in node.names):
-          offenders.append(os.path.relpath(p, pkg_root))
-        elif isinstance(node, ast.ImportFrom) and (
-            (node.module or "").split(".")[0] == "ctypes"):
-          offenders.append(os.path.relpath(p, pkg_root))
-  assert not offenders, f"ctypes leaked above the ffi floor: {offenders}"
+        names = []
+        if isinstance(node, ast.Import):
+          names = [n.name for n in node.names]
+        elif isinstance(node, ast.ImportFrom):
+          names = [node.module or ""] + (
+              [n.name for n in node.names] if node.level or "." in (node.module or "")
+              or (node.module or "") == "postgkyl" else [])
+        for name in names:
+          root = name.split(".")[0]
+          if root == "ctypes":
+            offenders.append(f"{os.path.relpath(p, pkg_root)}: ctypes")
+          if ("_g0py" in name.split(".") or name == "_g0py") and not in_ffi:
+            offenders.append(f"{os.path.relpath(p, pkg_root)}: _g0py")
+  assert not offenders, f"foreign floor leaked above ffi/: {offenders}"
 
 
 def test_import_graph_is_acyclic():

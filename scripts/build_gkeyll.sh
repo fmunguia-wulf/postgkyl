@@ -44,3 +44,8 @@ if [ ! -f "${SO_PATH}" ]; then
     exit 1
 fi
 echo "# Built ${SO_PATH}"
+
+# Build the _g0py extension against gkyl_pg0.h + libg0core.so. The pg0
+# shim itself (core/zero/pg0.c) was just compiled INTO libg0core.so above —
+# that step is the compile-time contract check (GKEYLL_C_SHIM.md).
+sh "${SCRIPT_DIR}/build_pg0.sh"
