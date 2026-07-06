@@ -68,3 +68,6 @@ where = ["src/"]
 # the compiled bridge (scripts/build_pg0.sh) + the extension source; the pg0
 # shim itself lives in the gkeyll repo (GKEYLL_C_SHIM.md)
 "postgkyl.ffi" = ["_g0py.so", "csrc/*.c"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
