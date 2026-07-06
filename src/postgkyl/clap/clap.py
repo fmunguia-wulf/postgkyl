@@ -763,6 +763,7 @@ NOTE: this command cannot be combined with other postgkyl commands.
   def gk_rz(self,
       mapc2p: str | None = None,
       nodes: str | None = None,
+      z_axis: float = 0.0,
       use: str | None = None,
       tag: str = 'rz',
       label: str | None = None,
@@ -773,25 +774,28 @@ Gyrokinetics: Interpolate DG dataset(s) and map them to the R-Z plane.
 Assumes DG data (not yet interpolated) has been loaded onto the stack by a
 preceding command.
 
-The mapc2p and nodes geometry files are located automatically from the prefix
-of the first processed dataset (e.g. '<prefix>-mapc2p.gkyl', '<prefix>-nodes.gkyl'),
-so '-n'/'-N' only need to be given to override that. For 3D data the nodes file
-is used by default (it closes the poloidal flux surfaces); 2D data uses mapc2p.
+The geometry is automatically found from the prefix of the first processed
+dataset: the pointwise '<prefix>-geo_int_nodes.gkyl' is preferred (exact node
+coordinates, robust at coarse z resolution), falling back to the modal
+'<prefix>-geo_int_mapc2p.gkyl'. Use '-n path' to point at a specific nodes
+file, '-m path' at a specific mapc2p file, or "-m ''" to force the default
+mapc2p lookup.
 
 For 3D (field-aligned) data the field is reconstructed on the poloidal plane at
 toroidal angle --phi-tor (default 0) by interpolating along the binormal
 direction, up-sampled in z (--nz-interp) for smooth surfaces.
 
     Args:
-      mapc2p: (--mapc2p, -n) Path to the geo_int_mapc2p.gkyl file. If omitted, '<prefix>-geo_int_mapc2p.gkyl' is looked up from the first processed dataset's prefix.
-      nodes: (--nodes, -N) Path to the -nodes.gkyl file (default geometry source for 3D data; its full [-pi, pi] grid closes the poloidal flux surfaces). If omitted, '<prefix>-nodes.gkyl' is looked up.
+      mapc2p: (--mapc2p, -m) Use a modal mapc2p file as the geometry source instead of the default nodes file; pass '' to look up '<prefix>-geo_int_mapc2p.gkyl' from the first processed dataset's prefix.
+      nodes: (--nodes, -n) Path to a nodal geometry file, overriding the default '<prefix>-geo_int_nodes.gkyl' lookup.
+      z_axis: (--z-axis, -z) Vertical position of the magnetic axis (m), added to the geometry Z.mapc2p files store Z relative to the axis; pass Z_axis from the simulation input file to plot in machine coordinates. Default 0.
       use: (--use, -u) Specify tag of datasets to process from the stack.
       tag: (--tag, -t) Tag for output datasets.
       label: (--label, -l) Custom label for the result.
       phi_tor: (--phi-tor, -p) Toroidal angle (radians) of the poloidal plane to project 3D data onto. Default 0.
       nz_interp: (--nz-interp) Parallel (z) up-sampling factor used to smooth the projected 3D surfaces. Default 8.
     """
-    return self._run(_cmd("gk-rz"), mapc2p=mapc2p, nodes=nodes, use=use, tag=tag, label=label, phi_tor=phi_tor, nz_interp=nz_interp)
+    return self._run(_cmd("gk-rz"), mapc2p=mapc2p, nodes=nodes, z_axis=z_axis, use=use, tag=tag, label=label, phi_tor=phi_tor, nz_interp=nz_interp)
 
   def grid(self,
       use: str | None = None,
@@ -833,6 +837,15 @@ energy.
       label: (--label, -l) Custom label for the result.
     """
     return self._run(_cmd("growth"), use=use, guess=guess, minn=minn, dataset=dataset, instantaneous=instantaneous, dir=dir, tag=tag, label=label)
+
+  def gui(self,
+      path: str = '/Users/ahoffman/postgkyl/tests/test_data'):
+    """Launch the postgkyl marimo GUI on a data directory.
+
+    Args:
+      path: (--path, -p) Path to the Gkeyll data directory to open in the GUI (default: the bundled tests/test_data).
+    """
+    return self._run(_cmd("gui"), path=path)
 
   def info(self,
       use: str | None = None,
