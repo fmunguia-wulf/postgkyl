@@ -4,7 +4,7 @@
 # FFI_REDESIGN.md). Invoked automatically by `pip install`/`pip install -e`
 # via setup.py, and safe to re-run by hand.
 #
-# The gkeyll/ submodule tracks branch lapack_lite (zero external deps: no
+# The gkeyll/ submodule tracks branch lapack_lite_shim (zero external deps: no
 # MPI/CUDA/SuperLU/Lua, LAPACK replaced by the bundled lapack-lite). Only
 # core/ is needed to build libg0core.so, so moments/, vlasov/, gyrokinetic/,
 # and pkpm/ (~200MB combined) are excluded via sparse-checkout and are never
@@ -12,7 +12,7 @@
 set -e
 
 REPO_URL="https://github.com/ammarhakim/gkeyll.git"
-BRANCH="lapack_lite"
+BRANCH="lapack_lite_shim"
 SPARSE_DIRS="core gkeyll install-deps machines"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
