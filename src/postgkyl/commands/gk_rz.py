@@ -67,6 +67,26 @@ def _nodes_geometry(path):
   return coords, R, Z, phi
 
 
+def _corner_rz(path):
+  """R and Z from a pointwise corner geometry file ('-geo_corn_nodes.gkyl').
+
+  The corner file stores one value per cell corner, endpoints included, so
+  unlike the interior nodes/mapc2p files it covers the domain boundary (in
+  particular z = +/-pi, where the poloidal cross section closes). Returns
+  (coords, R, Z) with 'coords' the corner lattice.
+  """
+  gdat = GData(path)
+  vals = gdat.get_values()
+  coords = [np.linspace(np.squeeze(g)[0], np.squeeze(g)[-1], n)
+            for g, n in zip(gdat.get_grid(), vals.shape[:-1])]
+
+  if gku.is_gdata_geo_mapc2p(gdat):
+    X, Y, Z = vals[..., 0], vals[..., 1], vals[..., 2]
+    return coords, np.sqrt(X**2 + Y**2), Z
+
+  return coords, vals[..., 0], vals[..., 1]
+
+
 def _interp(gdat, comp=0):
   """Interpolate component 'comp' of the DG GData object 'gdat'.
 
@@ -169,11 +189,11 @@ def gk_rz(ctx, **kwargs):
   data = ctx.obj["data"]
 
   # Locate the geometry files from the prefix of the first processed dataset.
-  first = next(data.iterator(kwargs["use"]), None)
-  if first is None:
+  first_data = next(data.iterator(kwargs["use"]), None)
+  if first_data is None:
     return
 
-  prefix = _file_prefix(getattr(first, "_file_name", None))
+  prefix = _file_prefix(getattr(first_data, "_file_name", None))
 
   # Geometry source: the pointwise nodes file by default (exact node values;
   # the modal mapc2p representation loses amplitude where the toroidal winding
@@ -201,9 +221,7 @@ def gk_rz(ctx, **kwargs):
     raise click.ClickException(
       "Could not find a geometry file; pass it with -N/--nodes or -n/--mapc2p.")
 
-  is_3d = first.get_num_dims() == 3
-
-  if not is_3d:
+  if first_data.get_num_dims() == 2:
     # ---- 2D: direct map onto R-Z using mapc2p. ----
 
     verb_print(ctx, "Mapping stack data to R-Z using " + geo_path)
@@ -233,7 +251,7 @@ def gk_rz(ctx, **kwargs):
   nz_interp = max(1, kwargs["nz_interp"])
 
   # Field cell-center coordinates (from the field's own DG grid).
-  fine_grid, _ = _interp(first)
+  fine_grid, _ = _interp(first_data)
   xc, yc, zc = _centers(fine_grid)
   Nz = zc.size
 
@@ -244,14 +262,36 @@ def gk_rz(ctx, **kwargs):
   gx, gy, gz = gx_gy_gz
 
   # Up-sampled z: edges (zf_edges) for the plotting grid, centers (zf) for the
-  # field reconstruction.
+  # field reconstruction. The edges span the full z domain of the field grid
+  # (not just its cell centers) so the poloidal cross section closes at
+  # theta = +/-pi.
   xn = fine_grid[0]
-  zf_edges = np.linspace(zc[0], zc[-1], nz_interp * Nz + 1)
+  zf_edges = np.linspace(fine_grid[2][0], fine_grid[2][-1], nz_interp * Nz + 1)
   zf = 0.5 * (zf_edges[:-1] + zf_edges[1:])
 
+  # R, Z (y-independent) on the (x, z) plane. The nodes/mapc2p values live at
+  # interior points only, so extend the table to the z domain edges with the
+  # pointwise corner geometry when available (exact values at z = +/-pi, where
+  # the flux surfaces close on themselves); otherwise the boundary strip is
+  # linearly extrapolated.
+  R2d, Z2d, gz_rz = majorR[:, 0, :], vertZ[:, 0, :], gz
+  corn_path = prefix + "-geo_corn_nodes.gkyl" if prefix is not None else None
+  if corn_path is not None and os.path.exists(corn_path):
+    verb_print(ctx, "Closing the theta = +/-pi ends with " + corn_path)
+    ccoords, cornR, cornZ = _corner_rz(corn_path)
+    cx, cz = ccoords[0], ccoords[2]
+    cornR, cornZ = cornR[:, 0, :], cornZ[:, 0, :] + kwargs["z_axis"]
+    R2d = np.concatenate([
+      np.interp(gx, cx, cornR[:, 0])[:, None], R2d,
+      np.interp(gx, cx, cornR[:, -1])[:, None]], axis=1)
+    Z2d = np.concatenate([
+      np.interp(gx, cx, cornZ[:, 0])[:, None], Z2d,
+      np.interp(gx, cx, cornZ[:, -1])[:, None]], axis=1)
+    gz_rz = np.concatenate([[cz[0]], gz, [cz[-1]]])
+
   # Interpolate the geometry.
-  Rrz = _sample(majorR[:, 0, :], [gx, gz], [xn, zf_edges])
-  Zrz = _sample(vertZ[:, 0, :], [gx, gz], [xn, zf_edges])
+  Rrz = _sample(R2d, [gx, gz_rz], [xn, zf_edges])
+  Zrz = _sample(Z2d, [gx, gz_rz], [xn, zf_edges])
   # Make phi continuous in all three directions before interpolating.
   phi = np.unwrap(np.unwrap(np.unwrap(phi, axis=2), axis=1), axis=0)
   phi_grid = _sample(phi, [gx, gy, gz], [xc, yc, zf])
