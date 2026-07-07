@@ -299,33 +299,44 @@ activating/deactivating multiple datasets.
     return self._run(_cmd("deactivate"), tag=tag, index=index, focused=focused)
 
   def dg_evproj(self,
-      z0: float | None = None,
-      z1: float | None = None,
-      z2: float | None = None,
-      z3: float | None = None,
-      z4: float | None = None,
-      z5: float | None = None,
+      z0: str | None = None,
+      z1: str | None = None,
+      z2: str | None = None,
+      z3: str | None = None,
+      z4: str | None = None,
+      z5: str | None = None,
       comp: str | None = None,
+      weight: str | None = None,
       use: str | None = None,
       tag: str | None = None,
       label: str | None = None):
     """Evaluate a DG field at specified coordinates and project onto a lower-dimensional basis.
 
-Coordinates specified with --z0, --z1, ... --z5.
+Coordinates specified with --z0, --z1, ... --z5. Each direction can instead be
+given as 'avg' to average the field over that direction (integral over the
+direction divided by its length). Evaluation and averaging can be combined,
+e.g. --z0 avg --z1 0.5. The output has the same reduced dimensionality whether
+a direction is evaluated at a coordinate or averaged.
+
+When averaging, the geometric Jacobian <prefix>-geo_int_jacobgeo.gkyl (found
+next to the dataset) is used as the weight if present, giving the weighted
+average int(f J dx) / int(J dx). Override the weight file with --weight, or
+disable weighting with '--weight none'.
 
     Args:
-      z0: (--z0) Physical coord to evaluate in direction 0.
-      z1: (--z1) Physical coord to evaluate in direction 1.
-      z2: (--z2) Physical coord to evaluate in direction 2.
-      z3: (--z3) Physical coord to evaluate in direction 3.
-      z4: (--z4) Physical coord to evaluate in direction 4.
-      z5: (--z5) Physical coord to evaluate in direction 5.
+      z0: (--z0) Physical coord to evaluate in direction 0, or 'avg' to average over it.
+      z1: (--z1) Physical coord to evaluate in direction 1, or 'avg' to average over it.
+      z2: (--z2) Physical coord to evaluate in direction 2, or 'avg' to average over it.
+      z3: (--z3) Physical coord to evaluate in direction 3, or 'avg' to average over it.
+      z4: (--z4) Physical coord to evaluate in direction 4, or 'avg' to average over it.
+      z5: (--z5) Physical coord to evaluate in direction 5, or 'avg' to average over it.
       comp: (--comp, -c) Component index to select from the result (int or slice).
+      weight: (--weight, -w) Weight file for the average. Defaults to <prefix>-geo_int_jacobgeo.gkyl found next to the dataset; pass a path to override, or 'none' to disable.
       use: (--use, -u) Tag to apply to. [default: all active]
       tag: (--tag, -t) Tag for the output dataset.
       label: (--label, -l) Label for the output dataset.
     """
-    return self._run(_cmd("dg-evproj"), z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=comp, use=use, tag=tag, label=label)
+    return self._run(_cmd("dg-evproj"), z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5, comp=comp, weight=weight, use=use, tag=tag, label=label)
 
   def dg_local_poly(self,
       use: str | None = None,
