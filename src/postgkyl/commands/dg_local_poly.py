@@ -103,9 +103,26 @@ def dg_local_poly(ctx, **kwargs):
         edges_d = np.linspace(lower[d], upper[d], num_cells[d] + 1)
       cell_center = 0.5 * (edges_d[:-1] + edges_d[1:])
       dx = edges_d[1:] - edges_d[:-1]
-      coords = (cell_center[:, np.newaxis]
-                + nodes[np.newaxis, :] * dx[:, np.newaxis] / 2).reshape(-1)
+      coords = (cell_center[:, np.newaxis] + nodes[np.newaxis, :]*dx[:, np.newaxis]/2).reshape(-1)
       int_grid.append(coords)
+
+    if dat.ctx["grid_type"] == "c2p_vel":
+      # Evaluate the vel map at nodes in each cell.
+      poly_order_vmap = 1
+      num_cdim = dat.ctx["num_cdim"]
+      num_vdim = dat.ctx["num_vdim"]
+      for d in range(num_cdim,num_dims):
+        grid_c = grid_in[d]
+        coord_1v = np.zeros(num_cells[d]*num_nodes)
+        for i, vmap_c in enumerate(grid_c):
+          for k in range(num_nodes):
+            coord_1v[i*num_nodes+k] = expand_1d[int(poly_order_vmap - 1)](vmap_c, nodes[k])
+          # end
+        # end
+
+        int_grid[d] = coord_1v
+      # end
+    # end
 
     # Insert a NaN between every couple of points along each dimension to break
     # the curve at the cell interfaces.
