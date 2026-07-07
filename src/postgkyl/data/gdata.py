@@ -176,6 +176,10 @@ class GData(object):
 
   status = property(get_status)
 
+  # ---- File name ----
+  def get_file_name(self) -> str:
+    return self._file_name
+
   # ---- Input file ----
   def get_input_file(self) -> str:
     if not has_adios:
