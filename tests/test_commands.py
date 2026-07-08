@@ -139,13 +139,17 @@ class TestCommands:
     np.testing.assert_array_equal(values_shape, (10, 1, 2))
 
 
-  def test_plot(self):
+  def test_plot(self, monkeypatch):
     self.ctx.invoke(cmd.load)
+    # plot() closes the figure when show=False, so capture a reference to it
+    # right before it is closed (the Figure keeps its state while referenced).
+    captured = {}
+    monkeypatch.setattr(plt, "close", lambda *a, **k: captured.setdefault("fig", plt.gcf()))
     self.ctx.invoke(cmd.plot, show=False)
-    fig = plt.gcf()
+    monkeypatch.undo()
+    label = captured["fig"].get_supylabel()
     self.ctx.obj['data'].clean()
     self.ctx.obj["in_data_strings_loaded"] = 0
-    label = fig.figure.get_supylabel()
     plt.close("all")
     assert label == "$z_1$"
 
