@@ -284,3 +284,18 @@ _diamag_vel : GkQuantity = GkQuantity(
   is_vector = True
 )
 gk_quant_registry.register(_diamag_vel)
+
+# ------------------------------
+# --- Phase space quantities ---
+# ------------------------------
+
+# Distribution function loaded through load_gk_distf.
+_distf : GkQuantity = GkQuantity(
+  name = "distf",
+  source = [[""]],
+  fetch_func = [ff.load_distf],
+  label = r"$f_{%s}$",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_distf)

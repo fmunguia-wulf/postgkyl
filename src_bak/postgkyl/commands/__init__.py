@@ -8,6 +8,8 @@ from postgkyl.commands.bparrotate import bparrotate
 from postgkyl.commands.bperprotate import bperprotate
 from postgkyl.commands.collect import collect
 from postgkyl.commands.current import current
+from src_bak.postgkyl.commands.dg_evproj import dg_evproj
+from src_bak.postgkyl.commands.dg_avg import dg_avg
 from postgkyl.commands.differentiate import differentiate
 from postgkyl.commands.energetics import energetics
 from postgkyl.commands.euler import euler

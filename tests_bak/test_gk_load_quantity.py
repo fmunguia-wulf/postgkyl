@@ -14,6 +14,8 @@ The fetch functions (and their gkylsoft-backed DG operators) then run for real.
 Quantities whose computation requires the compiled gkylsoft library are skipped
 when that library is unavailable.
 """
+import os
+
 import click
 import numpy as np
 import pytest
@@ -45,6 +47,14 @@ except Exception:  # noqa: BLE001 - any failure means the lib is unusable here
 # Extra command options required by specific quantities (beyond the per-component
 # selection that every vector quantity needs, which is added automatically below).
 _EXTRA_OPTS = {}
+
+# Define the data used to test the handling of GK distribution functions.
+_TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
+_DISTF_REAL = {
+  "name": "rt_gk_tcv_iwl_1x2v_p1",
+  "species": "elc",
+  "frame": 250,
+}
 
 
 def _extra_opts_for(quant) -> str | None:
@@ -104,6 +114,10 @@ class TestGkLoadQuantity:
 
   @pytest.mark.parametrize("quantity", gk_quant_registry.list())
   def test_load_quantity(self, quantity, tmp_path, monkeypatch):
+    if quantity == "distf":
+      self._check_distf_real()
+      return
+
     quant = gk_quant_registry.get(quantity)
     path = str(tmp_path)
 
@@ -132,3 +146,25 @@ class TestGkLoadQuantity:
 
     assert ctx.obj.data.get_num_datasets() >= 1, (
       f"gk-load-quantity produced no dataset for quantity '{quantity}'")
+
+  def _check_distf_real(self):
+    """
+    Test the distf function with real data present in the test_data directory.
+    """
+    ctx = self._make_ctx()
+    try:
+      ctx.invoke(
+        cmd.gk_load_quantity,
+        quantity="distf",
+        name=_DISTF_REAL["name"],
+        species=_DISTF_REAL["species"],
+        frame=str(_DISTF_REAL["frame"]),
+        path=_TEST_DATA_DIR,
+      )
+    except (RuntimeError, FileNotFoundError, OSError) as err:
+      if not _DGOPS_AVAILABLE:
+        pytest.skip(f"'distf' requires the gkylsoft DG library: {err}")
+      raise
+
+    assert ctx.obj["data"].get_num_datasets() >= 1, (
+      "gk-load-quantity produced no dataset for quantity 'distf'")
