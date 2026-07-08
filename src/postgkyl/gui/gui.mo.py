@@ -121,22 +121,21 @@ def _(base64, mo, os):
 
 
 @app.cell
-def _(dir_input, mo, scan_outputs):
+def _(dir_input, get_field, mo, scan_outputs, set_field):
     # --- field selection ----------------------------------------------------
-    # NB: intentionally does NOT depend on the refresh button — refresh should
-    # recompute the figure only, never rebuild (and thus reset) these controls.
     outputs = scan_outputs(dir_input.value)
     _opts = sorted(outputs.keys())
 
     if _opts:
-        _default = next((o for o in _opts if o.endswith("M0")), _opts[0])
+        _prev = get_field()
+        # Keep old value if it exists in the new directory, else fallback to M0/first
+        _default = _prev if _prev in _opts else next((o for o in _opts if o.endswith("M0")), _opts[0])
         field_dropdown = mo.ui.dropdown(
-            options=_opts, value=_default, label="Field", searchable=True
+            options=_opts, value=_default, label="Field", searchable=True, on_change=set_field
         )
     else:
         field_dropdown = mo.ui.dropdown(options=[], label="Field")
     return field_dropdown, outputs
-
 
 @app.cell
 def _():
@@ -160,18 +159,10 @@ def _():
 
 
 @app.cell
-def _(dir_input, gk_quant_list, list_prefixes, mo):
-    # --- load mode: plain `load` vs `gk-load-quantity` ----------------------
-    # `gk-load-quantity` builds a named quantity by combining several output
-    # files (e.g. a temperature from BiMaxwellian moments). The sim prefix is
-    # chosen from those discovered in the single data directory above.
+def _(gk_quant_list, mo):
+    # --- load mode: static controls -----------------------------------------
     load_mode = mo.ui.dropdown(
         options=["load", "gk-load-quantity"], value="load", label="load mode")
-
-    _prefixes = list_prefixes(dir_input.value.strip())
-    simprefix = mo.ui.dropdown(
-        options=_prefixes, value=(_prefixes[0] if _prefixes else None),
-        label="sim prefix", searchable=True)
     quantity = mo.ui.dropdown(
         options=gk_quant_list,
         value=("M0" if "M0" in gk_quant_list else (gk_quant_list[0] if gk_quant_list else None)),
@@ -180,24 +171,35 @@ def _(dir_input, gk_quant_list, list_prefixes, mo):
     direction = mo.ui.text(value="", label="direction", placeholder="dir, e.g. 0/1/2")
     extra = mo.ui.text(
         value="", label="extra", placeholder="mass=...,charge=...", full_width=True)
-    return direction, extra, load_mode, quantity, simprefix, species
+    return direction, extra, load_mode, quantity, species
+
+
+@app.cell
+def _(dir_input, list_prefixes, mo):
+    # --- load mode: dynamic prefix ------------------------------------------
+    _prefixes = list_prefixes(dir_input.value.strip())
+    simprefix = mo.ui.dropdown(
+        options=_prefixes, value=(_prefixes[0] if _prefixes else None),
+        label="sim prefix", searchable=True)
+    return (simprefix,)
 
 
 @app.cell
 def _(mo):
     # --- persisted selection state ------------------------------------------
-    # The frame, the select slices and the component live in state, not in the
-    # field-dependent cells, so switching field re-seeds them instead of
-    # resetting them. `allow_self_loops=False` (the default) means a widget
-    # writing its own state does NOT rebuild itself, so dragging stays smooth.
     get_frame, set_frame = mo.state(None)
     get_sel_en, set_sel_en = mo.state([])
     get_sel_val, set_sel_val = mo.state([])
     get_comp_en, set_comp_en = mo.state(False)
     get_comp_val, set_comp_val = mo.state(0)
+    
+    # New state variables for interface persistence
+    get_field, set_field = mo.state(None)
+    get_xidx, set_xidx = mo.state(0)
     return (
-        get_comp_en, get_comp_val, get_frame, get_sel_en, get_sel_val,
-        set_comp_en, set_comp_val, set_frame, set_sel_en, set_sel_val,
+        get_comp_en, get_comp_val, get_field, get_frame, get_sel_en,
+        get_sel_val, get_xidx, set_comp_en, set_comp_val, set_field,
+        set_frame, set_sel_en, set_sel_val, set_xidx,
     )
 
 
@@ -345,8 +347,8 @@ def _(
 
 
 @app.cell
-def _(grid_info, mo):
-    # --- processing chain ---------------------------------------------------
+def _(mo):
+    # --- processing chain: static controls ----------------------------------
     transform = mo.ui.dropdown(
         options=["none", "interpolate", "dg-local-poly", "gk-rz", "gk-fluxsurf"],
         value="none",
@@ -355,25 +357,31 @@ def _(grid_info, mo):
     interp_pts = mo.ui.number(start=1, stop=32, value=2, label="points factor / nz-interp")
     mapc2p_file = mo.ui.text(value="", label="mapc2p file (optional)", full_width=True)
     
-    # Radial slice slider for gk-fluxsurf
-    if grid_info.get("ok") and len(grid_info["dims"]) > 0:
-        max_x = grid_info["dims"][0]["n"] - 1
-        x_idx = mo.ui.slider(
-            start=0, stop=max_x, step=1, value=0, 
-            label=f"flux surface x-index (0 to {max_x})", 
-            show_value=True, include_input=True, full_width=True
-        )
-    else:
-        x_idx = mo.ui.slider(start=0, stop=0, value=0, label="flux surface x-index", disabled=True)
-        
-    # Toroidal angle slice slider for gk-rz (0 to 360 degrees for user friendliness)
+    # Toroidal angle slice slider for gk-rz
     phi_tor_val = mo.ui.slider(
         start=0, stop=360, step=1, value=0,
         label="poloidal plane angle phi-tor (degrees)",
         show_value=True, include_input=True, full_width=True
     )
+    return interp_pts, mapc2p_file, phi_tor_val, transform
+
+
+@app.cell
+def _(get_xidx, grid_info, mo, set_xidx):
+    # --- processing chain: dynamic flux surface slider ----------------------
+    if grid_info.get("ok") and len(grid_info["dims"]) > 0:
+        max_x = grid_info["dims"][0]["n"] - 1
+        _prev = get_xidx()
+        _val = _prev if _prev <= max_x else 0
+        x_idx = mo.ui.slider(
+            start=0, stop=max_x, step=1, value=_val, 
+            label=f"flux surface x-index (0 to {max_x})", 
+            show_value=True, include_input=True, full_width=True, on_change=set_xidx
+        )
+    else:
+        x_idx = mo.ui.slider(start=0, stop=0, value=0, label="flux surface x-index", disabled=True)
         
-    return interp_pts, mapc2p_file, transform, x_idx, phi_tor_val
+    return (x_idx,)
 
 @app.cell
 def _(mo):
