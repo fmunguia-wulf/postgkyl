@@ -21,50 +21,6 @@ from postgkyl.modalDG.kernels import expand_1d
 # gkyl_elem_type enum ordinal for double (INT=0, FLOAT=1, DOUBLE=2)
 _GKYL_DOUBLE = ctypes.c_int(2)
 
-
-class _GkylBasis(ctypes.Structure):
-  """
-  ctypes mirror of `struct gkyl_basis` (core/zero/gkyl_basis.h).
-
-  The layout must match exactly, because gkyl_array_average_inp embeds two of
-  these by value. All the C member functions are plain pointers, so we only
-  need pointer-sized placeholders for them.
-  """
-  _fields_ = [
-    ("ndim",       ctypes.c_uint),
-    ("poly_order", ctypes.c_uint),
-    ("num_basis",  ctypes.c_uint),
-    ("num_quad",   ctypes.c_uint),
-    ("id",         ctypes.c_char * 64),
-    ("b_type",     ctypes.c_int),
-    ("eval",                     ctypes.c_void_p),
-    ("eval_expand",              ctypes.c_void_p),
-    ("eval_grad_expand",         ctypes.c_void_p),
-    ("flip_odd_sign",            ctypes.c_void_p),
-    ("flip_even_sign",           ctypes.c_void_p),
-    ("node_list",                ctypes.c_void_p),
-    ("nodal_to_modal",           ctypes.c_void_p),
-    ("nodal_to_modal_quad_surf", ctypes.c_void_p * 3),
-    ("node_quad_surf_list",      ctypes.c_void_p * 3),
-    ("quad_nodal_to_modal",      ctypes.c_void_p),
-    ("modal_to_quad_nodal",      ctypes.c_void_p),
-  ]
-
-
-class _GkylArrayAverageInp(ctypes.Structure):
-  """ctypes mirror of `struct gkyl_array_average_inp` (core/zero/gkyl_array_average.h)."""
-  _fields_ = [
-    ("grid",          ctypes.c_void_p),
-    ("basis",         _GkylBasis),
-    ("basis_avg",     _GkylBasis),
-    ("local",         ctypes.c_void_p),
-    ("local_avg",     ctypes.c_void_p),
-    ("local_avg_ext", ctypes.c_void_p),
-    ("weight",        ctypes.c_void_p),
-    ("avg_dim",       ctypes.POINTER(ctypes.c_int)),
-    ("use_gpu",       ctypes.c_bool),
-  ]
-
 class GkeyllDGops:
   """
   Operations on DG data, returning DG data.
@@ -113,10 +69,6 @@ class GkeyllDGops:
     # gkyl_cart_modal_gkhybrid_new(cdim, vdim) -> gkyl_basis*
     lib.gkyl_cart_modal_gkhybrid_new.argtypes = [c_i, c_i]
     lib.gkyl_cart_modal_gkhybrid_new.restype  = c_vp
-
-    # gkyl_cart_modal_serendip(*basis, ndim, poly_order) -> void (fills in place)
-    lib.gkyl_cart_modal_serendip.argtypes = [ctypes.POINTER(_GkylBasis), c_i, c_i]
-    lib.gkyl_cart_modal_serendip.restype  = None
 
     # gkyl_cart_modal_basis_get_num_basis(*basis) -> int
     lib.gkyl_cart_modal_basis_get_num_basis.argtypes = [c_vp]
@@ -182,8 +134,10 @@ class GkeyllDGops:
     lib.gkyl_dg_eval_at_coord_proj_release.argtypes = [c_vp]
     lib.gkyl_dg_eval_at_coord_proj_release.restype  = None
 
-    # gkyl_array_average_new(inp*) -> gkyl_array_average*
-    lib.gkyl_array_average_new.argtypes = [ctypes.POINTER(_GkylArrayAverageInp)]
+    # gkyl_array_average_new(*grid, *basis, *basis_avg, *local, *local_avg,
+    #                         *local_avg_ext, *weight, *avg_dim, use_gpu) -> gkyl_array_average*
+    lib.gkyl_array_average_new.argtypes = [c_vp, c_vp, c_vp, c_vp, c_vp, c_vp, c_vp,
+                                           ctypes.POINTER(c_i), ctypes.c_bool]
     lib.gkyl_array_average_new.restype  = c_vp
 
     # gkyl_array_average_advance(up*, fin*, avgout*)
@@ -447,27 +401,11 @@ class GkeyllDGops:
 
   def average(self, avg_dirs: list, gdata, weight=None, comp_grid: bool = False) -> GData:
     """
-    Average a DG field over the directions in avg_dirs and project onto the
-    lower-dimensional target basis.
+    Average a DG field over the directions in avg_dirs (gkyl_array_average).
 
-    Uses the Gkeyll gkyl_array_average updater, which supports serendipity
-    bases at poly_order <= 2. The average over a direction is the integral of
-    the DG expansion over that direction divided by its length, so the output
-    has exactly the same reduced dimensionality as evaluating at a single
-    coordinate in that direction.
-
-    If a weight field is given the weighted average is computed instead,
-    ``\\int f w dx^i / \\int w dx^i``, where the integral runs over avg_dirs.
-
-    Inputs:
-      avg_dirs:  List of 0-based direction indices to average over.
-      gdata:     Donor DG dataset (serendipity, poly_order in ctx).
-      weight:    Optional weight GData, same dimensionality/basis as gdata.
-                 If None, an unweighted average (integral / volume) is done.
-      comp_grid: Passed to the output GData constructor.
-
-    Returns:
-      GData with the averaged field over the surviving grid dimensions.
+    Returns a GData over the surviving dimensions. With a weight GData (same
+    dims/basis as gdata) the weighted average is computed instead. Serendipity
+    basis, poly_order <= 2 only.
     """
     basis_type = gdata.ctx["basis_type"]
     if basis_type.lower() != "serendipity":
@@ -523,15 +461,12 @@ class GkeyllDGops:
     c_rng_up_tar = (ctypes.c_int * ndim_red)(*cells_tar)
     rng_tar_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim_red), c_rng_lo_tar, c_rng_up_tar)
 
-    # Full and reduced serendipity bases (filled in place, no release needed).
-    basis     = _GkylBasis()
-    basis_avg = _GkylBasis()
-    self._lib.gkyl_cart_modal_serendip(ctypes.byref(basis),
-      ctypes.c_int(ndim), ctypes.c_int(poly_order))
-    self._lib.gkyl_cart_modal_serendip(ctypes.byref(basis_avg),
-      ctypes.c_int(ndim_red), ctypes.c_int(poly_order))
-    num_basis_do  = int(basis.num_basis)
-    num_basis_tar = int(basis_avg.num_basis)
+    # Full (donor) and reduced (target) serendipity bases.
+    basis_do  = self._gkyl_basis_new_from_gdata(gdata)
+    basis_avg = self._lib.gkyl_cart_modal_serendip_new(ctypes.c_int(ndim_red),
+      ctypes.c_int(poly_order))
+    num_basis_do  = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_do))
+    num_basis_tar = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_avg))
 
     # Donor array.
     arr_do, values = self._gkyl_array_new_from_gdata(gdata)
@@ -553,25 +488,18 @@ class GkeyllDGops:
       ctypes.c_size_t(size_tar), tar_buf.ctypes.data_as(ctypes.c_void_p), )
 
     # avg_dim flags (1 = averaged) over the full dimensionality.
-    avg_flags   = [1 if d in avg_dirs else 0 for d in range(ndim)]
-    c_avg_dim   = (ctypes.c_int * ndim)(*avg_flags)
+    avg_flags = [1 if d in avg_dirs else 0 for d in range(ndim)]
+    c_avg_dim = (ctypes.c_int * ndim)(*avg_flags)
 
-    inp = _GkylArrayAverageInp()
-    inp.grid          = grid_ptr
-    inp.basis         = basis
-    inp.basis_avg     = basis_avg
-    inp.local         = rng_ptr
-    inp.local_avg     = rng_tar_ptr
-    inp.local_avg_ext = rng_tar_ptr  # used to size the integrated weight (weight != NULL)
-    inp.weight        = arr_w        # None => unweighted average (integral / volume)
-    inp.avg_dim       = ctypes.cast(c_avg_dim, ctypes.POINTER(ctypes.c_int))
-    inp.use_gpu       = False
-
-    updater = self._lib.gkyl_array_average_new(ctypes.byref(inp))
+    # rng_tar_ptr doubles as local_avg_ext (only read to size the integrated weight).
+    updater = self._lib.gkyl_array_average_new(grid_ptr, basis_do, basis_avg,
+      rng_ptr, rng_tar_ptr, rng_tar_ptr, arr_w, c_avg_dim, ctypes.c_bool(False))
     try:
       self._lib.gkyl_array_average_advance(updater, arr_do, arr_tar)
     finally:
       self._lib.gkyl_array_average_release(updater)
+      self._lib.gkyl_cart_modal_basis_release(basis_do)
+      self._lib.gkyl_cart_modal_basis_release(basis_avg)
       self._lib.gkyl_array_release(arr_do)
       self._lib.gkyl_array_release(arr_tar)
       if arr_w is not None:
