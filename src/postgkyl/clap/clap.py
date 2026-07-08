@@ -596,6 +596,34 @@ NOTE: this command cannot be combined with other postgkyl commands.
     """
     return self._run(_cmd("gk-energy-balance"), name=name, species=species, path=path, relative_error=relative_error, multib=multib, field_dot_file=field_dot_file, apar_dot_file=apar_dot_file, fdot_file=fdot_file, source_file=source_file, bflux_xlower_file=bflux_xlower_file, bflux_ylower_file=bflux_ylower_file, bflux_zlower_file=bflux_zlower_file, bflux_xupper_file=bflux_xupper_file, bflux_yupper_file=bflux_yupper_file, bflux_zupper_file=bflux_zupper_file, f_file=f_file, field_file=field_file, apar_file=apar_file, dt_file=dt_file, logy=logy, absy=absy, xlabel=xlabel, ylabel=ylabel, title=title, indent_left=indent_left, add_width=add_width, saveas=saveas)
 
+  def gk_fluxsurf(self,
+      mapc2p: str | None = None,
+      nodes: str | None = None,
+      x_idx: int = 0,
+      nphi: int = 128,
+      nz_interp: int = 8,
+      use: str | None = None,
+      tag: str = 'fluxsurf',
+      label: str | None = None):
+    """Gyrokinetics: Extract a 2D theta-phi flux surface.
+
+This command extracts data along a specific radial flux surface (constant x)
+for 3D field-aligned data. It achieves this by performing a binormal
+projection over a scan of toroidal angles (phi), creating a 2D grid of
+phi vs z (where z maps along the poloidal/theta direction).
+
+    Args:
+      mapc2p: (--mapc2p, -m) Use a modal mapc2p file as the geometry source instead of the default nodes file.
+      nodes: (--nodes, -n) Path to a nodal geometry file, overriding the default lookup.
+      x_idx: (--x-idx, -x) The cell index in the radial (x) direction representing the flux surface. Default 0.
+      nphi: (--nphi) Number of toroidal angle (phi) slices. Increased default to 128 for smoother diagonal field lines.
+      nz_interp: (--nz-interp) Parallel (z) up-sampling factor used to smooth the projected 3D surfaces. Default 8.
+      use: (--use, -u) Specify tag of datasets to process from the stack.
+      tag: (--tag, -t) Tag for output datasets.
+      label: (--label, -l) Custom label for the result.
+    """
+    return self._run(_cmd("gk-fluxsurf"), mapc2p=mapc2p, nodes=nodes, x_idx=x_idx, nphi=nphi, nz_interp=nz_interp, use=use, tag=tag, label=label)
+
   def gk_load_quantity(self,
       quantity: str | None = None,
       qlist: bool = False,

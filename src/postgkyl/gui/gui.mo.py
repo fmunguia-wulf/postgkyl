@@ -345,17 +345,35 @@ def _(
 
 
 @app.cell
-def _(mo):
+def _(grid_info, mo):
     # --- processing chain ---------------------------------------------------
     transform = mo.ui.dropdown(
-        options=["none", "interpolate", "dg-local-poly", "gk-rz"],
+        options=["none", "interpolate", "dg-local-poly", "gk-rz", "gk-fluxsurf"],
         value="none",
         label="transform",
     )
-    interp_pts = mo.ui.number(start=1, stop=32, value=2, label="points/cell")
+    interp_pts = mo.ui.number(start=1, stop=32, value=2, label="points factor / nz-interp")
     mapc2p_file = mo.ui.text(value="", label="mapc2p file (optional)", full_width=True)
-    return interp_pts, mapc2p_file, transform
-
+    
+    # Radial slice slider for gk-fluxsurf
+    if grid_info.get("ok") and len(grid_info["dims"]) > 0:
+        max_x = grid_info["dims"][0]["n"] - 1
+        x_idx = mo.ui.slider(
+            start=0, stop=max_x, step=1, value=0, 
+            label=f"flux surface x-index (0 to {max_x})", 
+            show_value=True, include_input=True, full_width=True
+        )
+    else:
+        x_idx = mo.ui.slider(start=0, stop=0, value=0, label="flux surface x-index", disabled=True)
+        
+    # Toroidal angle slice slider for gk-rz (0 to 360 degrees for user friendliness)
+    phi_tor_val = mo.ui.slider(
+        start=0, stop=360, step=1, value=0,
+        label="poloidal plane angle phi-tor (degrees)",
+        show_value=True, include_input=True, full_width=True
+    )
+        
+    return interp_pts, mapc2p_file, transform, x_idx, phi_tor_val
 
 @app.cell
 def _(mo):
@@ -523,7 +541,19 @@ def _(
         elif transform.value == "dg-local-poly":
             pg.dg_local_poly(npoints=int(interp_pts.value) if interp_pts.value else 2)
         elif transform.value == "gk-rz":
-            pg.gk_rz(mapc2p=_opt(mapc2p_file))
+            # Convert degrees from slider to radians for the backend projection
+            phi_rad = float(phi_tor_val.value) * 3.141592653589793 / 180.0
+            pg.gk_rz(
+                mapc2p=_opt(mapc2p_file), 
+                phi_tor=phi_rad, 
+                nz_interp=int(interp_pts.value) if interp_pts.value else 8
+            )
+        elif transform.value == "gk-fluxsurf":
+            pg.gk_fluxsurf(
+                mapc2p=_opt(mapc2p_file), 
+                x_idx=int(x_idx.value) if x_idx.value else 0,
+                nz_interp=int(interp_pts.value) if interp_pts.value else 8
+            )
 
         # 3) select (slice by coordinate value from the dynamic sliders) ----
         sel_kwargs = {}
@@ -668,8 +698,8 @@ def _(
     species,
 ):
     # --- assemble select rows (one per grid dimension) ----------------------
-    if transform.value == "gk-rz":
-            _select_block = mo.md("_Selection disabled for gk-rz transform._")
+    if transform.value in ("gk-rz", "gk-fluxsurf"):
+        _select_block = mo.md(f"_Selection disabled for {transform.value} transform._")
     elif grid_info.get("ok"):
         _rows = [
             mo.hstack(
@@ -713,6 +743,8 @@ def _(
         # mo.md("#### 3 · Processing"),
         mo.hstack([transform, interp_pts], justify="start", gap=1),
         mapc2p_file,
+        x_idx if transform.value == "gk-fluxsurf" else mo.md(""),
+        phi_tor_val if transform.value == "gk-rz" else mo.md(""),
         mo.md("**select** — enable a dimension to slice it at the slider's coordinate"),
         _select_block,
         mo.md("#### Plot options"),
