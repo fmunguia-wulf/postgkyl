@@ -189,19 +189,21 @@ class TestCommands:
 
 
   def test_gk_rz(self):
-    # gk_rz maps DG data already on the stack to the R-Z plane; the geometry
-    # ('<prefix>-mapc2p.gkyl') is auto-located from the loaded dataset's prefix.
-    field = f"{self.dir_path:s}/gk_ltx_iwl_2x2v_p1-elc_M2par_10.gkyl"
-    local_ctx = click.Context(cli)
-    local_ctx.obj = dict(self.ctx.obj)
-    local_ctx.obj["data"] = cmd.DataSpace()
-    local_ctx.obj["in_data_strings"] = [field]
-    local_ctx.obj["in_data_strings_loaded"] = 0
-    local_ctx.invoke(cmd.load)
-    local_ctx.invoke(cmd.gk_rz)
-    # The result is pushed under the 'rz' tag.
-    data = local_ctx.obj["data"].get_dataset(0, tag="rz")
+    # gk-rz operates on data already loaded onto the stack and locates the
+    # geometry from the loaded file's prefix (here '<prefix>-geo_int_mapc2p.gkyl').
+    saved_strings = self.ctx.obj["in_data_strings"]
+    self.ctx.obj["in_data_strings"] = [f"{self.dir_path:s}/gk_ltx_iwl_2x2v_p1-elc_M2par_10.gkyl"]
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.invoke(cmd.load)
+    self.ctx.invoke(cmd.gk_rz)
+    data = self.ctx.obj['data'].get_dataset(0, tag='rz')
     values = data.values
-    # Verify a dataset was pushed and has a trailing component dimension of 1
+    grid = data.grid
+    self.ctx.obj['data'].clean()
+    self.ctx.obj["in_data_strings"] = saved_strings
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    # The 2D field is mapped onto the R-Z plane: R and Z grids plus a single
+    # component dimension.
     assert values is not None
     assert values.shape[-1] == 1
+    assert len(grid) == 2
