@@ -115,35 +115,36 @@ def _sample(values, src_coords, dst_coords):
   )(tuple(mesh))
 
 
-def _binormal_project(vals, phi_uw, phi_tor):
-  """Reconstruct a field-aligned dataset on the poloidal plane at phi = phi_tor.
-
-  For each (x, z) column the field is sampled along the binormal direction y
-  (axis 1) at the physical toroidal angle 'phi_uw' (unwrapped, i.e. continuous
-  in all directions). The field is periodic in y, so it is also periodic in
-  toroidal angle with period 'box' (the toroidal extent of one binormal box);
-  phi_tor is folded into the interval covered by each column before
-  interpolating, which stitches the simulated wedge periodically around the
-  torus. This is the real-space equivalent of the FFT phase-sum used in
-  field-aligned poloidal projections.
-
-  'vals' and 'phi_uw' have shape (Nx, Ny, Nz). Returns a (Nx, Nz) array.
+def _fft_poloidal_project(vals, zc, box, wind, phi0_zf, zf, phi_tor):
+  """Project a 3D field-aligned dataset onto the poloidal plane at phi = phi_tor.
   """
   Nx, Ny, Nz = vals.shape
-  out = np.empty((Nx, Nz))
-  for ix in range(Nx):
-    for iz in range(Nz):
-      phi_y = phi_uw[ix, :, iz]
-      val_y = vals[ix, :, iz]
-      # Toroidal angle subtended by one full (periodic) binormal box.
-      box = np.mean(np.diff(phi_y)) * Ny
-      # Fold phi_tor into [phi_y[0], phi_y[0] + box)
-      pt = phi_y[0] + np.mod(phi_tor - phi_y[0], box)
-      phi_ext = np.concatenate([phi_y - box, phi_y, phi_y + box])
-      val_ext = np.concatenate([val_y, val_y, val_y])
-      order = np.argsort(phi_ext)
-      out[ix, iz] = np.interp(pt, phi_ext[order], val_ext[order])
+  fk = np.fft.rfft(vals, axis=1, norm="forward")  # (Nx, K, Nz)
+  K = fk.shape[1]
 
+  # Twist-and-shift reconnection: add a ghost z-cell at each domain edge (+/-pi)
+  # whose value is the opposite end phase-shifted by exp(i k n0 wind).
+  dz = zc[1] - zc[0]
+  z_ex = np.concatenate(([zc[0] - dz / 2], zc, [zc[-1] + dz / 2]))
+  fk_ex = np.zeros((Nx, K, Nz + 2), dtype=complex)
+  fk_ex[:, :, 1:-1] = fk
+  psh = (2.0 * np.pi / box) * wind  # per-mode phase = n0 * wind(x)
+  for k in range(K):
+    ph = np.exp(-1j * k * psh)
+    fk_ex[:, k, -1] = 0.5 * (fk[:, k, -1] + ph * fk[:, k, 0])
+    fk_ex[:, k, 0] = 0.5 * (fk[:, k, 0] + np.conj(ph) * fk[:, k, -1])
+
+  # Up-sample along z (interpolate real and imaginary parts separately).
+  fk_zf = (PchipInterpolator(z_ex, fk_ex.real, axis=2)(zf)
+           + 1j * PchipInterpolator(z_ex, fk_ex.imag, axis=2)(zf))
+
+  # Phase-sum: reconstruct the field where the physical toroidal angle == phi_tor.
+  frac = (phi_tor - phi0_zf) / box
+  out = np.zeros((Nx, len(zf)))
+  for k in range(K):
+    # rfft: modes 0 < k < Nyquist represent both +/-k; do not double k=0 or Nyquist.
+    weight = 1.0 if (k == 0 or (Ny % 2 == 0 and k == K - 1)) else 2.0
+    out += weight * np.real(fk_zf[:, k, :] * np.exp(-1j * 2.0 * np.pi * k * frac))
   return out
 
 
@@ -253,27 +254,35 @@ def gk_rz(ctx, **kwargs):
   # Field cell-center coordinates (from the field's own DG grid).
   fine_grid, _ = _interp(first_data)
   xc, yc, zc = _centers(fine_grid)
-  Nz = zc.size
+  Nx, Ny, Nz = xc.size, yc.size, zc.size
 
   verb_print(ctx, "3D data: projecting onto phi = %g rad using geometry %s"
                   % (phi_tor, geo_path))
   gx_gy_gz, majorR, vertZ, phi = geo_reader(geo_path)
+  if phi is None:
+    raise click.ClickException(
+      "The geometry file has no toroidal-angle component; cannot project 3D data.")
   vertZ = vertZ + kwargs["z_axis"]
   gx, gy, gz = gx_gy_gz
 
+  # Physical toroidal angle on the field grid, made continuous for interpolation.
+  phi = np.unwrap(np.unwrap(np.unwrap(phi, axis=2), axis=1), axis=0)
+  phiF = _sample(phi, [gx, gy, gz], [xc, yc, zc])
+  # The binormal domain spans one 1/n0 toroidal sector (wedge).
+  box = np.mean(np.diff(phiF[Nx // 2, :, Nz // 2])) * Ny
+  n0 = max(1, int(round(abs(2.0 * np.pi / box))))
+  box = np.sign(box) * 2.0 * np.pi / n0
+  wind = phiF[:, 0, -1] - phiF[:, 0, 0]
+
   # Up-sampled z: edges (zf_edges) for the plotting grid, centers (zf) for the
-  # field reconstruction. The edges span the full z domain of the field grid
-  # (not just its cell centers) so the poloidal cross section closes at
-  # theta = +/-pi.
+  # field reconstruction.
   xn = fine_grid[0]
   zf_edges = np.linspace(fine_grid[2][0], fine_grid[2][-1], nz_interp * Nz + 1)
   zf = 0.5 * (zf_edges[:-1] + zf_edges[1:])
+  # Toroidal angle at the binormal origin along (x, zf), used by the phase-sum.
+  phi0_zf = np.array([np.interp(zf, zc, phiF[ix, 0, :]) for ix in range(Nx)])
 
-  # R, Z (y-independent) on the (x, z) plane. The nodes/mapc2p values live at
-  # interior points only, so extend the table to the z domain edges with the
-  # pointwise corner geometry when available (exact values at z = +/-pi, where
-  # the flux surfaces close on themselves); otherwise the boundary strip is
-  # linearly extrapolated.
+  # R, Z (y-independent) on the (x, z) plane.
   R2d, Z2d, gz_rz = majorR[:, 0, :], vertZ[:, 0, :], gz
   corn_path = prefix + "-geo_corn_nodes.gkyl" if prefix is not None else None
   if corn_path is not None and os.path.exists(corn_path):
@@ -292,16 +301,11 @@ def gk_rz(ctx, **kwargs):
   # Interpolate the geometry.
   Rrz = _sample(R2d, [gx, gz_rz], [xn, zf_edges])
   Zrz = _sample(Z2d, [gx, gz_rz], [xn, zf_edges])
-  # Make phi continuous in all three directions before interpolating.
-  phi = np.unwrap(np.unwrap(np.unwrap(phi, axis=2), axis=1), axis=0)
-  phi_grid = _sample(phi, [gx, gy, gz], [xc, yc, zf])
 
   loaded_count = 0
   for dat in data.iterator(kwargs["use"]):
     _, vals = _interp(dat)
-    # Up-sample the field in z onto the projection grid, then reconstruct at phi_tor.
-    vals_zf = PchipInterpolator(zc, vals, axis=-1, extrapolate=True)(zf)
-    proj = _binormal_project(vals_zf, phi_grid, phi_tor)
+    proj = _fft_poloidal_project(vals, zc, box, wind, phi0_zf, zf, phi_tor)
     out = GData(tag=kwargs["tag"], label=kwargs["label"], ctx=dat.ctx)
     out.push([Rrz, Zrz], proj[..., np.newaxis])
     data.add(out)
