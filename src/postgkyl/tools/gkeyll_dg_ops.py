@@ -134,6 +134,20 @@ class GkeyllDGops:
     lib.gkyl_dg_eval_at_coord_proj_release.argtypes = [c_vp]
     lib.gkyl_dg_eval_at_coord_proj_release.restype  = None
 
+    # gkyl_array_average_new(*grid, *basis, *basis_avg, *local, *local_avg,
+    #                         *local_avg_ext, *weight, *avg_dim, use_gpu) -> gkyl_array_average*
+    lib.gkyl_array_average_new.argtypes = [c_vp, c_vp, c_vp, c_vp, c_vp, c_vp, c_vp,
+                                           ctypes.POINTER(c_i), ctypes.c_bool]
+    lib.gkyl_array_average_new.restype  = c_vp
+
+    # gkyl_array_average_advance(up*, fin*, avgout*)
+    lib.gkyl_array_average_advance.argtypes = [c_vp, c_vp, c_vp]
+    lib.gkyl_array_average_advance.restype  = None
+
+    # gkyl_array_average_release(up*)
+    lib.gkyl_array_average_release.argtypes = [c_vp]
+    lib.gkyl_array_average_release.restype  = None
+
   def _gkyl_array_new_from_gdata(self, gdata):
     """
     Wrap a GData's value buffer in a gkyl_array without copying.
@@ -382,6 +396,127 @@ class GkeyllDGops:
     out.ctx["poly_order"] = int(_poly_order_tar.value)
     out.ctx["num_cdim"] = int(_cdim_tar.value)
     out.ctx["num_vdim"] = int(_ndim_tar.value - _cdim_tar.value)
+
+    return out
+
+  def average(self, avg_dirs: list, gdata, weight=None, comp_grid: bool = False) -> GData:
+    """
+    Average a DG field over the directions in avg_dirs (gkyl_array_average).
+
+    Returns a GData over the surviving dimensions. With a weight GData (same
+    dims/basis as gdata) the weighted average is computed instead. Serendipity
+    basis, poly_order <= 2 only.
+    """
+    basis_type = gdata.ctx["basis_type"]
+    if basis_type.lower() != "serendipity":
+      raise ValueError(f"average only supports the serendipity basis, got '{basis_type}'. "
+                       "gkyl_array_average provides serendipity kernels only.")
+
+    ndim       = gdata.get_num_dims()
+    poly_order = int(gdata.ctx["poly_order"])
+    if poly_order > 2:
+      raise ValueError(f"average only supports poly_order <= 2, got {poly_order}.")
+
+    if weight is not None:
+      w_basis_type = weight.ctx["basis_type"]
+      if w_basis_type.lower() != "serendipity":
+        raise ValueError(f"weight must use the serendipity basis, got '{w_basis_type}'.")
+      if weight.get_num_dims() != ndim:
+        raise ValueError(f"weight has {weight.get_num_dims()} dims but the field has {ndim}; "
+                         "they must match.")
+      if int(weight.ctx["poly_order"]) != poly_order:
+        raise ValueError(f"weight poly_order {int(weight.ctx['poly_order'])} != field "
+                         f"poly_order {poly_order}.")
+
+    avg_dirs  = sorted(set(avg_dirs))
+    if not avg_dirs or avg_dirs[0] < 0 or avg_dirs[-1] >= ndim:
+      raise ValueError(f"average dirs {avg_dirs} out of range for a {ndim}D field.")
+    keep_dirs = [d for d in range(ndim) if d not in avg_dirs]
+    ndim_tar  = len(keep_dirs)
+
+    ggrid      = gdata.get_grid()
+    grid_edges = [np.copy(ggrid[d]) for d in range(ndim)]
+    cells = [len(grid_edges[d]) - 1 for d in range(ndim)]
+    lower = [float(grid_edges[d][0])  for d in range(ndim)]
+    upper = [float(grid_edges[d][-1]) for d in range(ndim)]
+
+    # For a full average (no surviving dims), Gkeyll keeps a 1D, single-cell
+    # target following the same convention as eval_at_coord_proj.
+    ndim_red  = ndim_tar if ndim_tar > 0 else 1
+    cells_tar = [cells[d] for d in keep_dirs] if ndim_tar > 0 else [1]
+
+    # Donor grid.
+    c_lower  = (ctypes.c_double * ndim)(*lower)
+    c_upper  = (ctypes.c_double * ndim)(*upper)
+    c_cells  = (ctypes.c_int    * ndim)(*cells)
+    grid_ptr = self._lib.gkyl_rect_grid_new(ctypes.c_int(ndim), c_lower, c_upper, c_cells)
+
+    # Donor (full) range, 1-indexed.
+    c_rng_lo = (ctypes.c_int * ndim)(*([1] * ndim))
+    c_rng_up = (ctypes.c_int * ndim)(*cells)
+    rng_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim), c_rng_lo, c_rng_up)
+
+    # Target (reduced) range, 1-indexed.
+    c_rng_lo_tar = (ctypes.c_int * ndim_red)(*([1] * ndim_red))
+    c_rng_up_tar = (ctypes.c_int * ndim_red)(*cells_tar)
+    rng_tar_ptr  = self._lib.gkyl_range_new(ctypes.c_int(ndim_red), c_rng_lo_tar, c_rng_up_tar)
+
+    # Full (donor) and reduced (target) serendipity bases.
+    basis_do  = self._gkyl_basis_new_from_gdata(gdata)
+    basis_avg = self._lib.gkyl_cart_modal_serendip_new(ctypes.c_int(ndim_red),
+      ctypes.c_int(poly_order))
+    num_basis_do  = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_do))
+    num_basis_tar = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis_avg))
+
+    # Donor array.
+    arr_do, values = self._gkyl_array_new_from_gdata(gdata)
+    ncomp_raw = int(values.shape[-1])
+
+    # Optional weight array (spans the full donor range/basis). Keep _w_values
+    # alive so its numpy buffer is not collected while the kernel runs.
+    arr_w, _w_values = (None, None)
+    if weight is not None:
+      arr_w, _w_values = self._gkyl_array_new_from_gdata(weight)
+
+    # Target buffer.
+    num_phys_comps = ncomp_raw // num_basis_do
+    ncomp_tar      = num_phys_comps * num_basis_tar
+    size_tar       = int(np.prod(cells_tar))
+    tar_shape      = (*cells_tar, ncomp_tar)
+    tar_buf        = np.zeros(tar_shape, dtype=np.float64)
+    arr_tar        = self._lib.gkyl_array_new_from_buff(_GKYL_DOUBLE, ctypes.c_size_t(ncomp_tar),
+      ctypes.c_size_t(size_tar), tar_buf.ctypes.data_as(ctypes.c_void_p), )
+
+    # avg_dim flags (1 = averaged) over the full dimensionality.
+    avg_flags = [1 if d in avg_dirs else 0 for d in range(ndim)]
+    c_avg_dim = (ctypes.c_int * ndim)(*avg_flags)
+
+    # rng_tar_ptr doubles as local_avg_ext (only read to size the integrated weight).
+    updater = self._lib.gkyl_array_average_new(grid_ptr, basis_do, basis_avg,
+      rng_ptr, rng_tar_ptr, rng_tar_ptr, arr_w, c_avg_dim, ctypes.c_bool(False))
+    try:
+      self._lib.gkyl_array_average_advance(updater, arr_do, arr_tar)
+    finally:
+      self._lib.gkyl_array_average_release(updater)
+      self._lib.gkyl_cart_modal_basis_release(basis_do)
+      self._lib.gkyl_cart_modal_basis_release(basis_avg)
+      self._lib.gkyl_array_release(arr_do)
+      self._lib.gkyl_array_release(arr_tar)
+      if arr_w is not None:
+        self._lib.gkyl_array_release(arr_w)
+      self._lib.gkyl_rect_grid_release(grid_ptr)
+      self._lib.gkyl_range_release(rng_ptr)
+      self._lib.gkyl_range_release(rng_tar_ptr)
+
+    tar_grid = [ggrid[d] for d in keep_dirs] if ndim_tar > 0 else [np.array([0.0, 1.0])]
+
+    out = GData(ctx=gdata.ctx, comp_grid=comp_grid)
+    out.push(tar_grid, tar_buf)
+
+    out.ctx["basis_type"] = "serendipity"
+    out.ctx["poly_order"] = poly_order
+    out.ctx["num_cdim"]   = ndim_tar
+    out.ctx["num_vdim"]   = 0
 
     return out
 
