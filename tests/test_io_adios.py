@@ -176,3 +176,67 @@ def test_load_raises_when_neither_frame_nor_diagnostic():
   r = GkylAdiosReader(F_P1, ctx={})
   with pytest.raises(TypeError, match="neither a frame nor a diagnostic"):
     r.load()
+
+
+def test_is_compatible_false_when_adios2_not_installed(monkeypatch):
+  """``is_compatible`` must short-circuit to False (not raise) when the
+  optional ``adios2`` dependency is unavailable, regardless of the file."""
+  import postgkyl.io.gkyl_adios_reader as adios_reader_mod
+
+  monkeypatch.setattr(adios_reader_mod, "adios2", None)
+  r = GkylAdiosReader(F_P1, ctx={})
+  assert r.is_compatible() is False
+
+
+def test_module_sets_adios2_to_none_when_import_fails(monkeypatch):
+  """Exercises the ``try: import adios2 / except ImportError`` guard at
+  module scope itself -- the module must load cleanly (not raise) and bind
+  ``adios2 = None`` when the optional dependency isn't importable."""
+  import builtins
+  import postgkyl.io.gkyl_adios_reader as adios_reader_mod
+
+  real_import = builtins.__import__
+
+  def blocking_import(name, *args, **kwargs):
+    if name == "adios2":
+      raise ImportError("simulated: adios2 is not installed")
+    return real_import(name, *args, **kwargs)
+
+  monkeypatch.setattr(builtins, "__import__", blocking_import)
+  try:
+    importlib.reload(adios_reader_mod)
+    assert adios_reader_mod.adios2 is None
+    r = adios_reader_mod.GkylAdiosReader(F_P1, ctx={})
+    assert r.is_compatible() is False
+  finally:
+    # Restore the real binding regardless of the patched import above --
+    # sys.modules keeps this reloaded module object, so a later test's
+    # `import postgkyl.io.gkyl_adios_reader` would otherwise still see
+    # `adios2 is None`.
+    monkeypatch.setattr(builtins, "__import__", real_import)
+    importlib.reload(adios_reader_mod)
+
+
+def test_create_offset_count_raises_for_non_int_slice_axis_selector():
+  """``idx_parser`` returns a tuple for a comma-separated selector string --
+  neither an int nor a slice -- which ``_create_offset_count`` must reject."""
+  r = GkylAdiosReader(F_P1, ctx={})
+  grid = [np.linspace(0, 1, 5)]
+  num_elems = np.array([4, 8], dtype=np.int32)
+  with pytest.raises(TypeError, match="'z' is neither number or slice"):
+    r._create_offset_count(num_elems, ("0,1", None), None, grid)
+
+
+def test_create_offset_count_handles_slice_comp_selector():
+  r = GkylAdiosReader(F_P1, ctx={})
+  num_elems = np.array([4, 8], dtype=np.int32)
+  offset, count = r._create_offset_count(num_elems, (None, None), "0:2", None)
+  assert offset[-1] == 0
+  assert count[-1] == 2
+
+
+def test_create_offset_count_raises_for_non_int_slice_comp_selector():
+  r = GkylAdiosReader(F_P1, ctx={})
+  num_elems = np.array([4, 8], dtype=np.int32)
+  with pytest.raises(TypeError, match="'comp' is neither number or slice"):
+    r._create_offset_count(num_elems, (None, None), "0,1", None)
