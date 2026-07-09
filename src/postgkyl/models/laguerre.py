@@ -46,6 +46,11 @@ def laguerre_compose(f_grid: list[np.ndarray], f_values: np.ndarray,
   # number of axes, e.g. one cannot multiply (3, 3) and (3,) arrays but can
   # multiply (3, 3) with (3, 1) or (1, 3).
   F0, F1 = F0[..., np.newaxis], F1[..., np.newaxis]
+  # T_m gains two new axes here (F0/F1 gain only one above), one deeper than
+  # needed to broadcast against vperp_3D — an extra, constant-along-itself
+  # trailing axis leaks into the returned array's shape. Preserved verbatim
+  # from src_bak/postgkyl/tools/laguerre_compose.py; pinned by
+  # tests/test_models_laguerre.py.
   T_m = T_m[..., np.newaxis, np.newaxis]
 
   # Hardcoded for l=0, n=0,1 in

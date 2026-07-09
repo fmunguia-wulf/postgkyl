@@ -31,8 +31,6 @@ def transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
   v_dim = len(f_grid) - c_dim
   out_grid = np.meshgrid(*f_grid, indexing="ij")
 
-  # There might be a better way to do this but hopefully such hardcoding
-  # is ok in this instance -- PC
   if c_dim == 1:
     for v_idx in range(v_dim):
       nx = f_grid[0].shape[0]
@@ -48,7 +46,7 @@ def transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
   elif c_dim == 2:
     for v_idx in range(v_dim):
       nx = f_grid[0].shape[0]
-      ny = f_grid[0].shape[1]
+      ny = f_grid[1].shape[0]
 
       ext_u = np.zeros((nx, ny))
       ext_u[:-1, :-1] += u_values[..., v_idx]
@@ -62,8 +60,8 @@ def transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
   else:
     for v_idx in range(v_dim):
       nx = f_grid[0].shape[0]
-      ny = f_grid[0].shape[1]
-      nz = f_grid[0].shape[2]
+      ny = f_grid[1].shape[0]
+      nz = f_grid[2].shape[0]
 
       ext_u = np.zeros((nx, ny, nz))
       ext_u[:-1, :-1, :-1] += u_values[..., v_idx]
