@@ -14,10 +14,24 @@ import os
 import re
 from typing import Literal
 
+import msgpack
 import numpy as np
 import pyvista as pv
 
 from postgkyl.numerics import nodal_to_cell_centered_grid
+
+# ctx keys that are either structural (already carried by the binary header
+# itself, e.g. cells/lower/upper) or postgkyl's own session-only bookkeeping
+# (recomputed by the reader from the meta below) -- never part of the
+# msgpack meta blob Gkeyll writes.
+_INTERNAL_CTX_KEYS = frozenset({
+    "cells", "lower", "upper", "num_comps", "num_dims", "grid_type",
+    "is_modal", "representation", "num_quad", "interpolated", "var_names",
+})
+
+# ctx uses postgkyl's snake_case names; Gkeyll's own meta blob (and anything
+# else that reads the file) expects the original camelCase keys.
+_CTX_TO_META_KEY = {"poly_order": "polyOrder", "basis_type": "basisType"}
 
 
 def write(data, out_name: str = "",
@@ -50,7 +64,8 @@ def write(data, out_name: str = "",
   values = data.values
 
   if extension == "gkyl":
-    _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values)
+    ctx = getattr(data, "ctx", {}) or {}
+    _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx)
   elif extension == "npy":
     np.save(out_name, np.asarray(values).squeeze())
   elif extension == "txt":
@@ -63,14 +78,44 @@ def write(data, out_name: str = "",
   return out_name
 
 
-def _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values) -> None:
+def _build_meta(ctx: dict) -> dict:
+  """Translate ``ctx`` back into the msgpack meta blob Gkeyll itself writes
+  (poly order, basis type, physical params, time/frame stamps, ...) --
+  everything except the structural/session-only keys in
+  ``_INTERNAL_CTX_KEYS``."""
+  meta = {}
+  for key, val in ctx.items():
+    if key in _INTERNAL_CTX_KEYS:
+      continue
+    # end
+    meta[_CTX_TO_META_KEY.get(key, key)] = _to_msgpack_safe(val)
+  # end
+  return meta
+
+
+def _to_msgpack_safe(val):
+  if isinstance(val, np.generic):
+    return val.item()
+  # end
+  if isinstance(val, np.ndarray):
+    return val.tolist()
+  # end
+  return val
+
+
+def _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx) -> None:
   dti = np.dtype("i8")
   dtf = np.dtype("f8")
-  with open(out_name, "w", encoding="utf-8") as fh:
+  meta = _build_meta(ctx)
+  packed = msgpack.packb(meta, use_bin_type=True) if meta else b""
+  with open(out_name, "wb") as fh:
     np.array([103, 107, 121, 108, 48], dtype=np.dtype("b")).tofile(fh, sep="")  # 'gkyl0'
     np.array([1], dtype=dti).tofile(fh, sep="")              # version 1
     np.array([1], dtype=dti).tofile(fh, sep="")              # file type 1 (field)
-    np.array([0], dtype=dti).tofile(fh, sep="")              # meta size
+    np.array([len(packed)], dtype=dti).tofile(fh, sep="")    # meta size
+    if packed:
+      fh.write(packed)
+    # end
     np.array([2], dtype=dti).tofile(fh, sep="")              # real type (f8)
     np.array([num_dims], dtype=dti).tofile(fh, sep="")
     np.array(num_cells, dtype=dti).tofile(fh, sep="")

@@ -140,6 +140,78 @@ def test_write_txt_multidim_computes_row_major_strides(tmp_path):
   assert len(lines) == int(np.prod(b.num_cells))
 
 
+# --------------------------------------------------------- writer / metadata
+def test_write_gkyl_roundtrips_metadata_through_meta_blob(tmp_path):
+  """DG poly order/basis type, physical params, and time/frame stamps read
+  off ``F1`` must survive a write() -> reload() round trip, not just the
+  raw field values."""
+  a = pg.load(F1)
+  out = a.write(str(tmp_path / "roundtrip.gkyl"), extension="gkyl")
+
+  reloaded = GkylReader(out, ctx={})
+  reloaded.preload()
+
+  for key in ("poly_order", "basis_type", "time", "frame",
+      "changeset", "builddate", "geometry_type", "Description"):
+    assert key in reloaded.ctx, f"{key!r} missing after round trip"
+    assert reloaded.ctx[key] == a.ctx[key]
+  # end
+
+
+def test_write_gkyl_roundtrips_custom_ctx_keys(tmp_path):
+  """Any ctx key that isn't structural/session-only (not just the keys
+  postgkyl special-cases) must be preserved verbatim."""
+  a = pg.load(F1).interp().sel(comp=0)
+  a.ctx["charge"] = -1.0
+  a.ctx["mass"] = 1837.0
+  out = a.write(str(tmp_path / "custom_meta.gkyl"), extension="gkyl")
+
+  reloaded = GkylReader(out, ctx={})
+  reloaded.preload()
+  assert reloaded.ctx["charge"] == -1.0
+  assert reloaded.ctx["mass"] == 1837.0
+
+
+def test_write_gkyl_with_no_extra_ctx_writes_zero_meta_size(tmp_path):
+  """A dataset whose ctx carries only structural/session keys must produce
+  the same zero-length meta blob the writer always emitted -- no spurious
+  meta bytes for a dataset with nothing extra to say."""
+  out_name = str(tmp_path / "no_meta.gkyl")
+  writer._write_gkyl(out_name, num_dims=1, num_comps=1, num_cells=[4],
+      lo=[0.0], up=[4.0], values=np.arange(4, dtype=np.float64),
+      ctx={"cells": np.array([4]), "lower": np.array([0.0]),
+          "upper": np.array([4.0]), "grid_type": "uniform"})
+
+  meta_size = np.fromfile(out_name, dtype=np.dtype("i8"), count=1, offset=21)[0]
+  assert meta_size == 0
+
+  reloaded = GkylReader(out_name, ctx={})
+  reloaded.preload()
+  np.testing.assert_allclose(reloaded.cells, [4])
+
+
+def test_build_meta_excludes_internal_keys_and_renames_dg_fields():
+  ctx = {
+      "cells": np.array([4]), "lower": np.array([0.0]), "upper": np.array([4.0]),
+      "num_comps": 1, "num_dims": 1, "grid_type": "uniform", "is_modal": True,
+      "representation": "modal", "num_quad": 3, "interpolated": True,
+      "var_names": ["f"],
+      "poly_order": 2, "basis_type": "serendipity", "time": 0.5, "frame": 3,
+  }
+  meta = writer._build_meta(ctx)
+  assert meta == {"polyOrder": 2, "basisType": "serendipity",
+      "time": 0.5, "frame": 3}
+
+
+def test_to_msgpack_safe_converts_numpy_scalars_and_arrays():
+  assert writer._to_msgpack_safe(np.float64(1.5)) == 1.5
+  assert isinstance(writer._to_msgpack_safe(np.float64(1.5)), float)
+  assert writer._to_msgpack_safe(np.int64(3)) == 3
+  assert isinstance(writer._to_msgpack_safe(np.int64(3)), int)
+  assert writer._to_msgpack_safe(np.array([1.0, 2.0])) == [1.0, 2.0]
+  assert writer._to_msgpack_safe("serendipity") == "serendipity"
+
+
 # --------------------------------------------------------------- gkyl_reader
 def test_is_compatible_false_for_wrong_magic_and_missing_file(tmp_path):
   bogus = tmp_path / "bad.gkyl"
