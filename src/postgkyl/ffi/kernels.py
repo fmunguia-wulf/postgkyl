@@ -111,6 +111,113 @@ def weak_inv(basis_type: str, ndim: int, poly_order: int,
   return out
 
 
+# -------------------------------------------------- conf-space x phase-space
+# gkyl_dg_mul_conf_phase_op_range picks its kernel from the PHASE basis type
+# alone (choose_mul_conf_phase_kern in gkyl_dg_bin_ops_priv.h); for
+# hybrid/gkhybrid the conf poly_order it reads is unused by that branch, so
+# the only real requirement (Gkeyll's own PKPM/GK convention) is a
+# serendipity conf basis. Every (cdim, vdim) split our own basis.py
+# convention (_HYBRID_CDIM_VDIM) derives from a valid hybrid/gkhybrid ndim
+# already has a populated cross_mul_list entry -- verified by hand against
+# hyb_cross_mul_list/gkhyb_cross_mul_list, so no extra table is needed there.
+# serendipity/tensor phase bases have a genuinely holey (cdim, pdim,
+# poly_order) kernel table -- unlike same-basis weak_mul, most combinations
+# a valid same-basis object could have are simply absent (NULL function
+# pointer, no null check in gkyl_dg_mul_conf_phase_op_range) -- so those are
+# guarded explicitly below, transcribed from ser_cross_mul_list /
+# ten_cross_mul_list in gkyl_dg_bin_ops_priv.h.
+_CROSS_MUL_SER = {
+    2: {1: {1, 2, 3}},
+    3: {1: {1, 2, 3}, 2: {1, 2, 3}},
+    4: {1: {1, 2, 3}, 2: {1, 2, 3}, 3: {1, 2, 3}},
+    5: {2: {1, 2}, 3: {1, 2}},
+    6: {3: {1}},
+}
+_CROSS_MUL_TEN = {
+    2: {1: {1, 2}},
+    3: {1: {1, 2}, 2: {1, 2}},
+    4: {1: {1, 2}, 2: {1, 2}, 3: {1}},
+    5: {2: {1, 2}, 3: {1}},
+    6: {3: {1}},
+}
+_CROSS_MUL_TABLES = {"serendipity": _CROSS_MUL_SER, "tensor": _CROSS_MUL_TEN}
+
+
+def _check_mul_conf_phase(conf_basis_type: str, phase_basis_type: str,
+    conf_ndim: int, phase_ndim: int, poly_order: int):
+  conf_basis_type = conf_basis_type.lower()
+  phase_basis_type = phase_basis_type.lower()
+  if phase_ndim <= conf_ndim:
+    raise ValueError(
+        f"phase_ndim ({phase_ndim}) must exceed conf_ndim ({conf_ndim})")
+  if phase_basis_type in ("hybrid", "gkhybrid"):
+    if conf_basis_type != "serendipity":
+      raise NotImplementedError(
+          "Gkeyll pairs a hybrid/gkhybrid phase basis with a serendipity "
+          f"conf basis only (its own PKPM/GK convention), not "
+          f"'{conf_basis_type}'")
+    return
+  if phase_basis_type in ("serendipity", "tensor"):
+    if conf_basis_type != phase_basis_type:
+      raise NotImplementedError(
+          "gkyl_dg_mul_conf_phase_op_range picks its kernel from the phase "
+          f"basis type alone ('{phase_basis_type}'); pair it with a conf "
+          f"basis of the same type, not '{conf_basis_type}'")
+    valid = _CROSS_MUL_TABLES[phase_basis_type].get(phase_ndim, {}).get(
+        conf_ndim)
+    if not valid or poly_order not in valid:
+      raise NotImplementedError(
+          f"Gkeyll has no {phase_basis_type} conf*phase cross-mul kernel "
+          f"for conf_ndim={conf_ndim}, phase_ndim={phase_ndim}, "
+          f"poly_order={poly_order}")
+    return
+  raise NotImplementedError(
+      "Gkeyll's conf*phase cross-mul supports serendipity, tensor, hybrid, "
+      f"gkhybrid phase bases, not '{phase_basis_type}'")
+
+
+def weak_mul_conf_phase(conf_basis_type: str, conf_ndim: int,
+    phase_basis_type: str, phase_ndim: int, poly_order: int,
+    conf_cells, phase_cells, cop: GkylArray, pop: GkylArray) -> GkylArray:
+  """Conf-space x phase-space weak product ``cop * pop`` via
+  ``gkyl_dg_mul_conf_phase_op_range`` -- e.g. a density (conf-space) times a
+  distribution function (phase-space) in PKPM/gyrokinetic post-processing.
+
+  Unlike :func:`weak_mul`, this is single-field only on both sides (the
+  underlying kernel takes no field-index arguments): ``cop.ncomp`` must
+  equal the conf basis's ``num_basis`` and ``pop.ncomp`` the phase basis's.
+
+  ``conf_cells``/``phase_cells`` are each grid's per-dimension cell counts
+  (e.g. ``rio``'s ``grid["cells"]``) -- Gkeyll maps each phase cell to its
+  conf cell by dropping the velocity-space indices, so both cell counts are
+  needed to build matching index ranges; ``conf_cells`` must equal the
+  leading ``conf_ndim`` entries of ``phase_cells``.
+
+  The dispatch is asymmetric: Gkeyll chooses the kernel from the PHASE
+  basis type alone, so ``conf_basis_type`` must be ``"serendipity"`` when
+  pairing with hybrid/gkhybrid, or match ``phase_basis_type`` exactly for
+  serendipity/tensor.
+  """
+  _check_mul_conf_phase(conf_basis_type, phase_basis_type, conf_ndim,
+      phase_ndim, poly_order)
+  cbasis = get_basis(conf_basis_type, conf_ndim, poly_order)
+  pbasis = get_basis(phase_basis_type, phase_ndim, poly_order)
+  if cop.ncomp != cbasis.num_basis:
+    raise ValueError(
+        f"cop.ncomp ({cop.ncomp}) must equal the conf basis's num_basis "
+        f"({cbasis.num_basis}); mul_conf_phase is single-field only")
+  if pop.ncomp != pbasis.num_basis:
+    raise ValueError(
+        f"pop.ncomp ({pop.ncomp}) must equal the phase basis's num_basis "
+        f"({pbasis.num_basis}); mul_conf_phase is single-field only")
+  conf_cells = np.asarray(conf_cells, dtype=np.int32)
+  phase_cells = np.asarray(phase_cells, dtype=np.int32)
+  out = GkylArray.alloc(pop.ncomp, pop.size)
+  _lib.require().dg_mul_conf_phase(cbasis._cap, pbasis._cap, out._cap,
+      cop._cap, pop._cap, conf_cells, phase_cells)
+  return out
+
+
 # ------------------------------------------------------- linear coefficient ops
 def lincomb(ca: float, a: GkylArray, cb: float, b: GkylArray) -> GkylArray:
   """``ca*a + cb*b`` on the DG coefficients (gkyl_array_set + accumulate)."""

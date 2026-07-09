@@ -17,6 +17,7 @@ from postgkyl.ffi.array import GkylArray
 weak_mul = ffi.kernels.weak_mul
 weak_div = ffi.kernels.weak_div
 weak_inv = ffi.kernels.weak_inv
+weak_mul_conf_phase = ffi.kernels.weak_mul_conf_phase
 lincomb = ffi.kernels.lincomb
 scale = ffi.kernels.scale
 integrate = ffi.kernels.integrate

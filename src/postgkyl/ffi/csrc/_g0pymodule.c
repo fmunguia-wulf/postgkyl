@@ -433,6 +433,47 @@ py_dg_inv(PyObject *self, PyObject *args)
   Py_RETURN_NONE;
 }
 
+static PyObject *
+py_dg_mul_conf_phase(PyObject *self, PyObject *args)
+{
+  PyObject *cbcap, *pbcap, *poutcap, *copcap, *popcap, *ccellsobj, *pcellsobj;
+  if (!PyArg_ParseTuple(args, "OOOOOOO", &cbcap, &pbcap, &poutcap, &copcap,
+          &popcap, &ccellsobj, &pcellsobj))
+    return NULL;
+  pg0_basis *cbasis = basis_arg(cbcap), *pbasis = basis_arg(pbcap);
+  pg0_array *pout = array_arg(poutcap), *cop = array_arg(copcap),
+            *pop = array_arg(popcap);
+  if (!cbasis || !pbasis || !pout || !cop || !pop)
+    return NULL;
+  PyArrayObject *ccells = (PyArrayObject *)PyArray_FROM_OTF(
+      ccellsobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *pcells = (PyArrayObject *)PyArray_FROM_OTF(
+      pcellsobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  if (!ccells || !pcells) {
+    Py_XDECREF(ccells);
+    Py_XDECREF(pcells);
+    return NULL;
+  }
+  if (PyArray_SIZE(ccells) != pg0_basis_ndim(cbasis) ||
+      PyArray_SIZE(pcells) != pg0_basis_ndim(pbasis)) {
+    Py_DECREF(ccells);
+    Py_DECREF(pcells);
+    PyErr_SetString(PyExc_ValueError,
+        "mul_conf_phase: cells arrays must match each basis's ndim");
+    return NULL;
+  }
+  int status = pg0_dg_mul_conf_phase(cbasis, pbasis, pout, cop, pop,
+      PyArray_DATA(ccells), PyArray_DATA(pcells));
+  Py_DECREF(ccells);
+  Py_DECREF(pcells);
+  if (status != 0) {
+    PyErr_SetString(PyExc_ValueError,
+        "mul_conf_phase: operand shapes incompatible with the bases/cells");
+    return NULL;
+  }
+  Py_RETURN_NONE;
+}
+
 /* --------------------------------------- linear coefficient ops / reduce */
 static PyObject *
 py_array_set(PyObject *self, PyObject *args)
@@ -744,6 +785,8 @@ static PyMethodDef g0py_methods[] = {
   { "dg_mul", py_dg_mul, METH_VARARGS, "weak product (per field)" },
   { "dg_div", py_dg_div, METH_VARARGS, "weak quotient (per field)" },
   { "dg_inv", py_dg_inv, METH_VARARGS, "weak reciprocal (per field)" },
+  { "dg_mul_conf_phase", py_dg_mul_conf_phase, METH_VARARGS,
+    "conf-space x phase-space weak product (single field)" },
   { "array_set", py_array_set, METH_VARARGS, "out = c*a" },
   { "array_accumulate", py_array_accumulate, METH_VARARGS, "out += c*a" },
   { "array_scale", py_array_scale, METH_VARARGS, "a *= c (in place)" },

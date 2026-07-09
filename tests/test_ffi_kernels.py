@@ -123,6 +123,111 @@ def test_weak_inv_refuses_ndim_above_3(ndim):
     k.weak_inv("serendipity", ndim, 1, a)
 
 
+# --------------------------------------------------- conf-space x phase-space
+def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_hybrid():
+  """Multiplying by a spatially-uniform conf field of true value 1 can never
+  raise polynomial degree, so it's an EXACT identity on the phase
+  coefficients regardless of what the weak cross-mul kernel computes --
+  this is the 1x1v PKPM pairing (serendipity conf x hybrid phase)."""
+  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
+  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+  conf_cells, phase_cells = [3], [3, 4]
+  cop_coeffs = np.zeros((3, cbasis.num_basis))
+  cop_coeffs[:, 0] = np.sqrt(2.0)  # constant field value 1 (cdim=1)
+  cop = GkylArray.from_numpy(cop_coeffs)
+  rng = np.random.default_rng(3)
+  pop_coeffs = rng.normal(size=(12, pbasis.num_basis))
+  pop = GkylArray.from_numpy(pop_coeffs)
+  out = k.weak_mul_conf_phase("serendipity", 1, "hybrid", 2, 1, conf_cells,
+      phase_cells, cop, pop)
+  np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+
+
+def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_gkhybrid():
+  """Same identity check for the 1x2v gyrokinetic pairing (serendipity conf
+  x gkhybrid phase, cdim=1 vdim=2)."""
+  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
+  pbasis = ffi.basis.get_basis("gkhybrid", 3, 1)
+  conf_cells, phase_cells = [4], [4, 3, 2]
+  cop_coeffs = np.zeros((4, cbasis.num_basis))
+  cop_coeffs[:, 0] = np.sqrt(2.0)
+  cop = GkylArray.from_numpy(cop_coeffs)
+  rng = np.random.default_rng(5)
+  pop_coeffs = rng.normal(size=(24, pbasis.num_basis))
+  pop = GkylArray.from_numpy(pop_coeffs)
+  out = k.weak_mul_conf_phase("serendipity", 1, "gkhybrid", 3, 1, conf_cells,
+      phase_cells, cop, pop)
+  np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+
+
+def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_serendipity():
+  """Same-family serendipity conf x serendipity phase also goes through
+  gkyl_dg_mul_conf_phase_op_range (not the same-basis gkyl_dg_mul_op path,
+  since cdim != pdim), so it needs its own identity check."""
+  cbasis = ffi.basis.get_basis("serendipity", 1, 2)
+  pbasis = ffi.basis.get_basis("serendipity", 2, 2)
+  conf_cells, phase_cells = [3], [3, 5]
+  cop_coeffs = np.zeros((3, cbasis.num_basis))
+  cop_coeffs[:, 0] = np.sqrt(2.0)
+  cop = GkylArray.from_numpy(cop_coeffs)
+  rng = np.random.default_rng(9)
+  pop_coeffs = rng.normal(size=(15, pbasis.num_basis))
+  pop = GkylArray.from_numpy(pop_coeffs)
+  out = k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 2,
+      conf_cells, phase_cells, cop, pop)
+  np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+
+
+def test_mul_conf_phase_rejects_ncomp_mismatch():
+  cop = GkylArray.alloc(3, 3)  # hybrid conf num_basis is 2, not 3
+  pop = GkylArray.alloc(6, 12)
+  with pytest.raises(ValueError, match="single-field only"):
+    k.weak_mul_conf_phase("serendipity", 1, "hybrid", 2, 1, [3], [3, 4],
+        cop, pop)
+
+
+def test_mul_conf_phase_rejects_non_serendipity_conf_for_hybrid():
+  cop = GkylArray.alloc(2, 3)
+  pop = GkylArray.alloc(6, 12)
+  with pytest.raises(NotImplementedError, match="serendipity conf basis"):
+    k.weak_mul_conf_phase("tensor", 1, "hybrid", 2, 1, [3], [3, 4], cop, pop)
+
+
+def test_mul_conf_phase_rejects_mismatched_ser_ten_families():
+  cop = GkylArray.alloc(2, 3)
+  pop = GkylArray.alloc(4, 15)
+  with pytest.raises(NotImplementedError, match="phase basis type alone"):
+    k.weak_mul_conf_phase("tensor", 1, "serendipity", 2, 1, [3], [3, 5],
+        cop, pop)
+
+
+def test_mul_conf_phase_rejects_kernel_table_gap():
+  """pdim=5, cdim=1 has no serendipity cross-mul kernel at all (NULL in
+  ser_cross_mul_list) -- must raise cleanly, not call through a NULL
+  function pointer."""
+  cop = GkylArray.alloc(2, 2)
+  pop = GkylArray.alloc(32, 32)
+  with pytest.raises(NotImplementedError, match="no serendipity conf\\*phase"):
+    k.weak_mul_conf_phase("serendipity", 1, "serendipity", 5, 1,
+        [2], [2, 2, 2, 2, 2], cop, pop)
+
+
+def test_mul_conf_phase_rejects_cells_array_size_mismatch():
+  cop = GkylArray.alloc(2, 3)
+  pop = GkylArray.alloc(4, 20)  # cells [3, 5] imply size 15, not 20
+  with pytest.raises(ValueError, match="incompatible"):
+    k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 1, [3], [3, 5],
+        cop, pop)
+
+
+def test_mul_conf_phase_rejects_phase_ndim_not_exceeding_conf_ndim():
+  cop = GkylArray.alloc(4, 4)
+  pop = GkylArray.alloc(4, 4)
+  with pytest.raises(ValueError, match="must exceed"):
+    k.weak_mul_conf_phase("serendipity", 2, "serendipity", 2, 1, [2, 2],
+        [2, 2], cop, pop)
+
+
 # ---------------------------------------------------------- coefficient ops
 def test_lincomb_matches_numpy():
   rng = np.random.default_rng(1)
