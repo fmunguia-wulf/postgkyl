@@ -2,8 +2,13 @@
 
 A Gkeyll field stores only its *values*; at read time the grid is built
 uniformly from the stored bounds (corrected for ghost cells). Coordinate
-(computational-to-physical) mappings are applied afterwards by the ``map`` verb
-(not part of this minimal port).
+(computational-to-physical) mappings are *not* applied while reading -- they
+are applied afterwards, on already-loaded data, by the ``map`` verb (not yet
+implemented; ``ops/map.py`` is a later migration layer).
+
+``uniform_grid``/``adjust_for_ghost_cells`` build the read-time uniform grid;
+``c2p_grid`` splits a mapping field's packed node coordinates into a per-
+dimension grid and will be used by the DG machinery behind the ``map`` verb.
 """
 
 from __future__ import annotations
@@ -39,3 +44,15 @@ def uniform_grid(lower: np.ndarray, upper: np.ndarray,
   """A uniform nodal grid: ``cells[d] + 1`` edges per dimension."""
   return [np.linspace(lower[d], upper[d], cells[d] + 1)
       for d in range(len(cells))]
+
+
+def c2p_grid(nodes: np.ndarray, num_dims: int) -> list:
+  """Split a ``mapc2p`` node array into a per-dimension block of coefficients.
+
+  The mapping file packs every dimension's node coordinates on the last axis;
+  this slices that axis into ``num_dims`` equal blocks.
+  """
+  num_comps = nodes.shape[-1]
+  num_coeff = num_comps / num_dims
+  return [nodes[..., int(d * num_coeff):int((d + 1) * num_coeff)]
+      for d in range(num_dims)]

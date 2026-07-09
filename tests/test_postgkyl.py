@@ -391,7 +391,13 @@ _ALLOWED = {
     "ffi":    set(),                                # the foreign floor (only ctypes owner)
     "numerics": set(),
     "dg":     {"ffi"},                              # interp bridge + modal ops -> kernels
-    "io":     {"ffi"},                              # C-native reader -> gkyl_array_rio
+    "io":     {"ffi", "numerics"},                  # C-native reader -> gkyl_array_rio;
+                                                      # readers/writer reuse the pure-math
+                                                      # leaf (idx_parser for ADIOS partial-load
+                                                      # slicing, nodal_to_cell_centered_grid for
+                                                      # the vtk writer) instead of duplicating
+                                                      # it -- numerics has 0 internal imports,
+                                                      # so this cannot create a cycle (layer 04-io)
     "core":   {"io", "ffi"},                        # container holds a GkylArray backend
     "render": {"core", "numerics"},
     "ops":    {"core", "dg", "numerics", "render"},

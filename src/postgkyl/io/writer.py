@@ -3,26 +3,33 @@
 A leaf module: it consumes the read-only *surface* of a dataset (the same
 properties the readers fill) and never imports ``core``/``ops``. Supports the
 Gkeyll binary ``.gkyl`` format (round-trips with :class:`GkylReader`), plain
-ASCII ``.txt``, and NumPy ``.npy``.
+ASCII ``.txt``, NumPy ``.npy``, and legacy VTK structured-grid ``.vtk``
+(for external 3-D/VR viewers such as ParaView).
 """
 
 from __future__ import annotations
 
+import json
+import os
+import re
 from typing import Literal
 
 import numpy as np
+import pyvista as pv
+
+from postgkyl.numerics import nodal_to_cell_centered_grid
 
 
 def write(data, out_name: str = "",
-    extension: Literal["gkyl", "txt", "npy"] = "gkyl",
+    extension: Literal["gkyl", "txt", "npy", "vtk"] = "gkyl",
     var_name: str = "CartGridField") -> str:
   """Write ``data`` to ``out_name`` in the requested ``extension``.
 
   Args:
     data: a dataset exposing ``num_dims``/``num_comps``/``num_cells``/
-      ``bounds``/``values``/``grid`` (a ``GDataState`` or subclass).
+      ``bounds``/``values``/``grid``/``ctx`` (a ``GDataState`` or subclass).
     out_name: output path; when empty a name is derived from the source file.
-    extension: one of ``"gkyl"`` (default), ``"txt"``, ``"npy"``.
+    extension: one of ``"gkyl"`` (default), ``"txt"``, ``"npy"``, ``"vtk"``.
     var_name: unused placeholder kept for interface symmetry.
 
   Returns:
@@ -48,6 +55,8 @@ def write(data, out_name: str = "",
     np.save(out_name, np.asarray(values).squeeze())
   elif extension == "txt":
     _write_txt(out_name, data, num_dims, num_comps, num_cells, values)
+  elif extension == "vtk":
+    _write_vtk(out_name, data, num_dims, num_cells, values)
   else:
     raise ValueError(f"Unsupported write extension '{extension}'")
   # end
@@ -91,3 +100,83 @@ def _write_txt(out_name, data, num_dims, num_comps, num_cells, values) -> None:
       comps = [f"{values[tuple(idxs)][c]:.15e}" for c in range(num_comps)]
       fh.write(", ".join(cells + comps) + "\n")
     # end
+
+
+def _write_vtk(out_name, data, num_dims, num_cells, values) -> None:
+  """Write a legacy VTK structured-grid file via PyVista.
+
+  1-D/2-D fields are written as a height-mapped surface (the field value
+  becomes the missing coordinate, e.g. z for a 1-D line); 3-D fields are
+  written as a volume with the field stored as point data ``"f_raw"``.
+  """
+  if num_dims not in (1, 2, 3):
+    raise ValueError(f"VTK output supports 1-3 dimensions, got {num_dims}")
+  # end
+
+  n_grid = nodal_to_cell_centered_grid(data.grid, num_cells, meshgrid=True)
+  fval = np.asarray(values).squeeze()
+  if num_dims == 1:
+    x = n_grid[0]
+    y = np.zeros_like(x)
+    z = fval
+  elif num_dims == 2:
+    x, y = n_grid
+    z = fval
+  else:
+    x, y, z = n_grid
+  # end
+
+  grid3d = pv.StructuredGrid(x, y, z)
+  grid3d["f_raw"] = fval.ravel(order="F")
+  grid3d.save(out_name)
+  _update_vtk_series_file(data, out_name)
+
+
+def _update_vtk_series_file(data, out_name: str) -> None:
+  """Create or update ParaView ``.series`` metadata for VTK file-series
+  time playback: each write of a frame-numbered file appends (or refreshes)
+  its entry, keyed by the series' shared stem."""
+  out_dir = os.path.dirname(out_name)
+  out_file = os.path.basename(out_name)
+  stem, ext = os.path.splitext(out_file)
+  match = re.match(r"^(.*?)(?:[_-]?(\d+))$", stem)
+  if match and match.group(1):
+    series_stem = match.group(1).rstrip("_-") or stem
+  else:
+    series_stem = stem
+  # end
+
+  series_path = os.path.join(out_dir, f"{series_stem}{ext}.series")
+  time_value = float(data.ctx.get("time", data.ctx.get("frame", 0.0)))
+  rel_file = os.path.relpath(out_name, out_dir if out_dir else ".")
+
+  series_data = {"file-series-version": "1.0", "files": []}
+  if os.path.exists(series_path):
+    try:
+      with open(series_path, "r", encoding="utf-8") as fh:
+        loaded = json.load(fh)
+      if isinstance(loaded, dict) and isinstance(loaded.get("files"), list):
+        series_data = loaded
+        series_data.setdefault("file-series-version", "1.0")
+      # end
+    except (OSError, json.JSONDecodeError):
+      pass
+    # end
+  # end
+
+  replaced = False
+  for entry in series_data["files"]:
+    if entry.get("name") == rel_file:
+      entry["time"] = time_value
+      replaced = True
+      break
+    # end
+  # end
+  if not replaced:
+    series_data["files"].append({"name": rel_file, "time": time_value})
+  # end
+
+  series_data["files"].sort(key=lambda x: (float(x.get("time", 0.0)), x.get("name", "")))
+  with open(series_path, "w", encoding="utf-8") as fh:
+    json.dump(series_data, fh, indent=2)
+    fh.write("\n")
