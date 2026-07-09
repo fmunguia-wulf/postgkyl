@@ -17,7 +17,10 @@ contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
 - ``rio``      file loading through ``gkyl_array_rio``
 - ``kernels``  weak multiply/divide/inverse, coefficient lin-combs, reduce,
                integrate
-- ``rep``      modal · nodal · quad representation changes
+
+Representation changes (modal · nodal · quad) are orchestration over this
+floor's public functions, not floor primitives themselves — they live in
+``dg/rep.py`` (see CLAUDE.md's "Engine layers" section).
 
 No struct layout, signature, or calling convention exists in Python: the C
 compiler checks all of it against the real ``gkyl_*.h`` headers when the shim

@@ -1,6 +1,6 @@
 """Coverage-completing tests for the leaf/engine/backend layers: numerics,
-dg, the remaining ffi corners (array/kernels/rep), and the matplotlib
-render backend.
+dg (interp/modal/rep), the remaining ffi corners (array/kernels), and the
+matplotlib render backend.
 
 Run:  PYTHONPATH=src pytest tests/test_coverage_leaf.py -v
 """
@@ -173,12 +173,12 @@ def test_weak_mul_conf_phase_rejects_pop_ncomp_mismatch():
         [3], [3, 4], cop, pop)
 
 
-# ======================================================================= ffi/rep
+# ======================================================================= dg/rep
 @needs_gkeyll
 def test_apply_per_field_rejects_ncomp_not_a_multiple():
   arr = ffi.GkylArray.alloc(3, 4)  # ncomp=3, not a multiple of num_basis=2
   with pytest.raises(ValueError, match="not a multiple"):
-    ffi.rep.modal_to_nodal("serendipity", 1, 1, arr)
+    dg.rep.modal_to_nodal("serendipity", 1, 1, arr)
 
 
 @needs_gkeyll
@@ -186,7 +186,7 @@ def test_materialize_rejects_ncomp_not_a_multiple_of_points_per_cell():
   a = pg.load(F1)
   arr = ffi.GkylArray.alloc(a.native.ncomp + 1, a.native.size)  # off by one
   with pytest.raises(ValueError, match="points/cell"):
-    ffi.rep.materialize("serendipity", 1, 1, arr, a.grid, "nodal")
+    dg.rep.materialize("serendipity", 1, 1, arr, a.grid, "nodal")
 
 
 @needs_gkeyll
@@ -197,7 +197,7 @@ def test_tensor_point_layout_rejects_a_non_tensor_lin_index_collision(monkeypatc
   check): both are real defensive checks in ``_tensor_point_layout``, but
   Gkeyll's actual basis node sets never exhibit either failure mode, so we
   drive them directly by faking ``node_coords``."""
-  from postgkyl.ffi import rep
+  from postgkyl.dg import rep
 
   duplicate_coords = np.array([[0., 0.], [0., 1.], [1., 0.], [0., 0.]])
   monkeypatch.setattr(rep.ffi_basis, "node_coords", lambda *a, **k: duplicate_coords)
@@ -207,7 +207,7 @@ def test_tensor_point_layout_rejects_a_non_tensor_lin_index_collision(monkeypatc
 
 @needs_gkeyll
 def test_tensor_point_layout_rejects_misaligned_node_coordinates(monkeypatch):
-  from postgkyl.ffi import rep
+  from postgkyl.dg import rep
 
   nan_coords = np.array([[0.0], [np.nan]])
   monkeypatch.setattr(rep.ffi_basis, "node_coords", lambda *a, **k: nan_coords)
