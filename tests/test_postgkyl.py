@@ -164,6 +164,63 @@ def test_modal_linear_ops_commute_with_interp():
   assert np.allclose(shifted, 1.0e18, rtol=1e-6)
 
 
+def _make_modal(grid, cells, basis_type, poly_order, coeffs):
+  """A bare modal GData, built in-memory rather than from a file — for
+  exercising the conf x phase cross-multiply path with grids we control."""
+  d = pg.GData()
+  d.ctx.update(basis_type=basis_type, poly_order=poly_order, is_modal=True,
+      cells=np.array(cells))
+  d.push(grid, ffi.array.GkylArray.from_numpy(coeffs))
+  return d
+
+
+@needs_gkeyll
+def test_conf_phase_mul_is_automatic_and_commutative():
+  """``conf * phase`` and ``phase * conf`` both dispatch to the cross-basis
+  gkyl_dg_mul_conf_phase_op_range path with no separate method needed — the
+  API picks the lower-dimensional operand as the conf side automatically.
+  Multiplying by a spatially-uniform conf field of true value 1 is an exact
+  identity on the phase side (no weak-projection truncation), so this is a
+  correctness check, not just a "did it run" smoke test."""
+  conf_edges = [np.linspace(0.0, 1.0, 4)]                       # 3 cells
+  phase_edges = [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)]  # 3x4
+
+  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
+  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+  cop = np.zeros((3, cbasis.num_basis))
+  cop[:, 0] = np.sqrt(2.0)                                      # value 1
+  rng = np.random.default_rng(11)
+  pop = rng.normal(size=(12, pbasis.num_basis))
+
+  conf = _make_modal(conf_edges, [3], "serendipity", 1, cop)
+  phase = _make_modal(phase_edges, [3, 4], "hybrid", 1, pop)
+
+  out1 = conf * phase
+  out2 = phase * conf
+  assert isinstance(out1, pg.GData) and out1.num_dims == 2
+  np.testing.assert_allclose(out1.values.reshape(12, 6), pop)
+  np.testing.assert_allclose(out2.values.reshape(12, 6), pop)
+
+
+@needs_gkeyll
+def test_conf_phase_mul_rejects_non_mul_ops_and_mismatched_grids():
+  conf = _make_modal([np.linspace(0.0, 1.0, 4)], [3], "serendipity", 1,
+      np.zeros((3, 2)))
+  phase = _make_modal(
+      [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)], [3, 4],
+      "hybrid", 1, np.zeros((12, 6)))
+  with pytest.raises(ValueError, match="only '\\*' is defined"):
+    conf / phase
+  with pytest.raises(ValueError, match="only '\\*' is defined"):
+    conf + phase
+
+  mismatched = _make_modal(
+      [np.linspace(0.0, 2.0, 4), np.linspace(-1.0, 1.0, 5)], [3, 4],
+      "hybrid", 1, np.zeros((12, 6)))
+  with pytest.raises(ValueError, match="not the same simulation"):
+    conf * mismatched
+
+
 def _relerr(x, y):
   x, y = np.asarray(x, float), np.asarray(y, float)
   return np.abs(x - y).max() / np.abs(y).max()

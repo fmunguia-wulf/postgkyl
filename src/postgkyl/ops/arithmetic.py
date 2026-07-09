@@ -11,6 +11,10 @@ REFACTOR_GKEYLL_FFI.md):
   combinations (``gkyl_array_set``/``accumulate``), scalar multiply is
   ``gkyl_array_scale``, scalar add shifts the mean coefficient, and integer
   powers are repeated weak multiplies. Results stay modal (gkyl-backed).
+  Two modal operands of *different* dimensionality (e.g. a conf-space density
+  times a phase-space distribution) automatically route ``*`` through
+  ``gkyl_dg_mul_conf_phase_op_range`` instead — whichever operand has fewer
+  dimensions is the conf side, independent of call order.
 - **numpy-backed operands** take the unchanged NumPy path.
 - **Mixing the domains** in one expression is an error naming the fix.
 """
@@ -89,6 +93,8 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
     raise ValueError(
         "one operand is modal (gkyl-native) and the other is interpolated; "
         "call .interp() on the modal operand to combine them.")
+  if pa.num_dims != pb.num_dims:
+    return _modal_conf_phase_mul(op, pa, pb)
   if not numerics.grids_compatible(pa.grid, pb.grid):
     raise ValueError("operands live on different grids")
   basis = _basis_of(pa)
@@ -116,6 +122,40 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
         f"operation {getattr(op, '__name__', op)} is not defined between two "
         "modal datasets; .to_nodal()/.to_quad() for pointwise math.")
   return pa._result(pa.grid, out)
+
+
+def _modal_conf_phase_mul(op, pa: GDataState, pb: GDataState):
+  """``conf * phase`` (either order): the operands have different ``num_dims``,
+  so Gkeyll's per-cell same-basis ``weak_mul`` cannot apply -- this is the
+  cross-basis ``gkyl_dg_mul_conf_phase_op_range`` path
+  (``dg.modal.weak_mul_conf_phase``), which multiplies every phase-space cell
+  by its corresponding lower-dimensional conf-space cell (e.g. a density
+  times a distribution function). Automatic: whichever operand has fewer
+  dimensions is the conf side, regardless of call order (``a * b == b * a``).
+  """
+  if op is not operator.mul:
+    raise ValueError(
+        f"operands have different dimensionality ({pa.num_dims}D vs "
+        f"{pb.num_dims}D); only '*' is defined between a lower-dimensional "
+        "conf-space field and a higher-dimensional phase-space field "
+        "(Gkeyll has no cross-basis weak divide/add).")
+  conf, phase = (pa, pb) if pa.num_dims < pb.num_dims else (pb, pa)
+  for d in (conf, phase):
+    if _rep_of(d) != "modal":
+      raise ValueError(
+          "conf-space x phase-space multiplication is defined for modal DG "
+          "coefficients only; .to_modal() first.")
+  if not numerics.grid_is_prefix(conf.grid, phase.grid):
+    raise ValueError(
+        "the lower-dimensional operand's grid is not the leading dimensions "
+        "of the higher-dimensional operand's grid; they are not the same "
+        "simulation's conf-space and phase-space grids.")
+  conf_type, conf_ndim, conf_p = _basis_of(conf)
+  phase_type, phase_ndim, _ = _basis_of(phase)
+  out = dg.modal.weak_mul_conf_phase(conf_type, conf_ndim, phase_type,
+      phase_ndim, conf_p, conf.num_cells, phase.num_cells, conf.native,
+      phase.native)
+  return phase._result(phase.grid, out)
 
 
 def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
