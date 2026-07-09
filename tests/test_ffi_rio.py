@@ -29,15 +29,14 @@ GENERATED_FILES = sorted(glob.glob(os.path.join(DATA, "generated", "*.gkyl")))
 
 pytestmark = needs_gkeyll
 
-# A non-field (dynvector) file, so the cross-check test below also exercises
-# its own "not a field file -> skip" branch, not just the field-file path.
-_NON_FIELD_FILES = []
+# A non-field (dynvector) file, used below to check that `file_type` correctly
+# excludes it from the field-file cross-check.
+_NON_FIELD_FILE = None
 if ffi.available():
   from postgkyl.ffi import rio as _rio
   _dynvec_dir = tempfile.mkdtemp()
-  _dynvec_path = os.path.join(_dynvec_dir, "not_a_field_dynvec.gkyl")
-  _rio.write_dynvec(_dynvec_path, np.array([0.0, 1.0]), np.array([[1.0], [2.0]]))
-  _NON_FIELD_FILES.append(_dynvec_path)
+  _NON_FIELD_FILE = os.path.join(_dynvec_dir, "not_a_field_dynvec.gkyl")
+  _rio.write_dynvec(_NON_FIELD_FILE, np.array([0.0, 1.0]), np.array([[1.0], [2.0]]))
 
 
 # ------------------------------------------------------ cross-check vs GkylReader
@@ -47,17 +46,14 @@ def _read_with_pure_python(path):
   return r.load()
 
 
-@pytest.mark.parametrize("path", FIELD_FILES + GENERATED_FILES + _NON_FIELD_FILES,
-    ids=os.path.basename)
+@pytest.mark.parametrize("path", FIELD_FILES + GENERATED_FILES, ids=os.path.basename)
 def test_read_field_matches_the_pure_python_reader(path):
   """The strongest test in this layer: for every fixture the C reader
   accepts, its grid/cells/coefficients must agree exactly with the
   independent pure-Python implementation reading the same bytes."""
   py_grid, py_values = _read_with_pure_python(path)
 
-  if rio.file_type(path) not in rio.FIELD_FILE_TYPES:
-    pytest.skip(f"{os.path.basename(path)} is not a single/multi-range field file")
-
+  assert rio.file_type(path) in rio.FIELD_FILE_TYPES
   c_grid, c_arr = rio.read_field(path)
   c_values = c_arr.to_numpy(cells=c_grid["cells"])
 
@@ -70,6 +66,10 @@ def test_read_field_matches_the_pure_python_reader(path):
 
 def test_file_type_of_a_field_file():
   assert rio.file_type(FIELD_FILES[0]) in rio.FIELD_FILE_TYPES
+
+
+def test_file_type_of_a_dynvec_file_is_not_a_field_type():
+  assert rio.file_type(_NON_FIELD_FILE) not in rio.FIELD_FILE_TYPES
 
 
 def test_file_type_nonexistent_path_returns_sentinel():

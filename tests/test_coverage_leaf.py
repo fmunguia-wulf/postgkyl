@@ -251,5 +251,6 @@ def test_plot_rejects_more_than_two_dimensions():
 @needs_gkeyll
 def test_plot_show_true_does_not_error_with_agg_backend():
   a = pg.load(F1).interp().sel(comp=0)
-  fig = a.plot(show=True)
+  with pytest.warns(UserWarning, match="non-interactive"):
+    fig = a.plot(show=True)
   assert fig is not None
