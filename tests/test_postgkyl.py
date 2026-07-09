@@ -399,6 +399,12 @@ _ALLOWED = {
                                                       # it -- numerics has 0 internal imports,
                                                       # so this cannot create a cycle (layer 04-io)
     "core":   {"io", "ffi"},                        # container holds a GkylArray backend
+    "models": {"numerics"},                          # equation-system physics -> mag_sq
+                                                      # (pressure diagnostics, plasma params);
+                                                      # authorized by 06-models.md -- models
+                                                      # takes arrays in/out like numerics, so
+                                                      # this cannot create a cycle (numerics has
+                                                      # 0 internal imports)
     "render": {"core", "numerics"},
     "ops":    {"core", "dg", "numerics", "render"},
     "api":    {"core", "ops", "io"},
