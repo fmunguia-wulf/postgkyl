@@ -54,8 +54,8 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
     values: ``(cells..., total_comps)`` array of DG coefficients.
     grid: list of 1-D nodal edge arrays (one per dimension).
     poly_order: polynomial order of the basis.
-    basis_type: long basis name (``"serendipity"`` or ``"tensor"``; the
-      hybrid bases are not wired through the FFI in this minimal core).
+    basis_type: long basis name (``"serendipity"``, ``"tensor"``,
+      ``"hybrid"``, or ``"gkhybrid"``).
     modal: False for nodal-basis data (field-blocked node values per cell);
       converted through the exact ``nodal_to_modal`` matrix first.
     num_interp: interpolation points per cell; defaults to ``poly_order + 1``.

@@ -25,6 +25,7 @@ import postgkyl as pg  # noqa: E402
 DATA = os.path.join(ROOT, "tests", "test_data")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
 F2D = os.path.join(DATA, "generated", "2d_ms_p1.gkyl")
+F_GKHYBRID = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-elc_250.gkyl")
 
 
 def test_load_metadata():
@@ -111,6 +112,20 @@ def test_shim_handshake():
   b = ffi.basis.get_basis("serendipity", 2, 1)
   assert (b.ndim, b.poly_order, b.num_basis) == (2, 1, 4)
   assert b.id == "serendipity"
+
+
+@needs_gkeyll
+def test_gkhybrid_basis_loads_and_interpolates():
+  """A real 1x2v gyrokinetic distribution file (gkhybrid basis) round-trips
+  through the modal -> field bridge, exactly like a serendipity/tensor file."""
+  d = pg.load(F_GKHYBRID)
+  assert d.ctx["basis_type"] == "gkhybrid"
+  assert d.ctx["poly_order"] == 1
+  assert d.num_dims == 3                          # 1x2v
+  assert d.values.shape[-1] == 12                 # gkhybrid 1x2v num_basis
+  g = d.interp()
+  assert g.backend == "numpy"
+  assert g.values.shape == (64, 32, 16, 1)        # (p+1=2) interp points/cell
 
 
 @needs_gkeyll

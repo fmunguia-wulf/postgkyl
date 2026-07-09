@@ -276,6 +276,22 @@ py_basis_new(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+py_basis_new_hybrid(PyObject *self, PyObject *args)
+{
+  const char *type;
+  int cdim, vdim;
+  if (!PyArg_ParseTuple(args, "sii", &type, &cdim, &vdim))
+    return NULL;
+  pg0_basis *b = pg0_basis_new_hybrid(type, cdim, vdim);
+  if (!b) {
+    PyErr_Format(PyExc_NotImplementedError,
+        "basis '%s' is not wired through the Gkeyll shim", type);
+    return NULL;
+  }
+  return PyCapsule_New(b, BASIS_CAP, basis_capsule_destroy);
+}
+
+static PyObject *
 py_basis_info(PyObject *self, PyObject *args)
 {
   PyObject *cap;
@@ -497,6 +513,31 @@ py_array_reduce(PyObject *self, PyObject *args)
   return out;
 }
 
+/* ---------------------------------------------------- field-aware reduce */
+static PyObject *
+py_array_dg_reduce(PyObject *self, PyObject *args)
+{
+  PyObject *bcap, *acap;
+  int comp, op;
+  if (!PyArg_ParseTuple(args, "OOii", &bcap, &acap, &comp, &op))
+    return NULL;
+  pg0_basis *b = basis_arg(bcap);
+  pg0_array *a = array_arg(acap);
+  if (!b || !a)
+    return NULL;
+  if (op < 0 || op > 2) {
+    PyErr_SetString(PyExc_ValueError, "reduce op must be 0/1/2 (min/max/sum)");
+    return NULL;
+  }
+  double out;
+  if (pg0_array_dg_reduce(&out, b, a, comp, op) != 0) {
+    PyErr_Format(PyExc_ValueError,
+        "dg_reduce: component %d out of range for this basis", comp);
+    return NULL;
+  }
+  return PyFloat_FromDouble(out);
+}
+
 /* ------------------------------------------------------------ integrate */
 static PyObject *
 py_array_integrate(PyObject *self, PyObject *args)
@@ -554,6 +595,126 @@ fail:
   return NULL;
 }
 
+/* ------------------------------------------------------------- writing */
+static PyObject *
+py_write_field(PyObject *self, PyObject *args)
+{
+  const char *fname;
+  PyObject *loobj, *upobj, *ncobj, *metaobj, *acap;
+  if (!PyArg_ParseTuple(args, "sOOOOO", &fname, &loobj, &upobj, &ncobj,
+          &metaobj, &acap))
+    return NULL;
+  pg0_array *a = array_arg(acap);
+  if (!a)
+    return NULL;
+  PyArrayObject *lo = (PyArrayObject *)PyArray_FROM_OTF(
+      loobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *up = (PyArrayObject *)PyArray_FROM_OTF(
+      upobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *nc = (PyArrayObject *)PyArray_FROM_OTF(
+      ncobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  if (!lo || !up || !nc)
+    goto fail;
+  int ndim = (int)PyArray_SIZE(lo);
+  if (ndim < 1 || ndim > PG0_MAX_DIM || PyArray_SIZE(up) != ndim ||
+      PyArray_SIZE(nc) != ndim) {
+    PyErr_SetString(PyExc_ValueError, "grid arrays must share ndim <= 7");
+    goto fail;
+  }
+  const char *meta = NULL;
+  Py_ssize_t meta_sz = 0;
+  if (metaobj != Py_None) {
+    if (PyBytes_AsStringAndSize(metaobj, (char **)&meta, &meta_sz) < 0)
+      goto fail;
+  }
+  int status = pg0_write_field(fname, ndim, PyArray_DATA(lo),
+      PyArray_DATA(up), PyArray_DATA(nc), meta, (size_t)meta_sz, a);
+  Py_DECREF(lo);
+  Py_DECREF(up);
+  Py_DECREF(nc);
+  if (status == -1) {
+    PyErr_SetString(PyExc_ValueError,
+        "write_field: grid cells do not cover the array");
+    return NULL;
+  }
+  if (status != 0) {
+    PyErr_Format(PyExc_OSError, "'%s': %s", fname, pg0_status_msg(status));
+    return NULL;
+  }
+  Py_RETURN_NONE;
+fail:
+  Py_XDECREF(lo);
+  Py_XDECREF(up);
+  Py_XDECREF(nc);
+  return NULL;
+}
+
+/* --------------------------------------------------------- dynvectors */
+static PyObject *
+py_dynvec_read(PyObject *self, PyObject *args)
+{
+  const char *fname;
+  if (!PyArg_ParseTuple(args, "s", &fname))
+    return NULL;
+  size_t ncomp;
+  pg0_array *tm = NULL, *data = NULL;
+  int status = pg0_dynvec_read(fname, &ncomp, &tm, &data);
+  if (status != 0) {
+    static const char *msgs[] = {
+      "", "no such dynvector file (or empty/unrecognized header)",
+      "dynvector is not double-precision (unsupported)",
+      "failed to read dynvector data",
+    };
+    PyErr_Format(PyExc_OSError, "'%s': %s", fname,
+        msgs[status >= 1 && status <= 3 ? status : 0]);
+    return NULL;
+  }
+  PyObject *tm_cap = wrap_array(tm);
+  PyObject *data_cap = wrap_array(data);
+  if (!tm_cap || !data_cap) {
+    Py_XDECREF(tm_cap);
+    Py_XDECREF(data_cap);
+    return NULL;
+  }
+  return Py_BuildValue("(nNN)", (Py_ssize_t)ncomp, tm_cap, data_cap);
+}
+
+static PyObject *
+py_dynvec_write(PyObject *self, PyObject *args)
+{
+  const char *fname;
+  PyObject *tmobj, *dataobj;
+  if (!PyArg_ParseTuple(args, "sOO", &fname, &tmobj, &dataobj))
+    return NULL;
+  PyArrayObject *tm = (PyArrayObject *)PyArray_FROM_OTF(
+      tmobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *data = (PyArrayObject *)PyArray_FROM_OTF(
+      dataobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  if (!tm || !data) {
+    Py_XDECREF(tm);
+    Py_XDECREF(data);
+    return NULL;
+  }
+  npy_intp n = PyArray_DIM(tm, 0);
+  npy_intp ncomp = PyArray_NDIM(data) > 1 ? PyArray_DIM(data, 1) : 1;
+  if (PyArray_DIM(data, 0) != n) {
+    Py_DECREF(tm);
+    Py_DECREF(data);
+    PyErr_SetString(PyExc_ValueError,
+        "dynvec_write: tm and data must share the same length");
+    return NULL;
+  }
+  int status = pg0_dynvec_write(fname, (size_t)ncomp, (size_t)n,
+      PyArray_DATA(tm), PyArray_DATA(data));
+  Py_DECREF(tm);
+  Py_DECREF(data);
+  if (status != 0) {
+    PyErr_Format(PyExc_OSError, "'%s': dynvector write failed", fname);
+    return NULL;
+  }
+  Py_RETURN_NONE;
+}
+
 /* --------------------------------------------------------------- module */
 static PyMethodDef g0py_methods[] = {
   { "api_version", py_api_version, METH_NOARGS, "pg0 shim API version" },
@@ -571,6 +732,8 @@ static PyMethodDef g0py_methods[] = {
   { "read_field", py_read_field, METH_VARARGS,
     "((ndim, lower, upper, cells), array)" },
   { "basis_new", py_basis_new, METH_VARARGS, "basis handle" },
+  { "basis_new_hybrid", py_basis_new_hybrid, METH_VARARGS,
+    "basis handle (hybrid/gkhybrid, by cdim/vdim)" },
   { "basis_info", py_basis_info, METH_VARARGS,
     "(ndim, poly_order, num_basis, id)" },
   { "basis_eval", py_basis_eval, METH_VARARGS, "basis functions at a point" },
@@ -588,8 +751,16 @@ static PyMethodDef g0py_methods[] = {
     "a[:, comp] += val (in place)" },
   { "array_reduce", py_array_reduce, METH_VARARGS,
     "per-component min/max/sum" },
+  { "array_dg_reduce", py_array_dg_reduce, METH_VARARGS,
+    "field-aware (Gauss-node) min/max/sum of one component" },
   { "array_integrate", py_array_integrate, METH_VARARGS,
     "int dx op(f) per field" },
+  { "write_field", py_write_field, METH_VARARGS,
+    "write (lower, upper, cells, meta_bytes_or_None, array) to a .gkyl file" },
+  { "dynvec_read", py_dynvec_read, METH_VARARGS,
+    "(ncomp, tm_array, data_array) read from a dynvector file" },
+  { "dynvec_write", py_dynvec_write, METH_VARARGS,
+    "write a dynvector from parallel tm[n]/data[n,ncomp] arrays" },
   { NULL, NULL, 0, NULL },
 };
 

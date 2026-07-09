@@ -23,7 +23,18 @@ class GkylArray:
   # ------------------------------------------------------------ constructors
   @classmethod
   def alloc(cls, ncomp: int, size: int) -> "GkylArray":
-    """gkyl-owned zeroed array of ``size`` cells x ``ncomp`` doubles."""
+    """gkyl-owned zeroed array of ``size`` cells x ``ncomp`` doubles.
+
+    Raises:
+      ValueError: ``ncomp`` or ``size`` is not positive. Gkeyll's own
+        allocator asserts on a zero-byte buffer at *release* time (an abort,
+        not a Python exception) — refusing here turns a process crash into a
+        clean, early error.
+    """
+    if ncomp <= 0 or size <= 0:
+      raise ValueError(f"GkylArray.alloc: ncomp={ncomp} and size={size} "
+                       "must both be positive (Gkeyll cannot allocate a "
+                       "zero-sized array)")
     return cls(_lib.require().array_new(ncomp, size))
 
   @classmethod
@@ -32,8 +43,19 @@ class GkylArray:
 
     The buffer is pinned inside the capsule for the C array's lifetime; data
     is made contiguous float64 first (copying only if needed).
+
+    Raises:
+      ValueError: ``values`` has fewer than 1 dimension, or is empty (see
+        :meth:`alloc` — an empty buffer crashes Gkeyll's allocator on
+        release rather than raising).
     """
     buf = np.ascontiguousarray(values, dtype=np.float64)
+    if buf.ndim < 1:
+      raise ValueError("GkylArray.from_numpy: need at least a 1-D "
+                       "(…, ncomp) array")
+    if buf.size == 0:
+      raise ValueError("GkylArray.from_numpy: array is empty (Gkeyll "
+                       "cannot allocate a zero-sized array)")
     return cls(_lib.require().array_from_numpy(buf))
 
   def clone(self) -> "GkylArray":

@@ -39,13 +39,91 @@ class Basis:
 _basis_cache: dict[tuple, Basis] = {}
 _matrix_cache: dict[tuple, np.ndarray] = {}
 
+# Highest poly_order each basis supports per ndim, mirroring the fixed-size
+# `ev[4]` function-pointer tables in gkeyll's
+# core/zero/gkyl_cart_modal_{serendip,tensor}_priv.h. Those tables have NO
+# runtime bounds checking: gkyl_cart_modal_serendip/tensor assert
+# `ndim>0 && ndim<=6` (a process abort on failure, not a Python exception),
+# and index poly_order into the 4-slot array with no check at all, so an
+# out-of-range poly_order is undefined behavior, not a clean failure. This
+# guard must run before every call into the shim; keep it in sync with those
+# two headers if Gkeyll ever adds higher-order kernels.
+_MAX_POLY_ORDER = {
+    "serendipity": {1: 3, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1},
+    "tensor": {1: 3, 2: 3, 3: 2, 4: 2, 5: 2, 6: 1},
+}
+
+# hybrid/gkhybrid are fixed-poly_order (=1) bases parameterized by
+# (cdim, vdim) rather than (ndim, poly_order) — see
+# gkeyll/core/zero/gkyl_cart_modal_{hybrid,gkhybrid}.c. A .gkyl file only
+# records the total ndim, not the cdim/vdim split, so this table recovers it
+# from the one configuration Gkeyll actually produces for each: PKPM hybrid
+# always carries a single parallel-velocity direction (vdim=1, cdim=ndim-1);
+# gyrokinetic gkhybrid always carries (vpar, mu) (vdim=2), except the 1x1v
+# case, which has no mu direction (vdim=1) — mirroring the legacy postgkyl
+# convention (src_bak/postgkyl/data/{dg.py,computeInterpolationMatrices.py})
+# and matching gkeyll/core/unit/ctest_basis.c's own (cdim, vdim) choices.
+# Gkeyll's gkhybrid kernel tables are indexed by ndim alone (poly_order fixed
+# at 1), so any (cdim, vdim) pair summing to the same ndim would dispatch to
+# the identical compiled basis; this table simply names the one physical
+# configuration that split corresponds to.
+_HYBRID_CDIM_VDIM = {
+    "hybrid": {2: (1, 1), 3: (2, 1), 4: (3, 1)},
+    "gkhybrid": {2: (1, 1), 3: (1, 2), 4: (2, 2), 5: (3, 2)},
+}
+
 
 def get_basis(basis_type: str, ndim: int, poly_order: int) -> Basis:
-  """A cached, fully-initialized Gkeyll basis object."""
-  key = (basis_type.lower(), ndim, poly_order)
+  """A cached, fully-initialized Gkeyll basis object.
+
+  Args:
+    basis_type: ``"serendipity"``, ``"tensor"``, ``"hybrid"``, or
+      ``"gkhybrid"`` (case-insensitive).
+    ndim: number of dimensions. 1..6 for serendipity/tensor; the hybrid
+      bases only exist for the ``(cdim, vdim)`` combinations Gkeyll actually
+      generates kernels for — see :data:`_HYBRID_CDIM_VDIM`.
+    poly_order: polynomial order for serendipity/tensor (ceiling depends on
+      ``(basis_type, ndim)``, see :data:`_MAX_POLY_ORDER`); must be ``1``
+      for hybrid/gkhybrid, which have no other order.
+
+  Returns:
+    The cached :class:`Basis` (the same object for repeated requests with
+    the same arguments).
+
+  Raises:
+    ValueError: unknown ``basis_type``, or ``(ndim, poly_order)`` outside
+      what Gkeyll's compiled kernel tables support for it. Checked here
+      because the C constructors have no such guard themselves (see above).
+  """
+  basis_type = basis_type.lower()
+  key = (basis_type, ndim, poly_order)
   if key in _basis_cache:
     return _basis_cache[key]
-  cap = _lib.require().basis_new(key[0], ndim, poly_order)
+
+  if basis_type in _HYBRID_CDIM_VDIM:
+    if poly_order != 1:
+      raise ValueError(f"Gkeyll's {basis_type} basis only exists at "
+                       f"poly_order 1, got {poly_order}")
+    cdim_vdim = _HYBRID_CDIM_VDIM[basis_type].get(ndim)
+    if cdim_vdim is None:
+      raise ValueError(f"Gkeyll's {basis_type} basis supports ndim "
+                       f"{sorted(_HYBRID_CDIM_VDIM[basis_type])}, got {ndim}")
+    cdim, vdim = cdim_vdim
+    cap = _lib.require().basis_new_hybrid(basis_type, cdim, vdim)
+  else:
+    limits = _MAX_POLY_ORDER.get(basis_type)
+    if limits is None:
+      raise ValueError(f"unknown basis_type '{basis_type}'; expected one of "
+                       f"{sorted(set(_MAX_POLY_ORDER) | set(_HYBRID_CDIM_VDIM))}")
+    max_p = limits.get(ndim)
+    if max_p is None:
+      raise ValueError(f"Gkeyll's {basis_type} basis supports ndim 1..6, "
+                       f"got {ndim}")
+    if not 0 <= poly_order <= max_p:
+      raise ValueError(f"Gkeyll's {basis_type} basis in {ndim}D supports "
+                       f"poly_order 0..{max_p}, got {poly_order}")
+    cap = _lib.require().basis_new(basis_type, ndim, poly_order)
+
   nd, p, nb, bid = _lib.require().basis_info(cap)
   _basis_cache[key] = Basis(cap, nd, p, nb, bid)
   return _basis_cache[key]
