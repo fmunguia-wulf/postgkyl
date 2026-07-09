@@ -6,14 +6,14 @@ Run:  PYTHONPATH=src pytest tests/test_ffi_rio.py -v
 import glob
 import os
 import sys
+import tempfile
 
 import numpy as np
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-  sys.path.insert(0, SRC)
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 from postgkyl import ffi  # noqa: E402
 from postgkyl.ffi import rio  # noqa: E402
@@ -29,6 +29,16 @@ GENERATED_FILES = sorted(glob.glob(os.path.join(DATA, "generated", "*.gkyl")))
 
 pytestmark = needs_gkeyll
 
+# A non-field (dynvector) file, so the cross-check test below also exercises
+# its own "not a field file -> skip" branch, not just the field-file path.
+_NON_FIELD_FILES = []
+if ffi.available():
+  from postgkyl.ffi import rio as _rio
+  _dynvec_dir = tempfile.mkdtemp()
+  _dynvec_path = os.path.join(_dynvec_dir, "not_a_field_dynvec.gkyl")
+  _rio.write_dynvec(_dynvec_path, np.array([0.0, 1.0]), np.array([[1.0], [2.0]]))
+  _NON_FIELD_FILES.append(_dynvec_path)
+
 
 # ------------------------------------------------------ cross-check vs GkylReader
 def _read_with_pure_python(path):
@@ -37,7 +47,8 @@ def _read_with_pure_python(path):
   return r.load()
 
 
-@pytest.mark.parametrize("path", FIELD_FILES + GENERATED_FILES, ids=os.path.basename)
+@pytest.mark.parametrize("path", FIELD_FILES + GENERATED_FILES + _NON_FIELD_FILES,
+    ids=os.path.basename)
 def test_read_field_matches_the_pure_python_reader(path):
   """The strongest test in this layer: for every fixture the C reader
   accepts, its grid/cells/coefficients must agree exactly with the

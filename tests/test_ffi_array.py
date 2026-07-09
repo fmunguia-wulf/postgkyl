@@ -12,8 +12,7 @@ import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-  sys.path.insert(0, SRC)
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 from postgkyl import ffi  # noqa: E402
 from postgkyl.ffi.array import GkylArray  # noqa: E402

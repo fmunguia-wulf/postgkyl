@@ -12,8 +12,7 @@ import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-  sys.path.insert(0, SRC)
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 from postgkyl import ffi  # noqa: E402
 from postgkyl.ffi import _lib  # noqa: E402
@@ -122,6 +121,22 @@ def test_import_error_when_extension_missing():
   # The real package's bindings must be entirely unaffected by the above.
   assert ffi.available() is True
   assert isinstance(ffi.require(), types.ModuleType)
+
+
+@needs_gkeyll
+def test_patched_g0py_cleans_up_sys_modules_when_never_previously_imported():
+  """``_patched_g0py.__exit__``'s cleanup has two cases: restore whatever was
+  in ``sys.modules`` before (exercised by every other test here, since the
+  real ``_g0py`` is always already imported in this environment), or delete
+  the key entirely when there was nothing to restore. Simulate the latter by
+  removing the real module first and restoring it manually afterward."""
+  real = sys.modules.pop("postgkyl.ffi._g0py")
+  try:
+    with _patched_g0py(types.SimpleNamespace()):
+      assert "postgkyl.ffi._g0py" in sys.modules
+    assert "postgkyl.ffi._g0py" not in sys.modules
+  finally:
+    sys.modules["postgkyl.ffi._g0py"] = real
 
 
 @needs_gkeyll

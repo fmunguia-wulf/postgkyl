@@ -11,8 +11,7 @@ import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-  sys.path.insert(0, SRC)
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 from postgkyl import ffi  # noqa: E402
 from postgkyl.ffi import basis as fb  # noqa: E402
@@ -47,6 +46,14 @@ def _analytic_num_basis(basis_type: str, ndim: int, poly_order: int) -> int:
 def test_num_basis_matches_independent_formula(basis_type, ndim, poly_order):
   got = fb.num_basis(basis_type, ndim, poly_order)
   assert got == _analytic_num_basis(basis_type, ndim, poly_order)
+
+
+def test_analytic_num_basis_helper_rejects_serendipity_3d():
+  """The independent reference formula only has closed forms for 1-D/2-D
+  serendipity; the parametrized cases above never reach 3-D, so this checks
+  the helper's own guard directly."""
+  with pytest.raises(NotImplementedError, match="no independent closed form"):
+    _analytic_num_basis("serendipity", 3, 1)
 
 
 def test_get_basis_caches_the_same_object():

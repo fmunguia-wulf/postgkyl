@@ -1,0 +1,287 @@
+"""Coverage-completing tests for the ``ops`` verb layer.
+
+The golden-path tests exercise ``comp=`` selection, the happy arithmetic
+paths, and the default basis/poly_order. This file targets the error edges
+and the less obvious dispatch branches: coordinate (``z0``) selection,
+mixed-representation/mixed-basis rejections, modal-scalar operator
+combinations, ufunc edge cases, and every verb's metadata-missing guard.
+
+Run:  PYTHONPATH=src pytest tests/test_coverage_ops.py -v
+"""
+
+import os
+import sys
+
+import numpy as np
+import pytest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, "src")
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
+
+import matplotlib
+matplotlib.use("Agg")
+
+import postgkyl as pg  # noqa: E402
+from postgkyl import ffi, ops  # noqa: E402
+from postgkyl.core.state import GDataState  # noqa: E402
+
+needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+    reason="no compiled Gkeyll (libg0core.so) found")
+
+DATA = os.path.join(ROOT, "tests", "test_data")
+F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
+
+
+def _dynvec_dataset(tmp_path, time, values):
+  from postgkyl.ffi import rio
+  path = str(tmp_path / "series.gkyl")
+  rio.write_dynvec(path, np.asarray(time), np.asarray(values))
+  return pg.load(path)
+
+
+# ============================================================== ops.select
+@needs_gkeyll
+def test_select_by_coordinate_on_a_nodal_grid(tmp_path):
+  """A dynvector's grid length equals its value count exactly, so
+  ``select``'s ``is_matching`` branch is True (unlike interpolated field
+  data, whose grid is always one edge longer than its values)."""
+  d = _dynvec_dataset(tmp_path, [0.0, 0.5, 1.0, 1.5], [[1.0], [2.0], [3.0], [4.0]])
+
+  by_int = d.sel(z0=1)
+  np.testing.assert_allclose(by_int.values, [[2.0]])
+  np.testing.assert_allclose(by_int.grid[0], [0.5])
+
+  by_float = d.sel(z0=0.6)
+  np.testing.assert_allclose(by_float.values, [[3.0]])
+
+  by_slice = d.sel(z0="1:3")
+  np.testing.assert_allclose(by_slice.values, [[2.0], [3.0]])
+  np.testing.assert_allclose(by_slice.grid[0], [0.5, 1.0])
+
+  by_negative_int = d.sel(z0=-1)
+  np.testing.assert_allclose(by_negative_int.values, [[4.0]])
+
+  with pytest.raises(TypeError, match="single index or a slice"):
+    d.sel(z0="1,2")  # comma selector is comp-only syntax, not valid for z-axes
+
+
+@needs_gkeyll
+def test_select_by_coordinate_on_a_non_matching_edge_grid():
+  """Interpolated field data: the grid has one more point than the values
+  along every axis (edges vs. cell values) -- the ``is_matching`` False
+  path."""
+  g = pg.load(F1).interp()
+  assert g.grid[0].shape[0] == g.values.shape[0] + 1
+
+  by_float = g.sel(z0=0.0)
+  assert by_float.values.shape[0] == 1
+  by_slice = g.sel(z0="2:5")
+  assert by_slice.values.shape[0] == 3
+  assert by_slice.grid[0].shape[0] == 4
+
+
+# ========================================================== ops.arithmetic
+@needs_gkeyll
+def test_numpy_domain_rejects_incompatible_grids_and_shapes():
+  a = pg.load(F1).interp()
+  b = pg.load(F1).interp()
+  b_sub = b.sel(comp=0)  # different shape than the full 'a'
+  with pytest.raises(ValueError, match="incompatible shapes"):
+    a + b_sub
+
+  c = pg.load(F1).interp()
+  c.grid[0] = c.grid[0] + 1.0  # displace the grid -> no longer "compatible"
+  with pytest.raises(ValueError, match="different grids"):
+    a + c
+
+
+@needs_gkeyll
+def test_basis_of_raises_when_metadata_missing():
+  a, b = pg.load(F1), pg.load(F1)
+  del a.ctx["poly_order"]
+  with pytest.raises(ValueError, match="basis_type/poly_order"):
+    a * b
+
+
+@needs_gkeyll
+def test_modal_binary_rejects_mixing_with_a_plain_array():
+  a = pg.load(F1)
+  with pytest.raises(ValueError, match="cannot mix native modal data"):
+    a * np.zeros((24, 6))
+
+
+@needs_gkeyll
+def test_modal_dataset_pair_rejects_grid_and_basis_mismatch():
+  a = pg.load(F1)
+  b = pg.load(F1)
+  b.grid[0] = b.grid[0] + 100.0
+  with pytest.raises(ValueError, match="different grids"):
+    a * b
+
+  c = pg.load(F1)
+  c.ctx["basis_type"] = "tensor"
+  with pytest.raises(ValueError, match="different DG bases"):
+    a * c
+
+
+@needs_gkeyll
+def test_modal_dataset_pair_rejects_unsupported_op():
+  a, b = pg.load(F1), pg.load(F1)
+  with pytest.raises(ValueError, match="not defined between two"):
+    a ** b
+
+
+@needs_gkeyll
+def test_conf_phase_mul_requires_both_operands_modal():
+  """Mixed representation on a conf*phase multiply (different num_dims)
+  must refuse just like the same-dims path, not silently coerce."""
+  conf_edges = [np.linspace(0.0, 1.0, 4)]
+  phase_edges = [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)]
+  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
+  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+
+  conf = pg.GData()
+  conf.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True, cells=np.array([3]))
+  conf.push(conf_edges, ffi.array.GkylArray.from_numpy(np.zeros((3, cbasis.num_basis))))
+
+  phase = pg.GData()
+  phase.ctx.update(basis_type="hybrid", poly_order=1, is_modal=True, cells=np.array([3, 4]))
+  phase.push(phase_edges, ffi.array.GkylArray.from_numpy(np.zeros((12, pbasis.num_basis))))
+
+  phase_nodal = phase.to_nodal()
+  with pytest.raises(ValueError, match="modal DG coefficients only"):
+    conf * phase_nodal
+
+
+@needs_gkeyll
+@pytest.mark.parametrize("expr", [
+    lambda a: a / 2.0,             # modal / scalar (linear divide)
+    lambda a: 5.0 - a,             # scalar - modal
+    lambda a: a - 5.0,             # modal - scalar
+    lambda a: 5.0 / a,             # scalar / modal (weak reciprocal)
+])
+def test_modal_scalar_operator_combinations(expr):
+  a = pg.load(F1)
+  out = expr(a)
+  assert isinstance(out, pg.GData)
+  assert out.backend == "gkyl"
+
+
+@needs_gkeyll
+def test_modal_scalar_rejects_reflected_power():
+  a = pg.load(F1)
+  with pytest.raises(ValueError, match="not defined for modal"):
+    2.0 ** a
+
+
+@needs_gkeyll
+def test_apply_ufunc_method_and_out_kwarg_are_rejected():
+  a = pg.load(F1).interp()
+  assert a.__array_ufunc__(np.add, "reduce", a) is NotImplemented
+  assert a.__array_ufunc__(np.sqrt, "__call__", a, out=(np.zeros(1),)) is NotImplemented
+
+
+@needs_gkeyll
+def test_apply_ufunc_rejects_shape_mismatch():
+  a = pg.load(F1).interp()
+  b = pg.load(F1).interp().sel(comp=0)
+  with pytest.raises(ValueError, match="incompatible shapes"):
+    np.add(a, b)
+
+
+@needs_gkeyll
+def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
+  a = pg.load(F1).interp()
+  out = np.add(a, 2.0)
+  np.testing.assert_allclose(out.values, a.values + 2.0)
+  assert a.__array_ufunc__(np.add, "__call__", a, "not-a-number") is NotImplemented
+
+
+# ========================================================== ops.interpolate
+def test_interpolate_rejects_unknown_short_basis_code():
+  d = pg.load(F1)
+  with pytest.raises(ValueError, match="Unknown basis"):
+    d.interp(basis="bogus")
+
+
+@needs_gkeyll
+def test_interpolate_accepts_a_short_basis_code():
+  d = pg.load(F1).interp(basis="ms")
+  assert d.is_interpolated
+
+
+def test_interpolate_requires_basis_type_when_none_given():
+  d = pg.GData()
+  d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
+  with pytest.raises(ValueError, match="no stored 'basis_type'"):
+    d.interp()
+
+
+def test_interpolate_requires_poly_order_when_none_given():
+  d = pg.GData()
+  d.ctx["basis_type"] = "serendipity"
+  d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
+  with pytest.raises(ValueError, match="No polynomial order"):
+    d.interp()
+
+
+# =========================================================== ops.represent
+@needs_gkeyll
+def test_represent_rejects_numpy_backed_and_missing_metadata():
+  interp = pg.load(F1).interp()
+  with pytest.raises(ValueError, match="NumPy-backed"):
+    interp.to_modal()
+
+  a = pg.load(F1)
+  del a.ctx["poly_order"]
+  with pytest.raises(ValueError, match="no basis_type/poly_order"):
+    a.to_nodal()
+
+
+@needs_gkeyll
+def test_represent_rejects_unknown_target():
+  a = pg.load(F1)
+  with pytest.raises(ValueError, match="unknown representation"):
+    ops.represent(a, to="bogus")
+
+
+@needs_gkeyll
+def test_represent_rejects_quad_dataset_missing_num_quad():
+  q = pg.load(F1).to_quad()
+  del q.ctx["num_quad"]
+  with pytest.raises(ValueError, match="lost its 'num_quad'"):
+    q.to_modal()
+
+
+@needs_gkeyll
+def test_represent_same_representation_clones():
+  a = pg.load(F1)
+  same = a.to_modal()  # already modal -> the "cur == to" clone branch
+  np.testing.assert_allclose(same.values, a.values)
+  assert same.native is not a.native
+
+
+@needs_gkeyll
+def test_apply_rejects_non_modal_data():
+  a = pg.load(F1).to_nodal()
+  with pytest.raises(ValueError, match="expects modal data"):
+    a.apply(np.sqrt)
+
+
+# =============================================================== ops.info
+@needs_gkeyll
+def test_info_verb_handles_multiple_datasets():
+  a, b = pg.load(F1), pg.load(F1)
+  summaries = pg.info(a, b)
+  assert len(summaries) == 2
+  assert all("Number of components" in s for s in summaries)
+
+
+# ============================================================ ops.integrate
+@needs_gkeyll
+def test_integrate_requires_basis_metadata():
+  a = pg.load(F1)
+  del a.ctx["basis_type"]
+  with pytest.raises(ValueError, match="basis_type/poly_order"):
+    a.integrate()

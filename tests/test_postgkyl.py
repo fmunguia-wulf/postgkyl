@@ -14,8 +14,7 @@ import pytest
 # Make src/ importable without an install.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-  sys.path.insert(0, SRC)
+sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 import matplotlib
 matplotlib.use("Agg")
@@ -425,8 +424,8 @@ def _import_targets(node):
       yield mod.split(".")[1]
 
 
-def _build_edges():
-  pkg_root = os.path.join(SRC, "postgkyl")
+def _build_edges(pkg_root=None):
+  pkg_root = pkg_root or os.path.join(SRC, "postgkyl")
   edges = collections.defaultdict(set)
   violations = []
   for dp, _, files in os.walk(pkg_root):
@@ -459,12 +458,7 @@ def test_import_contract_no_violations():
   assert not violations, "layer contract violations:\n" + "\n".join(violations)
 
 
-def test_foreign_floor_confined_to_ffi():
-  """The foreign world is the compiled ``_g0py`` extension, importable only
-  under ffi/ — and ctypes appears nowhere at all: the C contract is enforced
-  by the compiler when the pg0 shim builds, never re-declared in Python
-  (GKEYLL_C_SHIM.md)."""
-  pkg_root = os.path.join(SRC, "postgkyl")
+def _foreign_floor_offenders(pkg_root):
   offenders = []
   for dp, _, files in os.walk(pkg_root):
     for f in files:
@@ -486,11 +480,20 @@ def test_foreign_floor_confined_to_ffi():
             offenders.append(f"{os.path.relpath(p, pkg_root)}: ctypes")
           if ("_g0py" in name.split(".") or name == "_g0py") and not in_ffi:
             offenders.append(f"{os.path.relpath(p, pkg_root)}: _g0py")
+  return offenders
+
+
+def test_foreign_floor_confined_to_ffi():
+  """The foreign world is the compiled ``_g0py`` extension, importable only
+  under ffi/ — and ctypes appears nowhere at all: the C contract is enforced
+  by the compiler when the pg0 shim builds, never re-declared in Python
+  (GKEYLL_C_SHIM.md)."""
+  pkg_root = os.path.join(SRC, "postgkyl")
+  offenders = _foreign_floor_offenders(pkg_root)
   assert not offenders, f"foreign floor leaked above ffi/: {offenders}"
 
 
-def test_import_graph_is_acyclic():
-  edges, _ = _build_edges()
+def _find_cycles(edges):
   color = collections.defaultdict(int)
   cycles = []
 
@@ -506,4 +509,48 @@ def test_import_graph_is_acyclic():
   for n in list(edges):
     if color[n] == 0:
       dfs(n, [n])
+  return cycles
+
+
+def test_import_graph_is_acyclic():
+  edges, _ = _build_edges()
+  cycles = _find_cycles(edges)
   assert not cycles, f"import cycle(s): {cycles}"
+
+
+# --------------------------------------------------------------------------
+# The self-checks above only ever see a *compliant* tree in this repo (that
+# is the point). These drive their violation/cycle/offender branches
+# directly, against a small throwaway fake package tree, without touching
+# the real source.
+# --------------------------------------------------------------------------
+def _write_module(pkg_root, layer, name, body):
+  d = os.path.join(pkg_root, layer) if layer else pkg_root
+  os.makedirs(d, exist_ok=True)
+  with open(os.path.join(d, name), "w") as fh:
+    fh.write(body)
+
+
+def test_build_edges_flags_a_disallowed_import(tmp_path):
+  pkg_root = str(tmp_path / "postgkyl")
+  _write_module(pkg_root, "badlayer", "mod.py", "import postgkyl.ops\n")
+  _, violations = _build_edges(pkg_root)
+  assert any("badlayer" in v and "ops" in v for v in violations)
+
+
+def test_import_graph_detects_a_real_cycle(tmp_path):
+  pkg_root = str(tmp_path / "postgkyl")
+  _write_module(pkg_root, "layer_a", "mod.py", "import postgkyl.layer_b\n")
+  _write_module(pkg_root, "layer_b", "mod.py", "import postgkyl.layer_a\n")
+  edges, _ = _build_edges(pkg_root)
+  cycles = _find_cycles(edges)
+  assert cycles, "expected the fake layer_a <-> layer_b cycle to be detected"
+
+
+def test_foreign_floor_offenders_flags_ctypes_and_g0py_outside_ffi(tmp_path):
+  pkg_root = str(tmp_path / "postgkyl")
+  _write_module(pkg_root, "badlayer", "uses_ctypes.py", "import ctypes\n")
+  _write_module(pkg_root, "badlayer", "uses_g0py.py", "from postgkyl.ffi import _g0py\n")
+  offenders = _foreign_floor_offenders(pkg_root)
+  assert any(o.endswith(": ctypes") for o in offenders)
+  assert any(o.endswith(": _g0py") for o in offenders)
