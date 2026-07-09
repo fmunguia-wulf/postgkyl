@@ -12,17 +12,24 @@ from .state import GDataState
 
 
 def flatten_datasets(items) -> list:
-  """Flatten nested lists/tuples of datasets into a single flat list.
+  """Flatten nested lists/tuples/groups of datasets into a single flat list.
 
   Lets the multi-dataset entry points accept either ``f(a, b)`` or ``f([a, b])``
-  (and nested combinations). Non-dataset, non-iterable items pass through so the
-  downstream consumer can raise a clear error.
+  (and nested combinations, including a ``DatasetGroup`` wherever a dataset is
+  expected). Recursion is on any iterable, not just ``list``/``tuple`` — this is
+  what lets a nested ``core.group.DatasetGroup`` flatten correctly without this
+  module importing that one (it needs no type check, only that groups are
+  iterable). Strings pass through whole (never iterated character-by-character);
+  non-dataset, non-iterable items also pass through so the downstream consumer
+  can raise a clear, contextual error.
   """
   out = []
   for it in items:
     if isinstance(it, GDataState):
       out.append(it)
-    elif isinstance(it, (list, tuple)):
+    elif isinstance(it, (str, bytes)):
+      out.append(it)
+    elif hasattr(it, "__iter__"):
       out.extend(flatten_datasets(it))
     else:
       out.append(it)
