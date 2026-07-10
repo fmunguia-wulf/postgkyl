@@ -18,5 +18,20 @@ from .integrate import integrate
 from .plot import plot
 from .represent import apply, represent
 
+from .fft import fft
+from .magsq import magsq
+from .relchange import relchange
+from .mask import mask
+from .collect import collect
+from .grid import grid
+from .val2coord import val2coord
+from .extract_input import extract_input
+from .fit import fit
+from .growth import growth
+from .differentiate import differentiate
+from .ev import ev
+
 __all__ = ["interpolate", "select", "info", "integrate", "plot", "arithmetic",
-    "represent", "apply"]
+    "represent", "apply",
+    "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
+    "extract_input", "fit", "growth", "differentiate", "ev"]

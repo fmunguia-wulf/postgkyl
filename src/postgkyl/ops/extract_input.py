@@ -1,0 +1,38 @@
+"""The ``extract_input`` verb — decode the input file embedded in ``ctx``.
+
+Gkeyll output files may carry the original simulation input file as a
+base64-encoded string, stashed by the reader under ``ctx['input_file']``.
+This verb is *terminal*: unlike every other verb in this module it returns
+a plain ``str``, not a dataset (matching the legacy contract).
+
+No current :mod:`postgkyl.io` reader populates ``ctx['input_file']`` (the
+ADIOS2 attribute it would come from, ``inputfile``, is not read by
+``io.gkyl_adios_reader`` -- see the layer-07 report); this verb decodes it
+whenever a reader does provide it, and returns ``""`` otherwise, exactly as
+the legacy code did when no input file was embedded.
+"""
+
+from __future__ import annotations
+
+import base64
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from postgkyl.core.state import GDataState
+# end
+
+
+def extract_input(data: "GDataState") -> str:
+  """Decode the input file embedded in a Gkeyll output file's ``ctx``.
+
+  Args:
+    data: the dataset whose embedded input file is decoded.
+
+  Returns:
+    The decoded input-file text, or an empty string when none is embedded.
+  """
+  encoded = data.ctx.get("input_file")
+  if encoded:
+    return base64.decodebytes(encoded.encode("utf-8")).decode("utf-8")
+  # end
+  return ""
