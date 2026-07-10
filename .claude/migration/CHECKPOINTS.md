@@ -1,0 +1,23 @@
+# Checkpoint log
+
+Baseline (before layer 01): `PYTHONPATH=src python -m pytest tests/ -q` → 26
+passed, 1.04s. `ffi.available()` → True. Branch `refactor-fluent` @ 1cf7c37.
+
+| Layer | C1 green | C2 arch | C3 cov | C4 golden | C5 review closed | C6 old parity | Commit |
+|-------|----------|---------|--------|-----------|------------------|---------------|--------|
+| 02-numerics | ✅ 524 passed, 1 skipped | ✅ 5/5 | ✅ 100% (759/759 stmts) | ✅ 32 passed | ✅ PASS WITH FIXES → all 5 closed | ✅ intentional divergences documented (integrate colon-slice, fft 4D guard, init_polar `&` bug, ev_ops warn→raise) | fc8ce96 |
+| 03-dg | ✅ 541 passed | ✅ 5/5 | ✅ 100% (202/202 stmts) | ✅ 32 passed | ✅ PASS (fixer optional, no blocking issues) | ✅ map.py intentionally replaces src_bak's alignment algorithm per MAPPING.md; differentiation deferred to layer 07 (see notes/differentiate-decision.md) | ee919e7 |
+| 04-io | ✅ 574 passed | ✅ 5/5 | ✅ 99% (707/707 stmts, io+numerics edge) | ✅ 32 passed | ✅ PASS (fixer optional, C1-C4 minor/non-blocking) | ✅ no numerical divergence; typer/cli_mode/adios-write/vtk norm_axes drops are the only behavior changes, all licensed by PYTHON_PRINCIPLES | 1ece639 |
+| 05-core | ✅ 601 passed | ✅ 5/5 | ✅ 100% (244/244 stmts, core) | ✅ 32 passed | ✅ PASS (fixer optional, 2 cosmetic criticisms: missing type hints, absolute vs relative import) | ✅ generalized flatten fixes a latent infinite-recursion bug in src_bak's `_flatten`; verb-shaped members (`__getattr__` broadcast, `plot`, `animate`, `plotly_animate`, `collect`, `ev`, `info`) deferred to layer 10 | 3e417df |
+| 06-models | ✅ 702 passed | ✅ 5/5 | ✅ 96% (366/366 stmts, models; frame.py 58% is a structurally-unreachable preserved bug) | ✅ 32 passed | ✅ PASS → C1/C2/C3 closed | ✅ every formula diffed term-by-term vs src_bak and matches; two inherited src_bak bugs (frame.py c_dim 2/3, laguerre.py extra broadcast axis) preserved and pinned by tests, not silently fixed | b0ec434, ce9d0af |
+| 07-ops-field | ✅ 791 passed | ✅ 5/5 | ✅ 100% (601/601 stmts, whole ops/ package; `--cov` plugin broken sandbox-wide, measured via `coverage run`) | ✅ 32 passed | ✅ PASS → C1 declined (out-of-scope, tracked against io/), C2/C4 closed, C3 acknowledged (unreachable) | ✅ all 12 field verbs numerically identical to src_bak; two intentional, documented divergences: `differentiate` per layer-03 decision doc (field-domain numerical gradient, not modal bridge), `fft`'s nodal→cell-centered grid prep fixes a latent src_bak off-by-one; `mask`/`collect` drop file-path args (ops can't import io) in favor of pre-loaded-dataset args | cff3eb9 |
+| 08-ops-physics | ✅ 892 passed | ✅ 5/5 | ✅ 100% (751/751 stmts, ops/) | ✅ 32 passed | ✅ PASS WITH FIXES → C1/C2(ops-scope)/C5 fixed, C3/C4 acknowledged/declined by design | ✅ physics verbs are thin wrappers over layer-06 `models/`, numerically unchanged; `map` intentionally implements MAPPING.md's evaluate-based design, not src_bak's algorithm (standing decision); fixer pass closed a real curvilinear-select axis bug (C1) and made `current()` raise instead of silently falling back on inconsistent `qbym` args (C2, ops-layer only) | d4c801c |
+| 09-render | ✅ 1058 passed, 2 skipped | ✅ 5/5 | ✅ 97% (734/734 stmts, render/; plotly.py 96%, pyvista.py 91% GL/rare-branch justified) | ✅ 32 passed | ✅ PASS WITH FIXES → C1/C2/C3/C4/C5/C6/C7 all fixed | ✅ matplotlib/animate/plotly/pyvista numerics diffed vs src_bak and match after fixer restored dropped `xscale`/`yscale`/`zscale` (C1); intentional drops (streamline/quiver/contour/lineouts, `jet` colormap, dual GData/tuple input) documented in `.claude/migration/notes/09-render-parity.md` | 0fc9867 |
+
+> **Renumbering note (2026-07-10):** after layer 09 the plan was amended
+> (PLAN.md "Amendment — models → diagnostics"): a new restructure layer
+> 10-diagnostics was inserted and the remaining layers shifted to 11-api,
+> 12-loaders, 13-diagnostics-programs, 14-cli, 15-facade. Layer-number
+> references in the rows above use the OLD numbering (e.g. 05-core's
+> "deferred to layer 10" means the api layer, now 11). Layer 10's C6
+> parity baseline is the pre-layer git HEAD, not src_bak.
