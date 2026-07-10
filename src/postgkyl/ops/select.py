@@ -22,6 +22,15 @@ def select(data: "GDataState", *, comp=None,
   string ``"start:end"``; ``comp`` additionally accepts ``"a,b"``. Unspecified
   axes are kept in full. The selected dimension is retained (length-1), matching
   the legacy behaviour.
+
+  A curvilinear axis (a multi-dimensional grid array, produced by ``.map()``
+  with ``space="conf"``) has no single 1-D coordinate array to search, so a
+  coordinate/slice-string selector on that axis raises; an integer index
+  still works, as does a separable (1-D) mapped axis (``.map(space="vel")``).
+
+  Raises:
+    ValueError: if ``data`` is native modal (gkyl-backed), or a
+      coordinate/slice selector targets a curvilinear grid axis.
   """
   if data.backend == "gkyl":
     raise ValueError(
@@ -37,9 +46,24 @@ def select(data: "GDataState", *, comp=None,
     if d >= num_dims or z is None:
       continue
     # end
-    len_grid = grid[d].shape[0]
-    is_matching = values.shape[d] == len_grid  # grid holds edges (cells+1) -> usually False
-    idx = idx_parser(z, grid[d], is_matching)
+    grid_arr = grid[d]
+    curvilinear = grid_arr.ndim > 1  # a .map()-deformed, non-separable axis
+    if curvilinear and not isinstance(z, int):
+      raise ValueError(
+          f"select: z{d}'s grid axis is multi-dimensional (curvilinear, "
+          "produced by .map()); coordinate values and slice strings have "
+          f"no single coordinate array to match against -- pass an "
+          f"integer index for z{d} instead.")
+    # end
+    # grid holds edges (cells+1) -> is_matching is usually False; a
+    # curvilinear array's own axis k corresponds to absolute dimension
+    # `offset + k` (map.py's mapped block), not to axis d of `grid` itself
+    # -- ctx["mapped_axes"] records each absolute dimension's block offset
+    # so the N-D array can be indexed on its own relative axis.
+    rel = d - data.ctx.get("mapped_axes", {}).get(d, 0) if curvilinear else d
+    len_grid = grid_arr.shape[rel] if curvilinear else grid_arr.shape[0]
+    is_matching = values.shape[d] == len_grid
+    idx = z if curvilinear else idx_parser(z, grid_arr, is_matching)
     if isinstance(idx, int):
       if idx < 0:
         idx = values.shape[d] + idx
@@ -51,7 +75,12 @@ def select(data: "GDataState", *, comp=None,
     else:
       raise TypeError("Coordinate selector must be a single index or a slice.")
     # end
-    grid[d] = grid[d][g_idx]
+    if curvilinear:  # slice only the N-D grid array's own relative axis
+      grid[d] = grid_arr[tuple(g_idx if k == rel else slice(None)
+          for k in range(grid_arr.ndim))]
+    else:
+      grid[d] = grid_arr[g_idx]
+    # end
     values_idx[d] = v_idx
   # end
 

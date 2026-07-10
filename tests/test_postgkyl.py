@@ -406,7 +406,19 @@ _ALLOWED = {
                                                       # this cannot create a cycle (numerics has
                                                       # 0 internal imports)
     "render": {"core", "numerics"},
-    "ops":    {"core", "dg", "numerics", "render"},
+    "ops":    {"core", "dg", "numerics", "render", "models"},
+                                                      # "models" added by
+                                                      # 08-ops-physics.md: the
+                                                      # physics verbs (moments/
+                                                      # agyro/current/energetics/
+                                                      # rotate/transform_frame/
+                                                      # laguerre) unwrap
+                                                      # GDataState and delegate
+                                                      # to models' array-in,
+                                                      # array-out functions --
+                                                      # models has no upward
+                                                      # imports, so this cannot
+                                                      # create a cycle
     "api":    {"core", "ops", "io"},
     "":       {"api", "ops", "render", "io"},       # facade: pure re-export of public names
     "cli":    {""},                                   # top surface: pure consumer of the facade
