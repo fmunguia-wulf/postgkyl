@@ -19,6 +19,7 @@ from .select import select
 from .info import info
 from .integrate import integrate
 from .plot import plot
+from .animate import animate
 from .represent import apply, represent
 
 from .fft import fft
@@ -43,8 +44,8 @@ from .transform_frame import transform_frame
 from .laguerre import laguerre_compose
 from .map import map
 
-__all__ = ["interpolate", "select", "info", "integrate", "plot", "arithmetic",
-    "represent", "apply",
+__all__ = ["interpolate", "select", "info", "integrate", "plot", "animate",
+    "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
     "extract_input", "fit", "growth", "differentiate", "ev",
     "euler", "tenmoment", "mhd", "velocity",
