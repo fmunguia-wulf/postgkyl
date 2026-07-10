@@ -399,26 +399,22 @@ _ALLOWED = {
                                                       # it -- numerics has 0 internal imports,
                                                       # so this cannot create a cycle (layer 04-io)
     "core":   {"io", "ffi"},                        # container holds a GkylArray backend
-    "models": {"numerics"},                          # equation-system physics -> mag_sq
-                                                      # (pressure diagnostics, plasma params);
-                                                      # authorized by 06-models.md -- models
-                                                      # takes arrays in/out like numerics, so
-                                                      # this cannot create a cycle (numerics has
-                                                      # 0 internal imports)
     "render": {"core", "numerics"},
-    "ops":    {"core", "dg", "numerics", "render", "models"},
-                                                      # "models" added by
-                                                      # 08-ops-physics.md: the
-                                                      # physics verbs (moments/
-                                                      # agyro/current/energetics/
-                                                      # rotate/transform_frame/
-                                                      # laguerre) unwrap
-                                                      # GDataState and delegate
-                                                      # to models' array-in,
-                                                      # array-out functions --
-                                                      # models has no upward
-                                                      # imports, so this cannot
-                                                      # create a cycle
+    "ops":    {"core", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
+                                                      # the physics verbs (moments/agyro/
+                                                      # current/energetics/rotate/
+                                                      # transform_frame/laguerre) moved up
+                                                      # into diagnostics, folded with the
+                                                      # models/ array math they delegated to;
+                                                      # ops is now the equation-blind
+                                                      # core-verb library only
+    "diagnostics": {"core", "ops", "numerics"},     # added by 10-diagnostics.md: equation-
+                                                      # specific compositions (five_moment/
+                                                      # ten_moment/mhd/plasma/multispecies/
+                                                      # rotations/kinetic/pkpm) wrap core
+                                                      # verbs and state -- none of core/ops/
+                                                      # numerics imports upward, so this
+                                                      # cannot create a cycle
     "api":    {"core", "ops", "io"},
     "":       {"api", "ops", "render", "io"},       # facade: pure re-export of public names
     "cli":    {""},                                   # top surface: pure consumer of the facade

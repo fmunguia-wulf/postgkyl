@@ -4,7 +4,7 @@ Centralizes the check-and-bridge that ``plot`` and ``animate`` both need:
 point-value representations (nodal/quad) materialize directly at their true
 physical point locations; raw modal coefficients refuse -- the caller must
 choose ``.interp()``, ``.to_nodal()``, or ``.to_quad()`` explicitly. One home
-for the fact, mirroring ``ops/_guards.py``'s centralization of the analogous
+for the fact, mirroring ``core/guards.py``'s centralization of the analogous
 field-domain check.
 """
 

@@ -7,10 +7,13 @@ concrete (sub)class because ``_result`` rebuilds ``type(self)``.
 
 ``interpolate`` is the one-way modal -> NumPy bridge; ``arithmetic`` dispatches
 on the container backend (Gkeyll kernels for modal data, NumPy for field data);
-``integrate`` is a terminal verb that runs inside Gkeyll on modal data. The
-physics verbs (``moments``/``agyro``/``current``/``energetics``/``rotate``/
-``transform_frame``/``laguerre``) delegate to the equation-system functions in
-``models``; ``map`` delegates to the grid-mapping engine in ``dg.map``.
+``integrate`` is a terminal verb that runs inside Gkeyll on modal data;
+``map`` delegates to the grid-mapping engine in ``dg.map``. This is the
+equation-blind core-verb library only -- an op never knows which equation
+system produced the file; equation-specific physics (the former
+``moments``/``agyro``/``current``/``energetics``/``rotate``/
+``transform_frame``/``laguerre`` verbs, folded with the array math they
+delegated to) lives one layer up, in ``diagnostics``.
 """
 
 from . import arithmetic
@@ -34,21 +37,10 @@ from .fit import fit
 from .growth import growth
 from .differentiate import differentiate
 from .ev import ev
-
-from .moments import euler, tenmoment, mhd, velocity
-from .agyro import agyro, mom_agyro
-from .current import current
-from .energetics import energetics
-from .rotate import parrotate, perprotate
-from .transform_frame import transform_frame
-from .laguerre import laguerre_compose
 from .map import map
 
 __all__ = ["interpolate", "select", "info", "integrate", "plot", "animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
     "extract_input", "fit", "growth", "differentiate", "ev",
-    "euler", "tenmoment", "mhd", "velocity",
-    "agyro", "mom_agyro", "current", "energetics",
-    "parrotate", "perprotate", "transform_frame", "laguerre_compose",
     "map"]
