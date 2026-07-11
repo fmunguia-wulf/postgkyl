@@ -8,10 +8,11 @@ scalars as keyword-only options, and return a ``GDataState`` (via
 ``_result``) or, in later layers, a ``Figure``. Equation-blind core verbs
 stay in ``ops``; this is the layer that knows what the numbers mean.
 
-Layers 12/13 extend this package with the equation-internal loaders
-(``gyrokinetics/``, ``discovery.py``, ``pkpm.load_pkpm``) and the
-program-scale diagnostics (``trajectory``, ``enstrophy``, ``ke_dke``) --
-there is no separate ``loaders/`` package.
+Layer 12 added the equation-internal loaders: ``gyrokinetics/`` (distribution
+functions + the derived-quantity registry), the shared ``discovery.py``
+stem/frame discovery, and ``pkpm.load_pkpm``. Layer 13 extends this package
+further with the program-scale diagnostics (``trajectory``, ``enstrophy``,
+``ke_dke``) -- there is no separate ``loaders/`` package anywhere.
 """
 
 from . import (
@@ -23,9 +24,11 @@ from . import (
     rotations,
     kinetic,
     pkpm,
+    discovery,
+    gyrokinetics,
 )
 
 __all__ = [
     "five_moment", "ten_moment", "mhd", "plasma", "multispecies",
-    "rotations", "kinetic", "pkpm",
+    "rotations", "kinetic", "pkpm", "discovery", "gyrokinetics",
 ]

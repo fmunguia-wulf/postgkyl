@@ -408,15 +408,27 @@ _ALLOWED = {
                                                       # models/ array math they delegated to;
                                                       # ops is now the equation-blind
                                                       # core-verb library only
-    "diagnostics": {"core", "ops", "numerics"},     # added by 10-diagnostics.md: equation-
+    "diagnostics": {"core", "ops", "numerics", "api"}, # added by 10-diagnostics.md: equation-
                                                       # specific compositions (five_moment/
                                                       # ten_moment/mhd/plasma/multispecies/
                                                       # rotations/kinetic/pkpm) wrap core
                                                       # verbs and state -- none of core/ops/
                                                       # numerics imports upward, so this
-                                                      # cannot create a cycle
+                                                      # cannot create a cycle; "api" added by
+                                                      # 12-diagnostics-loaders.md: the
+                                                      # gyrokinetics/pkpm loaders build on
+                                                      # pg.load/GData (modal arithmetic,
+                                                      # .interp()) to read simulation output
+                                                      # -- api imports only core/ops/io, none
+                                                      # of which import diagnostics, so this
+                                                      # still cannot create a cycle
     "api":    {"core", "ops", "io"},
-    "":       {"api", "ops", "render", "io"},       # facade: pure re-export of public names
+    "":       {"api", "ops", "render", "io", "diagnostics"}, # facade: pure re-export of
+                                                      # public names; "diagnostics" added by
+                                                      # 12-diagnostics-loaders.md, which
+                                                      # explicitly authorizes the facade
+                                                      # re-exporting load_gk_quantity etc. so
+                                                      # pg.load_gk_quantity(...) keeps working
     "cli":    {""},                                   # top surface: pure consumer of the facade
 }
 _LAYERS = set(_ALLOWED)

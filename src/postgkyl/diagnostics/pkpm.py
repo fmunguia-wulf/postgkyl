@@ -6,9 +6,10 @@ Laguerre expansion coefficients ``F0(x, v_par)``, ``F1(x, v_par)`` (hardcoded
 for ``l=0``, ``n=0,1``) and the PKPM ``T/m`` moment. See Jimmy Juno's slides:
 https://drive.google.com/file/d/1548tLF9o7vyW3bkrsq6FvAMV-8XJvKtY/view
 
-Layers 12/13 will extend this module with ``load_pkpm`` (the equation-
-internal loader for PKPM output files); this layer only moves the
-already-migrated ``laguerre_compose`` verb here.
+``load_pkpm`` is the equation-internal loader for PKPM output files (ported
+from ``src_bak/postgkyl/loaders/pkpm.py``): it loads the distribution and its
+companion ``pkpm_vars`` file, interpolates them, and applies
+``laguerre_compose`` + ``kinetic.transform_frame``.
 """
 
 from __future__ import annotations
@@ -17,7 +18,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from ..api.gdata import GData
 from ..core.guards import require_field_domain as _require_field_domain
+from .kinetic import transform_frame
 
 if TYPE_CHECKING:
   from ..core.state import GDataState
@@ -111,3 +114,50 @@ def laguerre_compose(distribution: "GDataState", variables: "GDataState", *,
       variables.values)
   return distribution._result(grid, values, inplace=inplace, tag=tag,
       label=label)
+
+
+# ------------------------------------------------------------------- loader
+def load_pkpm(name: str, species: str, idx: "str | int", poly_order: int, *,
+    tag: str | None = None, label: str | None = None) -> "GData":
+  """Load, interpolate, and frame-transform Gkeyll PKPM data.
+
+  Loads the PKPM distribution (its two Laguerre coefficients ``F0``/``G``)
+  and its companion ``pkpm_vars`` file (whose component 3 is ``T/m`` and
+  components 0:3 are the bulk velocity ``(ux, uy, uz)``), interpolates both,
+  composes the full distribution function (:func:`laguerre_compose`), and
+  shifts it into the bulk-flow frame (:func:`~postgkyl.diagnostics.kinetic.
+  transform_frame`).
+
+  Args:
+    name: Root name (file prefix) of the simulation.
+    species: Species name.
+    idx: Frame/file number.
+    poly_order: Polynomial order of the DG representation.
+    tag: Optional tag for the resulting dataset.
+    label: Optional label for the resulting dataset.
+
+  Returns:
+    A populated, interpolated, frame-transformed
+    :class:`~postgkyl.api.gdata.GData`.
+  """
+  gf = GData(f"{name!s}-{species!s}_{idx!s}.gkyl")
+  gvars = GData(f"{name!s}-{species!s}_pkpm_vars_{idx!s}.gkyl")
+
+  c_dim = gf.num_dims - 1
+
+  gf_interp = gf.interp(basis="pkpmhyb", p=poly_order)
+  gvars_interp = gvars.interp(basis="ms", p=poly_order)
+
+  t_over_m = gvars_interp.sel(comp=3)
+  bulk_u = gvars_interp.sel(comp="0:3")
+
+  composed = laguerre_compose(gf_interp, t_over_m)
+  out = transform_frame(composed, bulk_u, cdim=c_dim)
+
+  if tag is not None:
+    out.set_tag(tag)
+  # end
+  if label is not None:
+    out.set_label(label)
+  # end
+  return out

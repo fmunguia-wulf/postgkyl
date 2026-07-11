@@ -146,3 +146,97 @@ class TestLaguerreCompose:
     t_over_m = _make([np.array([0.0, 1.0])], np.array([[2.0]]))
     with pytest.raises(ValueError, match=r"\.interp\(\)"):
       pkpm.laguerre_compose(d, t_over_m)
+
+
+# ---------------------------------------------------------------- load_pkpm
+# No pkpm fixture is staged under tests/test_data, and postgkyl's own .gkyl
+# writer (io/writer.py) does not reproduce the "multi-range" (file_type 3)
+# structure the *compiled* reader (GkylCReader, tried first whenever the
+# shim is available) expects for a real Gkeyll file -- so a naively
+# write-then-load'ed synthetic file bounces off ``pg0_read_field`` before
+# ``load_pkpm`` ever sees it. Following the same technique
+# ``tests_bak/test_gk_load_quantity.py`` used for the (equally ctypes-only)
+# old gk_quantities registry, the synthetic PKPM/pkpm_vars datasets are
+# served in-memory by monkeypatching the ``GData`` name ``pkpm.py`` itself
+# calls -- this exercises the *real* naming convention, interpolation,
+# ``laguerre_compose``, and ``transform_frame`` pipeline end to end; only
+# the on-disk-file-format step is stubbed.
+@needs_gkeyll
+class TestLoadPkpm:
+
+  _NB_HYBRID_2D_P1 = 6   # ffi.basis.num_basis("hybrid", 2, 1)
+  _NB_SER_1D_P1 = 2      # ffi.basis.num_basis("serendipity", 1, 1)
+
+  def _synthetic_gf(self, F0=3.0, G=1.0):
+    """Two-field (F0, G) PKPM distribution on a 2-cell (x, vpar) grid; only
+    the mean coefficient is populated, per field, per dimension, so the
+    interpolated field value is exactly ``F0``/``G`` everywhere (the mean
+    basis function is ``2**(-ndim/2)``, so ``coeff0 = value * 2**(ndim/2)``)."""
+    nb = self._NB_HYBRID_2D_P1
+    x = np.linspace(0.0, 1.0, 3)
+    vpar = np.linspace(-1.0, 1.0, 3)
+    values = np.zeros((2, 2, 2 * nb))
+    values[..., 0 * nb] = F0 * 2.0 ** (2 / 2)
+    values[..., 1 * nb] = G * 2.0 ** (2 / 2)
+    g = pg.GData(ctx={"poly_order": 1, "basis_type": "hybrid"})
+    g.push([x, vpar], values)
+    return g
+
+  def _synthetic_gvars(self, u=(0.1, 0.2, 0.3), t_over_m=2.0):
+    """4-component (ux, uy, uz, T/m) PKPM variables on the same 1-D (x) grid."""
+    nb = self._NB_SER_1D_P1
+    x = np.linspace(0.0, 1.0, 3)
+    values = np.zeros((2, nb * 4))
+    for i, uc in enumerate(u):
+      values[:, i * nb] = uc * 2.0 ** 0.5
+    # end
+    values[:, 3 * nb] = t_over_m * 2.0 ** 0.5
+    g = pg.GData(ctx={"poly_order": 1, "basis_type": "serendipity"})
+    g.push([x], values)
+    return g
+
+  def _patch(self, monkeypatch, gf, gvars):
+    def fake_ctor(file_name):
+      return gvars if "pkpm_vars" in file_name else gf
+    # end
+    monkeypatch.setattr(pkpm, "GData", fake_ctor)
+
+  def test_output_grid_gains_vperp(self, monkeypatch):
+    gf, gvars = self._synthetic_gf(), self._synthetic_gvars()
+    self._patch(monkeypatch, gf, gvars)
+    out = pkpm.load_pkpm("sim", "ion", 0, 1)
+    # x, vpar, vperp: transform_frame shifts vpar/vperp per cell by the bulk
+    # velocity, so (unlike pre-transform) they are no longer identical, but
+    # both gained the same third (meshgrid) shape.
+    assert len(out.get_grid()) == 3
+    assert out.get_grid()[1].shape == out.get_grid()[2].shape
+
+  def test_matches_manual_compose_and_transform(self, monkeypatch):
+    F0, G, u, t_over_m = 3.0, 1.0, (0.1, 0.2, 0.3), 2.0
+    gf, gvars = self._synthetic_gf(F0, G), self._synthetic_gvars(u, t_over_m)
+    self._patch(monkeypatch, gf, gvars)
+    out = pkpm.load_pkpm("sim", "ion", 0, 1)
+
+    gf_interp = gf.interp(basis="pkpmhyb", p=1)
+    gvars_interp = gvars.interp(basis="ms", p=1)
+    composed = pkpm.laguerre_compose(gf_interp, gvars_interp.sel(comp=3))
+    from postgkyl.diagnostics.kinetic import transform_frame
+    expected = transform_frame(composed, gvars_interp.sel(comp="0:3"), cdim=1)
+
+    np.testing.assert_allclose(out.values, expected.values)
+    for d in range(3):
+      np.testing.assert_allclose(out.get_grid()[d], expected.get_grid()[d])
+    # end
+
+  def test_tag_and_label(self, monkeypatch):
+    gf, gvars = self._synthetic_gf(), self._synthetic_gvars()
+    self._patch(monkeypatch, gf, gvars)
+    out = pkpm.load_pkpm("sim", "ion", 0, 1, tag="mytag", label="mylabel")
+    assert out.get_tag() == "mytag"
+    assert out.get_label() == "mylabel"
+
+  def test_default_tag_and_label(self, monkeypatch):
+    gf, gvars = self._synthetic_gf(), self._synthetic_gvars()
+    self._patch(monkeypatch, gf, gvars)
+    out = pkpm.load_pkpm("sim", "ion", 0, 1)
+    assert out.get_tag() == "default"
