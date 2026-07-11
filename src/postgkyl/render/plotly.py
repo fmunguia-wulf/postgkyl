@@ -159,9 +159,6 @@ def _log_colorbar_ticks(log_min: float, log_max: float, max_ticks: int = 7):
   if tick_vals[-1] != hi:
     tick_vals.append(hi)
   # end
-  if tick_vals[0] != lo:
-    tick_vals.insert(0, lo)
-  # end
   return [float(v) for v in tick_vals], [f"10<sup>{v:d}</sup>" for v in tick_vals]
 
 

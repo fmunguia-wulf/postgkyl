@@ -25,6 +25,12 @@ from postgkyl.render.plotly import (
     plotly_animate,
     save_rotating_plotly_figure,
 )
+from postgkyl.render.plotly import (
+    _log_colorbar_ticks,
+    _opacity_mapping,
+    _prepare_2d_coordinates,
+    _prepare_3d_coordinates,
+)
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None,
     reason="ffmpeg not found on PATH")
@@ -322,6 +328,72 @@ class TestPlotlyLogAxes:
   def test_logc_with_all_nonpositive_values_uses_fallback_range(self):
     fig = plotly(_volume_3d(fn=lambda x, y, z: -(x + y + z) - 1.0), logc=True)
     assert isinstance(fig.data[0], go.Volume)
+
+  def test_logc_ticks_append_max_when_step_overshoots_it(self):
+    # lo=0, hi=20 with the default max_ticks=7 steps by 3 and lands on 18,
+    # short of hi -- _log_colorbar_ticks must append the true endpoint.
+    fig = plotly(_surface_2d(), logc=True, cmin=1.0, cmax=1.0e20)
+    tick_vals = fig.data[0].colorbar.tickvals
+    assert tick_vals[-1] == 20.0
+
+  def test_logc_cmax_below_cmin_falls_back_to_a_one_decade_span(self):
+    # cmax < cmin collapses the requested log range; _apply_log_colorscale
+    # falls back to a single decade above cmin rather than an inverted one.
+    fig = plotly(_surface_2d(), logc=True, cmin=100.0, cmax=10.0)
+    np.testing.assert_allclose(fig.data[0].cmin, 2.0)
+    np.testing.assert_allclose(fig.data[0].cmax, 3.0)
+
+  def test_all_nan_values_yield_nan_color_range_without_raising(self):
+    n, m = 4, 5
+    grid = [np.linspace(0.0, 1.0, n), np.linspace(0.0, 1.0, m)]
+    values = np.full((n - 1, m - 1, 1), np.nan)
+    fig = plotly(_state(grid, values))
+    assert np.isnan(fig.data[0].cmin)
+    assert np.isnan(fig.data[0].cmax)
+
+
+class TestPlotlyPrivateHelpers:
+  """Direct tests for small pure helpers whose edge branches are defensive
+  code unreachable through ``plotly()``'s public contract: the coordinate
+  helpers only ever see grids matching the checked ``num_dims`` and 1-D
+  nodal axes (guaranteed by ``GDataState``), and ``_log_colorbar_ticks``
+  only ever gets called with the already-finite range ``_apply_log_colorscale``
+  computes. Testing these directly is simpler and more honest than
+  contriving a ``GDataState`` that violates those invariants."""
+
+  def test_opacity_mapping_swaps_inverted_bounds(self):
+    colorscale = [[0.0, "rgba(10, 20, 30, 1.000)"], [1.0, "rgba(10, 20, 30, 1.000)"]]
+    out = _opacity_mapping(colorscale, min_alpha=0.9, max_alpha=0.1)
+    first_alpha = float(out[0][1].split(",")[-1].rstrip(")"))
+    last_alpha = float(out[-1][1].split(",")[-1].rstrip(")"))
+    np.testing.assert_allclose(first_alpha, 0.1)
+    np.testing.assert_allclose(last_alpha, 0.9)
+
+  def test_opacity_mapping_passes_through_non_rgba_and_malformed_colors(self):
+    colorscale = [[0.0, "rgba(1, 2, 3)"], [1.0, "#ff0000"]]
+    out = _opacity_mapping(colorscale, min_alpha=0.0, max_alpha=1.0)
+    assert out == [[0.0, "rgba(1, 2, 3)"], [1.0, "#ff0000"]]
+
+  def test_log_colorbar_ticks_empty_for_non_finite_bounds(self):
+    assert _log_colorbar_ticks(float("nan"), 5.0) == ([], [])
+
+  def test_prepare_3d_coordinates_rejects_wrong_count(self):
+    with pytest.raises(ValueError, match="three coordinate arrays"):
+      _prepare_3d_coordinates((np.array([0.0]), np.array([0.0])), (1,))
+
+  def test_prepare_3d_coordinates_passes_through_already_meshed_arrays(self):
+    mesh = np.zeros((2, 2, 2))
+    out = _prepare_3d_coordinates((mesh, mesh, mesh), mesh.shape)
+    assert out[0] is mesh and out[1] is mesh and out[2] is mesh
+
+  def test_prepare_2d_coordinates_rejects_wrong_count(self):
+    with pytest.raises(ValueError, match="two coordinate arrays"):
+      _prepare_2d_coordinates((np.array([0.0]),), (1,))
+
+  def test_prepare_2d_coordinates_passes_through_already_meshed_arrays(self):
+    mesh = np.zeros((2, 2))
+    out = _prepare_2d_coordinates((mesh, mesh), mesh.shape)
+    assert out[0] is mesh and out[1] is mesh
 
 
 class TestSaveRotatingPlotlyFigure:

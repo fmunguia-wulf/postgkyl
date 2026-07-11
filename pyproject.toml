@@ -71,3 +71,7 @@ where = ["src/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:Animation was deleted without rendering anything:UserWarning",
+    "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
+]

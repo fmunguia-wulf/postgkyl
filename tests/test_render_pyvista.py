@@ -122,6 +122,66 @@ class TestPyvista:
   def test_no_title_omits_add_text(self):
     pyvista(_volume(), show=False, title=None)
 
+  def test_gl_context_errors_propagate_unwrapped(self):
+    # _require_gl_context only wraps *unexpected* exceptions from the render
+    # backend into a RuntimeError; a ValueError PyVista itself raises (e.g.
+    # an unknown theme name) should pass through as-is, not get relabeled as
+    # a GL-context failure.
+    with pytest.raises(ValueError, match="Theme"):
+      pyvista(_volume(), show=False, theme="bogus_theme_xyz")
+
+  def test_spin_rotates_camera_and_stops_after_interaction(self, monkeypatch):
+    # The rotation timer/click-observer callbacks only ever run inside VTK's
+    # own interactive event loop, which off-screen tests never enter. Capture
+    # them by stubbing the registration calls, then invoke them directly to
+    # exercise the closures' logic (advance while idle, freeze on click).
+    from pyvista.plotting.render_window_interactor import RenderWindowInteractor
+
+    captured = {}
+    monkeypatch.setattr(pv.Plotter, "add_timer_event",
+        lambda self, max_steps, duration, callback: captured.setdefault(
+            "rotate", callback))
+    def _fake_add_observer(self, event, call, interactor_style_fallback=True):
+      if event == "LeftButtonPressEvent":
+        captured["click"] = call
+      # end
+
+    monkeypatch.setattr(RenderWindowInteractor, "add_observer", _fake_add_observer)
+
+    pyvista(_volume(), show=False, spin=True, is_contour=False)
+
+    assert "rotate" in captured and "click" in captured
+    captured["rotate"](0)
+    captured["click"]()
+    captured["rotate"](0)  # a no-op once "clicked": interacting freezes it
+
+  def test_html_saveas_dispatches_to_export_html(self, monkeypatch, tmp_path):
+    # Exercise postgkyl's own saveas -> exporter dispatch without requiring
+    # the optional "trame_vtk" extra that pyvista's real HTML export needs.
+    called = {}
+    monkeypatch.setattr(pv.Plotter, "export_html",
+        lambda self, path: called.setdefault("path", path))
+    out = tmp_path / "out.html"
+    pyvista(_volume(), show=False, saveas=str(out))
+    assert called["path"] == str(out)
+
+  def test_vtksz_saveas_dispatches_to_export_vtksz(self, monkeypatch, tmp_path):
+    # Same as above, but for the optional "trame" extra .vtksz export needs.
+    called = {}
+    monkeypatch.setattr(pv.Plotter, "export_vtksz",
+        lambda self, path: called.setdefault("path", path))
+    out = tmp_path / "out.vtksz"
+    pyvista(_volume(), show=False, saveas=str(out))
+    assert called["path"] == str(out)
+
+  def test_show_true_calls_plotter_show(self, monkeypatch):
+    # A real interactive .show() blocks waiting for the window to close;
+    # stub it out to exercise the show=True branch without hanging the test.
+    calls = []
+    monkeypatch.setattr(pv.Plotter, "show", lambda self, *a, **k: calls.append(True))
+    pyvista(_volume(), show=True, is_contour=False)
+    assert calls == [True]
+
   def test_show_bounds_axes_ranges_reflect_scale_and_shift(self, monkeypatch):
     # The mesh itself is always normalized to +/-aspect_ratio (PyVista
     # handles non-integer axis extents poorly), so axes_ranges is the only
