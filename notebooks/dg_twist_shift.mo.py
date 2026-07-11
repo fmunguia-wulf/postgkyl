@@ -78,6 +78,11 @@ def _controls(mo):
     label="Simulation directory",
     full_width=True,
   )
+  input_file_ui = mo.ui.text(
+    value="rt_gk_cbc_passive_3x2v_p1",
+    label="Input file name",
+    full_width=True,
+  )
   sim_name_ui = mo.ui.text(
     value="rt_gk_cbc_passive_3x2v_p1",
     label="Simulation name",
@@ -103,17 +108,25 @@ def _controls(mo):
     label="Boundary",
   )
 
-  return sim_dir, sim_name_ui, gkylsoft_ui, ly_fac, nx, ny, run_btn, species, quantity, comp_ui, boundary
+  return sim_dir, input_file_ui, sim_name_ui, gkylsoft_ui, ly_fac, nx, ny, run_btn, species, quantity, comp_ui, boundary
 
 
 @app.cell
-def _layout(mo, sim_dir, sim_name_ui, gkylsoft_ui, ly_fac, nx, ny, run_btn,
+def _layout(mo, sim_dir, input_file_ui, sim_name_ui, gkylsoft_ui, ly_fac, nx, ny, run_btn,
       species, quantity, comp_ui, boundary):
   mo.vstack([
     sim_dir,
+    input_file_ui,
     sim_name_ui,
     gkylsoft_ui,
     mo.hstack([ly_fac, nx, ny, run_btn], justify="start"),
+    mo.callout(
+      mo.md(
+        "**Assumptions:** the input C file specifies the number of cells as `Nx` and `Ny`, "
+        "and the domain size along y as `Ly` (in units of `rho_s`)."
+      ),
+      kind="info",
+    ),
     mo.md("---"),
     mo.md("**Field plot**"),
     mo.hstack([species, quantity, comp_ui, boundary], justify="start"),
@@ -122,15 +135,16 @@ def _layout(mo, sim_dir, sim_name_ui, gkylsoft_ui, ly_fac, nx, ny, run_btn,
 
 @app.cell
 def _compile_run(mo, re, subprocess, Path,
-        sim_dir, sim_name_ui, ly_fac, nx, ny, run_btn):
+        sim_dir, input_file_ui, sim_name_ui, ly_fac, nx, ny, run_btn):
   # Only execute when the run button is pressed.
   mo.stop(not run_btn.value, mo.md("Click **Compile & Run** to start."))
 
-  _sdir     = sim_dir.value.rstrip("/")
-  _sim_name = sim_name_ui.value.strip()
+  _sdir        = sim_dir.value.rstrip("/")
+  _input_file  = input_file_ui.value.strip()
+  _sim_name    = sim_name_ui.value.strip()
 
   # Find the C input file
-  _c_path = Path(f"{_sdir}/{_sim_name}.c")
+  _c_path = Path(f"{_sdir}/{_input_file}.c")
   if not _c_path.exists():
     mo.stop(True, mo.callout(mo.md(f"**Error:** `{_c_path}` not found"), kind="danger"))
 
@@ -165,7 +179,7 @@ def _compile_run(mo, re, subprocess, Path,
 
   # Compile
   _make = subprocess.run(
-    ['make', _sim_name], cwd=_sdir,
+    ['make', _input_file], cwd=_sdir,
     capture_output=True, text=True)
 
   if _make.returncode != 0:
@@ -174,7 +188,7 @@ def _compile_run(mo, re, subprocess, Path,
 
   # Run initialization
   _run = subprocess.run(
-    [f'./{_sim_name}', '-s0'], cwd=_sdir,
+    [f'./{_input_file}', '-s0'], cwd=_sdir,
     capture_output=True, text=True)
 
   if _run.returncode != 0:
