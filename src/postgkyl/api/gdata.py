@@ -18,6 +18,8 @@ import numpy as np
 from postgkyl.core.state import GDataState
 from postgkyl import ops, io
 
+from .group import DatasetGroup
+
 
 class GData(GDataState):
   """Fluent dataset: ``pg.load(...).interp().sel(z0=0.0).plot()``."""
@@ -90,6 +92,76 @@ class GData(GDataState):
     ``d.apply(np.sqrt)``. The explicit spelling of nonlinear pointwise math
     on DG data; raise ``num_quad`` to de-alias."""
     return ops.apply(self, fn, num_quad=num_quad, **kwargs)
+
+  # ------------------------------------------------- field-domain analysis
+  # Equation-blind core verbs from layers 07-09 (``ops/__init__.py``), each a
+  # one-line delegation to its matching ``ops`` function.
+  def fft(self, *, psd: bool = False, iso: bool = False, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Fourier transform / power spectral density (see ``ops.fft``)."""
+    return ops.fft(self, psd=psd, iso=iso, inplace=inplace, tag=tag, label=label)
+
+  def magsq(self, *, coords: str = "0:3", inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Magnitude squared of a vector field (see ``ops.magsq``)."""
+    return ops.magsq(self, coords=coords, inplace=inplace, tag=tag, label=label)
+
+  def mask(self, mask_data: "GData | None" = None, *, lower: float | None = None,
+      upper: float | None = None, inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Mask values by a mask dataset or numeric thresholds (see ``ops.mask``)."""
+    return ops.mask(self, mask_data, lower=lower, upper=upper, inplace=inplace,
+        tag=tag, label=label)
+
+  def val2coord(self, *, x: str, y: str, periodic: bool = False,
+      tag: str | None = None, label: str | None = None) -> "DatasetGroup":
+    """Build new (x, y) datasets from DynVector columns (see ``ops.val2coord``).
+
+    Wraps the ``ops`` verb's (verb-less) ``core.DatasetGroup`` result in a
+    fluent :class:`~postgkyl.api.group.DatasetGroup` so the chain keeps going,
+    e.g. ``d.val2coord(x='0', y='1:3')[0].plot()``.
+    """
+    return DatasetGroup(ops.val2coord(self, x=x, y=y, periodic=periodic,
+        tag=tag, label=label))
+
+  def extract_input(self) -> str:
+    """Decode the input file embedded in ``ctx`` (see ``ops.extract_input``);
+    a terminal verb returning a plain ``str`` (``""`` if none is embedded)."""
+    return ops.extract_input(self)
+
+  def fit(self, fit_type: str, *, guess=None, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Fit a model to this dataset (see ``ops.fit``)."""
+    return ops.fit(self, fit_type, guess=guess, inplace=inplace, tag=tag,
+        label=label)
+
+  def growth(self, *, guess=None, minn: int | None = None, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Fit an exponential growth rate to time-series data (see ``ops.growth``)."""
+    return ops.growth(self, guess=guess, minn=minn, inplace=inplace, tag=tag,
+        label=label)
+
+  def differentiate(self, *, direction: int | None = None, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
+    """Numerical gradient of field-domain data (see ``ops.differentiate``)."""
+    return ops.differentiate(self, direction=direction, inplace=inplace, tag=tag,
+        label=label)
+
+  def map(self, mapping: "str | GData", *, space: str = "conf",
+      inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Deform this dataset's grid by evaluating a coordinate map (see ``ops.map``)."""
+    return ops.map(self, mapping, space=space, inplace=inplace, tag=tag,
+        label=label)
+
+  # Note: no fluent ``grid`` method. ``GData.grid`` (inherited from
+  # GDataState) is the axis-edge-array property that most of ``ops`` reads
+  # via plain attribute access (``data.grid``); a same-named verb method
+  # would shadow it for every GData instance and silently break every other
+  # verb. ``ops.grid`` (the "turn a dataset's grid into a dataset of
+  # coordinates" verb) is reachable as ``postgkyl.ops.grid(data, ...)`` --
+  # src_bak's GData carried the identical exception with the identical
+  # reasoning (src_bak/postgkyl/data/gdata.py:1258-1259).
 
   # ------------------------------------------------------ binary operators
   def __add__(self, o):      return ops.arithmetic.binary(operator.add, self, o)

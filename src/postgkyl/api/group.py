@@ -1,0 +1,116 @@
+"""``DatasetGroup`` (fluent) — the fluent group container over
+``core.DatasetGroup``.
+
+Mirrors how :class:`~postgkyl.api.gdata.GData` adds the fluent verb methods
+on top of the verb-less :class:`~postgkyl.core.state.GDataState`: this class
+adds *broadcasting* verbs on top of the verb-less
+:class:`~postgkyl.core.group.DatasetGroup`, without duplicating a single verb
+body.
+
+Contract
+--------
+Any attribute name that is not defined on this class itself (and does not
+start with ``_``) is resolved by :meth:`__getattr__`, by looking it up on
+every member, in order (**broadcasting**):
+
+- If the attribute is a *verb method* on every member, calling the broadcast
+  invokes that method on each member with the same arguments. If every
+  member's result is a ``GDataState`` (or subclass), the results are wrapped
+  in a *new* group of the caller's own concrete class, so chains stay fluent:
+  ``group.interp().sel(z0=0.0)``. Otherwise -- a terminal verb whose result is
+  not a dataset (``.plot()`` -> one Figure per member, ``.write()`` -> one
+  path per member, ``.integrate()`` -> one float per member,
+  ``.extract_input()`` -> one string per member, ...) -- a plain ``list`` of
+  the per-member results is returned, in member order. Note this means
+  ``group.plot()`` renders one figure *per member* (broadcast), not one
+  shared overlaid figure: there is no multi-dataset plot verb at the ``ops``
+  layer to delegate to, and ``api`` does not import ``render`` directly (see
+  ``tests/test_postgkyl.py``'s ``_ALLOWED`` map).
+- If the attribute is a *non-callable* value on every member (a property such
+  as ``num_dims`` or ``backend``), it resolves immediately to a plain
+  ``list`` of the per-member values, in member order -- no closure, no
+  call needed.
+- Attribute names starting with ``_`` are never broadcast (raises
+  ``AttributeError``), so private/dunder probes and pickling machinery are
+  unaffected. An attribute missing from any member also raises
+  ``AttributeError`` immediately, at access time.
+
+Four verbs are **not** broadcast because they combine the members into a
+single result rather than acting on each independently; these are defined
+explicitly below, delegating to the matching multi-dataset function in
+``ops``/``api.verbs``: ``info`` (one combined summary), ``collect`` (stack
+into one dataset), ``ev`` (evaluate an RPN expression over the members),
+``animate`` (one animation, one frame per member) -- matching the deferred
+worklist from layer 05's report (the old ``src_bak`` class's non-broadcast
+methods were exactly ``__getattr__`` broadcasting, ``plot``, ``info``,
+``animate``, ``plotly_animate``, ``collect``, ``ev``; ``plot`` and
+``plotly_animate`` are not in the new ``ops`` verb inventory as multi-dataset
+verbs, so only ``info``/``collect``/``ev``/``animate`` need the explicit
+treatment here).
+
+``ops.grid`` has no fluent spelling anywhere (not on ``GData``, so not
+broadcast here either) -- see ``api/gdata.py`` for why.
+"""
+
+from __future__ import annotations
+
+from postgkyl import ops
+from postgkyl.core.group import DatasetGroup as _CoreDatasetGroup
+from postgkyl.core.state import GDataState
+
+from . import verbs
+
+
+class DatasetGroup(_CoreDatasetGroup):
+  """A group whose members' fluent verbs broadcast over the whole group."""
+
+  def __getattr__(self, name: str):
+    if name.startswith("_"):
+      raise AttributeError(name)
+    # end
+    values = [getattr(member, name) for member in self._datasets]
+    if values and not all(callable(v) for v in values):
+      return values
+    # end
+
+    def broadcast(*args, **kwargs):
+      results = [v(*args, **kwargs) for v in values]
+      if results and all(isinstance(r, GDataState) for r in results):
+        return type(self)(results)
+      # end
+      return results
+    return broadcast
+
+  # ------------------------------------------------------- combining (typed)
+  # Overridden (not inherited) so the result stays the caller's concrete
+  # subclass, mirroring GDataState._result's ``type(self)`` trick.
+  def with_(self, *others) -> "DatasetGroup":
+    """Return a new group (same concrete class) with ``others`` appended."""
+    return type(self)(self._datasets + list(others))
+
+  __and__ = with_
+
+  def __getitem__(self, index):
+    """Index or slice; a slice returns a group of the same concrete class."""
+    result = self._datasets[index]
+    return type(self)(result) if isinstance(index, slice) else result
+
+  # ------------------------------------------------------- terminal (typed)
+  def info(self, *, header: bool = True) -> list:
+    """Summarize every member (see ``ops.info``); returns a list of strings."""
+    return ops.info(*self._datasets, header=header)
+
+  def collect(self, *, sumdata: bool = False, period: float | None = None,
+      offset: float = 0.0, tag: str | None = None, label: str | None = None):
+    """Combine the members into one dataset along a time axis (see
+    ``api.verbs.collect``)."""
+    return verbs.collect(*self._datasets, sumdata=sumdata, period=period,
+        offset=offset, tag=tag, label=label)
+
+  def ev(self, chain: str, *, tag: str | None = None, label: str | None = None):
+    """Evaluate an RPN expression over the members (see ``api.verbs.ev``)."""
+    return verbs.ev(chain, *self._datasets, tag=tag, label=label)
+
+  def animate(self, **kwargs):
+    """Animate the members, one frame each (see ``api.verbs.animate``)."""
+    return verbs.animate(*self._datasets, **kwargs)
