@@ -32,7 +32,7 @@ a bare top-level name (one home per verb-vocabulary fact, not three).
 
 Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
 
-    floor      gpython/    ctypes -> libg0core.so (the only foreign code)
+    floor      gpython/    compiled _gpython extension -> libg0core.so (the only foreign code)
     leaves     numerics/   (pure NumPy; imports nothing internal)
     engine     dg/         interp bridge + modal ops   -> gpython
     leaves     io/         readers (C-native first)    -> gpython

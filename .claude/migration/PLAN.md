@@ -133,8 +133,32 @@ package. Layer 12 was renamed accordingly (`12-diagnostics-loaders.md`); no
 - `differentiate`: exact modal derivative needs basis-gradient evaluation from
   the shim; layer 03 investigates and either implements or documents the
   fallback (post-interp `np.gradient`) — decision recorded in the layer 03
-  review.
+  review. **Resolved (layer 07):** `ops/differentiate.py` implements the
+  field-domain `np.gradient` fallback per
+  `.claude/migration/notes/differentiate-decision.md`; the exact modal
+  derivative (Approach A: wrap the shim's `eval_grad_expand` as
+  `pg0_basis_eval_grad`) remains permanently deferred — it requires editing
+  C sources in the `gkeyll/` submodule and `gpython/csrc/`, out of every
+  layer's authorized Python-only scope. Not revisited by layer 15.
 - `dg_local_poly`, `dg_avg`, `dg_evproj` (old ctypes/modalDG commands):
   capabilities re-provided by `ffi.basis`/`ops.represent`; port only if a
-  concrete gap remains after layer 08.
-- ADIOS reader tests require `adios2` (optional dep) — tests skip when absent.
+  concrete gap remains after layer 08. **Resolved:** never ported — their
+  capabilities are covered by `ops.represent`/`ops.apply`
+  (`.to_modal()/.to_nodal()/.to_quad()/.apply()`), and
+  `tests/test_cli_commands.py::test_config_and_dg_commands_are_not_registered`
+  pins that none of `config`/`dg_local_poly`/`dg_avg`/`dg_evproj` exist as
+  CLI commands.
+- ADIOS reader tests require `adios2` (optional dep) — tests skip when
+  absent. **Standing**, not a defect; unchanged through layer 15 (confirmed:
+  `adios2` is not installed in this environment, `TestGkylAdiosReader`-style
+  tests skip cleanly).
+
+## Layer 15 (facade) status
+
+Re-audited against the current tree (post layer-14 CLI + the "Incorporate
+growth into fit" / "Rename ffi and pg0 to gpython, copy->clone, write->save"
+follow-on commits): see `.claude/migration/FINAL_REPORT.md` for the full
+per-layer summary, the benchmark outputs, and the "known gaps" section
+(including one CLI import-contract regression discovered while running this
+layer's benchmarks — `cli/commands/fit.py` imports `postgkyl.numerics`
+directly, a layer-14-scope bug, not fixed here per this layer's Scope).

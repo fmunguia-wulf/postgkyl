@@ -3,12 +3,14 @@
 A Gkeyll field stores only its *values*; at read time the grid is built
 uniformly from the stored bounds (corrected for ghost cells). Coordinate
 (computational-to-physical) mappings are *not* applied while reading -- they
-are applied afterwards, on already-loaded data, by the ``map`` verb (not yet
-implemented; ``ops/map.py`` is a later migration layer).
+are applied afterwards, on already-loaded data, by the ``map`` verb
+(``ops/map.py``, backed by ``dg/map.py``; see ``MAPPING.md``).
 
-``uniform_grid``/``adjust_for_ghost_cells`` build the read-time uniform grid;
-``c2p_grid`` splits a mapping field's packed node coordinates into a per-
-dimension grid and will be used by the DG machinery behind the ``map`` verb.
+``uniform_grid``/``adjust_for_ghost_cells`` build the read-time uniform grid.
+``c2p_grid`` is unused by ``ops/map.py`` (which evaluates a mapping's DG
+coefficients directly via ``dg.map_grid``/``gpython.basis.eval_matrix``
+rather than splitting packed node coordinates) but is kept for any reader
+that still needs to split a mapping field's packed per-dimension node block.
 """
 
 from __future__ import annotations
