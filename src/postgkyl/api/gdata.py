@@ -72,6 +72,18 @@ class GData(GDataState):
     or a NumPy array (one value per field)."""
     return ops.integrate(self, op=op)
 
+  def integrate_axis(self, axis: int | tuple | str | None = None, *,
+      inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Trapezoidal integral over one or more axes of point-value data
+    (see ``ops.integrate_axis``); a new (reduced) dataset, like ``.sel()``.
+
+    Works on already-interpolated (NumPy) data or a native nodal/quad
+    representation; raw modal DG coefficients raise -- convert explicitly
+    first (``.interp()``/``.to_nodal()``/``.to_quad()``).
+    """
+    return ops.integrate_axis(self, axis, inplace=inplace, tag=tag, label=label)
+
   # --------------------------------------- representation changes (explicit)
   # Conversions never happen implicitly — these verbs are the only doorway
   # between the modal / nodal / quadrature representations (all gkyl-native).

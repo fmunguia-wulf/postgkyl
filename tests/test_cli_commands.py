@@ -293,10 +293,8 @@ class TestFitAndGrowth:
 
 
 # ---------------------------------------------------------------------------
-# integrate (terminal; new architecture integrates the whole grid via Gkeyll,
-# so the old axis-restricted partial integral is not reachable from the CLI
-# -- this is a documented, intentional capability change: see
-# integrate.py's docstring and .claude/migration/reviews/14-cli-review.md C2).
+# integrate -- two modes: whole-grid modal (terminal, prints values) via
+# --op, or per-axis point-value data (produces a new dataset) via --axis.
 # ---------------------------------------------------------------------------
 
 class TestIntegrate:
@@ -307,6 +305,15 @@ class TestIntegrate:
 
   def test_integrate_on_interpolated_data_fails_closed(self):
     result = _run([F1, "interp", "integrate"])
+    assert result.exit_code != 0
+
+  def test_integrate_axis_collapses_the_chosen_axis(self):
+    result = _ok([DISTF_P2_0, "interp", "integrate", "--axis", "0", "info"])
+    assert "Dim 0: Num. cells: 1;" in result.output
+    assert "Dim 1: Num. cells: 96;" in result.output
+
+  def test_integrate_axis_on_raw_modal_data_fails_closed(self):
+    result = _run([DISTF_P2_0, "integrate", "--axis", "0"])
     assert result.exit_code != 0
 
 

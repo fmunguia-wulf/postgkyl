@@ -285,3 +285,60 @@ def test_integrate_requires_basis_metadata():
   del a.ctx["basis_type"]
   with pytest.raises(ValueError, match="basis_type/poly_order"):
     a.integrate()
+
+
+# ======================================================= ops.integrate_axis
+@needs_gkeyll
+def test_integrate_axis_rejects_raw_modal_data():
+  a = pg.load(F1)
+  with pytest.raises(ValueError, match="modal DG coefficients"):
+    a.integrate_axis(0)
+
+
+def test_integrate_axis_on_interpolated_data_collapses_the_axis():
+  a = pg.load(F1).interp()
+  before = a.num_cells[0]
+  r = a.integrate_axis(0)
+  assert r.num_cells[0] == 1
+  assert before > 1  # sanity: the axis actually had more than one cell
+  assert r.ctx.get("interpolated") is True
+
+
+def test_integrate_axis_matches_manual_trapezoidal_sum():
+  a = pg.load(F1).interp()
+  r = a.integrate_axis(0)
+  dz = np.diff(a.grid[0])
+  expected = np.tensordot(dz, np.asarray(a.values), axes=([0], [0]))
+  np.testing.assert_allclose(np.asarray(r.values)[0], expected)
+
+
+def test_integrate_axis_default_integrates_every_axis():
+  a = pg.load(F1).interp()
+  r = a.integrate_axis()
+  assert all(n == 1 for n in r.num_cells)
+
+
+@needs_gkeyll
+def test_integrate_axis_on_native_nodal_representation():
+  # A gkyl-native nodal/quad dataset materializes to its true point grid
+  # before integrating -- same bridge ``plot`` uses (Doctrine V: one home).
+  nodal = pg.load(F1).to_nodal()
+  r = nodal.integrate_axis(0)
+  assert r.backend == "numpy"
+  assert r.num_cells[0] == 1
+  assert r.ctx.get("representation") is None  # stale tag cleared, not "nodal"
+
+
+def test_integrate_axis_tag_and_label():
+  a = pg.load(F1).interp()
+  r = a.integrate_axis(0, tag="reduced", label="my label")
+  assert r.tag == "reduced"
+  assert r.label == "my label"
+  assert a.num_cells[0] > 1  # original left untouched (inplace=False default)
+
+
+def test_integrate_axis_inplace_mutates_the_dataset():
+  a = pg.load(F1).interp()
+  out = a.integrate_axis(0, inplace=True)
+  assert out is a
+  assert a.num_cells[0] == 1

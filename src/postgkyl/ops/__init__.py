@@ -20,7 +20,7 @@ from . import arithmetic
 from .interpolate import interpolate
 from .select import select
 from .info import info
-from .integrate import integrate
+from .integrate import integrate, integrate_axis
 from .plot import plot
 from .animate import animate
 from .represent import apply, represent
@@ -38,7 +38,7 @@ from .differentiate import differentiate
 from .evaluate import evaluate
 from .map import map
 
-__all__ = ["interpolate", "select", "info", "integrate", "plot", "animate",
+__all__ = ["interpolate", "select", "info", "integrate", "integrate_axis", "plot", "animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
     "extract_input", "fit", "differentiate", "evaluate",

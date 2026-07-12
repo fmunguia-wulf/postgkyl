@@ -66,7 +66,8 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
 INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "save",
-    "mul", "div", "integrate", "to_modal", "to_nodal", "to_quad", "apply",
+    "mul", "div", "integrate", "integrate_axis", "to_modal", "to_nodal",
+    "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
     "differentiate", "map"]
 MODULE_VERBS = ["collect", "evaluate", "relchange", "animate"]
@@ -215,6 +216,7 @@ class TestSubclassPropagation:
     assert isinstance(MyData(F1).apply(np.abs), MyData)
     result = MyData(F1).integrate()
     assert result is not None
+    assert isinstance(MyData(F1).interp().integrate_axis(0), MyData)
 
 
 # ============================================================ keyword pass-through

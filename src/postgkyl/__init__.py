@@ -24,7 +24,7 @@ Every fluent ``GData`` method delegates to one of these ``ops`` functions, so
 ``pg.select(a, z0=0.0)`` and ``a.select(z0=0.0)`` are the same call — the
 functional and fluent spellings can never drift apart. The rest of the
 equation-blind ``ops`` verb inventory (``fft``, ``magsq``, ``mask``,
-``val2coord``, ``extract_input``, ``fit``, ``differentiate``,
+``val2coord``, ``extract_input``, ``fit``, ``differentiate``, ``integrate_axis``,
 ``map``, plus ``grid`` -- see ``api/gdata.py`` for why ``grid`` has no fluent
 spelling) is reachable as a ``GData`` fluent method and via
 ``postgkyl.ops.<verb>``; this facade does not additionally promote each one to
