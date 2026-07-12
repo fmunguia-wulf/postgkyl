@@ -20,6 +20,7 @@ delegated to) lives one layer up, in ``diagnostics``.
 
 from . import arithmetic
 from .interpolate import interpolate
+from .local_poly import local_poly
 from .select import select
 from .info import info
 from .integrate import integrate, integrate_axis
@@ -42,7 +43,7 @@ from .differentiate import differentiate
 from .evaluate import available_operators as available_evaluate_operators, evaluate
 from .map import map
 
-__all__ = ["interpolate", "select", "info", "integrate", "integrate_axis", "average",
+__all__ = ["interpolate", "local_poly", "select", "info", "integrate", "integrate_axis", "average",
     "eval_at_coord_proj",
     "plot", "animate",
     "arithmetic", "represent", "apply",

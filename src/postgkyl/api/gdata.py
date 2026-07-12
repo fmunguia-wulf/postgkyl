@@ -32,6 +32,14 @@ class GData(GDataState):
     return ops.interpolate(self, basis=basis, p=p, num_interp=num_interp,
         inplace=inplace, tag=tag, label=label)
 
+  def local_poly(self, *, basis: str | None = None, p: int | None = None,
+      npoints: int = 2, inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Evaluate the DG polynomial cell-by-cell onto a discontinuity-preserving
+    plotting mesh (see ``ops.local_poly``)."""
+    return ops.local_poly(self, basis=basis, p=p, npoints=npoints,
+        inplace=inplace, tag=tag, label=label)
+
   def select(self, *, comp=None, z0=None, z1=None, z2=None, z3=None, z4=None,
       z5=None, inplace: bool = False, tag: str | None = None,
       label: str | None = None) -> "GData":

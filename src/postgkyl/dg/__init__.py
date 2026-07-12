@@ -3,7 +3,9 @@
 Four modules, one per domain boundary:
 
 - :mod:`.interpolate` — the one-way modal -> NumPy bridge (matrix from
-  Gkeyll's basis functions, applied with NumPy).
+  Gkeyll's basis functions, applied with NumPy); also ``local_poly``, the
+  same bridge evaluated at whole-cell points with NaN-separated interfaces
+  (the discontinuity-preserving plotting mesh).
 - :mod:`.modal` — operations that stay in the modal domain (weak algebra,
   coefficient linear combinations, integration), all executed by Gkeyll
   kernels on native arrays.
@@ -13,9 +15,9 @@ Four modules, one per domain boundary:
   at a target's own grid points (see ``MAPPING.md``).
 """
 
-from .interpolate import interpolate, num_basis
+from .interpolate import interpolate, local_poly, num_basis
 from .map import eval_at_points, map_grid
 from . import modal, rep
 
-__all__ = ["interpolate", "num_basis", "modal", "rep", "eval_at_points",
-    "map_grid"]
+__all__ = ["interpolate", "local_poly", "num_basis", "modal", "rep",
+    "eval_at_points", "map_grid"]

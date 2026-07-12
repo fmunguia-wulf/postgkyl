@@ -1,0 +1,85 @@
+"""Quickstart: the golden script path.
+
+    pg.load(...).interpolate().select(...).plot()
+
+This walks through the same chain the CLI uses (see
+``examples/cli_tutorial.md``), one step at a time:
+
+1. ``pg.load`` reads a ``.gkyl`` file. Raw DG data lands in the *modal*
+   backend -- coefficients, not values you can plot or feed to NumPy.
+2. ``.interpolate()`` is the one-way bridge to a uniform mesh of plain
+   values (the *numpy* backend).
+3. ``.select()`` picks out one component/coordinate.
+4. ``.plot()`` renders it (a terminal verb -- returns the Matplotlib
+   ``Figure``, which this script then saves to disk).
+5. ``.save()`` writes a dataset back out; reloading it recovers the same
+   values, byte for byte.
+
+Run directly:
+    MPLBACKEND=Agg PYTHONPATH=src python examples/scripts/01_quickstart.py
+
+Run as a test: see ``tests/test_examples.py``, which runs this file and
+lets its ``assert`` statements double as regression checks.
+"""
+
+from __future__ import annotations
+
+import os
+
+import matplotlib
+matplotlib.use("Agg")  # headless-safe; drop this line to see the plot windows
+
+import numpy as np
+
+import postgkyl as pg
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+DATA = os.path.join(ROOT, "tests", "test_data", "generated", "2d_c2p_rot45_ms_p1.gkyl")
+OUTPUT_DIR = os.environ.get("PGKYL_EXAMPLE_OUTPUT", os.path.join(HERE, "output"))
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# 1. Load -- raw DG coefficients, native to Gkeyll. This 2D file carries a
+#    2-component vector field (a rotated coordinate map).
+d = pg.load(DATA)
+print("loaded:", repr(d))
+assert d.backend == "gkyl"
+assert not d.is_interpolated
+
+# 2. Interpolate -- the modal -> NumPy bridge.
+field = d.interpolate()
+print("interpolated:", repr(field))
+assert field.backend == "numpy"
+assert field.is_interpolated
+assert field.num_comps == 2
+
+# 3a. Select by component -- pick out the x-component as its own 2D scalar
+#     field.
+comp0 = field.select(comp=0)
+assert comp0.num_comps == 1
+fig = comp0.plot(title="x-component", show=False)
+png_path = os.path.join(OUTPUT_DIR, "01_quickstart_comp0.png")
+fig.savefig(png_path)
+print("saved plot:", png_path)
+assert os.path.exists(png_path)
+
+# 3b. Select by coordinate -- fix y=0.5 to take a lineout across x, keeping
+#     both components. The y axis survives as a size-1 slice (``select``
+#     narrows a coordinate, it doesn't drop the axis -- ``plot`` squeezes it
+#     away when rendering).
+lineout = field.select(z1=0.5)
+assert lineout.num_cells[1] == 1
+assert lineout.num_comps == 2
+fig = lineout.plot(title="lineout at y=0.5", show=False)
+lineout_path = os.path.join(OUTPUT_DIR, "01_quickstart_lineout.png")
+fig.savefig(lineout_path)
+print("saved plot:", lineout_path)
+
+# 4. Save / reload round trip -- writing an interpolated field to ``.gkyl``
+#    and reading it back recovers the same values exactly.
+gkyl_path = comp0.save(os.path.join(OUTPUT_DIR, "01_quickstart_out.gkyl"))
+reloaded = pg.load(gkyl_path)
+assert np.allclose(np.asarray(reloaded.values), np.asarray(comp0.values))
+print("round-tripped through", gkyl_path)
+
+print("01_quickstart: OK")

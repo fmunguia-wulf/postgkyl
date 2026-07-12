@@ -38,6 +38,7 @@ DISTF_P2_0 = os.path.join(DATA, "twostream-f-p2_0.bp")
 DISTF_P2_1 = os.path.join(DATA, "twostream-f-p2_1.bp")
 GK_NAME = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1")
 GK_JACOBTOT_INV = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-geo_int_jacobtot_inv.gkyl")
+F1D = os.path.join(DATA, "generated", "1d_ms_p1.gkyl")
 
 
 def _run(args):
@@ -178,6 +179,19 @@ class TestChainedPipelines:
 
   def test_grid_chain(self):
     _ok([DISTF_P2_0, "interp", "grid"])
+
+  def test_dg_local_poly_chain_and_help_example(self, tmp_path):
+    """The exact chain from ``dg_local_poly --help``'s docstring example
+    (1D M0 moment, selecting down the extra directions), against a real
+    1x2v distribution-function fixture."""
+    out = tmp_path / "cli.png"
+    result = _ok(["--batch-mode", DISTF_P2_0, "dg_local_poly", "select",
+        "--z1", "0.0", "--z2", "0.0", "plot", "--saveas", str(out)])
+    assert out.exists()
+
+  def test_dg_local_poly_npoints_and_tag(self):
+    result = _ok([F1D, "dg_local_poly", "-n", "3", "--tag", "lp", "info"])
+    assert "interpolated" in result.output
 
   def test_relchange_against_baseline(self):
     result = _ok([ENERGY, ENERGY, "relchange"])
@@ -541,11 +555,14 @@ class TestUtility:
 # ---------------------------------------------------------------------------
 
 def test_config_and_dg_commands_are_not_registered():
-  """'config' (obsolete gkylsoft-path store) and the dg_* Typer-era commands
-  are intentionally not ported -- see 14-cli.md's "Skip" list and this
-  layer's report."""
+  """'config' (obsolete gkylsoft-path store) and the still-deferred dg_*
+  Typer-era commands are intentionally not ported -- see 14-cli.md's "Skip"
+  list and this layer's report. ``dg_local_poly`` has since been ported (its
+  hand-derived per-order polynomial kernels are superseded by
+  ``gpython.basis.eval_matrix``, which evaluates any basis at arbitrary
+  points); ``dg_avg``/``dg_evproj`` remain unported."""
   names = {cmd.name for cmd in COMMANDS}
   assert "config" not in names
   assert "dg_avg" not in names
   assert "dg_evproj" not in names
-  assert "dg_local_poly" not in names
+  assert "dg_local_poly" in names

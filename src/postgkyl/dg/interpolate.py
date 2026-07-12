@@ -8,6 +8,16 @@ functions (:mod:`postgkyl.gpython.basis` calls the ``eval`` pointer carried by
 so the result is always a *new, by-value* NumPy array, never a view of C
 memory. The vendored sympy matrix tables this replaced lived in
 ``matrices.py`` (see ``src_bak`` history).
+
+:func:`local_poly` is the same bridge with a different evaluation-point
+convention: points span the whole reference cell ``[-1, 1]`` (endpoints
+included) instead of interior subcell centers, and a NaN is spliced in at
+every cell interface -- so a plot shows the true DG inter-cell discontinuity
+instead of the spuriously smooth curve :func:`interpolate` produces. The
+hand-derived per-order polynomial tables the old implementation used
+(``modalDG/kernels/expand_*d.py``, serendipity only) are superseded by
+:func:`postgkyl.gpython.basis.eval_matrix`, which evaluates *any* basis at
+arbitrary points through Gkeyll's own compiled basis-eval.
 """
 
 from __future__ import annotations
@@ -88,4 +98,76 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
   # end
 
   grid_out = [_make_mesh(num_interp, grid[d]) for d in range(num_dims)]
+  return grid_out, out
+
+
+def _cell_edges_to_nodes(edges: np.ndarray, nodes_1d: np.ndarray) -> np.ndarray:
+  """Physical coordinates of ``nodes_1d`` (in ``[-1, 1]``) within every cell
+  of a 1-D ``edges`` array, flattened cell-major. Works for a non-uniform
+  grid: each cell is scaled/shifted from its own actual width, not assumed
+  uniform across the domain (unlike :func:`_make_mesh`)."""
+  cell_center = 0.5 * (edges[:-1] + edges[1:])
+  dx = edges[1:] - edges[:-1]
+  return (cell_center[:, np.newaxis]
+          + nodes_1d[np.newaxis, :] * dx[:, np.newaxis] / 2).reshape(-1)
+
+
+def local_poly(values: np.ndarray, grid: list, *, poly_order: int,
+    basis_type: str, modal: bool = True, npoints: int = 2):
+  """Evaluate the DG polynomial cell-by-cell onto a discontinuity-preserving
+  plotting mesh.
+
+  Unlike :func:`interpolate`, points span the whole reference cell
+  ``[-1, 1]`` (``npoints`` of them, endpoints included) and a NaN is
+  inserted at every cell interface, so the true inter-cell jump of the DG
+  solution is visible when plotted instead of hidden by a spuriously smooth
+  curve.
+
+  Args:
+    values: ``(cells..., total_comps)`` array of DG coefficients.
+    grid: list of 1-D nodal edge arrays (one per dimension).
+    poly_order: polynomial order of the basis.
+    basis_type: long basis name (``"serendipity"``, ``"tensor"``,
+      ``"hybrid"``, or ``"gkhybrid"``).
+    modal: False for nodal-basis data; converted through the exact
+      ``nodal_to_modal`` matrix first.
+    npoints: evaluation points per cell, from one face to the other.
+
+  Returns:
+    ``(grid_out, values_out)`` — a NaN-separated edge-grid list and value
+    array, one entry longer per cell interface than the plain ``npoints``
+    x ``num_cells`` mesh.
+  """
+  num_dims = len(grid)
+  if num_dims == 1 and basis_type == "hybrid":
+    basis_type = "serendipity"  # PKPM hybrid degenerates to serendipity in 1D
+  # end
+
+  nodes_1d = np.linspace(-1.0, 1.0, npoints)
+  num_nodes = len(nodes_1d)
+
+  nb = num_basis(num_dims, poly_order, basis_type)
+  num_fields = values.shape[-1] // nb
+  c_mat = gpython_basis.eval_matrix(basis_type, num_dims, poly_order,
+      gpython_basis.tensor_points(nodes_1d, num_dims))
+
+  n2m = (None if modal else
+         gpython_basis.nodal_to_modal_matrix(basis_type, num_dims, poly_order))
+  out = None
+  for c in range(num_fields):
+    q = values[..., c * nb:(c + 1) * nb]
+    if n2m is not None:
+      q = np.einsum("jk,...k->...j", n2m, q)
+    field_c = _interpolate_on_mesh(c_mat, q, num_nodes)[..., np.newaxis]
+    out = field_c if out is None else np.append(out, field_c, axis=-1)
+  # end
+
+  num_cells = np.array(values.shape[:-1])
+  grid_out = [_cell_edges_to_nodes(grid[d], nodes_1d) for d in range(num_dims)]
+  for d in range(num_dims):
+    sep = np.arange(num_nodes, num_nodes * num_cells[d], num_nodes)
+    out = np.insert(out, sep, np.nan, axis=d)
+    grid_out[d] = np.insert(grid_out[d], sep, grid_out[d][sep - 1])
+  # end
+
   return grid_out, out

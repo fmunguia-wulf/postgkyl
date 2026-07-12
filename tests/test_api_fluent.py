@@ -65,7 +65,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # fluent spelling: either a GData instance method, or a module-level function
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
-INSTANCE_VERBS = ["interpolate", "select", "plot", "save",
+INSTANCE_VERBS = ["interpolate", "local_poly", "select", "plot", "save",
     "mul", "div", "integrate", "integrate_axis", "to_modal", "to_nodal",
     "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",

@@ -14,7 +14,7 @@ organization").
 from __future__ import annotations
 
 from . import (
-    load, interpolate, save, select, plot, info,
+    load, interpolate, local_poly, save, select, plot, info,
     fft, magsq, relchange, mask, collect, grid, val2coord, extractinput,
     fit, growth, differentiate, evaluate, map, integrate, average,
     evalatcoordproj, animate,
@@ -30,6 +30,7 @@ from . import print as _print
 COMMANDS = [
     load.command,
     interpolate.command,
+    local_poly.command,
     select.command,
     plot.command,
     info.command,
@@ -84,8 +85,8 @@ COMMAND_SECTIONS: dict[str, list[str]] = {
     "Verbs": [
         "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
         "extractinput", "fit", "growth", "differentiate", "evaluate", "map",
-        "integrate", "average", "evalatcoordproj", "interpolate", "select",
-        "load",
+        "integrate", "average", "evalatcoordproj", "interpolate",
+        "dg_local_poly", "select", "load",
     ],
     "Diagnostics": [
         "euler", "tenmoment", "mhd", "velocity", "agyro", "current",
