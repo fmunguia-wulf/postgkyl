@@ -11,8 +11,11 @@ stay in ``ops``; this is the layer that knows what the numbers mean.
 Layer 12 added the equation-internal loaders: ``gyrokinetics/`` (distribution
 functions + the derived-quantity registry), the shared ``discovery.py``
 stem/frame discovery, and ``pkpm.load_pkpm``. Layer 13 extends this package
-further with the program-scale diagnostics (``trajectory``, ``enstrophy``,
-``ke_dke``) -- there is no separate ``loaders/`` package anywhere.
+further with the program-scale diagnostics: three gyrokinetic programs
+(``gyrokinetics.gk_energy_balance``/``gk_particle_balance``/``gk_nodes``,
+ported from the old ``apps/gk_*.py``) plus ``trajectory``, ``enstrophy``, and
+``ke_dke`` (ported from ``apps/trajectory.py`` and ``tools/calc_*.py``) --
+there is no separate ``loaders/`` package anywhere.
 """
 
 from . import (
@@ -26,9 +29,13 @@ from . import (
     pkpm,
     discovery,
     gyrokinetics,
+    trajectory,
+    enstrophy,
+    ke_dke,
 )
 
 __all__ = [
     "five_moment", "ten_moment", "mhd", "plasma", "multispecies",
     "rotations", "kinetic", "pkpm", "discovery", "gyrokinetics",
+    "trajectory", "enstrophy", "ke_dke",
 ]

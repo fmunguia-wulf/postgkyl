@@ -33,6 +33,11 @@ from .quantities import (
 )
 from .registry import gk_quant_registry
 
+# Layer 13: program-scale diagnostics ported from src_bak's apps/gk_*.py.
+from .energy_balance import EnergyBalanceTraces, energy_balance_error, gk_energy_balance
+from .particle_balance import ParticleBalanceTraces, gk_particle_balance, particle_balance_error
+from .nodes import GKYL_GEOMETRY_ID, gk_nodes, is_geo_mapc2p, multib_tag, nodes_to_RZ
+
 __all__ = [
     "load_gk_distf", "resolve_frames",
     "available_quantities", "load_gk_quantity", "gk_quant_registry",
@@ -42,4 +47,7 @@ __all__ = [
     "fetch_Tpar_from_M0_M1_M2par", "fetch_temp_from_Max",
     "fetch_temp_from_Tpar_Tperp", "fetch_Tperp_from_BiMax",
     "fetch_Tperp_from_M0_M2perp",
+    "EnergyBalanceTraces", "energy_balance_error", "gk_energy_balance",
+    "ParticleBalanceTraces", "gk_particle_balance", "particle_balance_error",
+    "GKYL_GEOMETRY_ID", "gk_nodes", "is_geo_mapc2p", "multib_tag", "nodes_to_RZ",
 ]

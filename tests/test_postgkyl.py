@@ -408,7 +408,8 @@ _ALLOWED = {
                                                       # models/ array math they delegated to;
                                                       # ops is now the equation-blind
                                                       # core-verb library only
-    "diagnostics": {"core", "ops", "numerics", "api"}, # added by 10-diagnostics.md: equation-
+    "diagnostics": {"core", "ops", "numerics", "api", "render"}, # added by
+                                                      # 10-diagnostics.md: equation-
                                                       # specific compositions (five_moment/
                                                       # ten_moment/mhd/plasma/multispecies/
                                                       # rotations/kinetic/pkpm) wrap core
@@ -421,7 +422,15 @@ _ALLOWED = {
                                                       # .interp()) to read simulation output
                                                       # -- api imports only core/ops/io, none
                                                       # of which import diagnostics, so this
-                                                      # still cannot create a cycle
+                                                      # still cannot create a cycle; "render"
+                                                      # added by 13-diagnostics-programs.md:
+                                                      # the program-scale diagnostics
+                                                      # (gk_nodes, trajectory) build figures
+                                                      # directly with matplotlib/render
+                                                      # helpers -- render imports only
+                                                      # core/numerics, neither of which
+                                                      # imports diagnostics, so this still
+                                                      # cannot create a cycle
     "api":    {"core", "ops", "io"},
     "":       {"api", "ops", "render", "io", "diagnostics"}, # facade: pure re-export of
                                                       # public names; "diagnostics" added by
