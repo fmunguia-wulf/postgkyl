@@ -158,7 +158,14 @@ package. Layer 12 was renamed accordingly (`12-diagnostics-loaders.md`); no
 Re-audited against the current tree (post layer-14 CLI + the "Incorporate
 growth into fit" / "Rename ffi and pg0 to gpython, copy->clone, write->save"
 follow-on commits): see `.claude/migration/FINAL_REPORT.md` for the full
-per-layer summary, the benchmark outputs, and the "known gaps" section
-(including one CLI import-contract regression discovered while running this
-layer's benchmarks — `cli/commands/fit.py` imports `postgkyl.numerics`
-directly, a layer-14-scope bug, not fixed here per this layer's Scope).
+per-layer summary, the benchmark outputs, and the "known gaps" section.
+`test_import_contract_no_violations` and `test_import_graph_is_acyclic` both
+pass cleanly against the current tree — there is no CLI import-contract
+regression. `cli/commands/fit.py` imports only `click` and the shared
+`.._apply`/`.._options` helpers; the only `from postgkyl import numerics`
+edge anywhere is `ops/fit.py:22`, a different, legitimately-allowed
+`ops -> numerics` edge. The real, still-open item is `fit`'s CLI
+prefix-matching capability gap (`fit lin` -> `linear`, dropped since layer
+14), which is documented in `FINAL_REPORT.md`'s "Known gaps" §1 — it is a
+design question about whether the facade should grow a vocabulary export,
+not a currently-existing contract violation.

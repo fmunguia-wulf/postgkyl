@@ -10,14 +10,15 @@ stale docstring, and the untracked docs (`CLAUDE.md`, `MAPPING.md`,
 were touched.
 
 **Note on a concurrent process.** While this layer was running, a separate
-"layer-14 fixer" pass landed in the same working tree (visible as uncommitted
-changes to `src/postgkyl/cli/{_apply.py,commands/{agyro,collect,energetics,
+"layer-14 fixer" pass landed in the same working tree (touching
+`src/postgkyl/cli/{_apply.py,commands/{agyro,collect,energetics,
 ev,fit,growth,integrate,plot,val2coord}.py}`, `tests/test_cli_{commands,
 diagnostics}.py`, and `.claude/migration/reviews/14-cli-review.md`'s new
 "Resolutions" section). Those files are outside this layer's scope (rule 1)
 and were not touched here; they were only read, to confirm the tree they
-left behind is green and to report their outcome accurately below. See
-CHECKPOINTS.md's `14-cli` row.
+left behind is green and to report their outcome accurately below. That
+fixer pass is now committed (`9d99d97`, landed before this layer's own
+commit) — see CHECKPOINTS.md's `14-cli` row.
 
 ## Per-layer summary
 
@@ -112,14 +113,16 @@ libg0core.so`.
 
 ## Leftover sweep (item 3)
 
-- `git grep -nE "postgkeyll|typer|ctypes" src/` → 3 hits, all inside
-  docstrings/comments explaining what was *not* carried forward (the
-  facade's own architecture note, now fixed to say "compiled extension";
-  `diagnostics/gyrokinetics/quantities.py`'s note about the old
-  `ctypes`-based `GkeyllDGops`; `diagnostics/plasma.py`'s note about the old
-  `postgkeyll.tools.params`). No live import or executable use of any of
-  the three anywhere — same standard every prior layer review (04-io,
-  14-cli) applied and passed under.
+- `git grep -nE "postgkeyll|typer|ctypes" src/` → 2 hits (re-run after this
+  layer's own facade-docstring fix, which removed the third hit —
+  `src/postgkyl/__init__.py`'s stale "ctypes -> libg0core.so" architecture
+  line is now "compiled `_gpython` extension -> libg0core.so"), both inside
+  docstrings/comments explaining what was *not* carried forward:
+  `diagnostics/gyrokinetics/quantities.py:5`'s note about the old
+  `ctypes`-based `GkeyllDGops`, and `diagnostics/plasma.py:9`'s note about
+  the old `postgkeyll.tools.params`. No live import or executable use of
+  any of the three anywhere — same standard every prior layer review
+  (04-io, 14-cli) applied and passed under.
 - `git grep -n "src_bak" src/ tests/` → many hits, all docstrings/comments
   citing the port source (`"Ported from src_bak/postgkyl/..."`) or
   regression-test explanations of a fixed `src_bak` bug — expected and
@@ -330,14 +333,12 @@ Usage: pgkyl [OPTIONS] COMMAND1 [ARGS]... [COMMAND2 [ARGS]...]...
 Options:
   --version ...
 Verbs: fft, magsq, relchange, mask, collect, grid, val2coord, extractinput,
-  fit, growth, differentiate, ev, map, integrate, animate, interpolate,
-  select, save
+  fit, growth, differentiate, ev, map, integrate, interpolate, select, load
 Diagnostics: euler, tenmoment, mhd, velocity, agyro, current, energetics,
   parrotate, perprotate, bparrotate, bperprotate, transform_frame,
-  laguerre_compose
-Render: plot, plotly, plotly_animate, pyvista, style
-Loaders: load, gk_distf, gk_load_quantity, gkyl_pkpm
-Utility: info, print, listoutputs, status
+  laguerre_compose, gk_distf, gk_load_quantity, gkyl_pkpm
+Render: plot, animate, plotly, plotly_animate, pyvista, style
+Utility: info, print, listoutputs, save, status
 
 $ unset PYTHONPATH && python -m pytest tests/ -q
 1419 passed, 6 skipped, 4 warnings in 85.86s (0:01:25)
@@ -419,8 +420,13 @@ finding for a future performance-focused layer, not fixed.
 
 1. **`fit`'s CLI prefix-matching (`fit lin` → `linear`) is not restored**
    (14-cli-review C4). The old CLI resolved an unambiguous prefix of a fit
-   model name; the new one requires the model name in full. Restoring it
-   needs `cli/commands/fit.py` to read `numerics.FIT_FUNCTIONS`'s key list,
+   model name; the new one requires the model name in full. Today,
+   `cli/commands/fit.py` imports only `click` and the shared
+   `.._apply`/`.._options` helpers — it does **not** import
+   `postgkyl.numerics`, and `test_import_contract_no_violations` /
+   `test_import_graph_is_acyclic` both pass cleanly; there is no existing
+   contract violation to fix. Restoring the prefix-matching behavior would
+   need `cli/commands/fit.py` to read `numerics.FIT_FUNCTIONS`'s key list,
    but `cli` may only depend on the facade (`_ALLOWED["cli"] == {""}`), and
    the facade currently exports no math/vocabulary tables (only datasets/
    verbs/loaders). Two ways to close this, neither taken here (this layer's
@@ -430,16 +436,17 @@ finding for a future performance-focused layer, not fixed.
      `pg.diagnostics.<module>.VARIABLES` already works for
      `euler`/`tenmoment`/`mhd`) and have `fit.py` use `import postgkyl as
      pg; pg.numerics.FIT_FUNCTIONS` — note `pg.numerics` is *already*
-     reachable this way at runtime (confirmed: `ops/fit.py`'s legitimate
+     reachable this way at runtime (confirmed: `ops/fit.py:22`'s legitimate
      `from postgkyl import numerics` import populates the attribute on the
-     `postgkyl` module object as a side effect), so the fix may be as small
-     as changing `cli/commands/fit.py`'s import statement from `from
-     postgkyl import numerics` (which the AST-based `test_import_contract_
-     no_violations` correctly flags as a direct `cli -> numerics` edge) to
-     `import postgkyl as pg` + `pg.numerics.FIT_FUNCTIONS` (an attribute
-     access the AST checker does not — and structurally cannot — see,
-     exactly like every `pg.diagnostics.*`/`pg.render.*` reference already
-     in `cli/commands/`). Whether that attribute-traversal pattern is a
+     `postgkyl` module object as a side effect), so the fix would be
+     small: give `cli/commands/fit.py` an `import postgkyl as pg` +
+     `pg.numerics.FIT_FUNCTIONS` reference (an attribute access the
+     AST-based `test_import_contract_no_violations` does not — and
+     structurally cannot — see, exactly like every
+     `pg.diagnostics.*`/`pg.render.*` reference already in
+     `cli/commands/`), rather than a direct `from postgkyl import numerics`
+     (which the same test correctly *would* flag as a new `cli -> numerics`
+     edge if added). Whether that attribute-traversal pattern is a
      sanctioned exception or a blind spot in the architecture test is a
      design question for whoever picks this up, not a call this report
      makes unilaterally.
@@ -472,11 +479,12 @@ finding for a future performance-focused layer, not fixed.
    signature; extending it to accept a `DatasetGroup` and produce one
    overlaid figure is a real, scoped follow-up for whoever owns `ops`/
    `render` next.
-7. **The layer-14 fixer's changes are uncommitted** as of this report (see
-   the note at the top and the CHECKPOINTS.md `14-cli` row) — the
-   orchestrator should commit that fixer pass (and this layer's doc-sync
-   commit) before considering the migration closed. This report does not
-   commit anything itself, per this layer's rules.
+7. **The layer-14 fixer's changes are now committed** (`9d99d97`, landed
+   before this layer's own commit — see the note at the top and the
+   CHECKPOINTS.md `14-cli` row); this item is resolved and kept here only
+   as a record that the orchestrator's sequencing matched what this layer
+   asked for. This report does not commit anything itself, per this
+   layer's rules.
 
 ## Definition of done — self-check
 

@@ -81,16 +81,15 @@ COMMAND_SECTIONS: dict[str, list[str]] = {
     "Verbs": [
         "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
         "extractinput", "fit", "growth", "differentiate", "ev", "map",
-        "integrate", "animate", "interpolate", "select", "save",
+        "integrate", "interpolate", "select", "load",
     ],
     "Diagnostics": [
         "euler", "tenmoment", "mhd", "velocity", "agyro", "current",
         "energetics", "parrotate", "perprotate", "bparrotate", "bperprotate",
-        "transform_frame", "laguerre_compose",
+        "transform_frame", "laguerre_compose", "gk_distf", "gk_load_quantity", "gkyl_pkpm"
     ],
-    "Render": ["plot", "plotly", "plotly_animate", "pyvista", "style"],
-    "Loaders": ["load", "gk_distf", "gk_load_quantity", "gkyl_pkpm"],
-    "Utility": ["info", "print", "listoutputs", "status"],
+    "Render": ["plot", "animate", "plotly", "plotly_animate", "pyvista", "style"],
+    "Utility": ["info", "print", "listoutputs", "save", "status"],
 }
 
 __all__ = ["COMMANDS", "COMMAND_SECTIONS"]
