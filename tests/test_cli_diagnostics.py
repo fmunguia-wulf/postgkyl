@@ -176,10 +176,17 @@ class TestAgyro:
     return _make(GRID1D, np.array([[bx, by, bz]]), tag="field")
 
   def test_agyro_frobenius(self):
-    ds = DataSpace(datasets=[self._pij(pxy=0.5), self._bfield()])
+    pij, bfield = self._pij(pxy=0.5), self._bfield()
+    ds = DataSpace(datasets=[pij, bfield])
     _invoke(agyro.command, ds, measure="frobenius", pressure_tag="pressure",
         bfield_tag="field", tag="agyro", label=None)
     assert ds.datasets[-1].tag == "agyro"
+    # Regression test for review C3: agyro consumes both the pressure tensor
+    # and the B-field input, so both should be deactivated -- matching the
+    # rule every other multi-tag diagnostic (velocity, current, parrotate,
+    # perprotate, bparrotate, bperprotate) already follows.
+    assert not is_active(pij)
+    assert not is_active(bfield)
 
   def test_agyro_swisdak(self):
     ds = DataSpace(datasets=[self._pij(pxx=2.0, pyy=1.0, pzz=1.0, pxy=0.5),
@@ -236,6 +243,10 @@ class TestEnergetics:
     assert ds.datasets[-1].values.shape[-1] == 7
     assert not is_active(elc)
     assert not is_active(ion)
+    # Regression test for review C3: energetics consumes the field dataset
+    # too (src_bak's energetics deactivated all three inputs); the CLI port
+    # dropped the field deactivation.
+    assert not is_active(field)
 
 
 # ---------------------------------------------------------------------------

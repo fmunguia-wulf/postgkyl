@@ -22,7 +22,18 @@ from .._options import label_option, tag_option, use_option
 @label_option()
 @click.pass_context
 def command(ctx, guess, min_n, use, tag, label) -> None:
-  """Fit e^(2*rate*t) to the best leading window of DynVector-like data."""
+  """Fit e^(2*rate*t) to the best leading window of DynVector-like data.
+
+  Dropped from the old ``pgkyl growth`` command, deliberately, not silently:
+  ``--dir`` (pick which axis of 2D DynVector data to fit a per-mode growth
+  rate along) has no equivalent in ``ops.fit``/``GData.fit`` (layer 08,
+  already implemented/reviewed), which only supports 1D window fits --
+  adding it would mean extending that verb's contract, out of this CLI
+  layer's scope. ``--instantaneous`` (an interactive matplotlib plot of the
+  pointwise growth rate over time) is a plotting feature, not a fit
+  parameter, and was dropped as out-of-scope for a non-interactive/headless
+  CLI command; nothing here prevents building it later as its own command.
+  """
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]

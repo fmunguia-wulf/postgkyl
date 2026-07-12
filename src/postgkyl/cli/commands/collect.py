@@ -6,7 +6,7 @@ import click
 
 import postgkyl as pg
 
-from .._apply import active_datasets
+from .._apply import active_datasets, set_active
 from .._options import label_option, tag_option, use_option
 
 
@@ -22,7 +22,12 @@ from .._options import label_option, tag_option, use_option
 @label_option()
 @click.pass_context
 def command(ctx, sumdata, period, offset, use, tag, label) -> None:
-  """Collect the active datasets into one, stacked along a new time axis."""
+  """Collect the active datasets into one, stacked along a new time axis.
+
+  Only the datasets consumed by this collect are deactivated; any other
+  dataset already in the working set (loaded earlier, or excluded by
+  ``--use``) is left untouched and remains reachable via ``status``.
+  """
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
@@ -30,4 +35,7 @@ def command(ctx, sumdata, period, offset, use, tag, label) -> None:
     raise click.UsageError("collect: no datasets to collect")
   result = pg.collect(*pool, sumdata=sumdata, period=period, offset=offset,
       tag=tag, label=label)
-  ctx.obj.datasets = [result]
+  for d in pool:
+    set_active(d, False)
+  # end
+  ctx.obj.datasets.append(result)

@@ -32,4 +32,5 @@ def command(ctx, elc_tag, ion_tag, field_tag, gas_gamma, num_moms, tag,
       gas_gamma=gas_gamma, num_moms=num_moms, tag=tag, label=label)
   set_active(elc, False)
   set_active(ion, False)
+  set_active(field, False)
   ctx.obj.datasets.append(result)

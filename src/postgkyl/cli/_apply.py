@@ -61,11 +61,6 @@ def find_by_tag(ctx, tag: str):
   raise click.UsageError(f"no dataset tagged '{tag}' in the working set")
 
 
-def find_all_by_tag(ctx, tag: str) -> list:
-  """Return every dataset in the working set tagged ``tag``, in order."""
-  return [d for d in ctx.obj.datasets if d.tag == tag]
-
-
 def parse_indices(spec: str, length: int) -> list[int]:
   """Expand an index spec (``'3'``, ``'0,2,5'``, ``'1:6:2'``, ``':'``) into a
   concrete list of indices into a sequence of the given ``length``."""

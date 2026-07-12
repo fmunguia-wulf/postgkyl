@@ -40,6 +40,20 @@ def command(ctx, fit_type, guess, window, min_n, use, tag, label) -> None:
   sinusoid, tanh_transition, exp2) or a custom RPN expression, e.g.
   ``'a x * b +'`` fits y = a*x + b. Adds the fitted curve as a new dataset.
 
+  Capability drop from the old CLI, documented rather than silently
+  dropped: the old ``fit`` command's ``FIT_TYPE`` accepted an unambiguous
+  *prefix* of a model name (``fit lin`` -> ``linear``), resolved by a
+  dedicated ``FitTypeParam`` that read ``postgkyl.numerics.FIT_FUNCTIONS``
+  directly. This shell cannot reproduce that: ``cli`` may depend only on
+  the ``postgkyl`` facade (``test_import_contract_no_violations``), and the
+  facade does not re-export the fit-model vocabulary (nor should this
+  layer add that export -- the facade is layer 15's file, out of this
+  layer's scope, and CLAUDE.md's own euler/tenmoment/mhd guidance says a
+  vocabulary table must have exactly one home, not a second CLI-side copy).
+  FIT_TYPE must therefore be given in full here; see
+  ``.claude/migration/reviews/14-cli-review.md`` (C4) for the full
+  discussion.
+
   Note: Click's chained-group parsing binds each subcommand's own options
   before its positional argument, so options must be given *before*
   FIT_TYPE (``fit --window exp2``, not ``fit exp2 --window``) -- a

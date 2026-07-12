@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from .._apply import active_datasets
+from .._apply import active_datasets, set_active
 from .._options import label_option, tag_option, use_option
 
 
@@ -20,13 +20,21 @@ from .._options import label_option, tag_option, use_option
 @label_option()
 @click.pass_context
 def command(ctx, x, y, periodic, use, tag, label) -> None:
-  """Given a DynVector, select columns to build new plot-ready datasets."""
+  """Given a DynVector, select columns to build new plot-ready datasets.
+
+  Only the datasets consumed by this command are deactivated; any other
+  dataset already in the working set (loaded earlier, or excluded by
+  ``--use``) is left untouched and remains reachable via ``status``.
+  """
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  if not pool:
+    raise click.UsageError("val2coord: no datasets to convert")
   out = []
   for d in pool:
     out.extend(list(d.val2coord(x=x, y=y, periodic=periodic, tag=tag,
         label=label)))
+    set_active(d, False)
   # end
-  ctx.obj.datasets = out
+  ctx.obj.datasets.extend(out)

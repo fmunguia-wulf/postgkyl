@@ -363,7 +363,93 @@ the misses myself:
   single-line misses (an option branch or an error path), acceptable minor
   gaps individually, not flagged further.
 
-## Verdict
+## Resolutions
+
+**C1: FIXED** — `collect`, `ev`, and `val2coord` now splice their result(s)
+into the working set instead of replacing it wholesale, mirroring how
+`current`/`velocity`/`parrotate`/... already treat their consumed inputs:
+each dataset in the command's own pool is deactivated in place
+(`set_active(d, False)`) and the result(s) are `.append()`/`.extend()`-ed
+onto `ctx.obj.datasets`, so any dataset outside the pool (loaded earlier, or
+excluded by `--use`/`status --deactivate`) survives untouched and stays
+reactivatable. `src/postgkyl/cli/commands/collect.py:38-41`,
+`src/postgkyl/cli/commands/ev.py:38-41`,
+`src/postgkyl/cli/commands/val2coord.py:33,38,40` (the last also adding the
+missing `click.UsageError` guard for an empty/`--use`-mismatched pool, at
+line 33). Verified by three new regression tests:
+`tests/test_cli_commands.py::TestChainedPipelines::test_collect_preserves_untouched_dataset`,
+`test_ev_preserves_untouched_dataset`,
+`test_val2coord_preserves_untouched_dataset`, plus
+`test_val2coord_use_no_match_fails_closed` for the empty-pool guard.
+
+**C2: FIXED (documented) / DECLINED (restoring the axis-based path).** The
+capability swap is now named explicitly, in-line, where a reader of this
+command will actually see it: `src/postgkyl/cli/commands/integrate.py`'s
+docstring (lines 17-30) now states the old `integrate <axis>` behavior, why
+`numerics.calculus.integrate` is unreachable, and that this is an
+intentional, not silent, replacement; the test comment that inaccurately
+claimed a nonexistent report was the documentation
+(`tests/test_cli_commands.py:248-252`) now points at this docstring and this
+review instead. Declined: restoring an axis-based integration path. Doing so
+means adding a new field-domain `ops` verb (or extending `ops/integrate.py`
+to grow a second, NumPy axis-restricted mode) — `ops/` is layer
+08-ops-physics, already implemented and reviewed; a layer-14 fixer changing
+another, closed layer's verb contract is exactly the layer-boundary
+violation this task is instructed not to commit. This is the "or document
+the drop explicitly" alternative the criticism itself offered.
+
+**C3: FIXED** — settled the rule "a multi-tag diagnostic deactivates every
+dataset it consumed as an input" (matching `velocity`/`current`/
+`parrotate`/`perprotate`/`bparrotate`/`bperprotate`, and `src_bak`'s
+`energetics`) and applied it to the two outliers:
+`src/postgkyl/cli/commands/energetics.py:35` now also
+`set_active(field, False)`; `src/postgkyl/cli/commands/agyro.py:30` now also
+`set_active(bfield, False)`. Verified by extending
+`tests/test_cli_diagnostics.py::TestEnergetics::test_energetics_seven_components`
+with `assert not is_active(field)` and
+`TestAgyro::test_agyro_frobenius` with `assert not is_active(pij)` /
+`assert not is_active(bfield)`.
+
+**C4: DECLINED.** Restoring `FIT_TYPE` prefix-matching (`fit lin` ->
+`linear`) requires a canonical list of model names to prefix-match against
+(`numerics.FIT_FUNCTIONS`). Tried the direct fix first
+(`from postgkyl import numerics` + a `click.ParamType` in `fit.py`), but it
+fails `test_import_contract_no_violations`: `cli` may depend only on the
+facade (`_ALLOWED["cli"] == {""}`), and `postgkyl/__init__.py` does not (and
+per this layer's own instruction for `euler`/`tenmoment`/`mhd` — "one home
+for the quantity names — never retype the string list in the CLI" — should
+not) re-export the fit-model vocabulary as a second copy. Extending the
+facade to add that export would mean editing `src/postgkyl/__init__.py`,
+which is layer 15's file (not yet implemented/reviewed) — out of this
+fixer's scope, and hardcoding a duplicate name list in `cli/commands/fit.py`
+would itself be a doctrine-V violation (a second, hand-maintained copy of
+`FIT_FUNCTIONS`'s keys). This is the same category of blocker as C2: the
+"correct" fix needs an edge or a file this layer does not own. Took the
+criticism's other offered option instead: documented the drop explicitly in
+`fit.py`'s docstring (`src/postgkyl/cli/commands/fit.py:41-53`) and added
+`tests/test_cli_commands.py::TestFitAndGrowth::test_fit_type_prefix_not_supported_fails_closed`
+to pin the (declined-to-change) exact-match-only behavior so it fails
+closed rather than silently drifting.
+
+**C5: FIXED** — `--dir` and `--instantaneous` are now named as deliberate
+drops in `src/postgkyl/cli/commands/growth.py`'s docstring (lines 26-35),
+each with its own reason: `--dir` would require extending `ops.fit`'s
+contract (layer 08, out of this layer's scope, same reasoning as C2/C4);
+`--instantaneous` is an interactive-plot feature, not a fit parameter, ruled
+out for a non-interactive CLI command rather than silently forgotten.
+
+**C6: FIXED** — deleted the uncalled `find_all_by_tag`
+(`src/postgkyl/cli/_apply.py`, was lines 64-66); confirmed
+`grep -rn "find_all_by_tag" src/ tests/` now returns nothing.
+
+**C7: FIXED** — `plot --figsize` now raises `click.UsageError` (naming the
+offending value) for both a malformed `'w,h'` shape and non-numeric
+components, instead of letting an unhandled `ValueError` propagate.
+`src/postgkyl/cli/commands/plot.py:48-56`. Verified by
+`tests/test_cli_commands.py::TestPlotOptionParity::test_plot_malformed_figsize_fails_closed`
+and `test_plot_non_numeric_figsize_fails_closed`.
+
+## Verdict (fixer pass)
 
 **PASS WITH FIXES (fixer required).** The bulk of the layer is solid: every
 command from the instruction file's inventory is present and wired through

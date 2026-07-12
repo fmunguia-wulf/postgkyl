@@ -44,8 +44,16 @@ def command(ctx, title, save, style, vmin, vmax, logx, logy, logz, cmap,
     save_path = f"{ds.prefix}.png"
   parsed_figsize = None
   if figsize:
-    w, h = figsize.split(",")
-    parsed_figsize = (float(w), float(h))
+    parts = figsize.split(",")
+    if len(parts) != 2:
+      raise click.UsageError(
+          f"--figsize expects 'w,h' (e.g. '8,6'), got '{figsize}'")
+    try:
+      parsed_figsize = (float(parts[0]), float(parts[1]))
+    except ValueError:
+      raise click.UsageError(
+          f"--figsize expects two numbers 'w,h' (e.g. '8,6'), got '{figsize}'")
+    # end
   # end
   pg.plot(*datasets, title=title, save=save_path, show=show, style=style,
       vmin=vmin, vmax=vmax, logx=logx, logy=logy, logz=logz, cmap=cmap,

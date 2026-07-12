@@ -151,6 +151,17 @@ class TestChainedPipelines:
     result = _run(["ev", "f 2 *"])
     assert result.exit_code != 0
 
+  def test_ev_preserves_untouched_dataset(self):
+    # Regression test for review C1: ``ev`` used to replace the *entire*
+    # working set with its own result, silently dropping datasets that were
+    # deactivated (and thus not part of its input pool) rather than leaving
+    # them in place, reactivatable via ``status --activate``.
+    result = _ok([ENERGY, ENERGY, "status", "--deactivate", "0", "ev",
+        "f 2 *", "status"])
+    lines = [l for l in result.output.splitlines() if l.startswith("[")]
+    assert len(lines) == 3
+    assert "inactive" in lines[0]
+
   def test_fft_chain(self):
     _ok([DISTF_P2_0, "interp", "fft"])
 
@@ -195,12 +206,37 @@ class TestChainedPipelines:
     result = _ok([DISTF_P2_0, DISTF_P2_1, "interp", "collect"])
     assert result.exit_code == 0
 
+  def test_collect_preserves_untouched_dataset(self):
+    # Regression test for review C1 (see test_ev_preserves_untouched_dataset
+    # for the failure mode): ``collect`` used to wipe the whole working set.
+    result = _ok([ENERGY, ENERGY, "status", "--deactivate", "0", "collect",
+        "status"])
+    lines = [l for l in result.output.splitlines() if l.startswith("[")]
+    assert len(lines) == 3
+    assert "inactive" in lines[0]
+
   def test_mask_thresholds(self):
     _ok([DISTF_P2_0, "interp", "mask", "--lower", "-1e10"])
 
   def test_val2coord(self):
     result = _run([ENERGY, "val2coord", "-x", "0", "-y", "1"])
     assert result.exit_code == 0, result.output
+
+  def test_val2coord_preserves_untouched_dataset(self):
+    # Regression test for review C1.
+    result = _ok([ENERGY, ENERGY, "status", "--deactivate", "0",
+        "val2coord", "-x", "0", "-y", "1", "status"])
+    lines = [l for l in result.output.splitlines() if l.startswith("[")]
+    assert len(lines) == 3
+    assert "inactive" in lines[0]
+
+  def test_val2coord_use_no_match_fails_closed(self):
+    # Regression test for review C1's second, more severe manifestation:
+    # a mistyped/empty --use pool used to exit 0 and silently empty the
+    # entire working set instead of raising a usage error.
+    result = _run([ENERGY, "val2coord", "-x", "0", "-y", "1", "--use",
+        "nonexistent_tag"])
+    assert result.exit_code != 0
 
   def test_extractinput_no_embedded_input(self):
     result = _ok([ENERGY, "extractinput"])
@@ -232,6 +268,17 @@ class TestFitAndGrowth:
     result = _ok([ENERGY, "fit", "linear"])
     assert "R^2" in result.output
 
+  def test_fit_type_prefix_not_supported_fails_closed(self):
+    # Review C4: FIT_TYPE prefix-matching (old CLI's ``fit lin`` ->
+    # ``linear``) was declined rather than restored -- see fit.py's
+    # docstring for why (cli may only depend on the facade, which does not
+    # -- and per this layer's own guidance for euler/tenmoment/mhd, should
+    # not -- re-export the fit-model vocabulary). FIT_TYPE must be spelled
+    # out in full; assert that stays true (and fails closed, not silently)
+    # so a future change doesn't quietly reintroduce partial matching.
+    result = _run([ENERGY, "fit", "lin"])
+    assert result.exit_code != 0
+
   def test_fit_window_flag_precedes_argument(self):
     result = _ok([ENERGY, "fit", "--window", "exp2"])
     assert "R^2" in result.output
@@ -248,7 +295,8 @@ class TestFitAndGrowth:
 # ---------------------------------------------------------------------------
 # integrate (terminal; new architecture integrates the whole grid via Gkeyll,
 # so the old axis-restricted partial integral is not reachable from the CLI
-# -- see integrate.py's docstring and this layer's report).
+# -- this is a documented, intentional capability change: see
+# integrate.py's docstring and .claude/migration/reviews/14-cli-review.md C2).
 # ---------------------------------------------------------------------------
 
 class TestIntegrate:
@@ -293,6 +341,18 @@ class TestPlotOptionParity:
   def test_plot_no_datasets_fails_closed(self):
     result = _run(["plot"])
     assert result.exit_code != 0
+
+  def test_plot_malformed_figsize_fails_closed(self):
+    # Regression test for review C7: a malformed --figsize used to raise an
+    # unhandled ValueError instead of a clean click.UsageError.
+    result = _run([DISTF_P2_0, "interp", "plot", "--figsize", "10"])
+    assert result.exit_code != 0
+    assert "figsize" in result.output
+
+  def test_plot_non_numeric_figsize_fails_closed(self):
+    result = _run([DISTF_P2_0, "interp", "plot", "--figsize", "a,b"])
+    assert result.exit_code != 0
+    assert "figsize" in result.output
 
 
 class TestPlotly:

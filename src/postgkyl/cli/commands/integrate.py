@@ -18,6 +18,21 @@ def command(ctx, op, use) -> None:
 
   A terminal verb (like ``info``): prints one value per field component
   instead of producing a new dataset.
+
+  Capability change from the old ``pgkyl integrate <axis>`` command: the old
+  command took an ``axis`` argument and computed a NumPy trapezoidal
+  integral over just that axis of already-interpolated data
+  (``postgkyl.numerics.calculus.integrate``, ported verbatim in layer 02 but
+  never wired to a CLI command or ``ops`` verb -- it remains unreachable).
+  This command instead always integrates the *whole* grid, natively inside
+  Gkeyll, on modal (pre-``interp()``) data -- there is no axis argument.
+  Both are real integration capabilities; this one is not a superset of the
+  old one, and restoring the old axis-restricted path would mean adding a
+  new field-domain ``ops`` verb (layer 08, already implemented/reviewed) --
+  out of this CLI layer's scope, so it is recorded here as a documented,
+  intentional capability swap rather than silently ported forward. See
+  ``.claude/migration/reviews/14-cli-review.md`` (C2) for the full
+  discussion.
   """
   pool = active_datasets(ctx)
   if use is not None:
