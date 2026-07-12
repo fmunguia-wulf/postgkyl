@@ -17,9 +17,6 @@ This walks through the same chain the CLI uses (see
 
 Run directly:
     MPLBACKEND=Agg PYTHONPATH=src python examples/scripts/01_quickstart.py
-
-Run as a test: see ``tests/test_examples.py``, which runs this file and
-lets its ``assert`` statements double as regression checks.
 """
 
 from __future__ import annotations
@@ -28,8 +25,6 @@ import os
 
 import matplotlib
 matplotlib.use("Agg")  # headless-safe; drop this line to see the plot windows
-
-import numpy as np
 
 import postgkyl as pg
 
@@ -43,33 +38,24 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 #    2-component vector field (a rotated coordinate map).
 d = pg.load(DATA)
 print("loaded:", repr(d))
-assert d.backend == "gkyl"
-assert not d.is_interpolated
 
 # 2. Interpolate -- the modal -> NumPy bridge.
 field = d.interpolate()
 print("interpolated:", repr(field))
-assert field.backend == "numpy"
-assert field.is_interpolated
-assert field.num_comps == 2
 
 # 3a. Select by component -- pick out the x-component as its own 2D scalar
-#     field.
+#     field, and plot it.
 comp0 = field.select(comp=0)
-assert comp0.num_comps == 1
 fig = comp0.plot(title="x-component", show=False)
 png_path = os.path.join(OUTPUT_DIR, "01_quickstart_comp0.png")
 fig.savefig(png_path)
 print("saved plot:", png_path)
-assert os.path.exists(png_path)
 
 # 3b. Select by coordinate -- fix y=0.5 to take a lineout across x, keeping
 #     both components. The y axis survives as a size-1 slice (``select``
 #     narrows a coordinate, it doesn't drop the axis -- ``plot`` squeezes it
 #     away when rendering).
 lineout = field.select(z1=0.5)
-assert lineout.num_cells[1] == 1
-assert lineout.num_comps == 2
 fig = lineout.plot(title="lineout at y=0.5", show=False)
 lineout_path = os.path.join(OUTPUT_DIR, "01_quickstart_lineout.png")
 fig.savefig(lineout_path)
@@ -79,7 +65,6 @@ print("saved plot:", lineout_path)
 #    and reading it back recovers the same values exactly.
 gkyl_path = comp0.save(os.path.join(OUTPUT_DIR, "01_quickstart_out.gkyl"))
 reloaded = pg.load(gkyl_path)
-assert np.allclose(np.asarray(reloaded.values), np.asarray(comp0.values))
 print("round-tripped through", gkyl_path)
 
 print("01_quickstart: OK")

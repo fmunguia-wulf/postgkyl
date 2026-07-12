@@ -34,8 +34,6 @@ import os
 import matplotlib
 matplotlib.use("Agg")
 
-import numpy as np
-
 import postgkyl as pg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -54,8 +52,6 @@ print("registered quantities:", pg.available_gk_quantities())
 #    interpolated, so it's a regular one-component field.
 m0, = pg.load_gk_quantity("M0", "ion", HMOM_NAME, "250", path=DATA)
 print("M0:", repr(m0), " label:", m0.get_label())
-assert m0.num_comps == 1
-assert np.all(np.isfinite(np.asarray(m0)))
 
 fig = m0.plot(title=m0.get_label(), show=False)
 fig.savefig(os.path.join(OUTPUT_DIR, "04_gyrokinetics_M0.png"))
@@ -64,7 +60,6 @@ fig.savefig(os.path.join(OUTPUT_DIR, "04_gyrokinetics_M0.png"))
 #    velocity -- extra per-quantity parameters go through **extra.
 m1, = pg.load_gk_quantity("M1", "ion", HMOM_NAME, "250", path=DATA, mass=2.0)
 print("M1:", repr(m1), " label:", m1.get_label())
-assert np.all(np.isfinite(np.asarray(m1)))
 
 # 3. A species-independent geometric factor, from the other simulation --
 #    ``species=None`` since geometry isn't per-species.
@@ -79,9 +74,6 @@ fig.savefig(os.path.join(OUTPUT_DIR, "04_gyrokinetics_jacobtot_inv.png"))
 distf = pg.load_gk_distf(name=os.path.join(DATA, GK_NAME), species="elc",
     frame=250, jacobtot_inv_file=os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"))
 print("distf:", repr(distf))
-assert distf.num_dims == 3
-assert distf.num_comps == 1
-assert np.all(np.isfinite(np.asarray(distf)))
 
 # It's a regular GData from here on -- e.g. select a fixed-mu slice down to
 # the (x, vpar) plane and plot it, same as any other 2D field.

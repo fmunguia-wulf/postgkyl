@@ -18,7 +18,7 @@ value range, and the DG basis/order it was written with.
 pgkyl tests/test_data/rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl info
 ```
 
-## 2. The golden chain: interpolate -> select -> plot
+## 2. The chain: interpolate -> select -> plot
 
 Raw `.gkyl` files hold DG *coefficients*; `interpolate` bridges them onto a
 uniform mesh of plain values, `select` narrows down to one component (or one

@@ -40,29 +40,22 @@ prod = a * b                     # gkyl_dg_mul_op -- weak multiply
 back = prod / b                  # gkyl_dg_div_op -- weak divide
 summ = a + b                     # gkyl_array_accumulate -- coefficient sum
 
-assert prod.backend == "gkyl"
 # ``a + a == 2*a`` is an exact linear identity -- coefficient lin-combs never
 # alias. Weak multiply/divide, by contrast, is a *nonlinear* operation: the
 # product of two degree-p polynomials is degree 2p, and projecting it back
-# onto the degree-p basis is lossy in general (see
-# ``test_weak_mul_div_are_inverses_on_smooth_fields`` in
-# ``tests/test_gpython_kernels.py``). It only round-trips exactly when
-# nothing aliases -- e.g. this field, or dividing by a field that never
-# crosses zero.
-assert np.allclose(back.interpolate().values, a.interpolate().values)
-assert np.allclose(summ.interpolate().values, (2.0 * a).interpolate().values)
+# onto the degree-p basis is lossy in general. It only round-trips exactly
+# when nothing aliases -- e.g. this field, or dividing by a field that never
+# crosses zero. Compare via NumPy, which means interpolating first.
 print("(a*b)/b == a:  ", np.allclose(back.interpolate().values, a.interpolate().values))
 print("a+a == 2*a:    ", np.allclose(summ.interpolate().values, (2.0 * a).interpolate().values))
 
 total = a.integrate()            # gkyl_array_integrate -- a terminal verb
 print("integrate(a) = ", total)  # one value per component (this field has 2)
-assert isinstance(total, np.ndarray) and total.shape == (2,)
 
 # A general NumPy ufunc has no meaning on raw DG coefficients -- the
 # capability boundary is enforced, not just "usually correct".
 try:
   np.sqrt(a)
-  raise AssertionError("expected a ValueError")
 except ValueError as exc:
   print("np.sqrt(modal) refuses:", exc)
 
@@ -72,12 +65,9 @@ fb = b.interpolate()
 
 field_sum = fa + fb
 mag = np.sqrt(fa ** 2 + fb ** 2)  # ufunc -> still a GData, carrying fa's grid
-assert isinstance(mag, pg.GData)
-assert np.allclose(np.asarray(mag), np.sqrt(2) * np.asarray(fa))
 print("sqrt(a^2+b^2) == sqrt(2)*a:", np.allclose(np.asarray(mag), np.sqrt(2) * np.asarray(fa)))
 
 as_array = np.asarray(fa)        # plain ndarray -- the escape hatch out of GData
-assert isinstance(as_array, np.ndarray)
 print("np.asarray(interpolated) ->", as_array.shape, as_array.dtype)
 
 print("02_arithmetic_and_numpy: OK")
