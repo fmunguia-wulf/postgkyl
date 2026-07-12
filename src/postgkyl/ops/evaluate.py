@@ -145,8 +145,8 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
     else:
       # select() carries the field-domain guard (".interpolate() first") for
       # every data token, comp-sliced or not.
-      sel = select(dat, comp=comp)
-      grid, values = sel.grid, sel.values
+      selected = select(dat, comp=comp)
+      grid, values = selected.grid, selected.values
     # end
     grid_stack.append([grid])
     value_stack.append([values])

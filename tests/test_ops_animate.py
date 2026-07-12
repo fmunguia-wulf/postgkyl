@@ -34,7 +34,7 @@ def _close_figs():
 
 
 def _three_interpolated_frames():
-  return [pg.load(F1D).interpolate().sel(comp=c) for c in (0, 0, 0)]
+  return [pg.load(F1D).interpolate().select(comp=c) for c in (0, 0, 0)]
 
 
 class TestAnimateVerb:

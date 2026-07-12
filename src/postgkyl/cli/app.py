@@ -2,7 +2,7 @@
 
 The chained syntax mirrors the fluent script API 1:1::
 
-    pg.load('f.gkyl').interpolate().sel(z0=0).plot()      # script
+    pg.load('f.gkyl').interpolate().select(z0=0).plot()      # script
     pgkyl   f.gkyl    interp   sel --z0 0  plot        # CLI
 
 Chaining and callback-before-dispatch are native to ``click.Group(chain=True)``,

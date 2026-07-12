@@ -105,7 +105,7 @@ def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
   gdata = GData(file_name)
   interpolated = gdata.interpolate(basis=basis_type, p=poly_order)
   if comp is not None:
-    interpolated = interpolated.sel(comp=comp)
+    interpolated = interpolated.select(comp=comp)
   # end
   grid = interpolated.get_grid()
   values = interpolated.get_values()

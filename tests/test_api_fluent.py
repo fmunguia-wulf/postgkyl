@@ -65,7 +65,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # fluent spelling: either a GData instance method, or a module-level function
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
-INSTANCE_VERBS = ["interpolate", "sel", "select", "plot", "save",
+INSTANCE_VERBS = ["interpolate", "select", "plot", "save",
     "mul", "div", "integrate", "integrate_axis", "to_modal", "to_nodal",
     "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
@@ -249,16 +249,16 @@ class TestEndToEndChains:
     fig = pg.load(F2D_VEC).interpolate().magsq().plot(show=False)
     assert fig is not None
 
-  def test_interpolate_sel_fft(self):
+  def test_interpolate_select_fft(self):
     # fft's output grid is a frequency axis (one entry per value, not a
     # nodal N+1 edge array), so it is not directly re-plottable through the
     # same render path as the other chains -- exercised on values instead.
-    out = pg.load(F1D).interpolate().sel(comp=0).fft(psd=True)
+    out = pg.load(F1D).interpolate().select(comp=0).fft(psd=True)
     assert isinstance(out, pg.GData)
-    assert out.values.shape[0] == pg.load(F1D).interpolate().sel(comp=0).num_cells[0] // 2
+    assert out.values.shape[0] == pg.load(F1D).interpolate().select(comp=0).num_cells[0] // 2
 
-  def test_interpolate_sel_mask_fit(self):
-    out = pg.load(F1D).interpolate().sel(comp=0).mask(lower=-1e30).fit("linear")
+  def test_interpolate_select_mask_fit(self):
+    out = pg.load(F1D).interpolate().select(comp=0).mask(lower=-1e30).fit("linear")
     assert isinstance(out, pg.GData)
     assert "fit_params" in out.ctx
 
@@ -272,7 +272,7 @@ class TestDatasetGroup:
 
   def test_broadcast_non_terminal_verb_returns_a_group_of_the_same_class(self):
     g = ApiDatasetGroup(self._frames())
-    out = g.sel(comp=0)
+    out = g.select(comp=0)
     assert isinstance(out, ApiDatasetGroup)
     assert len(out) == 3
     for member in out:
@@ -280,7 +280,7 @@ class TestDatasetGroup:
 
   def test_broadcast_chains(self):
     g = ApiDatasetGroup(self._frames())
-    out = g.sel(comp=0).mask(lower=-1e30)
+    out = g.select(comp=0).mask(lower=-1e30)
     assert isinstance(out, ApiDatasetGroup)
     assert len(out) == 3
 
@@ -327,7 +327,7 @@ class TestDatasetGroup:
   @needs_gkeyll
   def test_animate_is_explicit_not_broadcast(self):
     from matplotlib.animation import FuncAnimation
-    frames = [pg.load(F1D).interpolate().sel(comp=0) for _ in range(3)]
+    frames = [pg.load(F1D).interpolate().select(comp=0) for _ in range(3)]
     g = ApiDatasetGroup(frames)
     anim = g.animate(show=False)
     assert isinstance(anim, FuncAnimation)
@@ -367,7 +367,7 @@ class TestDatasetGroup:
 class TestFacade:
   def test_documented_names_resolve(self):
     for name in ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
-        "interpolate", "select", "sel", "represent", "apply",
+        "interpolate", "select", "represent", "apply",
         "save", "collect", "evaluate", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
 

@@ -3,7 +3,7 @@
 Public surface (the facade). The golden script::
 
     import postgkyl as pg
-    pg.load('elc_M0_0.gkyl').interpolate().sel(z0=0.0).plot()
+    pg.load('elc_M0_0.gkyl').interpolate().select(z0=0.0).plot()
 
 The facade is **pure re-export** — every public name is defined in the layer that
 owns it and simply gathered here:
@@ -14,7 +14,7 @@ owns it and simply gathered here:
     plot                             <- render/    (multi-dataset rendering)
     info                             <- ops/       (the info verb, one-or-many)
     integrate                        <- ops/       (grid integral, via Gkeyll)
-    interpolate, select/sel          <- ops/       (functional verb spellings)
+    interpolate, select              <- ops/       (functional verb spellings)
     represent, apply                 <- ops/       (representation verbs)
     available_evaluate_operators     <- ops/       (``evaluate``'s RPN token vocabulary)
     save                             <- io/        (file output)
@@ -51,13 +51,10 @@ from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
     load_gk_distf, load_gk_quantity, available_quantities as available_gk_quantities)
 
-# Short alias, mirroring the fluent method (a.sel()).
-sel = select
-
 __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
-    "interpolate", "select", "sel", "represent", "apply", "save",
+    "interpolate", "select", "represent", "apply", "save",
     "collect", "evaluate", "relchange", "animate", "available_evaluate_operators",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

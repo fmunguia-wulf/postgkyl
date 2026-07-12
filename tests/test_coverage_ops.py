@@ -48,22 +48,22 @@ def test_select_by_coordinate_on_a_nodal_grid(tmp_path):
   data, whose grid is always one edge longer than its values)."""
   d = _dynvec_dataset(tmp_path, [0.0, 0.5, 1.0, 1.5], [[1.0], [2.0], [3.0], [4.0]])
 
-  by_int = d.sel(z0=1)
+  by_int = d.select(z0=1)
   np.testing.assert_allclose(by_int.values, [[2.0]])
   np.testing.assert_allclose(by_int.grid[0], [0.5])
 
-  by_float = d.sel(z0=0.6)
+  by_float = d.select(z0=0.6)
   np.testing.assert_allclose(by_float.values, [[3.0]])
 
-  by_slice = d.sel(z0="1:3")
+  by_slice = d.select(z0="1:3")
   np.testing.assert_allclose(by_slice.values, [[2.0], [3.0]])
   np.testing.assert_allclose(by_slice.grid[0], [0.5, 1.0])
 
-  by_negative_int = d.sel(z0=-1)
+  by_negative_int = d.select(z0=-1)
   np.testing.assert_allclose(by_negative_int.values, [[4.0]])
 
   with pytest.raises(TypeError, match="single index or a slice"):
-    d.sel(z0="1,2")  # comma selector is comp-only syntax, not valid for z-axes
+    d.select(z0="1,2")  # comma selector is comp-only syntax, not valid for z-axes
 
 
 @needs_gkeyll
@@ -74,9 +74,9 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
   g = pg.load(F1).interpolate()
   assert g.grid[0].shape[0] == g.values.shape[0] + 1
 
-  by_float = g.sel(z0=0.0)
+  by_float = g.select(z0=0.0)
   assert by_float.values.shape[0] == 1
-  by_slice = g.sel(z0="2:5")
+  by_slice = g.select(z0="2:5")
   assert by_slice.values.shape[0] == 3
   assert by_slice.grid[0].shape[0] == 4
 
@@ -86,7 +86,7 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
 def test_numpy_domain_rejects_incompatible_grids_and_shapes():
   a = pg.load(F1).interpolate()
   b = pg.load(F1).interpolate()
-  b_sub = b.sel(comp=0)  # different shape than the full 'a'
+  b_sub = b.select(comp=0)  # different shape than the full 'a'
   with pytest.raises(ValueError, match="incompatible shapes"):
     a + b_sub
 
@@ -185,7 +185,7 @@ def test_apply_ufunc_method_and_out_kwarg_are_rejected():
 @needs_gkeyll
 def test_apply_ufunc_rejects_shape_mismatch():
   a = pg.load(F1).interpolate()
-  b = pg.load(F1).interpolate().sel(comp=0)
+  b = pg.load(F1).interpolate().select(comp=0)
   with pytest.raises(ValueError, match="incompatible shapes"):
     np.add(a, b)
 

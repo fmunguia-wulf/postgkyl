@@ -44,7 +44,7 @@ def _make_state(grid, values, *, time=None, frame=None):
 
 # --------------------------------------------------------------------- vtk
 def test_vtk_writes_a_well_formed_legacy_header_1d(tmp_path):
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   out = writer.save(a, out_name=str(tmp_path / "out1d.vtk"), extension="vtk")
   assert os.path.exists(out)
   with open(out, "rb") as fh:
@@ -54,7 +54,7 @@ def test_vtk_writes_a_well_formed_legacy_header_1d(tmp_path):
 
 
 def test_vtk_writes_a_well_formed_legacy_header_2d(tmp_path):
-  b = pg.load(F2D).interpolate().sel(comp=0)
+  b = pg.load(F2D).interpolate().select(comp=0)
   out = writer.save(b, out_name=str(tmp_path / "out2d.vtk"), extension="vtk")
   assert os.path.exists(out)
   with open(out, "rb") as fh:
@@ -147,7 +147,7 @@ def test_gkyl_roundtrip_preserves_grid_and_values_exactly(tmp_path):
   backend split -- see core/state.py) since a written already-interpolated
   field still carries file_type == 1 and so is picked up again by whichever
   reader is first compatible (GkylCReader when the FFI is available)."""
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   out = writer.save(a, out_name=str(tmp_path / "rt.gkyl"), extension="gkyl")
 
   grid, _ = io.read(out)

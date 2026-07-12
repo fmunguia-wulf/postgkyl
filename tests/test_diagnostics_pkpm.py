@@ -219,9 +219,9 @@ class TestLoadPkpm:
 
     gf_interpolated = gf.interpolate(basis="pkpmhyb", p=1)
     gvars_interpolated = gvars.interpolate(basis="ms", p=1)
-    composed = pkpm.laguerre_compose(gf_interpolated, gvars_interpolated.sel(comp=3))
+    composed = pkpm.laguerre_compose(gf_interpolated, gvars_interpolated.select(comp=3))
     from postgkyl.diagnostics.kinetic import transform_frame
-    expected = transform_frame(composed, gvars_interpolated.sel(comp="0:3"), cdim=1)
+    expected = transform_frame(composed, gvars_interpolated.select(comp="0:3"), cdim=1)
 
     np.testing.assert_allclose(out.values, expected.values)
     for d in range(3):

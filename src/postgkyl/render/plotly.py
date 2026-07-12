@@ -407,7 +407,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     CLI's comma-string spelling, and ``num_axes`` (the old CLI's "restrict to
     this many components" override, orthogonal to ``squeeze``) was dropped --
     the fluent surface has no CLI comma-string args to parse it out of; use
-    ``.sel(comp=...)`` upstream to restrict components instead. ``xscale``/
+    ``.select(comp=...)`` upstream to restrict components instead. ``xscale``/
     ``yscale``/``zscale`` are ported with identical semantics: they scale
     the plotted coordinates (and, in surface mode, the height/color value)
     the same way ``xshift``/``yshift``/``zshift`` do.

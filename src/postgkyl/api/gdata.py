@@ -22,7 +22,7 @@ from .group import DatasetGroup
 
 
 class GData(GDataState):
-  """Fluent dataset: ``pg.load(...).interpolate().sel(z0=0.0).plot()``."""
+  """Fluent dataset: ``pg.load(...).interpolate().select(z0=0.0).plot()``."""
 
   # ---------------------------------------------------------- fluent verbs
   def interpolate(self, *, basis: str | None = None, p: int | None = None,
@@ -32,14 +32,12 @@ class GData(GDataState):
     return ops.interpolate(self, basis=basis, p=p, num_interp=num_interp,
         inplace=inplace, tag=tag, label=label)
 
-  def sel(self, *, comp=None, z0=None, z1=None, z2=None, z3=None, z4=None,
+  def select(self, *, comp=None, z0=None, z1=None, z2=None, z3=None, z4=None,
       z5=None, inplace: bool = False, tag: str | None = None,
       label: str | None = None) -> "GData":
     """Subselect coordinates/components (see ``ops.select``)."""
     return ops.select(self, comp=comp, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4,
         z5=z5, inplace=inplace, tag=tag, label=label)
-
-  select = sel
 
   def plot(self, **kwargs):
     """Render this dataset (terminal verb). Returns the matplotlib figure."""
@@ -73,7 +71,7 @@ class GData(GDataState):
       inplace: bool = False, tag: str | None = None,
       label: str | None = None) -> "GData":
     """Trapezoidal integral over one or more axes of point-value data
-    (see ``ops.integrate_axis``); a new (reduced) dataset, like ``.sel()``.
+    (see ``ops.integrate_axis``); a new (reduced) dataset, like ``.select()``.
 
     Works on already-interpolated (NumPy) data or a native nodal/quad
     representation; raw modal DG coefficients raise -- convert explicitly

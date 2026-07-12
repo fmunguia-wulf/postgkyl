@@ -99,7 +99,7 @@ def test_adjust_for_ghost_cells_shrinks_and_extends_bounds():
 # -------------------------------------------------------------------- writer
 def test_write_derives_out_name_from_source_file(tmp_path, monkeypatch):
   monkeypatch.chdir(tmp_path)
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   a._file_name = "source.gkyl"
   out = a.save()  # out_name empty -> derived from _file_name
   assert out == "source_mod.gkyl" or out.endswith("_mod.gkyl")
@@ -107,14 +107,14 @@ def test_write_derives_out_name_from_source_file(tmp_path, monkeypatch):
 
 
 def test_write_appends_extension_when_missing(tmp_path):
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   out = a.save(str(tmp_path / "no_ext"), extension="gkyl")
   assert out.endswith("no_ext.gkyl")
   assert os.path.exists(out)
 
 
 def test_write_npy_and_txt_and_rejects_unknown_extension(tmp_path):
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   npy_path = writer.save(a, out_name=str(tmp_path / "out.npy"), extension="npy")
   assert os.path.exists(npy_path)
   loaded = np.load(npy_path)
@@ -133,7 +133,7 @@ def test_write_npy_and_txt_and_rejects_unknown_extension(tmp_path):
 def test_write_txt_multidim_computes_row_major_strides(tmp_path):
   """``_write_txt``'s stride computation (``basis[d] = prod(cells[d+1:])``)
   only has a loop body for num_dims >= 2 -- a 1-D dataset skips it."""
-  b = pg.load(F2D).interpolate().sel(comp=0)
+  b = pg.load(F2D).interpolate().select(comp=0)
   txt_path = writer.save(b, out_name=str(tmp_path / "out2d.txt"), extension="txt")
   with open(txt_path) as fh:
     lines = fh.readlines()
@@ -161,7 +161,7 @@ def test_write_gkyl_roundtrips_metadata_through_meta_blob(tmp_path):
 def test_write_gkyl_roundtrips_custom_ctx_keys(tmp_path):
   """Any ctx key that isn't structural/session-only (not just the keys
   postgkyl special-cases) must be preserved verbatim."""
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   a.ctx["charge"] = -1.0
   a.ctx["mass"] = 1837.0
   out = a.save(str(tmp_path / "custom_meta.gkyl"), extension="gkyl")

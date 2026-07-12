@@ -278,16 +278,16 @@ class TestSelectCurvilinearGuard:
   def test_coordinate_selector_on_curvilinear_axis_refuses(self):
     mapped = self._mapped()
     with pytest.raises(ValueError, match="curvilinear"):
-      mapped.sel(z0=0.0)
+      mapped.select(z0=0.0)
 
   def test_slice_selector_on_curvilinear_axis_refuses(self):
     mapped = self._mapped()
     with pytest.raises(ValueError, match="curvilinear"):
-      mapped.sel(z0="1:3")
+      mapped.select(z0="1:3")
 
   def test_integer_index_selector_still_works(self):
     mapped = self._mapped()
-    out = mapped.sel(z0=1)
+    out = mapped.select(z0=1)
     assert out.values.shape[0] == 1
     # grid holds edges (2 bound one cell) even along a curvilinear axis
     assert out.grid[0].shape[0] == 2

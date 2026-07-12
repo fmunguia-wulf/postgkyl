@@ -3,7 +3,7 @@
 
 ``collect``, ``evaluate``, ``relchange``, and ``animate`` each combine *several*
 datasets into one result (or, for ``animate``, into one animation), so they
-cannot be one dataset's method the way ``interpolate``/``sel``/``fft``/... are on
+cannot be one dataset's method the way ``interpolate``/``select``/``fft``/... are on
 :class:`~postgkyl.api.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.ops` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never

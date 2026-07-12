@@ -36,7 +36,7 @@ def test_load_metadata():
 
 
 def test_golden_script_1d():
-  g = pg.load(F1).interpolate().sel(comp=0)
+  g = pg.load(F1).interpolate().select(comp=0)
   assert g.is_interpolated
   assert g.num_comps == 1
   assert g.num_dims == 1
@@ -47,15 +47,15 @@ def test_golden_script_1d():
 
 
 def test_golden_script_2d():
-  g = pg.load(F2D).interpolate().sel(comp=0)
+  g = pg.load(F2D).interpolate().select(comp=0)
   assert g.num_dims == 2
   assert g.values.shape == (16, 16, 1)
   assert g.plot(show=False) is not None
 
 
 def test_arithmetic_and_ufunc():
-  a = pg.load(F1).interpolate().sel(comp=0)
-  b = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
+  b = pg.load(F1).interpolate().select(comp=0)
   assert isinstance(a + b, pg.GData)
   assert isinstance(a * 2.0, pg.GData)
   assert isinstance(2.0 * a, pg.GData)          # reflected
@@ -73,7 +73,7 @@ def test_capability_guardrails_on_modal_data():
   with pytest.raises(ValueError):
     np.asarray(a)                                # coefficients are not point values
   with pytest.raises(ValueError):
-    a.sel(comp=0)                                # slicing would mix basis functions
+    a.select(comp=0)                                # slicing would mix basis functions
   with pytest.raises(ValueError):
     _ = a + a.interpolate()                           # mixed modal + field domains
 
@@ -351,7 +351,7 @@ def test_integrate_via_gkeyll():
 
 
 def test_write_roundtrip(tmp_path):
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   out = a.save(str(tmp_path / "rt.gkyl"))
   back = pg.load(out)
   assert np.allclose(back.values, a.values)

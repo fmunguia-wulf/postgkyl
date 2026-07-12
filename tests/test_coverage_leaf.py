@@ -230,8 +230,8 @@ def test_plot_rejects_empty_and_valueless_datasets():
 @needs_gkeyll
 def test_plot_multi_dataset_1d_with_labels_shows_legend_and_title():
   from postgkyl import render
-  a = pg.load(F1).interpolate().sel(comp=0)
-  b = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
+  b = pg.load(F1).interpolate().select(comp=0)
   fig = render.plot(a, b, labels=["first", "second"], title="my title", show=False)
   assert fig is not None
   assert fig._suptitle is not None
@@ -250,7 +250,7 @@ def test_plot_rejects_more_than_two_dimensions():
 
 @needs_gkeyll
 def test_plot_show_true_does_not_error_with_agg_backend():
-  a = pg.load(F1).interpolate().sel(comp=0)
+  a = pg.load(F1).interpolate().select(comp=0)
   with pytest.warns(UserWarning, match="non-interactive"):
     fig = a.plot(show=True)
   assert fig is not None
