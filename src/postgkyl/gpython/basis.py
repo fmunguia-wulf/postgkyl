@@ -1,4 +1,4 @@
-"""Gkeyll basis objects + evaluation matrices, through the pg0 shim.
+"""Gkeyll basis objects + evaluation matrices, through the gpython shim.
 
 ``struct gkyl_basis`` carries the basis functions themselves; the shim
 dispatches its function pointers in compiled C (``pg0_basis_eval`` & co.), so

@@ -2,8 +2,9 @@
 
 Per ``.claude/migration/notes/differentiate-decision.md`` (layer 03): an
 *exact* modal derivative would need a ``pg0_basis_eval_grad`` addition to the
-compiled shim (``gkeyll/core/zero/gkyl_pg0.h``/``pg0.c`` +
-``ffi/csrc/_g0pymodule.c``), out of scope for every layer above ``ffi``. This
+compiled shim (``gkeyll/core/zero/gkyl_gpython.h``/``gpython.c`` +
+``gpython/csrc/_gpythonmodule.c``), out of scope for every layer above
+``gpython``. This
 verb instead differentiates *after* ``.interp()``, with ``np.gradient`` on the
 plain NumPy field values (via ``numerics.ev_ops.grad``/``grad2``, the
 existing pure ``(grid, values)`` gradient operators shared with the ``ev``

@@ -1,15 +1,15 @@
-"""``ffi/`` — the foreign floor: the compiled bridge to Gkeyll.
+"""``gpython/`` — the foreign floor: the compiled bridge to Gkeyll.
 
 A bottom leaf (imports nothing internal). This package is the **only** place
 in postgkyl that touches the foreign world, and it does so through a compiled
 contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
 
-- ``csrc/``    ``_g0pymodule.c`` — the CPython extension over ``gkyl_pg0.h``;
-               the pg0 shim itself lives in the gkeyll repo
-               (``core/zero/{gkyl_pg0.h, pg0.c}``, compiled into
-               ``libg0core.so`` by Gkeyll's own build)
-- ``_g0py``    the built extension module — opaque handles in, ndarrays out
-- ``_lib``     loads ``_g0py`` + the ``PG0_API_VERSION`` handshake;
+- ``csrc/``    ``_gpythonmodule.c`` — the CPython extension over
+               ``gkyl_gpython.h``; the gpython shim itself lives in the
+               gkeyll repo (``core/zero/{gkyl_gpython.h, gpython.c}``,
+               compiled into ``libg0core.so`` by Gkeyll's own build)
+- ``_gpython``  the built extension module — opaque handles in, ndarrays out
+- ``_lib``     loads ``_gpython`` + the ``GPYTHON_API_VERSION`` handshake;
                ``available()`` is the single capability switch
 - ``array``    :class:`GkylArray` — Python owner of a native ``gkyl_array``
 - ``basis``    cached Gkeyll basis objects + interp/nodal/quad matrices

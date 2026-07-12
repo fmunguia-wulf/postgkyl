@@ -1,6 +1,6 @@
-"""Tests for ``postgkyl.ffi.array.GkylArray`` — the capsule-owning array.
+"""Tests for ``postgkyl.gpython.array.GkylArray`` — the capsule-owning array.
 
-Run:  PYTHONPATH=src pytest tests/test_ffi_array.py -v
+Run:  PYTHONPATH=src pytest tests/test_gpython_array.py -v
 """
 
 import gc
@@ -14,10 +14,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
-from postgkyl import ffi  # noqa: E402
-from postgkyl.ffi.array import GkylArray  # noqa: E402
+from postgkyl import gpython  # noqa: E402
+from postgkyl.gpython.array import GkylArray  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 pytestmark = needs_gkeyll
@@ -57,7 +57,7 @@ def test_clone_is_a_deep_copy():
   b = a.clone()
   assert np.array_equal(a.view(), b.view())
   # Mutate through the kernel layer (never the view) to prove independence.
-  ffi.kernels.scale(a, 0.0)  # returns a NEW array; `a` itself is untouched
+  gpython.kernels.scale(a, 0.0)  # returns a NEW array; `a` itself is untouched
   assert np.array_equal(a.view(), np.ones((3, 2)))
   assert np.array_equal(b.view(), np.ones((3, 2)))
 
@@ -89,7 +89,7 @@ def test_from_numpy_promotes_0d_to_a_single_cell():
   """`np.ascontiguousarray` upgrades a 0-d scalar to shape (1,) before the
   extension ever sees it, so this is a valid single-component, single-cell
   array, not the `ndim < 1` refusal (which is defensive/unreachable through
-  this public constructor — see the C source comment in _g0pymodule.c)."""
+  this public constructor — see the C source comment in _gpythonmodule.c)."""
   a = GkylArray.from_numpy(np.array(5.0))
   assert (a.ncomp, a.size) == (1, 1)
   assert a.view()[0, 0] == 5.0
@@ -106,7 +106,7 @@ def test_view_pins_native_memory_after_source_is_dropped():
 
 def test_view_pins_native_memory_for_alloc_too():
   a = GkylArray.alloc(2, 3)
-  ffi.kernels.shiftc(a, 7.0, 0)  # exercise the array without touching `v`
+  gpython.kernels.shiftc(a, 7.0, 0)  # exercise the array without touching `v`
   v = a.view()
   del a
   gc.collect()

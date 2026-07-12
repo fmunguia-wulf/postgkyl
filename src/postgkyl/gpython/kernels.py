@@ -1,6 +1,6 @@
 """Thin wrappers over Gkeyll's compiled operators (weak algebra & reductions).
 
-Each function takes :class:`~postgkyl.ffi.array.GkylArray` operands plus the
+Each function takes :class:`~postgkyl.gpython.array.GkylArray` operands plus the
 basis descriptor and calls one shim entry point; the per-field loop for
 ``ncomp == nfields * num_basis`` arrays and all transient C resources
 (``gkyl_dg_bin_op_mem``, integrate updaters) live inside the compiled shim.

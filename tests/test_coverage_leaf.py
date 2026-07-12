@@ -1,5 +1,5 @@
 """Coverage-completing tests for the leaf/engine/backend layers: numerics,
-dg (interp/modal/rep), the remaining ffi corners (array/kernels), and the
+dg (interp/modal/rep), the remaining gpython corners (array/kernels), and the
 matplotlib render backend.
 
 Run:  PYTHONPATH=src pytest tests/test_coverage_leaf.py -v
@@ -20,7 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import ffi, dg  # noqa: E402
+from postgkyl import gpython, dg  # noqa: E402
 # NB: `postgkyl.numerics.idx_parser` (the submodule) is shadowed by the
 # `idx_parser` FUNCTION that numerics/__init__.py re-exports under the same
 # attribute name -- both plain `from ... import idx_parser` and
@@ -31,7 +31,7 @@ ip = importlib.import_module("postgkyl.numerics.idx_parser")
 from postgkyl.numerics import elementwise  # noqa: E402
 from postgkyl.core.state import GDataState  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 DATA = os.path.join(ROOT, "tests", "test_data")
@@ -136,26 +136,26 @@ def test_modal_power_rejects_non_positive_integer_exponents():
     a ** 1.5
 
 
-# ==================================================================== ffi/array
+# ==================================================================== gpython/array
 @needs_gkeyll
 def test_gkylarray_from_numpy_rejects_scalar_input(monkeypatch):
   """``np.ascontiguousarray`` itself always promotes a 0-d input to 1-D, so
   this guard can't be reached through any real ndarray -- it defends against
   a hypothetical future NumPy behavior change. Drive it directly by faking
   ascontiguousarray's return value."""
-  from postgkyl.ffi import array as array_mod
+  from postgkyl.gpython import array as array_mod
   monkeypatch.setattr(array_mod.np, "ascontiguousarray",
       lambda values, dtype=None: np.array(5.0, dtype=dtype))
   with pytest.raises(ValueError, match="at least a 1-D"):
-    ffi.GkylArray.from_numpy(np.array(5.0))
+    gpython.GkylArray.from_numpy(np.array(5.0))
 
 
-# ==================================================================== ffi/kernels
+# ==================================================================== gpython/kernels
 @needs_gkeyll
 def test_weak_mul_conf_phase_rejects_unsupported_phase_basis():
-  from postgkyl.ffi import kernels as k
-  cop = ffi.GkylArray.alloc(2, 3)
-  pop = ffi.GkylArray.alloc(2, 12)
+  from postgkyl.gpython import kernels as k
+  cop = gpython.GkylArray.alloc(2, 3)
+  pop = gpython.GkylArray.alloc(2, 12)
   with pytest.raises(NotImplementedError, match="cross-mul supports"):
     k.weak_mul_conf_phase("serendipity", 1, "bogus-basis", 2, 1,
         [3], [3, 4], cop, pop)
@@ -163,11 +163,11 @@ def test_weak_mul_conf_phase_rejects_unsupported_phase_basis():
 
 @needs_gkeyll
 def test_weak_mul_conf_phase_rejects_pop_ncomp_mismatch():
-  from postgkyl.ffi import kernels as k
-  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
-  pbasis = ffi.basis.get_basis("serendipity", 2, 1)
-  cop = ffi.GkylArray.alloc(cbasis.num_basis, 3)
-  pop = ffi.GkylArray.alloc(pbasis.num_basis + 1, 12)  # wrong ncomp
+  from postgkyl.gpython import kernels as k
+  cbasis = gpython.basis.get_basis("serendipity", 1, 1)
+  pbasis = gpython.basis.get_basis("serendipity", 2, 1)
+  cop = gpython.GkylArray.alloc(cbasis.num_basis, 3)
+  pop = gpython.GkylArray.alloc(pbasis.num_basis + 1, 12)  # wrong ncomp
   with pytest.raises(ValueError, match="pop.ncomp"):
     k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 1,
         [3], [3, 4], cop, pop)
@@ -176,7 +176,7 @@ def test_weak_mul_conf_phase_rejects_pop_ncomp_mismatch():
 # ======================================================================= dg/rep
 @needs_gkeyll
 def test_apply_per_field_rejects_ncomp_not_a_multiple():
-  arr = ffi.GkylArray.alloc(3, 4)  # ncomp=3, not a multiple of num_basis=2
+  arr = gpython.GkylArray.alloc(3, 4)  # ncomp=3, not a multiple of num_basis=2
   with pytest.raises(ValueError, match="not a multiple"):
     dg.rep.modal_to_nodal("serendipity", 1, 1, arr)
 
@@ -184,7 +184,7 @@ def test_apply_per_field_rejects_ncomp_not_a_multiple():
 @needs_gkeyll
 def test_materialize_rejects_ncomp_not_a_multiple_of_points_per_cell():
   a = pg.load(F1)
-  arr = ffi.GkylArray.alloc(a.native.ncomp + 1, a.native.size)  # off by one
+  arr = gpython.GkylArray.alloc(a.native.ncomp + 1, a.native.size)  # off by one
   with pytest.raises(ValueError, match="points/cell"):
     dg.rep.materialize("serendipity", 1, 1, arr, a.grid, "nodal")
 
@@ -200,7 +200,7 @@ def test_tensor_point_layout_rejects_a_non_tensor_lin_index_collision(monkeypatc
   from postgkyl.dg import rep
 
   duplicate_coords = np.array([[0., 0.], [0., 1.], [1., 0.], [0., 0.]])
-  monkeypatch.setattr(rep.ffi_basis, "node_coords", lambda *a, **k: duplicate_coords)
+  monkeypatch.setattr(rep.gpython_basis, "node_coords", lambda *a, **k: duplicate_coords)
   with pytest.raises(ValueError, match="not a tensor product"):
     rep._tensor_point_layout("serendipity", 2, 1, "nodal", None)
 
@@ -210,7 +210,7 @@ def test_tensor_point_layout_rejects_misaligned_node_coordinates(monkeypatch):
   from postgkyl.dg import rep
 
   nan_coords = np.array([[0.0], [np.nan]])
-  monkeypatch.setattr(rep.ffi_basis, "node_coords", lambda *a, **k: nan_coords)
+  monkeypatch.setattr(rep.gpython_basis, "node_coords", lambda *a, **k: nan_coords)
   with pytest.raises(ValueError, match="do not align on a tensor grid"):
     rep._tensor_point_layout("serendipity", 1, 1, "nodal", None)
 

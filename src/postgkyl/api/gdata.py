@@ -48,9 +48,9 @@ class GData(GDataState):
     """Render this dataset (terminal verb). Returns the matplotlib figure."""
     return ops.plot(self, **kwargs)
 
-  def write(self, out_name: str = "", extension: str = "gkyl") -> str:
-    """Write this dataset to disk (see ``io.write``)."""
-    return io.write(self, out_name=out_name, extension=extension)
+  def save(self, out_name: str = "", extension: str = "gkyl") -> str:
+    """Write this dataset to disk (see ``io.save``)."""
+    return io.save(self, out_name=out_name, extension=extension)
 
   # ``info`` is inherited from GDataState (a pure state reader).
 
@@ -179,7 +179,7 @@ class GData(GDataState):
   # ----------------------------------------------------------------- unary
   def __neg__(self): return ops.arithmetic.binary(operator.mul, self, -1.0)
   def __abs__(self): return ops.arithmetic.apply_ufunc(np.absolute, "__call__", self)
-  def __pos__(self): return self.copy()
+  def __pos__(self): return self.clone()
 
   # --------------------------------------------------------- NumPy interop
   __array_priority__ = 100  # ndarray defers to us in mixed ndarray·GData ops

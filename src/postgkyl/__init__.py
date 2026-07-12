@@ -32,10 +32,10 @@ a bare top-level name (one home per verb-vocabulary fact, not three).
 
 Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
 
-    floor      ffi/        ctypes -> libg0core.so (the only foreign code)
+    floor      gpython/    ctypes -> libg0core.so (the only foreign code)
     leaves     numerics/   (pure NumPy; imports nothing internal)
-    engine     dg/         interp bridge + modal ops   -> ffi
-    leaves     io/         readers (C-native first)    -> ffi
+    engine     dg/         interp bridge + modal ops   -> gpython
+    leaves     io/         readers (C-native first)    -> gpython
     container  core/       GDataState {gkyl|numpy} backend
     seam       ops/        one verb each
     backend    render/     matplotlib
@@ -46,7 +46,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
 from postgkyl.api import GData, load, DatasetGroup, animate, collect, ev, relchange
 from postgkyl.ops import apply, info, integrate, interpolate, represent, select
 from postgkyl.render import plot
-from postgkyl.io import write
+from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
     load_gk_distf, load_gk_quantity, available_quantities as available_gk_quantities)
 
@@ -57,7 +57,7 @@ sel = select
 __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
-    "interpolate", "interp", "select", "sel", "represent", "apply", "write",
+    "interpolate", "interp", "select", "sel", "represent", "apply", "save",
     "collect", "ev", "relchange", "animate",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

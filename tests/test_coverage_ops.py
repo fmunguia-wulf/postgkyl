@@ -23,10 +23,10 @@ import matplotlib
 matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import ffi, ops  # noqa: E402
+from postgkyl import gpython, ops  # noqa: E402
 from postgkyl.core.state import GDataState  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 DATA = os.path.join(ROOT, "tests", "test_data")
@@ -34,7 +34,7 @@ F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMomen
 
 
 def _dynvec_dataset(tmp_path, time, values):
-  from postgkyl.ffi import rio
+  from postgkyl.gpython import rio
   path = str(tmp_path / "series.gkyl")
   rio.write_dynvec(path, np.asarray(time), np.asarray(values))
   return pg.load(path)
@@ -138,16 +138,16 @@ def test_conf_phase_mul_requires_both_operands_modal():
   must refuse just like the same-dims path, not silently coerce."""
   conf_edges = [np.linspace(0.0, 1.0, 4)]
   phase_edges = [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)]
-  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
-  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+  cbasis = gpython.basis.get_basis("serendipity", 1, 1)
+  pbasis = gpython.basis.get_basis("hybrid", 2, 1)
 
   conf = pg.GData()
   conf.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True, cells=np.array([3]))
-  conf.push(conf_edges, ffi.array.GkylArray.from_numpy(np.zeros((3, cbasis.num_basis))))
+  conf.push(conf_edges, gpython.array.GkylArray.from_numpy(np.zeros((3, cbasis.num_basis))))
 
   phase = pg.GData()
   phase.ctx.update(basis_type="hybrid", poly_order=1, is_modal=True, cells=np.array([3, 4]))
-  phase.push(phase_edges, ffi.array.GkylArray.from_numpy(np.zeros((12, pbasis.num_basis))))
+  phase.push(phase_edges, gpython.array.GkylArray.from_numpy(np.zeros((12, pbasis.num_basis))))
 
   phase_nodal = phase.to_nodal()
   with pytest.raises(ValueError, match="modal DG coefficients only"):

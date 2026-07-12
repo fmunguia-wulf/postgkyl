@@ -1,6 +1,6 @@
-"""Tests for ``postgkyl.ffi.rio`` — file I/O through Gkeyll's ``gkyl_array_rio``.
+"""Tests for ``postgkyl.gpython.rio`` — file I/O through Gkeyll's ``gkyl_array_rio``.
 
-Run:  PYTHONPATH=src pytest tests/test_ffi_rio.py -v
+Run:  PYTHONPATH=src pytest tests/test_gpython_rio.py -v
 """
 
 import glob
@@ -15,12 +15,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
-from postgkyl import ffi  # noqa: E402
-from postgkyl.ffi import rio  # noqa: E402
-from postgkyl.ffi.array import GkylArray  # noqa: E402
+from postgkyl import gpython  # noqa: E402
+from postgkyl.gpython import rio  # noqa: E402
+from postgkyl.gpython.array import GkylArray  # noqa: E402
 from postgkyl.io.gkyl_reader import GkylReader  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 DATA = os.path.join(ROOT, "tests", "test_data")
@@ -32,8 +32,8 @@ pytestmark = needs_gkeyll
 # A non-field (dynvector) file, used below to check that `file_type` correctly
 # excludes it from the field-file cross-check.
 _NON_FIELD_FILE = None
-if ffi.available():
-  from postgkyl.ffi import rio as _rio
+if gpython.available():
+  from postgkyl.gpython import rio as _rio
   _dynvec_dir = tempfile.mkdtemp()
   _NON_FIELD_FILE = os.path.join(_dynvec_dir, "not_a_field_dynvec.gkyl")
   _rio.write_dynvec(_NON_FIELD_FILE, np.array([0.0, 1.0]), np.array([[1.0], [2.0]]))

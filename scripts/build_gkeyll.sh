@@ -1,8 +1,7 @@
 #!/bin/sh
 # Fetches (if needed) and builds the vendored GkeyllZero `core` app as
-# libg0core.so, for the future ffi/ layer to bind against (see
-# FFI_REDESIGN.md). Invoked automatically by `pip install`/`pip install -e`
-# via setup.py, and safe to re-run by hand.
+# libg0core.so, for the gpython/ layer to bind against. Invoked automatically
+# by `pip install`/`pip install -e` via setup.py, and safe to re-run by hand.
 #
 # The gkeyll/ submodule tracks branch lapack_lite_shim (zero external deps: no
 # MPI/CUDA/SuperLU/Lua, LAPACK replaced by the bundled lapack-lite). Only
@@ -45,7 +44,8 @@ if [ ! -f "${SO_PATH}" ]; then
 fi
 echo "# Built ${SO_PATH}"
 
-# Build the _g0py extension against gkyl_pg0.h + libg0core.so. The pg0
-# shim itself (core/zero/pg0.c) was just compiled INTO libg0core.so above —
-# that step is the compile-time contract check (GKEYLL_C_SHIM.md).
-sh "${SCRIPT_DIR}/build_pg0.sh"
+# Build the _gpython extension against gkyl_gpython.h + libg0core.so. The
+# gpython shim itself (core/zero/gpython.c) was just compiled INTO
+# libg0core.so above — that step is the compile-time contract check
+# (GKEYLL_C_SHIM.md).
+sh "${SCRIPT_DIR}/build_gpython.sh"

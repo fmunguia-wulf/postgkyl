@@ -1,6 +1,6 @@
 """Coverage-completing tests for the ``io`` leaf layer.
 
-Golden-path loads in test_postgkyl.py / test_ffi_rio.py only exercise the
+Golden-path loads in test_postgkyl.py / test_gpython_rio.py only exercise the
 happy path of each reader (full, non-partial, version-1, real_type f8 field
 reads). This file targets the edges: partial loads (``axes=``/``comp=``),
 dynvector multi-chunk continuation, legacy version-0 / float32 files, ghost
@@ -23,12 +23,12 @@ import matplotlib
 matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import ffi, io  # noqa: E402
+from postgkyl import gpython, io  # noqa: E402
 from postgkyl.io import mapping, writer  # noqa: E402
 from postgkyl.io.gkyl_reader import GkylReader  # noqa: E402
 from postgkyl.io.gkyl_c_reader import GkylCReader  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 DATA = os.path.join(ROOT, "tests", "test_data")
@@ -59,7 +59,7 @@ def test_read_raises_when_no_reader_is_compatible(tmp_path):
 def test_gkyl_c_reader_is_compatible_swallows_backend_errors(monkeypatch):
   def _raise(*a, **k):
     raise RuntimeError("simulated backend failure")
-  monkeypatch.setattr(ffi.rio, "file_type", _raise)
+  monkeypatch.setattr(gpython.rio, "file_type", _raise)
   r = GkylCReader(F1, ctx={})
   assert r.is_compatible() is False
 
@@ -72,13 +72,13 @@ def test_gkyl_c_reader_declines_a_partial_load_request():
 
 @needs_gkeyll
 def test_gkyl_c_reader_rejects_cell_array_mismatch(monkeypatch):
-  from postgkyl.ffi.array import GkylArray
+  from postgkyl.gpython.array import GkylArray
 
   def _fake_read_field(path):
     return {"cells": np.array([10]), "lower": np.array([0.0]),
             "upper": np.array([1.0])}, GkylArray.alloc(1, 5)  # 5 != 10
 
-  monkeypatch.setattr(ffi.rio, "read_field", _fake_read_field)
+  monkeypatch.setattr(gpython.rio, "read_field", _fake_read_field)
   r = GkylCReader(F1, ctx={})
   with pytest.raises(IOError, match="ghost-cell layout"):
     r.load()
@@ -101,40 +101,40 @@ def test_write_derives_out_name_from_source_file(tmp_path, monkeypatch):
   monkeypatch.chdir(tmp_path)
   a = pg.load(F1).interp().sel(comp=0)
   a._file_name = "source.gkyl"
-  out = a.write()  # out_name empty -> derived from _file_name
+  out = a.save()  # out_name empty -> derived from _file_name
   assert out == "source_mod.gkyl" or out.endswith("_mod.gkyl")
   assert os.path.exists(out)
 
 
 def test_write_appends_extension_when_missing(tmp_path):
   a = pg.load(F1).interp().sel(comp=0)
-  out = a.write(str(tmp_path / "no_ext"), extension="gkyl")
+  out = a.save(str(tmp_path / "no_ext"), extension="gkyl")
   assert out.endswith("no_ext.gkyl")
   assert os.path.exists(out)
 
 
 def test_write_npy_and_txt_and_rejects_unknown_extension(tmp_path):
   a = pg.load(F1).interp().sel(comp=0)
-  npy_path = writer.write(a, out_name=str(tmp_path / "out.npy"), extension="npy")
+  npy_path = writer.save(a, out_name=str(tmp_path / "out.npy"), extension="npy")
   assert os.path.exists(npy_path)
   loaded = np.load(npy_path)
   np.testing.assert_allclose(loaded, np.asarray(a.values).squeeze())
 
-  txt_path = writer.write(a, out_name=str(tmp_path / "out.txt"), extension="txt")
+  txt_path = writer.save(a, out_name=str(tmp_path / "out.txt"), extension="txt")
   assert os.path.exists(txt_path)
   with open(txt_path) as fh:
     lines = fh.readlines()
   assert len(lines) == int(np.prod(a.num_cells))
 
   with pytest.raises(ValueError, match="Unsupported"):
-    writer.write(a, out_name=str(tmp_path / "out.bad"), extension="bad")
+    writer.save(a, out_name=str(tmp_path / "out.bad"), extension="bad")
 
 
 def test_write_txt_multidim_computes_row_major_strides(tmp_path):
   """``_write_txt``'s stride computation (``basis[d] = prod(cells[d+1:])``)
   only has a loop body for num_dims >= 2 -- a 1-D dataset skips it."""
   b = pg.load(F2D).interp().sel(comp=0)
-  txt_path = writer.write(b, out_name=str(tmp_path / "out2d.txt"), extension="txt")
+  txt_path = writer.save(b, out_name=str(tmp_path / "out2d.txt"), extension="txt")
   with open(txt_path) as fh:
     lines = fh.readlines()
   assert len(lines) == int(np.prod(b.num_cells))
@@ -146,7 +146,7 @@ def test_write_gkyl_roundtrips_metadata_through_meta_blob(tmp_path):
   off ``F1`` must survive a write() -> reload() round trip, not just the
   raw field values."""
   a = pg.load(F1)
-  out = a.write(str(tmp_path / "roundtrip.gkyl"), extension="gkyl")
+  out = a.save(str(tmp_path / "roundtrip.gkyl"), extension="gkyl")
 
   reloaded = GkylReader(out, ctx={})
   reloaded.preload()
@@ -164,7 +164,7 @@ def test_write_gkyl_roundtrips_custom_ctx_keys(tmp_path):
   a = pg.load(F1).interp().sel(comp=0)
   a.ctx["charge"] = -1.0
   a.ctx["mass"] = 1837.0
-  out = a.write(str(tmp_path / "custom_meta.gkyl"), extension="gkyl")
+  out = a.save(str(tmp_path / "custom_meta.gkyl"), extension="gkyl")
 
   reloaded = GkylReader(out, ctx={})
   reloaded.preload()
@@ -283,7 +283,7 @@ def test_partial_load_negative_stop_and_colon_component():
 
 @needs_gkeyll
 def test_dynvec_single_chunk_round_trip_via_pure_python_reader(tmp_path):
-  from postgkyl.ffi import rio
+  from postgkyl.gpython import rio
   path = str(tmp_path / "series.gkyl")
   time = np.array([0.0, 0.5, 1.0])
   values = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
@@ -301,7 +301,7 @@ def test_dynvec_multi_chunk_continuation(tmp_path):
   """Two dynvec writes concatenated back-to-back simulate the append
   pattern Gkeyll uses for a running time series -- the reader must loop
   back into ``_read_header`` for the second chunk without error."""
-  from postgkyl.ffi import rio
+  from postgkyl.gpython import rio
   p1, p2 = str(tmp_path / "c1.gkyl"), str(tmp_path / "c2.gkyl")
   rio.write_dynvec(p1, np.array([0.0, 0.1]), np.array([[1.0, 2.0], [3.0, 4.0]]))
   rio.write_dynvec(p2, np.array([0.2, 0.3, 0.4]),
@@ -318,8 +318,8 @@ def test_dynvec_multi_chunk_continuation(tmp_path):
 
 @needs_gkeyll
 def test_dynvec_continuation_rejects_a_non_dynvec_second_chunk(tmp_path):
-  from postgkyl.ffi import rio
-  from postgkyl.ffi.array import GkylArray
+  from postgkyl.gpython import rio
+  from postgkyl.gpython.array import GkylArray
   p1 = str(tmp_path / "c1.gkyl")
   rio.write_dynvec(p1, np.array([0.0, 0.1]), np.array([[1.0, 2.0], [3.0, 4.0]]))
   pf = str(tmp_path / "field.gkyl")

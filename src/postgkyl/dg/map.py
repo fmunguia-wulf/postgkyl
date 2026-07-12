@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl import ffi
+from postgkyl import gpython
 
 
 def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
@@ -67,7 +67,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
   # end
 
   if not modal:
-    n2m = ffi.basis.nodal_to_modal_matrix(basis_type, m, poly_order)
+    n2m = gpython.basis.nodal_to_modal_matrix(basis_type, m, poly_order)
     coeffs = np.einsum("jk,...k->...j", n2m, coeffs)
   # end
 
@@ -89,7 +89,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
   out = np.empty(z.shape[0], dtype=np.float64)
   for lin in np.unique(cell_lin):
     sel = cell_lin == lin
-    b = ffi.basis.eval_matrix(basis_type, m, poly_order, eta[sel])
+    b = gpython.basis.eval_matrix(basis_type, m, poly_order, eta[sel])
     out[sel] = b @ flat_coeffs[lin]
   # end
 
@@ -132,7 +132,7 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
         np.meshgrid(*target_axes, indexing="ij"), axis=-1)
   # end
 
-  nb = ffi.basis.num_basis(basis_type, m, poly_order)
+  nb = gpython.basis.num_basis(basis_type, m, poly_order)
   return [
       eval_at_points(map_coeffs[..., d * nb:(d + 1) * nb], lower, upper,
           cells, points, basis_type=basis_type, poly_order=poly_order,

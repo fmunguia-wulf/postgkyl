@@ -3,7 +3,7 @@
 **This is the one-way bridge between the two domains**: DG coefficients in
 (read through the container's NumPy view of the native array), plain NumPy
 values out. The interpolation matrix is built from Gkeyll's own basis
-functions (:mod:`postgkyl.ffi.basis` calls the ``eval`` pointer carried by
+functions (:mod:`postgkyl.gpython.basis` calls the ``eval`` pointer carried by
 ``struct gkyl_basis``), then applied per cell with a NumPy ``tensordot`` —
 so the result is always a *new, by-value* NumPy array, never a view of C
 memory. The vendored sympy matrix tables this replaced lived in
@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl.ffi import basis as ffi_basis
+from postgkyl.gpython import basis as gpython_basis
 
 
 def num_basis(dim: int, poly_order: int, basis_type: str) -> int:
   """Number of DG basis functions, straight from Gkeyll's basis object."""
-  return ffi_basis.num_basis(basis_type, dim, poly_order)
+  return gpython_basis.num_basis(basis_type, dim, poly_order)
 
 
 def _make_mesh(num_interp: int, edges: np.ndarray) -> np.ndarray:
@@ -74,10 +74,10 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
 
   nodes = num_basis(num_dims, poly_order, basis_type)
   num_fields = values.shape[-1] // nodes
-  c_mat = ffi_basis.interp_matrix(basis_type, num_dims, poly_order, num_interp)
+  c_mat = gpython_basis.interp_matrix(basis_type, num_dims, poly_order, num_interp)
 
   n2m = (None if modal else
-         ffi_basis.nodal_to_modal_matrix(basis_type, num_dims, poly_order))
+         gpython_basis.nodal_to_modal_matrix(basis_type, num_dims, poly_order))
   out = None
   for c in range(num_fields):
     q = values[..., c * nodes:(c + 1) * nodes]

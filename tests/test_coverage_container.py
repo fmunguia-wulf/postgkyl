@@ -21,14 +21,14 @@ import matplotlib
 matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import ffi  # noqa: E402
+from postgkyl import gpython  # noqa: E402
 from postgkyl.core.state import GDataState  # noqa: E402
 from postgkyl.core.collection import flatten_datasets  # noqa: E402
 
 DATA = os.path.join(ROOT, "tests", "test_data")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 
@@ -120,7 +120,7 @@ def test_getitem_selects_component_when_loaded():
 def test_copy_with_data_deep_copies_numpy_backend():
   d = GDataState()
   d.push([np.linspace(0.0, 1.0, 4)], np.ones((3, 2)))
-  c = d.copy(data=True)
+  c = d.clone(data=True)
   c.values[0, 0] = 99.0
   assert d.values[0, 0] == 1.0
   assert c.grid[0] is not d.grid[0]
@@ -129,7 +129,7 @@ def test_copy_with_data_deep_copies_numpy_backend():
 @needs_gkeyll
 def test_copy_with_data_deep_copies_gkyl_backend():
   d = pg.load(F1)
-  c = d.copy(data=True)
+  c = d.clone(data=True)
   assert c.native is not d.native
   np.testing.assert_allclose(c.values, d.values)
 

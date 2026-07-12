@@ -1,6 +1,6 @@
 """``GkylArray`` — the Python owner of a native ``gkyl_array``.
 
-The handle is a ``PyCapsule`` produced by the ``_g0py`` extension; its
+The handle is a ``PyCapsule`` produced by the ``_gpython`` extension; its
 destructor releases the C array, and zero-copy constructions pin the backing
 NumPy buffer inside the capsule for the lifetime of the C view. Views of the
 data take the capsule as their ndarray ``base``, so a view can never outlive

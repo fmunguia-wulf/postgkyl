@@ -1,7 +1,7 @@
 """Tests for ``postgkyl.dg.map`` — grid mapping by evaluation at target points.
 
 See ``MAPPING.md`` for the design. Test fixtures build modal (or nodal)
-coefficients for the mapping field synthetically with ``ffi.basis`` matrices
+coefficients for the mapping field synthetically with ``gpython.basis`` matrices
 (no mapc2p file is required, per the layer instructions), by exactly
 projecting a chosen physical-coordinate function onto the basis's own node
 points, per cell — this guarantees the coefficients exactly represent the
@@ -21,9 +21,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
-from postgkyl import ffi, dg  # noqa: E402
+from postgkyl import gpython, dg  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 pytestmark = needs_gkeyll
 
@@ -36,9 +36,9 @@ def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
   and back through the exact nodal<->modal change of basis reproduces it
   exactly, independent of the mapping code under test.
   """
-  nb = ffi.basis.num_basis(basis_type, 1, poly_order)
-  node_eta = ffi.basis.node_coords(basis_type, 1, poly_order)[:, 0]
-  n2m = ffi.basis.nodal_to_modal_matrix(basis_type, 1, poly_order)
+  nb = gpython.basis.num_basis(basis_type, 1, poly_order)
+  node_eta = gpython.basis.node_coords(basis_type, 1, poly_order)[:, 0]
+  n2m = gpython.basis.nodal_to_modal_matrix(basis_type, 1, poly_order)
   dz = (upper - lower) / cells
   centers = lower + (np.arange(cells) + 0.5) * dz
   nodal_z = centers[:, None] + 0.5 * dz * node_eta[None, :]  # (cells, nb)
@@ -48,9 +48,9 @@ def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
 
 def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
   """Exact per-cell modal coefficients of ``fn(z0, z1)`` for a 2-D basis."""
-  nb = ffi.basis.num_basis(basis_type, 2, poly_order)
-  node_eta = ffi.basis.node_coords(basis_type, 2, poly_order)  # (nb, 2)
-  n2m = ffi.basis.nodal_to_modal_matrix(basis_type, 2, poly_order)
+  nb = gpython.basis.num_basis(basis_type, 2, poly_order)
+  node_eta = gpython.basis.node_coords(basis_type, 2, poly_order)  # (nb, 2)
+  n2m = gpython.basis.nodal_to_modal_matrix(basis_type, 2, poly_order)
   dz = [(upper[d] - lower[d]) / cells[d] for d in range(2)]
   c0 = lower[0] + (np.arange(cells[0]) + 0.5) * dz[0]
   c1 = lower[1] + (np.arange(cells[1]) + 0.5) * dz[1]

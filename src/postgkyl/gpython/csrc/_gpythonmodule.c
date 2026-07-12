@@ -1,7 +1,7 @@
-/* _g0pymodule.c — the CPython extension over gkyl_pg0.h (GKEYLL_C_SHIM.md).
+/* _gpythonmodule.c — the CPython extension over gkyl_gpython.h (GKEYLL_C_SHIM.md).
  *
  * Knows Python objects, NumPy arrays, and the pg0 contract — and nothing
- * else about Gkeyll: gkyl_pg0.h (the pg0 shim, which lives in the gkeyll
+ * else about Gkeyll: gkyl_gpython.h (the gpython shim, which lives in the gkeyll
  * repo and is compiled into libg0core.so) exposes only opaque handles,
  * scalars, and buffers, so no layout or calling convention exists on this
  * side of the wall.
@@ -18,7 +18,7 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
-#include <gkyl_pg0.h>
+#include <gkyl_gpython.h>
 
 static const char ARRAY_CAP[] = "pg0_array";
 static const char BASIS_CAP[] = "pg0_basis";
@@ -757,7 +757,7 @@ py_dynvec_write(PyObject *self, PyObject *args)
 }
 
 /* --------------------------------------------------------------- module */
-static PyMethodDef g0py_methods[] = {
+static PyMethodDef gpython_methods[] = {
   { "api_version", py_api_version, METH_NOARGS, "pg0 shim API version" },
   { "array_new", py_array_new, METH_VARARGS, "zeroed native array" },
   { "array_from_numpy", py_array_from_numpy, METH_VARARGS,
@@ -807,20 +807,20 @@ static PyMethodDef g0py_methods[] = {
   { NULL, NULL, 0, NULL },
 };
 
-static struct PyModuleDef g0py_module = {
-  PyModuleDef_HEAD_INIT, "_g0py",
+static struct PyModuleDef gpython_module = {
+  PyModuleDef_HEAD_INIT, "_gpython",
   "Compiled bridge to Gkeyll via the pg0 shim (see GKEYLL_C_SHIM.md).",
-  -1, g0py_methods,
+  -1, gpython_methods,
 };
 
 PyMODINIT_FUNC
-PyInit__g0py(void)
+PyInit__gpython(void)
 {
   import_array();
-  PyObject *m = PyModule_Create(&g0py_module);
+  PyObject *m = PyModule_Create(&gpython_module);
   if (!m)
     return NULL;
-  if (PyModule_AddIntConstant(m, "PG0_API_VERSION", PG0_API_VERSION) < 0) {
+  if (PyModule_AddIntConstant(m, "GPYTHON_API_VERSION", GPYTHON_API_VERSION) < 0) {
     Py_DECREF(m);
     return NULL;
   }

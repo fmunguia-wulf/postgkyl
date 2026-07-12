@@ -13,11 +13,11 @@ import pytest
 import scipy.constants as const
 
 import postgkyl as pg
-from postgkyl import ffi
+from postgkyl import gpython
 from postgkyl.diagnostics import plasma as pp
 from postgkyl.core.state import GDataState
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

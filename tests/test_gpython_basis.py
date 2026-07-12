@@ -1,6 +1,6 @@
-"""Tests for ``postgkyl.ffi.basis`` — Gkeyll basis objects + matrices.
+"""Tests for ``postgkyl.gpython.basis`` — Gkeyll basis objects + matrices.
 
-Run:  PYTHONPATH=src pytest tests/test_ffi_basis.py -v
+Run:  PYTHONPATH=src pytest tests/test_gpython_basis.py -v
 """
 
 import os
@@ -13,10 +13,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
-from postgkyl import ffi  # noqa: E402
-from postgkyl.ffi import basis as fb  # noqa: E402
+from postgkyl import gpython  # noqa: E402
+from postgkyl.gpython import basis as fb  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 pytestmark = needs_gkeyll

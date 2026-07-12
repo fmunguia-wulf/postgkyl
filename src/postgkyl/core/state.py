@@ -4,7 +4,7 @@ Holds a Gkeyll dataset: a nodal ``grid`` (list of 1-D edge arrays) plus values
 in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.md:
 
 - ``backend == "gkyl"``: modal DG coefficients held as a native
-  :class:`~postgkyl.ffi.array.GkylArray`. Gkeyll owns the memory and all math
+  :class:`~postgkyl.gpython.array.GkylArray`. Gkeyll owns the memory and all math
   on it (weak ops, coefficient lin-combs, integrate). ``values`` exposes a
   read-only NumPy *view* for inspection; ``__array__`` refuses (interp first).
 - ``backend == "numpy"``: post-``interp`` (or never-modal) values as a plain
@@ -25,7 +25,7 @@ from typing import Tuple
 import numpy as np
 
 from postgkyl import io   # leaf layer (below); top-level import — never a cycle
-from postgkyl import ffi  # foreign floor (below): GkylArray backend type
+from postgkyl import gpython  # foreign floor (below): GkylArray backend type
 
 
 class GDataState:
@@ -34,7 +34,7 @@ class GDataState:
   def __init__(self, file_name: str = "", *, ctx: dict | None = None,
       tag: str = "default", label: str = "", **read_kwargs):
     self._grid: list | None = None
-    self._values: np.ndarray | ffi.GkylArray | None = None
+    self._values: np.ndarray | gpython.GkylArray | None = None
     self.ctx: dict = {}
     if ctx:
       self.ctx.update(ctx)
@@ -81,7 +81,7 @@ class GDataState:
   def get_num_comps(self) -> int:
     if self.ctx.get("num_comps"):
       return int(self.ctx["num_comps"])
-    if isinstance(self._values, ffi.GkylArray):
+    if isinstance(self._values, gpython.GkylArray):
       return self._values.ncomp
     if self._values is not None:
       return int(self._values.shape[-1])
@@ -128,25 +128,25 @@ class GDataState:
   @property
   def backend(self) -> str:
     """``"gkyl"`` (native modal storage) or ``"numpy"`` (field domain)."""
-    return "gkyl" if isinstance(self._values, ffi.GkylArray) else "numpy"
+    return "gkyl" if isinstance(self._values, gpython.GkylArray) else "numpy"
 
   @property
-  def native(self) -> ffi.GkylArray | None:
+  def native(self) -> gpython.GkylArray | None:
     """The native ``GkylArray`` when gkyl-backed; None otherwise. This is the
     handle the modal verbs pass to the Gkeyll kernels."""
-    return self._values if isinstance(self._values, ffi.GkylArray) else None
+    return self._values if isinstance(self._values, gpython.GkylArray) else None
 
   def get_values(self) -> np.ndarray:
     """Values for *reading*: gkyl-backed data yields a read-only NumPy view of
     the C buffer (valid while this dataset is alive); numpy-backed data yields
     the array itself. Mutation of modal data must go through the kernels."""
-    if isinstance(self._values, ffi.GkylArray):
+    if isinstance(self._values, gpython.GkylArray):
       return self._values.view(self.ctx.get("cells"))
     return self._values
 
   def set_values(self, values) -> None:
     self._values = values
-    if isinstance(values, ffi.GkylArray):
+    if isinstance(values, gpython.GkylArray):
       # Cell layout is not derivable from the flat native array; it comes from
       # ctx (set by the reader, and carried through copy(data=False)).
       self.ctx["num_comps"] = values.ncomp
@@ -168,7 +168,7 @@ class GDataState:
     return self
 
   # ------------------------------------------------------------- duplication
-  def copy(self, data: bool = True) -> "GDataState":
+  def clone(self, data: bool = True) -> "GDataState":
     """Deep-copy without re-reading. Builds ``type(self)`` so subclasses
     (e.g. the fluent ``GData``) propagate through every verb result."""
     new = type(self)(tag=self._tag, label=self._custom_label, ctx=self.ctx)
@@ -176,7 +176,7 @@ class GDataState:
     new._file_name = self._file_name
     new.color = self.color
     if data and self._values is not None:
-      dup = (self._values.clone() if isinstance(self._values, ffi.GkylArray)
+      dup = (self._values.clone() if isinstance(self._values, gpython.GkylArray)
              else np.array(self._values, copy=True))
       new.push([np.array(g, copy=True) for g in self._grid], dup)
     # end
@@ -191,7 +191,7 @@ class GDataState:
     input — so ``ops`` can be typed on ``GDataState`` yet return a fluent
     ``GData`` at runtime.
     """
-    target = self if inplace else self.copy(data=False)
+    target = self if inplace else self.clone(data=False)
     target.push(grid, values)
     if tag is not None:
       target.set_tag(tag)
@@ -235,7 +235,7 @@ class GDataState:
     subclass — see HIERARCHY_3.md. Nodal/quad data expose their point values;
     native *modal* data refuses: silently handing out DG coefficients as if
     they were point values is a correctness trap."""
-    if isinstance(self._values, ffi.GkylArray):
+    if isinstance(self._values, gpython.GkylArray):
       if self.ctx.get("representation", "modal") != "modal":
         return np.asarray(self.get_values(), dtype=dtype)
       raise ValueError(

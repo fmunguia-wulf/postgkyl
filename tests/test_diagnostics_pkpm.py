@@ -11,11 +11,11 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import ffi
+from postgkyl import gpython
 from postgkyl.diagnostics import pkpm
 from postgkyl.core.state import GDataState
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -164,8 +164,8 @@ class TestLaguerreCompose:
 @needs_gkeyll
 class TestLoadPkpm:
 
-  _NB_HYBRID_2D_P1 = 6   # ffi.basis.num_basis("hybrid", 2, 1)
-  _NB_SER_1D_P1 = 2      # ffi.basis.num_basis("serendipity", 1, 1)
+  _NB_HYBRID_2D_P1 = 6   # gpython.basis.num_basis("hybrid", 2, 1)
+  _NB_SER_1D_P1 = 2      # gpython.basis.num_basis("serendipity", 1, 1)
 
   def _synthetic_gf(self, F0=3.0, G=1.0):
     """Two-field (F0, G) PKPM distribution on a 2-cell (x, vpar) grid; only

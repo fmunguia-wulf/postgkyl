@@ -21,13 +21,13 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import ffi, ops
+from postgkyl import gpython, ops
 from postgkyl.api.group import DatasetGroup as ApiDatasetGroup
 from postgkyl.api import verbs as api_verbs
 from postgkyl.core.group import DatasetGroup as CoreDatasetGroup
 from postgkyl.core.state import GDataState
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -179,11 +179,11 @@ class TestSubclassPropagation:
 
   @needs_gkeyll
   def test_map(self):
-    from postgkyl.ffi import basis as ffi_basis
+    from postgkyl.gpython import basis as gpython_basis
 
     lower, upper, cells = 0.0, 4.0, 4
-    node_eta = ffi_basis.node_coords("serendipity", 1, 1)[:, 0]
-    n2m = ffi_basis.nodal_to_modal_matrix("serendipity", 1, 1)
+    node_eta = gpython_basis.node_coords("serendipity", 1, 1)[:, 0]
+    n2m = gpython_basis.nodal_to_modal_matrix("serendipity", 1, 1)
     dz = (upper - lower) / cells
     centers = lower + (np.arange(cells) + 0.5) * dz
     nodal_z = centers[:, None] + 0.5 * dz * node_eta[None, :]
@@ -193,7 +193,7 @@ class TestSubclassPropagation:
     mapping.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True,
         cells=np.array([cells], dtype=np.int64))
     mgrid = [np.linspace(lower, upper, cells + 1)]
-    mapping.push(mgrid, ffi.GkylArray.from_numpy(modal))
+    mapping.push(mgrid, gpython.GkylArray.from_numpy(modal))
 
     target = _make(MyData, [np.linspace(lower, upper, 17)], np.zeros((16, 1)))
     out = target.map(mapping, space="conf")

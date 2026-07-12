@@ -1,6 +1,6 @@
-"""Tests for ``postgkyl.ffi.kernels`` — weak algebra, lincomb, reduce, integrate.
+"""Tests for ``postgkyl.gpython.kernels`` — weak algebra, lincomb, reduce, integrate.
 
-Run:  PYTHONPATH=src pytest tests/test_ffi_kernels.py -v
+Run:  PYTHONPATH=src pytest tests/test_gpython_kernels.py -v
 """
 
 import os
@@ -13,11 +13,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
-from postgkyl import ffi  # noqa: E402
-from postgkyl.ffi import kernels as k  # noqa: E402
-from postgkyl.ffi.array import GkylArray  # noqa: E402
+from postgkyl import gpython  # noqa: E402
+from postgkyl.gpython import kernels as k  # noqa: E402
+from postgkyl.gpython.array import GkylArray  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 pytestmark = needs_gkeyll
@@ -27,7 +27,7 @@ def _smooth_field(basis_type, ndim, p, cells, rng, shift=0.0):
   """Random-but-smooth modal coefficients: only the constant + a small
   perturbation on the higher modes, and shifted away from zero so weak
   division never divides by (near-)zero."""
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
   coeffs = rng.normal(scale=0.05, size=(cells, nb))
   coeffs[:, 0] += shift
   return GkylArray.from_numpy(coeffs)
@@ -51,7 +51,7 @@ def test_weak_inv_matches_weak_div_by_one():
   basis_type, ndim, p, cells = "serendipity", 1, 1, 4
   a = _smooth_field(basis_type, ndim, p, cells, rng, shift=4.0)
   one = GkylArray.from_numpy(
-      np.zeros((cells, ffi.basis.num_basis(basis_type, ndim, p))))
+      np.zeros((cells, gpython.basis.num_basis(basis_type, ndim, p))))
   # constant field 1: coefficient 0 is 1/normalization, i.e. sqrt(2)**ndim
   one.view()  # no-op just to document one is unused below (division test)
   inv_a = k.weak_inv(basis_type, ndim, p, a)
@@ -89,7 +89,7 @@ def test_weak_ops_reject_unknown_basis_type():
 def test_weak_mul_div_refuse_ndim_above_3(ndim):
   """gkyl_dg_bin_ops' kernel tables assert(dim < 4) -- a process abort if
   this guard were missing; it must degrade to a clean exception instead."""
-  basis = ffi.basis.get_basis("serendipity", ndim, 1)
+  basis = gpython.basis.get_basis("serendipity", ndim, 1)
   a = GkylArray.alloc(basis.num_basis, 3)
   b = GkylArray.alloc(basis.num_basis, 3)
   with pytest.raises(NotImplementedError, match="ndim 1..3"):
@@ -116,7 +116,7 @@ def test_weak_inv_rejects_non_p1():
 def test_weak_inv_refuses_ndim_above_3(ndim):
   """gkyl_dg_inv_op's kernel table has NO bounds check at all for ndim; this
   guard is the only thing standing between a call and undefined behavior."""
-  basis = ffi.basis.get_basis("serendipity", ndim, 1)
+  basis = gpython.basis.get_basis("serendipity", ndim, 1)
   a = GkylArray.alloc(basis.num_basis, 3)
   with pytest.raises(NotImplementedError, match="ndim"):
     k.weak_inv("serendipity", ndim, 1, a)
@@ -128,8 +128,8 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_hybrid():
   raise polynomial degree, so it's an EXACT identity on the phase
   coefficients regardless of what the weak cross-mul kernel computes --
   this is the 1x1v PKPM pairing (serendipity conf x hybrid phase)."""
-  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
-  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+  cbasis = gpython.basis.get_basis("serendipity", 1, 1)
+  pbasis = gpython.basis.get_basis("hybrid", 2, 1)
   conf_cells, phase_cells = [3], [3, 4]
   cop_coeffs = np.zeros((3, cbasis.num_basis))
   cop_coeffs[:, 0] = np.sqrt(2.0)  # constant field value 1 (cdim=1)
@@ -145,8 +145,8 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_hybrid():
 def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_gkhybrid():
   """Same identity check for the 1x2v gyrokinetic pairing (serendipity conf
   x gkhybrid phase, cdim=1 vdim=2)."""
-  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
-  pbasis = ffi.basis.get_basis("gkhybrid", 3, 1)
+  cbasis = gpython.basis.get_basis("serendipity", 1, 1)
+  pbasis = gpython.basis.get_basis("gkhybrid", 3, 1)
   conf_cells, phase_cells = [4], [4, 3, 2]
   cop_coeffs = np.zeros((4, cbasis.num_basis))
   cop_coeffs[:, 0] = np.sqrt(2.0)
@@ -163,8 +163,8 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_serendipity():
   """Same-family serendipity conf x serendipity phase also goes through
   gkyl_dg_mul_conf_phase_op_range (not the same-basis gkyl_dg_mul_op path,
   since cdim != pdim), so it needs its own identity check."""
-  cbasis = ffi.basis.get_basis("serendipity", 1, 2)
-  pbasis = ffi.basis.get_basis("serendipity", 2, 2)
+  cbasis = gpython.basis.get_basis("serendipity", 1, 2)
+  pbasis = gpython.basis.get_basis("serendipity", 2, 2)
   conf_cells, phase_cells = [3], [3, 5]
   cop_coeffs = np.zeros((3, cbasis.num_basis))
   cop_coeffs[:, 0] = np.sqrt(2.0)
@@ -272,7 +272,7 @@ def test_dg_reduce_of_constant_field_min_max_match_the_constant():
   """min/max of a truly constant field equal that constant regardless of how
   many Gauss-Legendre nodes per cell the kernel evaluates at."""
   basis_type, ndim, p = "serendipity", 1, 1
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
   coeffs = np.zeros((5, nb))
   coeffs[:, 0] = 3.0 * np.sqrt(2.0)  # constant mode -> field value 3.0
   a = GkylArray.from_numpy(coeffs)
@@ -286,7 +286,7 @@ def test_dg_reduce_sum_scales_with_cell_count():
   a cell-count-independent way to check the "sum over the field" semantics
   without needing to know the kernel's internal Gauss-node count."""
   basis_type, ndim, p = "serendipity", 1, 1
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
 
   def const_field(ncells, value):
     coeffs = np.zeros((ncells, nb))
@@ -326,7 +326,7 @@ def test_dg_reduce_rejects_bad_op_and_bad_comp():
 # ----------------------------------------------------------------- integrate
 def test_integrate_constant_field_equals_constant_times_volume():
   basis_type, ndim, p = "serendipity", 1, 1
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
   cells = 4
   coeffs = np.zeros((cells, nb))
   coeffs[:, 0] = 2.0 * np.sqrt(2.0)  # constant field value 2.0
@@ -339,7 +339,7 @@ def test_integrate_constant_field_equals_constant_times_volume():
 
 def test_integrate_abs_and_sq_ops():
   basis_type, ndim, p = "serendipity", 1, 1
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
   coeffs = np.zeros((3, nb))
   coeffs[:, 0] = -2.0 * np.sqrt(2.0)  # constant field value -2.0
   a = GkylArray.from_numpy(coeffs)
@@ -355,7 +355,7 @@ def test_integrate_abs_and_sq_ops():
 
 def test_integrate_factor_scales_the_result():
   basis_type, ndim, p = "serendipity", 1, 1
-  nb = ffi.basis.num_basis(basis_type, ndim, p)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
   coeffs = np.zeros((2, nb))
   coeffs[:, 0] = np.sqrt(2.0)
   a = GkylArray.from_numpy(coeffs)
@@ -382,7 +382,7 @@ def test_integrate_rejects_unsupported_basis_or_poly_order():
 
 
 def test_integrate_rejects_ndim_above_3():
-  basis = ffi.basis.get_basis("serendipity", 4, 1)
+  basis = gpython.basis.get_basis("serendipity", 4, 1)
   a = GkylArray.alloc(basis.num_basis, 6)
   grid = {"ndim": 4, "lower": np.zeros(4), "upper": np.ones(4),
           "cells": np.array([1, 1, 1, 6])}
@@ -392,7 +392,7 @@ def test_integrate_rejects_ndim_above_3():
 
 def test_integrate_rejects_grid_array_mismatch():
   basis_type, ndim, p = "serendipity", 1, 1
-  a = GkylArray.alloc(ffi.basis.num_basis(basis_type, ndim, p), 4)
+  a = GkylArray.alloc(gpython.basis.num_basis(basis_type, ndim, p), 4)
   grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([1.0]),
           "cells": np.array([5])}  # 5 != a.size (4)
   with pytest.raises(ValueError, match="do not cover"):

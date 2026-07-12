@@ -13,10 +13,10 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import ffi, ops
+from postgkyl import gpython, ops
 from postgkyl.core.state import GDataState
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

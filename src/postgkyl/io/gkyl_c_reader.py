@@ -1,8 +1,8 @@
 """``.gkyl`` reading through Gkeyll itself (the primary read path).
 
 ``GkylCReader`` delegates the whole read — header, grid, allocation, payload,
-multi-range stitching — to ``libg0core.so`` via :mod:`postgkyl.ffi.rio` and
-returns the data as a **native** :class:`~postgkyl.ffi.array.GkylArray`, so
+multi-range stitching — to ``libg0core.so`` via :mod:`postgkyl.gpython.rio` and
+returns the data as a **native** :class:`~postgkyl.gpython.array.GkylArray`, so
 modal datasets start life in the modal domain. Python's only jobs are decoding
 the msgpack metadata blob into ``ctx`` (same key policy as the pure-Python
 reader) and building the NumPy edge grid.
@@ -17,7 +17,7 @@ from __future__ import annotations
 import numpy as np
 import msgpack
 
-from postgkyl import ffi
+from postgkyl import gpython
 from . import mapping
 
 
@@ -33,15 +33,15 @@ class GkylCReader:
         bool({k for k in kwargs if k not in ("axes", "comp")})
 
   def is_compatible(self) -> bool:
-    if self._partial or not ffi.available():
+    if self._partial or not gpython.available():
       return False
     try:
-      return ffi.rio.file_type(self.file_name) in ffi.rio.FIELD_FILE_TYPES
+      return gpython.rio.file_type(self.file_name) in gpython.rio.FIELD_FILE_TYPES
     except (OSError, RuntimeError):
       return False
 
   def preload(self) -> None:
-    grid, _, meta, esznc, _ = ffi.rio.read_header(self.file_name)
+    grid, _, meta, esznc, _ = gpython.rio.read_header(self.file_name)
     if meta:
       for key, val in msgpack.unpackb(meta).items():
         if key in ("polyOrder", "poly_order"):
@@ -60,7 +60,7 @@ class GkylCReader:
     self.ctx["num_comps"] = esznc // 8  # payload is float64
 
   def load(self):
-    grid, arr = ffi.rio.read_field(self.file_name)
+    grid, arr = gpython.rio.read_field(self.file_name)
     cells = grid["cells"]
     if arr.size != int(np.prod(cells)):
       raise IOError(

@@ -1,13 +1,13 @@
-"""Load the compiled ``_g0py`` extension — the single capability switch.
+"""Load the compiled ``_gpython`` extension — the single capability switch.
 
-The foreign floor is the CPython extension ``postgkyl.ffi._g0py``, built by
-``scripts/build_pg0.sh`` against ``gkyl_pg0.h`` — the pg0 shim, which lives
-in the gkeyll repo (``core/zero/pg0.c``) and is compiled INTO
+The foreign floor is the CPython extension ``postgkyl.gpython._gpython``, built by
+``scripts/build_gpython.sh`` against ``gkyl_gpython.h`` — the gpython shim, which lives
+in the gkeyll repo (``core/zero/gpython.c``) and is compiled INTO
 ``libg0core.so`` by Gkeyll's own build (GKEYLL_C_SHIM.md). There are no
 runtime signature declarations and no struct mirrors here: the contract is
 enforced by the C compiler at the producer. The one runtime check left is
-the ``PG0_API_VERSION`` handshake, which catches a stale ``_g0py.so`` paired
-with a newer shim header (or vice versa).
+the ``GPYTHON_API_VERSION`` handshake, which catches a stale ``_gpython.so``
+paired with a newer shim header (or vice versa).
 
 If the extension is missing, :func:`available` returns False and
 :func:`require` raises with build guidance; importing postgkyl never fails.
@@ -18,17 +18,17 @@ from __future__ import annotations
 import pathlib
 
 try:
-  from . import _g0py as _mod
-  if _mod.api_version() != _mod.PG0_API_VERSION:
+  from . import _gpython as _mod
+  if _mod.api_version() != _mod.GPYTHON_API_VERSION:
     raise ImportError(
-        f"pg0 shim version mismatch: _g0py.so was built for API "
-        f"{_mod.api_version()}, postgkyl expects {_mod.PG0_API_VERSION}; "
-        "rebuild with scripts/build_pg0.sh")
+        f"gpython shim version mismatch: _gpython.so was built for API "
+        f"{_mod.api_version()}, postgkyl expects {_mod.GPYTHON_API_VERSION}; "
+        "rebuild with scripts/build_gpython.sh")
   _ERROR = None
 except ImportError as exc:
   _mod = None
   _ERROR = (f"{exc}\nBuild the compiled bridge with scripts/build_gkeyll.sh "
-            "(or scripts/build_pg0.sh if libg0core.so already exists).")
+            "(or scripts/build_gpython.sh if libg0core.so already exists).")
 
 
 def available() -> bool:
@@ -37,7 +37,7 @@ def available() -> bool:
 
 
 def require():
-  """The ``_g0py`` module, or a RuntimeError explaining how to build it."""
+  """The ``_gpython`` module, or a RuntimeError explaining how to build it."""
   if _mod is None:
     raise RuntimeError(f"postgkyl's Gkeyll bridge is unavailable: {_ERROR}")
   return _mod

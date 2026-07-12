@@ -29,11 +29,11 @@ Non-negotiable rules (they override anything you might infer):
 5. Test command: `PYTHONPATH=src python -m pytest tests/ -q` from the repo
    root. Coverage: append `--cov=postgkyl.<layer> --cov-report=term-missing`
    (pytest-cov is installed). The compiled shim is available
-   (`ffi.available()` is True) — gate shim-dependent tests with the skipif
+   (`gpython.available()` is True) — gate shim-dependent tests with the skipif
    pattern from `tests/test_postgkyl.py`, but expect them to actually run.
 6. The four architecture tests in `tests/test_postgkyl.py`
    (`test_facade_is_pure_reexport`, `test_import_contract_no_violations`,
-   `test_foreign_floor_confined_to_ffi`, `test_import_graph_is_acyclic`) must
+   `test_foreign_floor_confined_to_gpython`, `test_import_graph_is_acyclic`) must
    pass when you finish. Never weaken them; only add an `_ALLOWED` edge when
    your instruction file explicitly authorizes it, with a comment.
 7. Work test-first where the instruction file provides an old test corpus:

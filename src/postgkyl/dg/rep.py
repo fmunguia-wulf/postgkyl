@@ -3,8 +3,8 @@
 One DG field, three per-cell representations (REFACTOR_GKEYLL_FFI.md §3b):
 modal coefficients, values at the basis nodes, values at Gauss–Legendre
 quadrature points. Conversions are per-cell matrix applications built from
-Gkeyll's basis function pointers (:mod:`postgkyl.ffi.basis`); data enters and
-leaves as a native :class:`~postgkyl.ffi.array.GkylArray`, so the field never
+Gkeyll's basis function pointers (:mod:`postgkyl.gpython.basis`); data enters and
+leaves as a native :class:`~postgkyl.gpython.array.GkylArray`, so the field never
 leaves the native domain. **Nothing here converts implicitly** — these are the
 backends of the explicit ``.to_nodal()/.to_modal()/.to_quad()/.apply()`` verbs.
 
@@ -20,8 +20,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl.ffi import basis as ffi_basis
-from postgkyl.ffi.array import GkylArray
+from postgkyl.gpython import basis as gpython_basis
+from postgkyl.gpython.array import GkylArray
 
 
 def _apply_per_field(arr: GkylArray, comps_in: int, mat: np.ndarray) -> GkylArray:
@@ -37,25 +37,25 @@ def _apply_per_field(arr: GkylArray, comps_in: int, mat: np.ndarray) -> GkylArra
 def modal_to_nodal(basis_type: str, ndim: int, poly_order: int,
     arr: GkylArray) -> GkylArray:
   """Coefficients -> values at the basis ``node_list`` points (exact)."""
-  nb = ffi_basis.num_basis(basis_type, ndim, poly_order)
+  nb = gpython_basis.num_basis(basis_type, ndim, poly_order)
   return _apply_per_field(arr, nb,
-      ffi_basis.modal_to_nodal_matrix(basis_type, ndim, poly_order))
+      gpython_basis.modal_to_nodal_matrix(basis_type, ndim, poly_order))
 
 
 def nodal_to_modal(basis_type: str, ndim: int, poly_order: int,
     arr: GkylArray) -> GkylArray:
   """Values at the basis nodes -> coefficients (exact inverse)."""
-  nb = ffi_basis.num_basis(basis_type, ndim, poly_order)
+  nb = gpython_basis.num_basis(basis_type, ndim, poly_order)
   return _apply_per_field(arr, nb,
-      ffi_basis.nodal_to_modal_matrix(basis_type, ndim, poly_order))
+      gpython_basis.nodal_to_modal_matrix(basis_type, ndim, poly_order))
 
 
 def modal_to_quad(basis_type: str, ndim: int, poly_order: int,
     arr: GkylArray, num_quad: int) -> GkylArray:
   """Coefficients -> values at the tensor Gauss–Legendre points."""
-  nb = ffi_basis.num_basis(basis_type, ndim, poly_order)
+  nb = gpython_basis.num_basis(basis_type, ndim, poly_order)
   return _apply_per_field(arr, nb,
-      ffi_basis.modal_to_quad_matrix(basis_type, ndim, poly_order, num_quad))
+      gpython_basis.modal_to_quad_matrix(basis_type, ndim, poly_order, num_quad))
 
 
 def quad_to_modal(basis_type: str, ndim: int, poly_order: int,
@@ -64,7 +64,7 @@ def quad_to_modal(basis_type: str, ndim: int, poly_order: int,
   ≤ 2·num_quad−1)."""
   nq = num_quad ** ndim
   return _apply_per_field(arr, nq,
-      ffi_basis.quad_to_modal_matrix(basis_type, ndim, poly_order, num_quad))
+      gpython_basis.quad_to_modal_matrix(basis_type, ndim, poly_order, num_quad))
 
 
 def wrap(values: np.ndarray) -> GkylArray:
@@ -89,7 +89,7 @@ def _tensor_point_layout(basis_type: str, ndim: int, poly_order: int,
     nq = int(num_quad) if num_quad else poly_order + 1
     pts_1d, _ = np.polynomial.legendre.leggauss(nq)
     return [pts_1d] * ndim, None
-  coords = ffi_basis.node_coords(basis_type, ndim, poly_order)
+  coords = gpython_basis.node_coords(basis_type, ndim, poly_order)
   nb = coords.shape[0]
   uniq = [np.unique(coords[:, d]) for d in range(ndim)]
   counts = [len(u) for u in uniq]

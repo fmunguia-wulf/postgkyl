@@ -45,7 +45,7 @@ def _make_state(grid, values, *, time=None, frame=None):
 # --------------------------------------------------------------------- vtk
 def test_vtk_writes_a_well_formed_legacy_header_1d(tmp_path):
   a = pg.load(F1).interp().sel(comp=0)
-  out = writer.write(a, out_name=str(tmp_path / "out1d.vtk"), extension="vtk")
+  out = writer.save(a, out_name=str(tmp_path / "out1d.vtk"), extension="vtk")
   assert os.path.exists(out)
   with open(out, "rb") as fh:
     header = fh.read(96)
@@ -55,7 +55,7 @@ def test_vtk_writes_a_well_formed_legacy_header_1d(tmp_path):
 
 def test_vtk_writes_a_well_formed_legacy_header_2d(tmp_path):
   b = pg.load(F2D).interp().sel(comp=0)
-  out = writer.write(b, out_name=str(tmp_path / "out2d.vtk"), extension="vtk")
+  out = writer.save(b, out_name=str(tmp_path / "out2d.vtk"), extension="vtk")
   assert os.path.exists(out)
   with open(out, "rb") as fh:
     header = fh.read(96)
@@ -66,7 +66,7 @@ def test_vtk_writes_a_3d_volume(tmp_path):
   grid = [np.linspace(0.0, 1.0, 3), np.linspace(0.0, 1.0, 4), np.linspace(0.0, 1.0, 5)]
   values = np.arange(2 * 3 * 4 * 1, dtype=float).reshape(2, 3, 4, 1)
   d = _make_state(grid, values)
-  out = writer.write(d, out_name=str(tmp_path / "out3d.vtk"), extension="vtk")
+  out = writer.save(d, out_name=str(tmp_path / "out3d.vtk"), extension="vtk")
   assert os.path.exists(out)
   with open(out, "rb") as fh:
     header = fh.read(96)
@@ -87,9 +87,9 @@ def test_vtk_series_file_accumulates_entries_across_two_writes(tmp_path):
   values = np.array([[1.0], [2.0], [3.0]])
 
   a = _make_state(grid, values, time=0.1)
-  out1 = writer.write(a, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
+  out1 = writer.save(a, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
   b = _make_state(grid, values, time=0.2)
-  out2 = writer.write(b, out_name=str(tmp_path / "solution_0002.vtk"), extension="vtk")
+  out2 = writer.save(b, out_name=str(tmp_path / "solution_0002.vtk"), extension="vtk")
 
   series_path = tmp_path / "solution.vtk.series"
   assert series_path.exists()
@@ -109,9 +109,9 @@ def test_vtk_series_file_updates_existing_entry_in_place(tmp_path):
   values = np.array([[1.0], [2.0], [3.0]])
 
   a = _make_state(grid, values, time=0.1)
-  writer.write(a, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
+  writer.save(a, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
   a2 = _make_state(grid, values, time=0.15)
-  writer.write(a2, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
+  writer.save(a2, out_name=str(tmp_path / "solution_0001.vtk"), extension="vtk")
 
   with open(tmp_path / "solution.vtk.series") as fh:
     series = json.load(fh)
@@ -123,7 +123,7 @@ def test_vtk_series_uses_frame_when_time_is_absent(tmp_path):
   grid = [np.linspace(0.0, 1.0, 4)]
   values = np.array([[1.0], [2.0], [3.0]])
   a = _make_state(grid, values, frame=3)
-  writer.write(a, out_name=str(tmp_path / "run_0003.vtk"), extension="vtk")
+  writer.save(a, out_name=str(tmp_path / "run_0003.vtk"), extension="vtk")
   with open(tmp_path / "run.vtk.series") as fh:
     series = json.load(fh)
   assert series["files"][0]["time"] == pytest.approx(3.0)
@@ -134,7 +134,7 @@ def test_vtk_series_recovers_from_a_corrupt_sidecar(tmp_path):
   values = np.array([[1.0], [2.0], [3.0]])
   (tmp_path / "bad.vtk.series").write_text("not valid json{{{")
   a = _make_state(grid, values, time=0.5)
-  writer.write(a, out_name=str(tmp_path / "bad_0001.vtk"), extension="vtk")
+  writer.save(a, out_name=str(tmp_path / "bad_0001.vtk"), extension="vtk")
   with open(tmp_path / "bad.vtk.series") as fh:
     series = json.load(fh)
   assert len(series["files"]) == 1
@@ -148,7 +148,7 @@ def test_gkyl_roundtrip_preserves_grid_and_values_exactly(tmp_path):
   field still carries file_type == 1 and so is picked up again by whichever
   reader is first compatible (GkylCReader when the FFI is available)."""
   a = pg.load(F1).interp().sel(comp=0)
-  out = writer.write(a, out_name=str(tmp_path / "rt.gkyl"), extension="gkyl")
+  out = writer.save(a, out_name=str(tmp_path / "rt.gkyl"), extension="gkyl")
 
   grid, _ = io.read(out)
   for g_out, g_in in zip(a.grid, grid):

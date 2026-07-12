@@ -19,14 +19,14 @@ import os
 import numpy as np
 import pytest
 
-from postgkyl import ffi
+from postgkyl import gpython
 from postgkyl.core.state import GDataState
 from postgkyl.diagnostics.gyrokinetics import distf, quantities as ff, quantity as qmod, utils
 from postgkyl.diagnostics.gyrokinetics.load_quantity import (
     available_quantities, load_gk_quantity)
 from postgkyl.diagnostics.gyrokinetics.registry import gk_quant_registry
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

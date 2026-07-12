@@ -81,9 +81,9 @@ def test_capability_guardrails_on_modal_data():
 # --------------------------------------------------------------------------
 # The modal domain: DG operations running inside Gkeyll (REFACTOR_GKEYLL_FFI.md)
 # --------------------------------------------------------------------------
-from postgkyl import ffi  # noqa: E402
+from postgkyl import gpython  # noqa: E402
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
 
@@ -101,14 +101,14 @@ def test_load_lands_in_the_modal_domain():
 
 @needs_gkeyll
 def test_shim_handshake():
-  """The compiled pg0 shim pairs with this postgkyl (GKEYLL_C_SHIM.md).
+  """The compiled gpython shim pairs with this postgkyl (GKEYLL_C_SHIM.md).
 
   There are no struct layouts to guard anymore — the C compiler checked the
-  whole contract when pg0.c built. What remains testable at runtime is the
+  whole contract when gpython.c built. What remains testable at runtime is the
   version handshake plus a behavioral probe through the shim."""
-  g0 = ffi.require()
-  assert g0.api_version() == g0.PG0_API_VERSION
-  b = ffi.basis.get_basis("serendipity", 2, 1)
+  g0 = gpython.require()
+  assert g0.api_version() == g0.GPYTHON_API_VERSION
+  b = gpython.basis.get_basis("serendipity", 2, 1)
   assert (b.ndim, b.poly_order, b.num_basis) == (2, 1, 4)
   assert b.id == "serendipity"
 
@@ -130,11 +130,11 @@ def test_gkhybrid_basis_loads_and_interpolates():
 @needs_gkeyll
 def test_interp_matrix_matches_analytic_basis():
   """Matrices built from Gkeyll's eval() match the normalized Legendre basis."""
-  m = ffi.basis.interp_matrix("serendipity", 1, 1, 2)   # points z = -+1/2
+  m = gpython.basis.interp_matrix("serendipity", 1, 1, 2)   # points z = -+1/2
   expect = np.array([[1 / np.sqrt(2), -np.sqrt(3.0 / 2.0) / 2],
                      [1 / np.sqrt(2), +np.sqrt(3.0 / 2.0) / 2]])
   assert np.allclose(m, expect)
-  m2 = ffi.basis.interp_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
+  m2 = gpython.basis.interp_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
   z = np.array([-2.0 / 3.0, 0.0, 2.0 / 3.0])
   assert np.allclose(m2[:, 2], 2.371708245126285 * z ** 2 - 0.7905694150420951)
 
@@ -169,7 +169,7 @@ def _make_modal(grid, cells, basis_type, poly_order, coeffs):
   d = pg.GData()
   d.ctx.update(basis_type=basis_type, poly_order=poly_order, is_modal=True,
       cells=np.array(cells))
-  d.push(grid, ffi.array.GkylArray.from_numpy(coeffs))
+  d.push(grid, gpython.array.GkylArray.from_numpy(coeffs))
   return d
 
 
@@ -184,8 +184,8 @@ def test_conf_phase_mul_is_automatic_and_commutative():
   conf_edges = [np.linspace(0.0, 1.0, 4)]                       # 3 cells
   phase_edges = [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)]  # 3x4
 
-  cbasis = ffi.basis.get_basis("serendipity", 1, 1)
-  pbasis = ffi.basis.get_basis("hybrid", 2, 1)
+  cbasis = gpython.basis.get_basis("serendipity", 1, 1)
+  pbasis = gpython.basis.get_basis("hybrid", 2, 1)
   cop = np.zeros((3, cbasis.num_basis))
   cop[:, 0] = np.sqrt(2.0)                                      # value 1
   rng = np.random.default_rng(11)
@@ -239,7 +239,7 @@ def test_representation_round_trips():
   # nodal -> quad composes through modal
   assert _relerr(n.to_quad().to_modal().values, a.values) < 1e-14
   # nodal values are the field evaluated at the basis node_list points
-  m2n = ffi.basis.modal_to_nodal_matrix("serendipity", 1, 1)
+  m2n = gpython.basis.modal_to_nodal_matrix("serendipity", 1, 1)
   manual = np.einsum("pk,cfk->cfp", m2n,
       np.asarray(a.values).reshape(24, 3, 2)).reshape(24, 6)
   assert np.allclose(n.values, manual)
@@ -352,7 +352,7 @@ def test_integrate_via_gkeyll():
 
 def test_write_roundtrip(tmp_path):
   a = pg.load(F1).interp().sel(comp=0)
-  out = a.write(str(tmp_path / "rt.gkyl"))
+  out = a.save(str(tmp_path / "rt.gkyl"))
   back = pg.load(out)
   assert np.allclose(back.values, a.values)
 
@@ -388,17 +388,17 @@ def test_cli_abbreviation_and_info():
 # Architecture contract: the layering is a strict, cycle-free DAG.
 # --------------------------------------------------------------------------
 _ALLOWED = {
-    "ffi":    set(),                                # the foreign floor (only ctypes owner)
+    "gpython":    set(),                                # the foreign floor (only ctypes owner)
     "numerics": set(),
-    "dg":     {"ffi"},                              # interp bridge + modal ops -> kernels
-    "io":     {"ffi", "numerics"},                  # C-native reader -> gkyl_array_rio;
+    "dg":     {"gpython"},                              # interp bridge + modal ops -> kernels
+    "io":     {"gpython", "numerics"},                  # C-native reader -> gkyl_array_rio;
                                                       # readers/writer reuse the pure-math
                                                       # leaf (idx_parser for ADIOS partial-load
                                                       # slicing, nodal_to_cell_centered_grid for
                                                       # the vtk writer) instead of duplicating
                                                       # it -- numerics has 0 internal imports,
                                                       # so this cannot create a cycle (layer 04-io)
-    "core":   {"io", "ffi"},                        # container holds a GkylArray backend
+    "core":   {"io", "gpython"},                        # container holds a GkylArray backend
     "render": {"core", "numerics"},
     "ops":    {"core", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
                                                       # the physics verbs (moments/agyro/
@@ -512,7 +512,7 @@ def _foreign_floor_offenders(pkg_root):
       if not f.endswith(".py"):
         continue
       p = os.path.join(dp, f)
-      in_ffi = _layer(p, pkg_root) == "ffi"
+      in_gpython = _layer(p, pkg_root) == "gpython"
       for node in ast.walk(ast.parse(open(p).read(), p)):
         names = []
         if isinstance(node, ast.Import):
@@ -525,19 +525,19 @@ def _foreign_floor_offenders(pkg_root):
           root = name.split(".")[0]
           if root == "ctypes":
             offenders.append(f"{os.path.relpath(p, pkg_root)}: ctypes")
-          if ("_g0py" in name.split(".") or name == "_g0py") and not in_ffi:
-            offenders.append(f"{os.path.relpath(p, pkg_root)}: _g0py")
+          if ("_gpython" in name.split(".") or name == "_gpython") and not in_gpython:
+            offenders.append(f"{os.path.relpath(p, pkg_root)}: _gpython")
   return offenders
 
 
-def test_foreign_floor_confined_to_ffi():
-  """The foreign world is the compiled ``_g0py`` extension, importable only
-  under ffi/ — and ctypes appears nowhere at all: the C contract is enforced
-  by the compiler when the pg0 shim builds, never re-declared in Python
+def test_foreign_floor_confined_to_gpython():
+  """The foreign world is the compiled ``_gpython`` extension, importable only
+  under gpython/ — and ctypes appears nowhere at all: the C contract is enforced
+  by the compiler when the gpython shim builds, never re-declared in Python
   (GKEYLL_C_SHIM.md)."""
   pkg_root = os.path.join(SRC, "postgkyl")
   offenders = _foreign_floor_offenders(pkg_root)
-  assert not offenders, f"foreign floor leaked above ffi/: {offenders}"
+  assert not offenders, f"foreign floor leaked above gpython/: {offenders}"
 
 
 def _find_cycles(edges):
@@ -594,10 +594,10 @@ def test_import_graph_detects_a_real_cycle(tmp_path):
   assert cycles, "expected the fake layer_a <-> layer_b cycle to be detected"
 
 
-def test_foreign_floor_offenders_flags_ctypes_and_g0py_outside_ffi(tmp_path):
+def test_foreign_floor_offenders_flags_ctypes_and_gpython_outside_gpython(tmp_path):
   pkg_root = str(tmp_path / "postgkyl")
   _write_module(pkg_root, "badlayer", "uses_ctypes.py", "import ctypes\n")
-  _write_module(pkg_root, "badlayer", "uses_g0py.py", "from postgkyl.ffi import _g0py\n")
+  _write_module(pkg_root, "badlayer", "uses_gpython.py", "from postgkyl.gpython import _gpython\n")
   offenders = _foreign_floor_offenders(pkg_root)
   assert any(o.endswith(": ctypes") for o in offenders)
-  assert any(o.endswith(": _g0py") for o in offenders)
+  assert any(o.endswith(": _gpython") for o in offenders)

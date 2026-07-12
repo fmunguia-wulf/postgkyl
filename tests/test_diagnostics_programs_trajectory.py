@@ -157,7 +157,7 @@ class TestTrajectoryViaIoWriter:
   edges), not the dynvector convention, so ``len(grid[0]) != values.shape[0]``
   for data written this way.
 
-  Single-component only: the compiled reader (``ffi.rio.read_field``, tried
+  Single-component only: the compiled reader (``gpython.rio.read_field``, tried
   first whenever the shim is available) fails on *any* multi-component
   ``.gkyl`` field this writer produces --
   ``PYTHONPATH=src python -c`` reproduction:
@@ -165,7 +165,7 @@ class TestTrajectoryViaIoWriter:
   ``OSError: pg0_read_field failed`` (reproduces even for pre-existing,
   layer-agnostic data, e.g. any ``GDataState`` pushed with
   ``values.shape[-1] >= 2``; single-component data round-trips fine). That
-  is a pre-existing limitation in ``ffi``/``io`` (outside this layer's
+  is a pre-existing limitation in ``gpython``/``io`` (outside this layer's
   scope), not something introduced here -- see this layer's report. A real
   3-component trajectory is exercised directly (no disk I/O) by
   ``TestTrajectorySynthetic`` instead."""
@@ -178,7 +178,7 @@ class TestTrajectoryViaIoWriter:
     d = GDataState()
     d.push([time_edges], values)
 
-    out = io.write(d, out_name=str(tmp_path / "traj.gkyl"), extension="gkyl")
+    out = io.save(d, out_name=str(tmp_path / "traj.gkyl"), extension="gkyl")
 
     from postgkyl.api import GData
     reloaded = GData(out)

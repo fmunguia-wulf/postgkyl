@@ -13,7 +13,7 @@ divergence from a literal "stay modal and call the weak kernels" port:
 extracting one physical field's coefficients out of a *packed* multi-field
 source file (``M0M1M2``, ``BiMaxwellianMoments``, ``HamiltonianMoments``, ...)
 has no primitive reachable from this layer's allowed imports (``core``,
-``ops``, ``numerics``, ``api`` -- not ``dg``/``ffi``; only ``ops.select``
+``ops``, ``numerics``, ``api`` -- not ``dg``/``gpython``; only ``ops.select``
 could slice a component, and it unconditionally refuses gkyl-backed data).
 Interpolating first sidesteps that gap entirely and matches the one
 established working pattern in this codebase; see the layer-12 report for

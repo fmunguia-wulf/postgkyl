@@ -13,7 +13,7 @@ from .gkyl_reader import GkylReader
 from .gkyl_adios_reader import GkylAdiosReader
 from .gkyl_h5_reader import GkylH5Reader
 from .flash_h5_reader import FlashH5Reader
-from .writer import write
+from .writer import save
 
 # Reader registry — tried in order; extend by adding (name, reader) entries.
 # Order is by *specificity* of ``is_compatible()``, most specific / cheapest
@@ -65,5 +65,5 @@ def read(file_name: str, ctx: dict | None = None, **kwargs):
       f"'{file_name}' cannot be read with any known reader: {list(_READERS)}")
 
 
-__all__ = ["read", "write", "mapping", "GkylCReader", "GkylReader",
+__all__ = ["read", "save", "mapping", "GkylCReader", "GkylReader",
     "GkylAdiosReader", "GkylH5Reader", "FlashH5Reader"]

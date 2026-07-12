@@ -34,7 +34,7 @@ _INTERNAL_CTX_KEYS = frozenset({
 _CTX_TO_META_KEY = {"poly_order": "polyOrder", "basis_type": "basisType"}
 
 
-def write(data, out_name: str = "",
+def save(data, out_name: str = "",
     extension: Literal["gkyl", "txt", "npy", "vtk"] = "gkyl",
     var_name: str = "CartGridField") -> str:
   """Write ``data`` to ``out_name`` in the requested ``extension``.

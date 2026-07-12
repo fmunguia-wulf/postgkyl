@@ -30,10 +30,10 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import ffi, ops
+from postgkyl import gpython, ops
 from postgkyl.core.state import GDataState
 
-needs_gkeyll = pytest.mark.skipif(not ffi.available(),
+needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 pytestmark = needs_gkeyll
 
@@ -48,8 +48,8 @@ F_MAPC2P_VEL = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-elc_mapc2p_vel.gkyl")
 def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
   """Exact per-cell modal coefficients of ``fn(z)`` for a 1-D basis (see
   ``tests/test_dg_map.py`` for the same helper at the engine level)."""
-  node_eta = ffi.basis.node_coords(basis_type, 1, poly_order)[:, 0]
-  n2m = ffi.basis.nodal_to_modal_matrix(basis_type, 1, poly_order)
+  node_eta = gpython.basis.node_coords(basis_type, 1, poly_order)[:, 0]
+  n2m = gpython.basis.nodal_to_modal_matrix(basis_type, 1, poly_order)
   dz = (upper - lower) / cells
   centers = lower + (np.arange(cells) + 0.5) * dz
   nodal_z = centers[:, None] + 0.5 * dz * node_eta[None, :]
@@ -58,8 +58,8 @@ def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
 
 def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
   """Exact per-cell modal coefficients of ``fn(z0, z1)`` for a 2-D basis."""
-  node_eta = ffi.basis.node_coords(basis_type, 2, poly_order)
-  n2m = ffi.basis.nodal_to_modal_matrix(basis_type, 2, poly_order)
+  node_eta = gpython.basis.node_coords(basis_type, 2, poly_order)
+  n2m = gpython.basis.nodal_to_modal_matrix(basis_type, 2, poly_order)
   dz = [(upper[d] - lower[d]) / cells[d] for d in range(2)]
   c0 = lower[0] + (np.arange(cells[0]) + 0.5) * dz[0]
   c1 = lower[1] + (np.arange(cells[1]) + 0.5) * dz[1]
@@ -81,7 +81,7 @@ def _synthetic_map(coeffs, lower, upper, cells, *, basis_type="serendipity",
       is_modal=is_modal, cells=np.asarray(cells, dtype=np.int64))
   grid = [np.linspace(lower[i], upper[i], int(cells[i]) + 1)
       for i in range(len(cells))]
-  d.push(grid, ffi.GkylArray.from_numpy(coeffs))
+  d.push(grid, gpython.GkylArray.from_numpy(coeffs))
   return d
 
 
@@ -245,7 +245,7 @@ class TestMapErrors:
   def test_missing_basis_metadata_raises(self):
     d = GDataState()
     d.ctx.update(cells=np.array([2]))
-    d.push([np.linspace(0.0, 1.0, 3)], ffi.GkylArray.from_numpy(np.zeros((2, 2))))
+    d.push([np.linspace(0.0, 1.0, 3)], gpython.GkylArray.from_numpy(np.zeros((2, 2))))
     target = _numpy_target([np.linspace(0.0, 1.0, 5)], np.zeros((4, 1)))
     with pytest.raises(ValueError, match="basis_type"):
       ops.map(target, d, space="conf")
@@ -260,7 +260,7 @@ class TestMapErrors:
     # supplying metadata by hand cannot satisfy num_comps == m * num_basis.
     for basis_type in ("serendipity", "tensor"):
       for poly_order in (0, 1, 2):
-        assert ffi.basis.num_basis(basis_type, 2, poly_order) != 2
+        assert gpython.basis.num_basis(basis_type, 2, poly_order) != 2
 
     target = pg.load(F_ELC).interp()
     mapping.ctx.update(basis_type="serendipity", poly_order=1)

@@ -1,8 +1,8 @@
 """Modal (DG-coefficient) operations — thin orchestration over Gkeyll kernels.
 
-Everything here acts on native :class:`~postgkyl.ffi.array.GkylArray` data and
+Everything here acts on native :class:`~postgkyl.gpython.array.GkylArray` data and
 returns native data (or plain numbers for reductions): the modal domain never
-leaves Gkeyll's memory. The only logic this layer adds over ``ffi.kernels`` is
+leaves Gkeyll's memory. The only logic this layer adds over ``gpython.kernels`` is
 DG bookkeeping — e.g. what "add a scalar" means for modal coefficients.
 """
 
@@ -10,18 +10,18 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl import ffi
-from postgkyl.ffi.array import GkylArray
+from postgkyl import gpython
+from postgkyl.gpython.array import GkylArray
 
 # Weak algebra and coefficient linear combinations — direct kernel calls.
-weak_mul = ffi.kernels.weak_mul
-weak_div = ffi.kernels.weak_div
-weak_inv = ffi.kernels.weak_inv
-weak_mul_conf_phase = ffi.kernels.weak_mul_conf_phase
-lincomb = ffi.kernels.lincomb
-scale = ffi.kernels.scale
-integrate = ffi.kernels.integrate
-reduce = ffi.kernels.reduce
+weak_mul = gpython.kernels.weak_mul
+weak_div = gpython.kernels.weak_div
+weak_inv = gpython.kernels.weak_inv
+weak_mul_conf_phase = gpython.kernels.weak_mul_conf_phase
+lincomb = gpython.kernels.lincomb
+scale = gpython.kernels.scale
+integrate = gpython.kernels.integrate
+reduce = gpython.kernels.reduce
 
 
 def shift_mean(basis_type: str, ndim: int, poly_order: int,
@@ -32,11 +32,11 @@ def shift_mean(basis_type: str, ndim: int, poly_order: int,
   of the field by ``val`` is a shift of coefficient 0 by ``val * 2^(ndim/2)``,
   applied per field (``gkyl_array_shiftc`` on each field's coefficient 0).
   """
-  nb = ffi.basis.num_basis(basis_type, ndim, poly_order)
+  nb = gpython.basis.num_basis(basis_type, ndim, poly_order)
   coeff_shift = float(val) * 2.0 ** (ndim / 2.0)
   out = a
   for f in range(a.ncomp // nb):
-    out = ffi.kernels.shiftc(out, coeff_shift, f * nb)
+    out = gpython.kernels.shiftc(out, coeff_shift, f * nb)
   return out
 
 
@@ -45,7 +45,7 @@ def shift_all(a: GkylArray, val: float) -> GkylArray:
   component of every cell is a field value, so shift them all."""
   out = a.clone()
   for k in range(a.ncomp):
-    out = ffi.kernels.shiftc(out, float(val), k)
+    out = gpython.kernels.shiftc(out, float(val), k)
   return out
 
 
