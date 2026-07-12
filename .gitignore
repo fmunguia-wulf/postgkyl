@@ -15,5 +15,5 @@ tests_bak/
 /*.md
 /*.py
 /*.json
-# built pg0/_g0py extension (scripts/build_pg0.sh)
-src/postgkyl/ffi/_g0py.so
+# built gpython/_gpython extension (scripts/build_gpython.sh)
+src/postgkyl/gpython/_gpython.so
