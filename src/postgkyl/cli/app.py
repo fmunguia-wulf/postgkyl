@@ -20,7 +20,7 @@ import click
 
 from postgkyl import __version__
 from postgkyl.cli.state import DataSpace
-from postgkyl.cli.commands import COMMANDS
+from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
 
 # Hidden aliases (abbreviation already covers interp->interpolate, sel->select).
 _ALIASES = {"pl": "plot"}
@@ -44,6 +44,31 @@ class PgkylGroup(click.Group):
       ctx.obj.in_data_strings.append(name)
       return super().get_command(ctx, "load")
     ctx.fail(f"'{name}' is not a command name nor a data file")
+
+  def format_commands(self, ctx, formatter) -> None:
+    """Group ``pgkyl --help``'s command listing under section headers.
+
+    Presentation only (see ``commands/__init__.py``'s ``COMMAND_SECTIONS``
+    and "14-cli.md"'s "Help output organization"): every command stays a
+    flat, chainable top-level ``click.Command`` resolved exactly as before;
+    only how they are *printed* changes, mirroring how ``git``/``docker``
+    group their subcommand help.
+    """
+    for section, names in COMMAND_SECTIONS.items():
+      rows = []
+      for name in names:
+        cmd = self.get_command(ctx, name)
+        if cmd is None:
+          continue
+        # end
+        rows.append((name, cmd.get_short_help_str(limit=formatter.width - 6)))
+      # end
+      if rows:
+        with formatter.section(section):
+          formatter.write_dl(rows)
+        # end
+      # end
+    # end
 
 
 @click.group(cls=PgkylGroup, chain=True,

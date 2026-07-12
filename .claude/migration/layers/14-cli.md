@@ -40,8 +40,57 @@ over the equation-internal loaders (`pg.diagnostics.gyrokinetics.load_gk_distf`
 / `load_gk_quantity`, `pg.diagnostics.pkpm.load_pkpm`).
 Utility commands: `listoutputs` (uses `pg.diagnostics.discovery`), `status`
 (activate/deactivate datasets in the chain state), `style` (render.style),
-`pr` (print values), `config` ONLY if it still has a backing store — else
+`print` (print values — full name, not `pr`: see "Command naming and
+abbreviation" below), `config` ONLY if it still has a backing store — else
 skip and note.
+
+## Help output organization
+
+`pgkyl --help` lists ~40 commands once every verb/diagnostic/render/loader
+shell above is registered — flat, that's noise for a user who only ever
+touches one equation system. Fix this at the presentation layer only, not
+by changing how commands resolve or chain:
+
+- Override `PgkylGroup.format_commands` (the standard Click hook for
+  grouped help — see `git`/`docker` for prior art) to print registered
+  commands under section headers instead of one flat alphabetical list:
+  **Verbs** (fft, magsq, relchange, mask, collect, grid, val2coord,
+  extractinput, fit, growth, differentiate, ev, map, integrate, animate,
+  interp, select), **Diagnostics** (euler, tenmoment, mhd, velocity, agyro,
+  current, energetics, parrotate, perprotate, bparrotate, bperprotate,
+  transform_frame, laguerre_compose), **Render** (plot, plotly,
+  plotly_animate, pyvista, style), **Loaders** (load, gk_distf,
+  gk_load_quantity, gkyl_pkpm), **Utility** (info, print, listoutputs,
+  status, config).
+- This is presentation only: every command stays a flat, chainable
+  top-level `click.Command` registered in `COMMANDS` exactly as today.
+  Do NOT nest diagnostics under a real `click.Group` subcommand (e.g.
+  `pgkyl diagnostics euler`) — `chain=True` groups treat nested groups as
+  chain members unreliably (argument boundaries between the subgroup and
+  the next chain link become ambiguous), and `PgkylGroup.get_command`
+  would need to recurse into a second namespace, duplicating the one
+  resolution mechanism the doctrine says should have one home. The
+  section headers solve discoverability without touching resolution.
+
+## Command naming and abbreviation
+
+Command names are spelled out in full (`print`, not `pr`; `interpolate`,
+not `interp`) — short forms are never separate canonical names, they are
+resolved dynamically by `PgkylGroup.get_command`'s prefix match
+(`c.startswith(name)`, already implemented in `cli/app.py`). This is not
+an alias table — it's the general parsing rule, so it falls out of
+whatever full names the commands above are given, and it must keep
+working as new commands are added:
+
+- `pr` and `pri` both resolve uniquely to `print` (no other registered
+  command starts with `pr`).
+- `p` alone is genuinely ambiguous — `plot`, `print`, `plotly`,
+  `plotly_animate`, `pyvista`, `parrotate`, `perprotate` all start with
+  `p` — and must produce the `ctx.fail("Ambiguous command …")` error
+  already implemented, not silently pick one.
+- Do not add entries to `_ALIASES` to paper over a new ambiguity;
+  either the ambiguity is real (let it fail, tell the user to type more
+  characters) or the colliding command needs a distinguishable full name.
 
 Infra:
 - `utils/verb_print.py` → `cli/_verbosity.py` on Click
@@ -68,9 +117,13 @@ not exist in the new tree.
   `<file> interp magsq plot --save` (Agg + `tmp_path`), `ev` expressions,
   moments chains on the copied euler fixtures, `listoutputs` on a tmp dir of
   conventionally-named files.
-- Abbreviations still resolve (`interp`, `sel`, plus any new collisions —
-  e.g. `e` must not silently pick between `ev`/`euler`/`energetics`: assert
-  ambiguous-prefix behavior).
+- Abbreviations still resolve via prefix match (`interp`, `sel`, `pr`/`pri`
+  → `print`) and genuine collisions fail closed rather than silently
+  picking one: assert `ctx.fail` on `e` (`ev`/`euler`/`energetics`) and on
+  `p` (`plot`/`print`/`plotly`/`plotly_animate`/`pyvista`/`parrotate`/
+  `perprotate`). Test this once as a generic property (shortest unique
+  prefix per registered command resolves; shared prefixes error) rather
+  than hardcoding each colliding letter.
 - Option-parity spot checks against the old command's documented options.
 
 ## Definition of done
