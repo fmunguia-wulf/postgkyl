@@ -16,6 +16,7 @@ owns it and simply gathered here:
     integrate                        <- ops/       (grid integral, via Gkeyll)
     interpolate/interp, select/sel   <- ops/       (functional verb spellings)
     represent, apply                 <- ops/       (representation verbs)
+    available_evaluate_operators     <- ops/       (``evaluate``'s RPN token vocabulary)
     save                             <- io/        (file output)
     load_gk_quantity,                <- diagnostics/gyrokinetics/
     load_gk_distf, available_gk_quantities        (equation-internal loaders)
@@ -44,7 +45,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
 """
 
 from postgkyl.api import GData, load, DatasetGroup, animate, collect, evaluate, relchange
-from postgkyl.ops import apply, info, integrate, interpolate, represent, select
+from postgkyl.ops import apply, available_evaluate_operators, info, integrate, interpolate, represent, select
 from postgkyl.render import plot
 from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
@@ -58,6 +59,6 @@ __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
     "interpolate", "interp", "select", "sel", "represent", "apply", "save",
-    "collect", "evaluate", "relchange", "animate",
+    "collect", "evaluate", "relchange", "animate", "available_evaluate_operators",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

@@ -5,12 +5,11 @@ from __future__ import annotations
 import click
 
 import postgkyl as pg
-from postgkyl.numerics import ev_cmds
 
 from .._apply import active_datasets, set_active
 from .._options import label_option, tag_option
 
-_OPERATORS = ", ".join(sorted(ev_cmds.keys()))
+_OPERATORS = ", ".join(pg.available_evaluate_operators())
 
 _HELP = f"""Evaluate an RPN expression over the active datasets.
 

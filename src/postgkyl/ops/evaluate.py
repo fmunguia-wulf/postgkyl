@@ -171,6 +171,11 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
   return True
 
 
+def available_operators() -> list[str]:
+  """The RPN operator tokens ``evaluate`` recognizes (e.g. ``'+'``, ``'sqrt'``)."""
+  return sorted(ev_cmds)
+
+
 def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     label: str | None = None) -> "GDataState":
   """Evaluate an RPN expression over an explicit list of datasets.
