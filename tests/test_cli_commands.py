@@ -280,11 +280,15 @@ class TestFitAndGrowth:
     assert result.exit_code != 0
 
   def test_fit_window_flag_precedes_argument(self):
-    result = _ok([ENERGY, "fit", "--window", "exp2"])
+    # --min-n close to the series length keeps the leading-window scan (an
+    # O(N) sweep of curve_fit calls) to a handful of iterations -- the
+    # scan's search behavior is exercised elsewhere; this test only checks
+    # CLI wiring, so it doesn't need the full ~15k-point sweep.
+    result = _ok([ENERGY, "fit", "--window", "--min-n", "15700", "exp2"])
     assert "R^2" in result.output
 
   def test_growth_rate(self):
-    result = _ok([ENERGY, "growth"])
+    result = _ok([ENERGY, "growth", "--min-n", "15700"])
     assert "growth rate" in result.output
 
   def test_fit_unknown_type_fails_closed(self):
