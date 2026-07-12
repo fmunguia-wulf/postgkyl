@@ -32,6 +32,13 @@ def _linear_dataset(a=2.0, b=1.0, n=20):
   return _make([edges], y[:, np.newaxis]), centers
 
 
+def _growth_series(a=1.0, b=0.5, n=60):
+  edges = np.linspace(0.0, 1.0, n + 1)
+  centers = 0.5 * (edges[:-1] + edges[1:])
+  y = a * np.exp(2.0 * b * centers)
+  return _make([edges], y[:, np.newaxis]), centers
+
+
 def test_linear_fit_recovers_parameters():
   d, _ = _linear_dataset(a=2.0, b=1.0)
   out = ops.fit(d, "linear")
@@ -126,3 +133,55 @@ def test_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interp\(\)"):
     ops.fit(d, "linear")
+
+
+# ── window=True -- growth-rate-style leading-window fits ─────────────────────
+
+def test_window_recovers_growth_rate():
+  d, _ = _growth_series(a=1.0, b=1.5)
+  out = ops.fit(d, "exp2", window=True)
+  assert out.ctx["fit_params"][0][1] == pytest.approx(1.5, abs=1e-3)
+
+
+def test_window_output_shape_matches_full_grid():
+  d, centers = _growth_series()
+  out = ops.fit(d, "exp2", window=True)
+  assert out.get_values().shape[0] == len(centers)
+
+
+def test_window_explicit_guess_string_and_sequence_agree():
+  d, _ = _growth_series(a=1.0, b=0.8)
+  out_str = ops.fit(d, "exp2", window=True, guess="1,1")
+  out_seq = ops.fit(d, "exp2", window=True, guess=(1.0, 1.0))
+  np.testing.assert_allclose(
+      out_str.ctx["fit_params"][0], out_seq.ctx["fit_params"][0])
+
+
+def test_window_min_n_controls_minimum_window():
+  d, _ = _growth_series(a=1.0, b=1.0, n=100)
+  out = ops.fit(d, "exp2", window=True, min_n=5)
+  assert out.ctx["fit_params"][0][1] == pytest.approx(1.0, abs=1e-2)
+
+
+def test_window_inplace_and_tag_label():
+  d, _ = _growth_series()
+  out = ops.fit(d, "exp2", window=True, tag="g", label="growth-fit", inplace=True)
+  assert out is d
+  assert d.get_tag() == "g"
+  assert d.get_label() == "growth-fit"
+
+
+def test_window_rejects_multi_dim_data():
+  e0, e1 = np.linspace(0.0, 1.0, 6), np.linspace(0.0, 1.0, 5)
+  c0, c1 = 0.5 * (e0[:-1] + e0[1:]), 0.5 * (e1[:-1] + e1[1:])
+  X, Y = np.meshgrid(c0, c1, indexing="ij")
+  d = _make([e0, e1], (X + Y)[..., np.newaxis])
+  with pytest.raises(ValueError, match="window=True is only supported"):
+    ops.fit(d, "plane", window=True)
+
+
+@needs_gkeyll
+def test_window_rejects_modal_data():
+  d = pg.load(F1)
+  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    ops.fit(d, "exp2", window=True)

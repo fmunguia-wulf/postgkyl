@@ -10,10 +10,9 @@ from .fft import fft, init_polar, polar_isotropic
 from .fit import (
     FIT_FUNCTIONS, FIT_NDIM, RPN_OPERATORS, RPN_FUNCTIONS,
     linear, quadratic, plane, quadratic2d, exp_plateau, gaussian, power,
-    sinusoid, tanh_transition, rpn_param_names, rpn_ndim, fit_evaluate, fit,
-    auto_guess,
+    sinusoid, tanh_transition, exp2, rpn_param_names, rpn_ndim, fit_evaluate,
+    fit, auto_guess, fit_best_window,
 )
-from .growth import exp2, fit_growth
 from .filters import fft_filtering, butter_filtering
 from .ev_ops import cmds as ev_cmds
 from .grid_centering import nodal_to_cell_centered_grid
@@ -28,9 +27,8 @@ __all__ = [
     "fft", "init_polar", "polar_isotropic",
     "FIT_FUNCTIONS", "FIT_NDIM", "RPN_OPERATORS", "RPN_FUNCTIONS",
     "linear", "quadratic", "plane", "quadratic2d", "exp_plateau", "gaussian",
-    "power", "sinusoid", "tanh_transition", "rpn_param_names", "rpn_ndim",
-    "fit_evaluate", "fit", "auto_guess",
-    "exp2", "fit_growth",
+    "power", "sinusoid", "tanh_transition", "exp2", "rpn_param_names",
+    "rpn_ndim", "fit_evaluate", "fit", "auto_guess", "fit_best_window",
     "fft_filtering", "butter_filtering",
     "ev_cmds",
     "nodal_to_cell_centered_grid",

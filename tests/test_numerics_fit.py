@@ -60,6 +60,11 @@ class TestFitFunctions:
     x = np.array([0.0])
     np.testing.assert_allclose(fitmod.tanh_transition(x, 2.0, 0.0, 1.0, -1.0), [-1.0])
 
+  def test_exp2_evaluation(self):
+    np.testing.assert_allclose(fitmod.exp2(0.0, a=2.0, b=1.0), 2.0)
+    x = np.array([0.0, 1.0, 2.0])
+    np.testing.assert_allclose(fitmod.exp2(x, a=1.0, b=1.0), np.exp(2 * x))
+
   def test_fit_functions_and_ndim_consistent(self):
     assert set(fitmod.FIT_FUNCTIONS) == set(fitmod.FIT_NDIM)
 
@@ -73,6 +78,7 @@ class TestFitFunctions:
     assert fitmod.FIT_NDIM["power"] == 1
     assert fitmod.FIT_NDIM["sinusoid"] == 1
     assert fitmod.FIT_NDIM["tanh_transition"] == 1
+    assert fitmod.FIT_NDIM["exp2"] == 1
 
   def test_fit_evaluate_builtin(self):
     x = np.array([0.0, 1.0, 2.0])
@@ -444,3 +450,93 @@ class TestAutoGuess:
     x = np.linspace(0, 1, 10)
     y = x
     assert fitmod.auto_guess("not_a_real_model", x, y) is None
+
+  def test_exp2_guess_seeds_a_working_fit(self):
+    x = np.linspace(0, 5, 80)
+    true_params = [1.0, 0.8]
+    y = fitmod.exp2(x, *true_params)
+    guess = fitmod.auto_guess("exp2", x, y)
+    params, _, R2 = fitmod.fit(x, y, "exp2", p0=guess)
+    np.testing.assert_allclose(params, true_params, rtol=1e-4)
+
+  def test_exp2_guess_is_scale_invariant(self):
+    """The log-linear guess should converge without needing x normalized
+    to O(1) -- unlike a blind (1, 1) seed, it stays accurate as the time
+    axis grows."""
+    x = np.linspace(0, 500, 200)
+    true_params = [2.0, 0.01]
+    y = fitmod.exp2(x, *true_params)
+    guess = fitmod.auto_guess("exp2", x, y)
+    params, _, R2 = fitmod.fit(x, y, "exp2", p0=guess)
+    np.testing.assert_allclose(params, true_params, rtol=1e-4)
+
+
+# ── fit_best_window ───────────────────────────────────────────────────────────
+
+class TestFitBestWindow:
+  def test_recovers_known_growth_rate(self):
+    x = np.linspace(0, 5, 60)
+    true_a, true_b = 1.0, 0.8
+    y = fitmod.exp2(x, true_a, true_b)
+    params, cov, R2, n = fitmod.fit_best_window(x, y, "exp2")
+    assert R2 > 0.99
+    np.testing.assert_allclose(params[1], true_b, rtol=0.05)
+
+  def test_returns_four_elements(self):
+    x = np.linspace(0, 3, 30)
+    y = fitmod.exp2(x, 1.0, 0.5)
+    result = fitmod.fit_best_window(x, y, "exp2")
+    assert len(result) == 4
+
+  def test_best_n_is_within_bounds(self):
+    x = np.linspace(0, 4, 40)
+    y = fitmod.exp2(x, 1.0, 0.5)
+    _, _, _, n = fitmod.fit_best_window(x, y, "exp2", min_n=5)
+    assert 5 <= n <= len(x)
+
+  def test_custom_min_n(self):
+    x = np.linspace(0, 3, 30)
+    y = fitmod.exp2(x, 1.0, 0.5)
+    _, _, _, n = fitmod.fit_best_window(x, y, "exp2", min_n=10)
+    assert n >= 10
+
+  def test_curve_fit_failure_for_some_windows_is_skipped(self, monkeypatch):
+    """A RuntimeError from curve_fit (non-convergence) for one fitting
+    window is caught, not fatal -- the scan continues and still returns
+    the best window that did converge."""
+    x = np.linspace(0, 5, 30)
+    y = fitmod.exp2(x, 1.0, 0.8)
+    real_curve_fit = fitmod.opt.curve_fit
+    calls = {"n": 0}
+
+    def flaky_curve_fit(*args, **kwargs):
+      calls["n"] += 1
+      if calls["n"] == 1:
+        raise RuntimeError("simulated non-convergence")
+      return real_curve_fit(*args, **kwargs)
+
+    monkeypatch.setattr(fitmod.opt, "curve_fit", flaky_curve_fit)
+    _, _, R2, _ = fitmod.fit_best_window(x, y, "exp2", min_n=5)
+    assert R2 > 0.9
+
+  def test_all_windows_failing_to_converge_raises(self, monkeypatch):
+    """If curve_fit never converges for any window in the scan range,
+    fit_best_window must raise a clear domain error rather than crash."""
+    x = np.linspace(0, 5, 30)
+    y = fitmod.exp2(x, 1.0, 0.8)
+
+    def always_fails(*args, **kwargs):
+      raise RuntimeError("simulated non-convergence")
+
+    monkeypatch.setattr(fitmod.opt, "curve_fit", always_fails)
+    with pytest.raises(RuntimeError, match="failed to converge"):
+      fitmod.fit_best_window(x, y, "exp2", min_n=5)
+
+  def test_generic_over_fit_type(self):
+    """fit_best_window is generic over any registered fit_type, not
+    hard-wired to exp2 -- generalizing the old growth-specific scan."""
+    x = np.linspace(0.1, 5, 40)
+    y = 2.0 * x + 1.0
+    params, _, R2, _ = fitmod.fit_best_window(x, y, "linear", p0=[1.0, 1.0])
+    assert R2 > 0.99
+    np.testing.assert_allclose(params, [2.0, 1.0], rtol=1e-6)

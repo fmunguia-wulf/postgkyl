@@ -67,7 +67,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
 INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "write",
     "mul", "div", "integrate", "to_modal", "to_nodal", "to_quad", "apply",
-    "fft", "magsq", "mask", "val2coord", "extract_input", "fit", "growth",
+    "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
     "differentiate", "map"]
 MODULE_VERBS = ["collect", "ev", "relchange", "animate"]
 
@@ -146,14 +146,14 @@ class TestSubclassPropagation:
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 1.0], atol=1e-8)
 
-  def test_growth(self):
+  def test_fit_window_growth_rate(self):
     edges = np.linspace(0.0, 1.0, 61)
     centers = 0.5 * (edges[:-1] + edges[1:])
     y = 1.0 * np.exp(2 * 0.5 * centers)
     d = _make(MyData, [edges], y[:, np.newaxis])
-    out = d.growth()
+    out = d.fit("exp2", window=True)
     assert isinstance(out, MyData)
-    assert "growth_rate" in out.ctx
+    assert out.ctx["fit_params"][0][1] == pytest.approx(0.5, abs=1e-2)
 
   def test_differentiate(self):
     edges = np.linspace(0.0, 1.0, 17)

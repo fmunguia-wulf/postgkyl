@@ -129,17 +129,16 @@ class GData(GDataState):
     a terminal verb returning a plain ``str`` (``""`` if none is embedded)."""
     return ops.extract_input(self)
 
-  def fit(self, fit_type: str, *, guess=None, inplace: bool = False,
-      tag: str | None = None, label: str | None = None) -> "GData":
-    """Fit a model to this dataset (see ``ops.fit``)."""
-    return ops.fit(self, fit_type, guess=guess, inplace=inplace, tag=tag,
-        label=label)
+  def fit(self, fit_type: str, *, guess=None, window: bool = False,
+      min_n: int | None = None, inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Fit a model to this dataset (see ``ops.fit``).
 
-  def growth(self, *, guess=None, minn: int | None = None, inplace: bool = False,
-      tag: str | None = None, label: str | None = None) -> "GData":
-    """Fit an exponential growth rate to time-series data (see ``ops.growth``)."""
-    return ops.growth(self, guess=guess, minn=minn, inplace=inplace, tag=tag,
-        label=label)
+    ``window=True`` fits only the best-scoring leading window of a 1D
+    series -- the growth-rate use case, e.g. ``d.fit('exp2', window=True)``.
+    """
+    return ops.fit(self, fit_type, guess=guess, window=window, min_n=min_n,
+        inplace=inplace, tag=tag, label=label)
 
   def differentiate(self, *, direction: int | None = None, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":

@@ -34,7 +34,6 @@ from .grid import grid
 from .val2coord import val2coord
 from .extract_input import extract_input
 from .fit import fit
-from .growth import growth
 from .differentiate import differentiate
 from .ev import ev
 from .map import map
@@ -42,5 +41,5 @@ from .map import map
 __all__ = ["interpolate", "select", "info", "integrate", "plot", "animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
-    "extract_input", "fit", "growth", "differentiate", "ev",
+    "extract_input", "fit", "differentiate", "ev",
     "map"]
