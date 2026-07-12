@@ -136,6 +136,85 @@ def test_modal_power_rejects_non_positive_integer_exponents():
     a ** 1.5
 
 
+def _const_gkyl_array(basis_type, ndim, p, cells, value):
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  b0 = 2.0 ** (-ndim / 2.0)
+  coeffs = np.zeros((int(np.prod(cells)), nb))
+  coeffs[:, 0] = value / b0
+  return gpython.GkylArray.from_numpy(coeffs)
+
+
+@needs_gkeyll
+def test_modal_average_full_reduction_corrects_the_raw_kernel_value():
+  """Unlike the raw kernel (test_array_average_full_reduction_unweighted_
+  writes_a_raw_value in test_gpython_kernels.py), ``dg.modal.average``
+  rescales the degenerate (every dim averaged), unweighted case back into a
+  properly b0-normalized coefficient -- so it agrees with the weighted
+  case (which the underlying weak division already normalizes) and with
+  every other modal dataset's "value = coeff0 * b0" convention."""
+  basis_type, p, cells = "serendipity", 1, [4]
+  a = _const_gkyl_array(basis_type, 1, p, cells, 3.0)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([2.0]),
+          "cells": np.array(cells)}
+  keep_dirs, cells_avg, out = dg.modal.average(grid, basis_type, 1, p, a, [0])
+  assert keep_dirs == []
+  assert cells_avg == [1]
+  b0 = 2.0 ** (-1 / 2.0)
+  np.testing.assert_allclose(out.view()[0, 0] * b0, 3.0, atol=1e-10)
+
+
+@needs_gkeyll
+def test_modal_average_multi_field_loops_and_reassembles_per_field():
+  """``gkyl_array_average`` has no field-index argument, so a multi-field
+  array (ncomp = nfields * num_basis) must be split, averaged one field at
+  a time, and reassembled -- verify each field's result matches averaging
+  it alone."""
+  basis_type, p, cells = "serendipity", 1, [4]
+  nb = gpython.basis.num_basis(basis_type, 1, p)
+  values = [3.0, -1.5]
+  coeffs = np.concatenate([
+      _const_gkyl_array(basis_type, 1, p, cells, v).view() for v in values],
+      axis=-1)
+  a = gpython.GkylArray.from_numpy(coeffs)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([2.0]),
+          "cells": np.array(cells)}
+  keep_dirs, cells_avg, out = dg.modal.average(grid, basis_type, 1, p, a, [0])
+  assert out.ncomp == 2 * nb
+  b0 = 2.0 ** (-1 / 2.0)
+  np.testing.assert_allclose(out.view()[0, 0] * b0, values[0], atol=1e-10)
+  np.testing.assert_allclose(out.view()[0, nb] * b0, values[1], atol=1e-10)
+
+
+@needs_gkeyll
+def test_modal_average_rejects_dirs_out_of_range():
+  basis_type, p, cells = "serendipity", 1, [4]
+  a = _const_gkyl_array(basis_type, 1, p, cells, 1.0)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([1.0]),
+          "cells": np.array(cells)}
+  with pytest.raises(ValueError, match="out of range"):
+    dg.modal.average(grid, basis_type, 1, p, a, [1])
+
+
+@needs_gkeyll
+def test_modal_average_rejects_ncomp_not_a_multiple_of_num_basis():
+  a = gpython.GkylArray.alloc(3, 4)  # num_basis for ser p1 1D is 2
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([1.0]),
+          "cells": np.array([4])}
+  with pytest.raises(ValueError, match="not a multiple"):
+    dg.modal.average(grid, "serendipity", 1, 1, a, [0])
+
+
+@needs_gkeyll
+def test_modal_average_rejects_weight_ncomp_mismatch():
+  basis_type, p, cells = "serendipity", 1, [4]
+  a = _const_gkyl_array(basis_type, 1, p, cells, 1.0)
+  w = gpython.GkylArray.alloc(3, 4)  # wrong ncomp for this basis
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([1.0]),
+          "cells": np.array(cells)}
+  with pytest.raises(ValueError, match="weight ncomp"):
+    dg.modal.average(grid, basis_type, 1, p, a, [0], weight=w)
+
+
 # ==================================================================== gpython/array
 @needs_gkeyll
 def test_gkylarray_from_numpy_rejects_scalar_input(monkeypatch):

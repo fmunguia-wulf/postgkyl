@@ -22,6 +22,7 @@ from click.testing import CliRunner
 
 matplotlib.use("Agg")
 
+import postgkyl as pg
 from postgkyl import gpython
 from postgkyl.cli.app import cli
 from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
@@ -319,6 +320,46 @@ class TestIntegrate:
   def test_integrate_axis_on_raw_modal_data_fails_closed(self):
     result = _run([DISTF_P2_0, "integrate", "--axis", "0"])
     assert result.exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# average -- weighted (or plain) average of native modal data over --z0..--z5.
+# ---------------------------------------------------------------------------
+
+class TestAverage:
+  @needs_gkeyll
+  def test_average_requires_at_least_one_direction_flag(self):
+    result = _run([F1, "average"])
+    assert result.exit_code != 0
+    assert "at least one direction flag" in result.output
+
+  @needs_gkeyll
+  def test_average_collapses_the_chosen_direction(self):
+    result = _ok([F1, "average", "--z0", "info"])
+    assert "Number of dimensions: 1" in result.output
+    assert "Dim 0: Num. cells: 1;" in result.output
+
+  @needs_gkeyll
+  def test_average_on_interpolated_data_fails_closed(self):
+    result = _run([F1, "interp", "average", "--z0"])
+    assert result.exit_code != 0
+
+  @needs_gkeyll
+  def test_average_with_weight_file(self, tmp_path):
+    d = pg.load(F1)
+    cells = d.ctx["cells"]
+    nb = gpython.basis.num_basis("serendipity", 1, 1)
+    coeffs = np.zeros((int(cells[0]), nb))
+    coeffs[:, 0] = 5.0
+    w = pg.GData()
+    w.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True,
+        cells=np.array(cells), representation="modal")
+    w.push([np.copy(g) for g in d.grid], gpython.array.GkylArray.from_numpy(coeffs))
+    weight_path = str(tmp_path / "weight.gkyl")
+    w.save(weight_path)
+
+    result = _ok([F1, "average", "--z0", "--weight", weight_path, "info"])
+    assert "Number of dimensions: 1" in result.output
 
 
 # ---------------------------------------------------------------------------

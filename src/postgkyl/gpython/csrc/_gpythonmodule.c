@@ -636,6 +636,73 @@ fail:
   return NULL;
 }
 
+/* ------------------------------------------------------------- average */
+static PyObject *
+py_array_average(PyObject *self, PyObject *args)
+{
+  PyObject *loobj, *upobj, *ncobj, *bcap, *bavgcap, *ncavgobj, *avgdimobj,
+      *wcap, *acap, *ocap;
+  if (!PyArg_ParseTuple(args, "OOOOOOOOOO", &loobj, &upobj, &ncobj, &bcap,
+          &bavgcap, &ncavgobj, &avgdimobj, &wcap, &acap, &ocap))
+    return NULL;
+  pg0_basis *b = basis_arg(bcap), *b_avg = basis_arg(bavgcap);
+  pg0_array *a = array_arg(acap), *out = array_arg(ocap);
+  if (!b || !b_avg || !a || !out)
+    return NULL;
+  pg0_array *weight = NULL;
+  if (wcap != Py_None) {
+    weight = array_arg(wcap);
+    if (!weight)
+      return NULL;
+  }
+  PyArrayObject *lo = (PyArrayObject *)PyArray_FROM_OTF(
+      loobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *up = (PyArrayObject *)PyArray_FROM_OTF(
+      upobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *nc = (PyArrayObject *)PyArray_FROM_OTF(
+      ncobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *ncavg = (PyArrayObject *)PyArray_FROM_OTF(
+      ncavgobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *avgdim = (PyArrayObject *)PyArray_FROM_OTF(
+      avgdimobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  if (!lo || !up || !nc || !ncavg || !avgdim)
+    goto fail;
+  int ndim = (int)PyArray_SIZE(lo);
+  int ndim_avg = (int)PyArray_SIZE(ncavg);
+  if (ndim < 1 || ndim > PG0_MAX_DIM || PyArray_SIZE(up) != ndim ||
+      PyArray_SIZE(nc) != ndim || PyArray_SIZE(avgdim) != ndim) {
+    PyErr_SetString(PyExc_ValueError,
+        "average: grid/avg_dim arrays must share ndim <= 7");
+    goto fail;
+  }
+  if (ndim_avg < 1 || ndim_avg > PG0_MAX_DIM) {
+    PyErr_SetString(PyExc_ValueError,
+        "average: cells_avg must have between 1 and 7 entries");
+    goto fail;
+  }
+  int status = pg0_array_average(ndim, PyArray_DATA(lo), PyArray_DATA(up),
+      PyArray_DATA(nc), b, b_avg, ndim_avg, PyArray_DATA(ncavg),
+      PyArray_DATA(avgdim), weight, a, out);
+  Py_DECREF(lo);
+  Py_DECREF(up);
+  Py_DECREF(nc);
+  Py_DECREF(ncavg);
+  Py_DECREF(avgdim);
+  if (status != 0) {
+    PyErr_SetString(PyExc_ValueError,
+        "average: operand shapes incompatible with the bases/grid");
+    return NULL;
+  }
+  Py_RETURN_NONE;
+fail:
+  Py_XDECREF(lo);
+  Py_XDECREF(up);
+  Py_XDECREF(nc);
+  Py_XDECREF(ncavg);
+  Py_XDECREF(avgdim);
+  return NULL;
+}
+
 /* ------------------------------------------------------------- writing */
 static PyObject *
 py_write_field(PyObject *self, PyObject *args)
@@ -798,6 +865,8 @@ static PyMethodDef gpython_methods[] = {
     "field-aware (Gauss-node) min/max/sum of one component" },
   { "array_integrate", py_array_integrate, METH_VARARGS,
     "int dx op(f) per field" },
+  { "array_average", py_array_average, METH_VARARGS,
+    "weighted (or plain) average over the flagged dims (single field)" },
   { "write_field", py_write_field, METH_VARARGS,
     "write (lower, upper, cells, meta_bytes_or_None, array) to a .gkyl file" },
   { "dynvec_read", py_dynvec_read, METH_VARARGS,

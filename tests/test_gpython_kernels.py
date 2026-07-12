@@ -397,3 +397,109 @@ def test_integrate_rejects_grid_array_mismatch():
           "cells": np.array([5])}  # 5 != a.size (4)
   with pytest.raises(ValueError, match="do not cover"):
     k.integrate(grid, basis_type, p, a)
+
+
+# ------------------------------------------------------------------ average
+def _const_field(basis_type, ndim, p, cells, value):
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  b0 = 2.0 ** (-ndim / 2.0)
+  coeffs = np.zeros((int(np.prod(cells)), nb))
+  coeffs[:, 0] = value / b0
+  return GkylArray.from_numpy(coeffs)
+
+
+def test_array_average_partial_reduction_of_constant_field_is_exact():
+  """A genuinely partial reduction (some dims survive) is a proper weak
+  contraction: the surviving 1D field's coefficient 0 is the standard
+  b0-normalized representation of the (unchanged, since the field is
+  spatially constant) value -- no basis-dependent surprises here."""
+  basis_type, p = "serendipity", 1
+  cells = [4, 3]
+  a = _const_field(basis_type, 2, p, cells, 3.0)
+  grid = {"ndim": 2, "lower": np.array([0.0, 0.0]), "upper": np.array([2.0, 1.0]),
+          "cells": np.array(cells)}
+  out = k.array_average(grid, basis_type, p, ndim_avg=1, cells_avg=[cells[0]],
+      avg_dim=[0, 1], a=a)
+  expect = np.zeros((cells[0], gpython.basis.num_basis(basis_type, 1, p)))
+  expect[:, 0] = 3.0 / (2.0 ** (-1 / 2.0))
+  np.testing.assert_allclose(out.view(), expect, atol=1e-10)
+
+
+def test_array_average_full_reduction_unweighted_writes_a_raw_value():
+  """The degenerate (every dim averaged) unweighted kernel
+  (gkyl_array_average_NxYY_avg<all dirs>) writes a single raw VALUE into
+  coefficient 0 -- not a b0-normalized coefficient, unlike the partial-
+  reduction case above. This is exactly the asymmetry
+  ``dg.modal.average`` corrects for (test_dg_modal_average_* in
+  test_coverage_leaf.py); this test pins the raw kernel behavior itself."""
+  basis_type, p = "serendipity", 1
+  cells = [4]
+  a = _const_field(basis_type, 1, p, cells, 3.0)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([2.0]),
+          "cells": np.array(cells)}
+  out = k.array_average(grid, basis_type, p, ndim_avg=1, cells_avg=[1],
+      avg_dim=[1], a=a)
+  np.testing.assert_allclose(out.view()[0, 0], 3.0, atol=1e-10)
+  np.testing.assert_allclose(out.view()[0, 1:], 0.0, atol=1e-10)
+
+
+def test_array_average_full_reduction_weighted_by_a_uniform_weight_matches_integrate():
+  """With ANY weight (even spatially uniform), the kernel performs a real
+  weak division, so the output IS a properly b0-normalized coefficient --
+  matching gkyl_array_integrate / volume for a uniform-weight average."""
+  basis_type, p = "serendipity", 1
+  cells = [4]
+  value = 3.0
+  a = _const_field(basis_type, 1, p, cells, value)
+  w = _const_field(basis_type, 1, p, cells, 2.0)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([2.0]),
+          "cells": np.array(cells)}
+  out = k.array_average(grid, basis_type, p, ndim_avg=1, cells_avg=[1],
+      avg_dim=[1], a=a, weight=w)
+  b0 = 2.0 ** (-1 / 2.0)
+  np.testing.assert_allclose(out.view()[0, 0] * b0, value, atol=1e-10)
+
+
+def test_array_average_rejects_unsupported_basis_or_poly_order():
+  a = GkylArray.alloc(2, 4)
+  grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [4]}
+  with pytest.raises(NotImplementedError, match="serendipity p1-p2"):
+    k.array_average(grid, "tensor", 1, 1, [1], [1], a)
+  with pytest.raises(NotImplementedError, match="serendipity p1-p2"):
+    k.array_average(grid, "serendipity", 3, 1, [1], [1], a)
+
+
+def test_array_average_rejects_ndim_above_3():
+  basis = gpython.basis.get_basis("serendipity", 4, 1)
+  a = GkylArray.alloc(basis.num_basis, 6)
+  grid = {"ndim": 4, "lower": np.zeros(4), "upper": np.ones(4),
+          "cells": np.array([1, 1, 1, 6])}
+  with pytest.raises(NotImplementedError, match="ndim 1-3"):
+    k.array_average(grid, "serendipity", 1, 1, [1, 1, 1, 6], [1, 0, 0, 0], a)
+
+
+def test_array_average_rejects_ncomp_not_single_field():
+  basis_type, p = "serendipity", 1
+  a = GkylArray.alloc(4, 4)  # 4 comps: 2 fields of num_basis=2, not single-field
+  grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [4]}
+  with pytest.raises(ValueError, match="single-field only"):
+    k.array_average(grid, basis_type, p, 1, [1], [1], a)
+
+
+def test_array_average_rejects_weight_shape_mismatch():
+  basis_type, p = "serendipity", 1
+  cells = [4]
+  a = _const_field(basis_type, 1, p, cells, 3.0)
+  w = GkylArray.alloc(2, 3)  # size 3 != a.size (4)
+  grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": np.array(cells)}
+  with pytest.raises(ValueError, match="weight"):
+    k.array_average(grid, basis_type, p, 1, [1], [1], a, weight=w)
+
+
+def test_array_average_rejects_grid_array_mismatch():
+  basis_type, p = "serendipity", 1
+  a = GkylArray.alloc(gpython.basis.num_basis(basis_type, 1, p), 4)
+  grid = {"ndim": 1, "lower": np.array([0.0]), "upper": np.array([1.0]),
+          "cells": np.array([5])}  # 5 != a.size (4)
+  with pytest.raises(ValueError, match="do not cover"):
+    k.array_average(grid, basis_type, p, 1, [1], [1], a)

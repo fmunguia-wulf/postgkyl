@@ -290,6 +290,57 @@ def dg_reduce(basis_type: str, ndim: int, poly_order: int, a: GkylArray,
       REDUCE_OPS[op]))
 
 
+def array_average(grid: dict, basis_type: str, poly_order: int, ndim_avg: int,
+    cells_avg, avg_dim, a: GkylArray, weight: GkylArray | None = None) -> GkylArray:
+  """Single-field weighted (or plain) average of ``a`` via ``gkyl_array_average``:
+  ``int f w dx^avg / int w dx^avg`` (or ``int f dx^avg / int dx^avg`` when
+  ``weight`` is omitted).
+
+  ``grid`` is the donor grid dict (ndim/lower/upper/cells, e.g. from ``rio``);
+  ``avg_dim`` flags (length ``grid["ndim"]``, 1 = averaged, 0 = kept) which
+  donor dims are reduced. ``ndim_avg``/``cells_avg`` describe the target: the
+  surviving dims' cell counts, or ``ndim_avg=1``/``cells_avg=[1]`` for a full
+  reduction (Gkeyll's own convention -- there is no true 0-dimensional
+  basis). Single-field only: ``a``/``weight`` must carry exactly one donor
+  basis's worth of coefficients (``a.ncomp == num_basis``); a multi-field
+  caller loops field by field (:func:`postgkyl.dg.modal.average`).
+
+  Guarded to the kernel set compiled into libg0core (serendipity p1-p2,
+  donor ndim 1-3 -- ``gkyl_array_average_new`` asserts ``poly_order <= 2``
+  and its kernel-choice table has no bound check past that).
+  """
+  if basis_type.lower() != "serendipity" or poly_order not in (1, 2):
+    raise NotImplementedError(
+        "gkyl_array_average kernels in libg0core cover serendipity p1-p2")
+  ndim = int(grid["ndim"])
+  if ndim not in (1, 2, 3):
+    raise NotImplementedError(
+        f"gkyl_array_average kernels in libg0core cover ndim 1-3, got {ndim}")
+  basis = get_basis(basis_type, ndim, poly_order)
+  basis_avg = get_basis(basis_type, ndim_avg, poly_order)
+  if a.ncomp != basis.num_basis:
+    raise ValueError(
+        f"average: a.ncomp ({a.ncomp}) must equal the donor basis's "
+        f"num_basis ({basis.num_basis}); average is single-field only")
+  if weight is not None and (weight.ncomp, weight.size) != (basis.num_basis, a.size):
+    raise ValueError(
+        f"average: weight must be single-field ({basis.num_basis} comps) "
+        f"and share the donor array's size ({a.size} cells)")
+  lower = np.asarray(grid["lower"], dtype=np.float64)
+  upper = np.asarray(grid["upper"], dtype=np.float64)
+  cells = np.asarray(grid["cells"], dtype=np.int32)
+  if int(np.prod(cells)) != a.size:
+    raise ValueError(f"grid cells {tuple(cells)} do not cover the array "
+                     f"({int(np.prod(cells))} vs {a.size} cells)")
+  cells_avg = np.asarray(cells_avg, dtype=np.int32)
+  avg_dim = np.asarray(avg_dim, dtype=np.int32)
+  out = GkylArray.alloc(basis_avg.num_basis, int(np.prod(cells_avg)))
+  _lib.require().array_average(lower, upper, cells, basis._cap, basis_avg._cap,
+      cells_avg, avg_dim, weight._cap if weight is not None else None,
+      a._cap, out._cap)
+  return out
+
+
 def integrate(grid: dict, basis_type: str, poly_order: int, a: GkylArray,
     op: str = "none", factor: float = 1.0) -> np.ndarray:
   """``int dx op(f)`` per field via ``gkyl_array_integrate`` — one value per field.

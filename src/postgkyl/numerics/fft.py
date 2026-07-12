@@ -94,7 +94,8 @@ def fft(grid: list[np.ndarray], values: np.ndarray, *, psd: bool = False,
   # end
   if num_dims == 2:
     ft_values = np.abs(ft_values[:N[0] // 2, :N[1] // 2, :])**2
-    freq.append(0)  # dummy third index for uniform downstream logic
+    if iso:
+      freq.append(0)  # dummy third index, only meaningful to init_polar below
   else:  # num_dims == 3 (num_dims > 3 already raised above)
     ft_values = np.abs(ft_values[:N[0] // 2, :N[1] // 2, :N[2] // 2, :])**2
   # end

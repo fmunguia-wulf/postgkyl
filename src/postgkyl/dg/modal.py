@@ -49,6 +49,78 @@ def shift_all(a: GkylArray, val: float) -> GkylArray:
   return out
 
 
+def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
+    a: GkylArray, avg_dirs, weight: GkylArray | None = None):
+  """``int f w dx^avg / int w dx^avg`` (or the plain average) of a modal
+  field over ``avg_dirs``, field by field.
+
+  ``gkyl_array_average`` has no field-index argument (unlike the weak ops
+  above, which loop inside the compiled shim), so a multi-field ``a``
+  (``ncomp == nfields * num_basis``) is split into single-field slices here
+  and averaged one at a time, then reassembled.
+
+  Args:
+    grid: donor grid dict (``ndim``/``lower``/``upper``/``cells``, e.g. from
+      ``rio``).
+    avg_dirs: 0-based donor directions to average over.
+    weight: optional single-field ``GkylArray`` over the same donor
+      grid/basis as ``a`` (the plain average, dividing by volume, is used
+      when omitted).
+
+  Returns:
+    ``(keep_dirs, cells_avg, result)`` -- the surviving donor directions (in
+    order), the target's per-dimension cell counts, and the averaged array
+    (``ncomp`` scaled to the same field count as ``a``). ``keep_dirs``/
+    ``cells_avg`` are empty/``[1]`` for a full reduction: Gkeyll always
+    keeps at least one target dimension, collapsing to a single cell when
+    every donor direction is averaged out.
+  """
+  avg_dirs = sorted(set(int(d) for d in avg_dirs))
+  if not avg_dirs or avg_dirs[0] < 0 or avg_dirs[-1] >= ndim:
+    raise ValueError(
+        f"average dirs {avg_dirs} out of range for a {ndim}D field")
+  keep_dirs = [d for d in range(ndim) if d not in avg_dirs]
+  ndim_avg = len(keep_dirs) if keep_dirs else 1
+  cells = np.asarray(grid["cells"])
+  cells_avg = [int(cells[d]) for d in keep_dirs] if keep_dirs else [1]
+  avg_dim = [1 if d in avg_dirs else 0 for d in range(ndim)]
+
+  nb = gpython.basis.num_basis(basis_type, ndim, poly_order)
+  if a.ncomp % nb:
+    raise ValueError(f"ncomp {a.ncomp} is not a multiple of num_basis {nb}")
+  nfields = a.ncomp // nb
+  if weight is not None and weight.ncomp != nb:
+    raise ValueError(f"average weight ncomp ({weight.ncomp}) must equal "
+                     f"the donor basis's num_basis ({nb})")
+
+  if nfields == 1:
+    out = gpython.kernels.array_average(grid, basis_type, poly_order,
+        ndim_avg, cells_avg, avg_dim, a, weight=weight)
+  else:
+    a_view = a.view().reshape(a.size, nfields, nb)
+    fields_out = []
+    for f in range(nfields):
+      a_f = GkylArray.from_numpy(np.ascontiguousarray(a_view[:, f, :]))
+      out_f = gpython.kernels.array_average(grid, basis_type, poly_order,
+          ndim_avg, cells_avg, avg_dim, a_f, weight=weight)
+      fields_out.append(out_f.view())
+    out = GkylArray.from_numpy(np.concatenate(fields_out, axis=-1))
+
+  if not keep_dirs and weight is None:
+    # Full reduction (every donor dim averaged), unweighted only: Gkeyll's
+    # own kernels for this corner case (gkyl_array_average_NxYY_avg<all
+    # dirs>) write a single raw VALUE into coefficient 0 -- there is no real
+    # target dimension to normalize against, unlike every other path here
+    # (a partial reduction, or ANY weighted reduction, which both go through
+    # a genuine per-mode contraction/weak-division and so already come out
+    # as a properly b0-normalized coefficient). Rescale so this dataset's
+    # coefficient 0 means the same thing ("value = coeff0 * b0") as every
+    # other modal dataset in the system -- verified against
+    # gkyl_array_integrate on a constant field (see test_dg_modal_average).
+    out = gpython.kernels.scale(out, 2.0 ** (ndim_avg / 2.0))
+  return keep_dirs, cells_avg, out
+
+
 def power(basis_type: str, ndim: int, poly_order: int,
     a: GkylArray, exponent) -> GkylArray:
   """``f ** n`` for a positive integer ``n``, as repeated weak multiplies."""

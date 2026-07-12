@@ -16,7 +16,7 @@ from __future__ import annotations
 from . import (
     load, interpolate, save, select, plot, info,
     fft, magsq, relchange, mask, collect, grid, val2coord, extractinput,
-    fit, growth, differentiate, evaluate, map, integrate, animate,
+    fit, growth, differentiate, evaluate, map, integrate, average, animate,
     euler, tenmoment, mhd, velocity, agyro, current, energetics,
     parrotate, perprotate, bparrotate, bperprotate, transform_frame,
     laguerre_compose,
@@ -47,6 +47,7 @@ COMMANDS = [
     evaluate.command,
     map.command,
     integrate.command,
+    average.command,
     animate.command,
     euler.command,
     tenmoment.command,
@@ -81,7 +82,7 @@ COMMAND_SECTIONS: dict[str, list[str]] = {
     "Verbs": [
         "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
         "extractinput", "fit", "growth", "differentiate", "evaluate", "map",
-        "integrate", "interpolate", "select", "load",
+        "integrate", "average", "interpolate", "select", "load",
     ],
     "Diagnostics": [
         "euler", "tenmoment", "mhd", "velocity", "agyro", "current",

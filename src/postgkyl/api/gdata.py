@@ -79,6 +79,21 @@ class GData(GDataState):
     """
     return ops.integrate_axis(self, axis, inplace=inplace, tag=tag, label=label)
 
+  def average(self, dims, *, weight: "GData | None" = None,
+      inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Weighted (or plain) average of modal data over ``dims`` via
+    ``gkyl_array_average`` (see ``ops.average``).
+
+    Runs inside Gkeyll on native modal (pre-``interpolate()``) data, unlike
+    ``integrate_axis``; produces a new, lower-dimensional dataset, still
+    modal and gkyl-native (so it composes with further ``.average()``/
+    ``.to_nodal()``/``.interpolate()`` calls, unlike the terminal
+    ``.integrate()``).
+    """
+    return ops.average(self, dims, weight=weight, inplace=inplace, tag=tag,
+        label=label)
+
   # --------------------------------------- representation changes (explicit)
   # Conversions never happen implicitly — these verbs are the only doorway
   # between the modal / nodal / quadrature representations (all gkyl-native).

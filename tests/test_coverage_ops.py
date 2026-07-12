@@ -287,6 +287,101 @@ def test_integrate_requires_basis_metadata():
     a.integrate()
 
 
+# ============================================================== ops.average
+@needs_gkeyll
+def test_average_full_reduction_matches_integrate_over_volume():
+  a = pg.load(F1)
+  avg = a.average([0])
+  assert avg.num_dims == 1
+  assert avg.ctx["cells"].tolist() == [1]
+  lo, up = a.bounds
+  volume = float(up[0] - lo[0])
+  integral = a.integrate()
+  b0 = 2.0 ** (-avg.num_dims / 2.0)
+  np.testing.assert_allclose(np.asarray(avg.native.view())[0, ::2] * b0,
+      np.asarray(integral) / volume, rtol=1e-8)
+
+
+@needs_gkeyll
+def test_average_partial_reduction_of_a_constant_field():
+  basis_type, p = "serendipity", 1
+  cells = [4, 3]
+  nb = gpython.basis.num_basis(basis_type, 2, p)
+  b0 = 2.0 ** (-2 / 2.0)
+  coeffs = np.zeros((int(np.prod(cells)), nb))
+  coeffs[:, 0] = 3.0 / b0
+
+  d = pg.GData()
+  d.ctx.update(basis_type=basis_type, poly_order=p, is_modal=True,
+      cells=np.array(cells), representation="modal")
+  grid = [np.linspace(0.0, 2.0, cells[0] + 1), np.linspace(0.0, 1.0, cells[1] + 1)]
+  d.push(grid, gpython.array.GkylArray.from_numpy(coeffs))
+
+  out = d.average([1])
+  assert out.num_dims == 1
+  assert out.ctx["cells"].tolist() == [cells[0]]
+  assert out.grid[0].shape[0] == cells[0] + 1
+  b0_avg = 2.0 ** (-1 / 2.0)
+  np.testing.assert_allclose(np.asarray(out.native.view())[:, 0] * b0_avg, 3.0,
+      atol=1e-10)
+
+
+@needs_gkeyll
+def test_average_rejects_numpy_backed_and_non_modal():
+  interpolated = pg.load(F1).interpolate()
+  with pytest.raises(ValueError, match="native modal data"):
+    interpolated.average([0])
+
+  nodal = pg.load(F1).to_nodal()
+  with pytest.raises(ValueError, match="modal representation"):
+    nodal.average([0])
+
+
+@needs_gkeyll
+def test_average_rejects_missing_basis_metadata():
+  a = pg.load(F1)
+  del a.ctx["poly_order"]
+  with pytest.raises(ValueError, match="basis_type/poly_order"):
+    a.average([0])
+
+
+@needs_gkeyll
+def test_average_rejects_weight_mismatch():
+  a = pg.load(F1)
+  weight_wrong_dims = pg.GData()
+  weight_wrong_dims.ctx.update(basis_type="serendipity", poly_order=1,
+      is_modal=True, cells=np.array([4, 3]), representation="modal")
+  weight_wrong_dims.push(
+      [np.linspace(0.0, 1.0, 5), np.linspace(0.0, 1.0, 4)],
+      gpython.array.GkylArray.from_numpy(np.zeros((12, 4))))
+  with pytest.raises(ValueError, match="dims but the field has"):
+    a.average([0], weight=weight_wrong_dims)
+
+  weight_wrong_basis = pg.load(F1)
+  weight_wrong_basis.ctx["basis_type"] = "tensor"
+  with pytest.raises(ValueError, match="basis_type"):
+    a.average([0], weight=weight_wrong_basis)
+
+  weight_wrong_p = pg.load(F1)
+  weight_wrong_p.ctx["poly_order"] = 2
+  with pytest.raises(ValueError, match="poly_order"):
+    a.average([0], weight=weight_wrong_p)
+
+
+@needs_gkeyll
+def test_average_tag_and_label_and_inplace():
+  a = pg.load(F1)
+  out = a.average([0], tag="reduced", label="my label")
+  assert out.tag == "reduced"
+  assert out.label == "my label"
+  assert a.num_dims == 1 and a.ctx["cells"].tolist() != [1]  # original untouched
+
+  b = pg.load(F1)
+  mutated = b.average([0], inplace=True)
+  assert mutated is b
+  assert b.ctx["cells"].tolist() == [1]
+
+
 # ======================================================= ops.integrate_axis
 @needs_gkeyll
 def test_integrate_axis_rejects_raw_modal_data():

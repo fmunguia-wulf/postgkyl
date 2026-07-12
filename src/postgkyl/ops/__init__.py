@@ -8,6 +8,8 @@ concrete (sub)class because ``_result`` rebuilds ``type(self)``.
 ``interpolate`` is the one-way modal -> NumPy bridge; ``arithmetic`` dispatches
 on the container backend (Gkeyll kernels for modal data, NumPy for field data);
 ``integrate`` is a terminal verb that runs inside Gkeyll on modal data;
+``average`` reduces modal data over a dimension subset via
+``gkyl_array_average``, producing a new lower-dimensional modal dataset;
 ``map`` delegates to the grid-mapping engine in ``dg.map``. This is the
 equation-blind core-verb library only -- an op never knows which equation
 system produced the file; equation-specific physics (the former
@@ -21,6 +23,7 @@ from .interpolate import interpolate
 from .select import select
 from .info import info
 from .integrate import integrate, integrate_axis
+from .average import average
 from .plot import plot
 from .animate import animate
 from .represent import apply, represent
@@ -38,7 +41,8 @@ from .differentiate import differentiate
 from .evaluate import available_operators as available_evaluate_operators, evaluate
 from .map import map
 
-__all__ = ["interpolate", "select", "info", "integrate", "integrate_axis", "plot", "animate",
+__all__ = ["interpolate", "select", "info", "integrate", "integrate_axis", "average",
+    "plot", "animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
     "extract_input", "fit", "differentiate", "evaluate", "available_evaluate_operators",

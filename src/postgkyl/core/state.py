@@ -119,7 +119,12 @@ class GDataState:
 
   def set_grid(self, grid: list) -> None:
     self._grid = grid
-    num_dims = self.get_num_dims()
+    # ``len(grid)`` (not ``get_num_dims()``) on purpose: for a gkyl-backed
+    # dataset, num_dims reads ctx["cells"], which a dimension-reducing verb
+    # (e.g. ``average``) updates via ``_result``'s ctx_updates -- AFTER
+    # ``push`` calls this method. Deriving straight from the just-given grid
+    # avoids depending on that update having landed yet.
+    num_dims = len(grid)
     self.ctx["lower"] = np.array([grid[d].min() for d in range(num_dims)])
     self.ctx["upper"] = np.array([grid[d].max() for d in range(num_dims)])
 
