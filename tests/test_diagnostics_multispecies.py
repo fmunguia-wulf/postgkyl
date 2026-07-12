@@ -88,7 +88,7 @@ class TestEnergetics:
     d = pg.load(F1)
     elc = _make_5mom(rho=1.0, vx=0.0, p=1.0)
     field = _make(_G1D, np.zeros((1, 6)))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ms.energetics(d, elc, field)
 
 
@@ -134,7 +134,7 @@ class TestAccumulateCurrent:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ms.accumulate_current(d)
 
 

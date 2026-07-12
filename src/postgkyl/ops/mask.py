@@ -58,7 +58,7 @@ def mask(data: "GDataState", mask_data: "GDataState | None" = None, *,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "mask operates on interpolated (NumPy) values; call .interp() "
+        "mask operates on interpolated (NumPy) values; call .interpolate() "
         "first -- masking raw DG coefficients has no basis-space meaning.")
   # end
   values = data.values

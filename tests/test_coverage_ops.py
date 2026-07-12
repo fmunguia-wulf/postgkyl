@@ -71,7 +71,7 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
   """Interpolated field data: the grid has one more point than the values
   along every axis (edges vs. cell values) -- the ``is_matching`` False
   path."""
-  g = pg.load(F1).interp()
+  g = pg.load(F1).interpolate()
   assert g.grid[0].shape[0] == g.values.shape[0] + 1
 
   by_float = g.sel(z0=0.0)
@@ -84,13 +84,13 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
 # ========================================================== ops.arithmetic
 @needs_gkeyll
 def test_numpy_domain_rejects_incompatible_grids_and_shapes():
-  a = pg.load(F1).interp()
-  b = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
+  b = pg.load(F1).interpolate()
   b_sub = b.sel(comp=0)  # different shape than the full 'a'
   with pytest.raises(ValueError, match="incompatible shapes"):
     a + b_sub
 
-  c = pg.load(F1).interp()
+  c = pg.load(F1).interpolate()
   c.grid[0] = c.grid[0] + 1.0  # displace the grid -> no longer "compatible"
   with pytest.raises(ValueError, match="different grids"):
     a + c
@@ -177,22 +177,22 @@ def test_modal_scalar_rejects_reflected_power():
 
 @needs_gkeyll
 def test_apply_ufunc_method_and_out_kwarg_are_rejected():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   assert a.__array_ufunc__(np.add, "reduce", a) is NotImplemented
   assert a.__array_ufunc__(np.sqrt, "__call__", a, out=(np.zeros(1),)) is NotImplemented
 
 
 @needs_gkeyll
 def test_apply_ufunc_rejects_shape_mismatch():
-  a = pg.load(F1).interp()
-  b = pg.load(F1).interp().sel(comp=0)
+  a = pg.load(F1).interpolate()
+  b = pg.load(F1).interpolate().sel(comp=0)
   with pytest.raises(ValueError, match="incompatible shapes"):
     np.add(a, b)
 
 
 @needs_gkeyll
 def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   out = np.add(a, 2.0)
   np.testing.assert_allclose(out.values, a.values + 2.0)
   assert a.__array_ufunc__(np.add, "__call__", a, "not-a-number") is NotImplemented
@@ -202,12 +202,12 @@ def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
 def test_interpolate_rejects_unknown_short_basis_code():
   d = pg.load(F1)
   with pytest.raises(ValueError, match="Unknown basis"):
-    d.interp(basis="bogus")
+    d.interpolate(basis="bogus")
 
 
 @needs_gkeyll
 def test_interpolate_accepts_a_short_basis_code():
-  d = pg.load(F1).interp(basis="ms")
+  d = pg.load(F1).interpolate(basis="ms")
   assert d.is_interpolated
 
 
@@ -215,7 +215,7 @@ def test_interpolate_requires_basis_type_when_none_given():
   d = pg.GData()
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   with pytest.raises(ValueError, match="no stored 'basis_type'"):
-    d.interp()
+    d.interpolate()
 
 
 def test_interpolate_requires_poly_order_when_none_given():
@@ -223,15 +223,15 @@ def test_interpolate_requires_poly_order_when_none_given():
   d.ctx["basis_type"] = "serendipity"
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   with pytest.raises(ValueError, match="No polynomial order"):
-    d.interp()
+    d.interpolate()
 
 
 # =========================================================== ops.represent
 @needs_gkeyll
 def test_represent_rejects_numpy_backed_and_missing_metadata():
-  interp = pg.load(F1).interp()
+  interpolated = pg.load(F1).interpolate()
   with pytest.raises(ValueError, match="NumPy-backed"):
-    interp.to_modal()
+    interpolated.to_modal()
 
   a = pg.load(F1)
   del a.ctx["poly_order"]
@@ -296,7 +296,7 @@ def test_integrate_axis_rejects_raw_modal_data():
 
 
 def test_integrate_axis_on_interpolated_data_collapses_the_axis():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   before = a.num_cells[0]
   r = a.integrate_axis(0)
   assert r.num_cells[0] == 1
@@ -305,7 +305,7 @@ def test_integrate_axis_on_interpolated_data_collapses_the_axis():
 
 
 def test_integrate_axis_matches_manual_trapezoidal_sum():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   r = a.integrate_axis(0)
   dz = np.diff(a.grid[0])
   expected = np.tensordot(dz, np.asarray(a.values), axes=([0], [0]))
@@ -313,7 +313,7 @@ def test_integrate_axis_matches_manual_trapezoidal_sum():
 
 
 def test_integrate_axis_default_integrates_every_axis():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   r = a.integrate_axis()
   assert all(n == 1 for n in r.num_cells)
 
@@ -330,7 +330,7 @@ def test_integrate_axis_on_native_nodal_representation():
 
 
 def test_integrate_axis_tag_and_label():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   r = a.integrate_axis(0, tag="reduced", label="my label")
   assert r.tag == "reduced"
   assert r.label == "my label"
@@ -338,7 +338,7 @@ def test_integrate_axis_tag_and_label():
 
 
 def test_integrate_axis_inplace_mutates_the_dataset():
-  a = pg.load(F1).interp()
+  a = pg.load(F1).interpolate()
   out = a.integrate_axis(0, inplace=True)
   assert out is a
   assert a.num_cells[0] == 1

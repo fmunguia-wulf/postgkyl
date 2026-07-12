@@ -28,7 +28,7 @@ def _make_mesh(num_interp: int, edges: np.ndarray) -> np.ndarray:
   return np.linspace(edges[0], edges[-1], num_interp * nx + 1)
 
 
-def _interp_on_mesh(c_mat: np.ndarray, q_in: np.ndarray,
+def _interpolate_on_mesh(c_mat: np.ndarray, q_in: np.ndarray,
     num_interp: int) -> np.ndarray:
   """Apply the interpolation matrix on every cell (per-point scatter)."""
   num_cells = np.array(q_in.shape)[:-1]  # drop the coefficient axis
@@ -74,7 +74,7 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
 
   nodes = num_basis(num_dims, poly_order, basis_type)
   num_fields = values.shape[-1] // nodes
-  c_mat = gpython_basis.interp_matrix(basis_type, num_dims, poly_order, num_interp)
+  c_mat = gpython_basis.interpolation_matrix(basis_type, num_dims, poly_order, num_interp)
 
   n2m = (None if modal else
          gpython_basis.nodal_to_modal_matrix(basis_type, num_dims, poly_order))
@@ -83,8 +83,8 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
     q = values[..., c * nodes:(c + 1) * nodes]
     if n2m is not None:
       q = np.einsum("jk,...k->...j", n2m, q)
-    interp_c = _interp_on_mesh(c_mat, q, num_interp)[..., np.newaxis]
-    out = interp_c if out is None else np.append(out, interp_c, axis=-1)
+    interpolated_c = _interpolate_on_mesh(c_mat, q, num_interp)[..., np.newaxis]
+    out = interpolated_c if out is None else np.append(out, interpolated_c, axis=-1)
   # end
 
   grid_out = [_make_mesh(num_interp, grid[d]) for d in range(num_dims)]

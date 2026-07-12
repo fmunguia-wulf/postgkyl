@@ -5,7 +5,7 @@ Per ``.claude/migration/notes/differentiate-decision.md`` (layer 03): an
 compiled shim (``gkeyll/core/zero/gkyl_gpython.h``/``gpython.c`` +
 ``gpython/csrc/_gpythonmodule.c``), out of scope for every layer above
 ``gpython``. This
-verb instead differentiates *after* ``.interp()``, with ``np.gradient`` on the
+verb instead differentiates *after* ``.interpolate()``, with ``np.gradient`` on the
 plain NumPy field values (via ``numerics.ev_ops.grad``/``grad2``, the
 existing pure ``(grid, values)`` gradient operators shared with the
 ``evaluate`` verb) -- a numerical (second-order accurate, cell-centered), not exact,
@@ -39,7 +39,7 @@ def differentiate(data: "GDataState", *, direction: int | None = None,
 
   Args:
     data: the dataset to differentiate; must be NumPy-backed (call
-      ``.interp()`` first on native modal data).
+      ``.interpolate()`` first on native modal data).
     direction: 0-based axis to differentiate along; None differentiates
       along every axis.
     inplace: mutate and return ``data`` instead of a new dataset.
@@ -55,7 +55,7 @@ def differentiate(data: "GDataState", *, direction: int | None = None,
   if data.backend == "gkyl":
     raise ValueError(
         "differentiate operates on interpolated (NumPy) values; call "
-        ".interp() first -- np.gradient has no basis-space meaning for raw "
+        ".interpolate() first -- np.gradient has no basis-space meaning for raw "
         "DG coefficients.")
   # end
   grid = data.grid

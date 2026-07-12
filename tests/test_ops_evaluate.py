@@ -162,5 +162,5 @@ def test_operator_failure_is_wrapped_in_value_error():
 @needs_gkeyll
 def test_rejects_modal_data():
   d = pg.load(F1)
-  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.evaluate("f sq", d)

@@ -86,7 +86,7 @@ class GkylArray:
     return flat.reshape(tuple(int(c) for c in cells) + (flat.shape[-1],))
 
   def to_numpy(self, cells=None) -> np.ndarray:
-    """By-value copy out of the C buffer (what the ``interp`` bridge returns)."""
+    """By-value copy out of the C buffer (what the ``interpolate`` bridge returns)."""
     return np.array(self.view(cells), copy=True)
 
   def __repr__(self) -> str:

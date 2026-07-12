@@ -82,7 +82,7 @@ class TestTransformFrameCdim1:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     bulk = _make([np.array([0.0, 1.0])], np.array([[0.1]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       kinetic.transform_frame(d, bulk, cdim=1)
 
 

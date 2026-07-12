@@ -304,7 +304,7 @@ class TestLoadDistf:
     assert calls["use_mc2nu"] is True
     assert calls["use_mapc2p"] is False
     assert calls["block_idx"] == 2
-    assert calls["interp"] == 0
+    assert calls["num_interp"] == 0
 
   def test_defaults(self, monkeypatch):
     calls = {}
@@ -403,7 +403,7 @@ class _SyntheticSource:
   """Serves a small, self-consistent constant-valued synthetic DG dataset
   for every source file a quantity asks for -- ported from
   tests_bak/test_gk_load_quantity.py's ``_make_synthetic_gdata``, adapted to
-  push through the new ``GDataState``/``.interp()`` (no ``ctypes``)."""
+  push through the new ``GDataState``/``.interpolate()`` (no ``ctypes``)."""
 
   POLY_ORDER = 1
   BASIS_TYPE = "serendipity"
@@ -569,7 +569,7 @@ class TestLoadQuantityMultiSpeciesMultiFrame:
 class TestUtils:
   """postgkyl.diagnostics.gyrokinetics.utils -- file/geometry helpers ported
   from src_bak's gk_utils.py (matplotlib bits dropped, read_g*file adapted
-  to postgkyl.api.load + .interp())."""
+  to postgkyl.api.load + .interpolate())."""
 
   def test_dict_get_bool_default(self):
     assert utils.dict_get_bool({}, "k", True) is True
@@ -643,15 +643,15 @@ class TestUtils:
     assert values is not None
 
   @needs_gkeyll
-  def test_read_interp_gfile(self):
-    grid, values, gdata = utils.read_interp_gfile(
+  def test_read_interpolated_gfile(self):
+    grid, values, gdata = utils.read_interpolated_gfile(
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
         poly_order=1, basis_type="ms")
     assert gdata.is_interpolated
 
   @needs_gkeyll
-  def test_read_interp_gfile_with_comp(self):
-    grid, values, gdata = utils.read_interp_gfile(
+  def test_read_interpolated_gfile_with_comp(self):
+    grid, values, gdata = utils.read_interpolated_gfile(
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
         poly_order=1, basis_type="ms", comp=0)
     assert gdata.num_comps == 1

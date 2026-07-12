@@ -53,7 +53,7 @@ def collect(*datasets, sumdata: bool = False, period: float | None = None,
   for i, dat in enumerate(states):
     if dat.backend == "gkyl":
       raise ValueError(
-          f"collect operates on interpolated (NumPy) values; call .interp() "
+          f"collect operates on interpolated (NumPy) values; call .interpolate() "
           f"first on dataset {i} -- stacking raw DG coefficients would mix "
           f"basis functions.")
     # end

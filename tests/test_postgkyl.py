@@ -36,26 +36,26 @@ def test_load_metadata():
 
 
 def test_golden_script_1d():
-  g = pg.load(F1).interp().sel(comp=0)
+  g = pg.load(F1).interpolate().sel(comp=0)
   assert g.is_interpolated
   assert g.num_comps == 1
   assert g.num_dims == 1
-  assert g.values.shape[0] == 48         # 24 cells * (p+1=2) interp points
+  assert g.values.shape[0] == 48         # 24 cells * (p+1=2) interpolation points
   assert type(g).__name__ == "GData"    # subclass propagated through verbs
   fig = g.plot(show=False)
   assert fig is not None
 
 
 def test_golden_script_2d():
-  g = pg.load(F2D).interp().sel(comp=0)
+  g = pg.load(F2D).interpolate().sel(comp=0)
   assert g.num_dims == 2
   assert g.values.shape == (16, 16, 1)
   assert g.plot(show=False) is not None
 
 
 def test_arithmetic_and_ufunc():
-  a = pg.load(F1).interp().sel(comp=0)
-  b = pg.load(F1).interp().sel(comp=0)
+  a = pg.load(F1).interpolate().sel(comp=0)
+  b = pg.load(F1).interpolate().sel(comp=0)
   assert isinstance(a + b, pg.GData)
   assert isinstance(a * 2.0, pg.GData)
   assert isinstance(2.0 * a, pg.GData)          # reflected
@@ -75,7 +75,7 @@ def test_capability_guardrails_on_modal_data():
   with pytest.raises(ValueError):
     a.sel(comp=0)                                # slicing would mix basis functions
   with pytest.raises(ValueError):
-    _ = a + a.interp()                           # mixed modal + field domains
+    _ = a + a.interpolate()                           # mixed modal + field domains
 
 
 # --------------------------------------------------------------------------
@@ -94,7 +94,7 @@ def test_load_lands_in_the_modal_domain():
   assert d.native is not None
   assert d.values.shape == (24, 6)                # read-only view for inspection
   assert not d.values.flags.writeable
-  g = d.interp()                                 # the one-way bridge
+  g = d.interpolate()                                 # the one-way bridge
   assert g.backend == "numpy"                    # ...to a by-value NumPy array
   assert g.values.flags.writeable
 
@@ -122,19 +122,19 @@ def test_gkhybrid_basis_loads_and_interpolates():
   assert d.ctx["poly_order"] == 1
   assert d.num_dims == 3                          # 1x2v
   assert d.values.shape[-1] == 12                 # gkhybrid 1x2v num_basis
-  g = d.interp()
+  g = d.interpolate()
   assert g.backend == "numpy"
-  assert g.values.shape == (64, 32, 16, 1)        # (p+1=2) interp points/cell
+  assert g.values.shape == (64, 32, 16, 1)        # (p+1=2) interpolation points/cell
 
 
 @needs_gkeyll
-def test_interp_matrix_matches_analytic_basis():
+def test_interpolation_matrix_matches_analytic_basis():
   """Matrices built from Gkeyll's eval() match the normalized Legendre basis."""
-  m = gpython.basis.interp_matrix("serendipity", 1, 1, 2)   # points z = -+1/2
+  m = gpython.basis.interpolation_matrix("serendipity", 1, 1, 2)   # points z = -+1/2
   expect = np.array([[1 / np.sqrt(2), -np.sqrt(3.0 / 2.0) / 2],
                      [1 / np.sqrt(2), +np.sqrt(3.0 / 2.0) / 2]])
   assert np.allclose(m, expect)
-  m2 = gpython.basis.interp_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
+  m2 = gpython.basis.interpolation_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
   z = np.array([-2.0 / 3.0, 0.0, 2.0 / 3.0])
   assert np.allclose(m2[:, 2], 2.371708245126285 * z ** 2 - 0.7905694150420951)
 
@@ -143,23 +143,23 @@ def test_interp_matrix_matches_analytic_basis():
 def test_weak_algebra_identities():
   """div(mul(a, b), b) == a — Gkeyll's weak kernels are exact inverses."""
   a, b = pg.load(F1), pg.load(F1)
-  back = (a * b / b).interp().values
-  ref = a.interp().values
+  back = (a * b / b).interpolate().values
+  ref = a.interpolate().values
   for f in (0, 2):  # density and T; field 1 (u_par) is identically ~0 -> 0/0
     scale = np.abs(ref[..., f]).max()
     assert np.abs(back[..., f] - ref[..., f]).max() / scale < 1e-12
 
 
 @needs_gkeyll
-def test_modal_linear_ops_commute_with_interp():
-  """interp is linear: modal +,-,scalar* agree with their NumPy counterparts."""
+def test_modal_linear_ops_commute_with_interpolate():
+  """interpolate is linear: modal +,-,scalar* agree with their NumPy counterparts."""
   a, b = pg.load(F1), pg.load(F1)
-  assert np.allclose((a + b).interp().values, a.interp().values + b.interp().values)
-  assert np.allclose((a - b).interp().values, 0.0)
-  assert np.allclose((2.5 * a).interp().values, 2.5 * a.interp().values)
-  assert np.allclose((-a).interp().values, -(a.interp().values))
-  assert np.allclose((a ** 2).interp().values, (a * a).interp().values)
-  shifted = (a + 1.0e18).interp().values - a.interp().values
+  assert np.allclose((a + b).interpolate().values, a.interpolate().values + b.interpolate().values)
+  assert np.allclose((a - b).interpolate().values, 0.0)
+  assert np.allclose((2.5 * a).interpolate().values, 2.5 * a.interpolate().values)
+  assert np.allclose((-a).interpolate().values, -(a.interpolate().values))
+  assert np.allclose((a ** 2).interpolate().values, (a * a).interpolate().values)
+  shifted = (a + 1.0e18).interpolate().values - a.interpolate().values
   assert np.allclose(shifted, 1.0e18, rtol=1e-6)
 
 
@@ -269,7 +269,7 @@ def test_conversions_are_always_explicit():
   with pytest.raises(ValueError):
     _ = np.add(n, q)                             # mixed reps through a ufunc
   with pytest.raises(ValueError):
-    q.interp()                                   # interp needs modal
+    q.interpolate()                                   # interp needs modal
   with pytest.raises(ValueError):
     n.integrate()                                # integrate needs modal
   with pytest.raises(ValueError):
@@ -347,11 +347,11 @@ def test_integrate_via_gkeyll():
   assert np.allclose(result, manual)
   assert np.all(a.integrate(op="abs") >= np.abs(result) * (1 - 1e-12))
   with pytest.raises(ValueError):
-    a.interp().integrate()                       # field domain: not a modal verb
+    a.interpolate().integrate()                       # field domain: not a modal verb
 
 
 def test_write_roundtrip(tmp_path):
-  a = pg.load(F1).interp().sel(comp=0)
+  a = pg.load(F1).interpolate().sel(comp=0)
   out = a.save(str(tmp_path / "rt.gkyl"))
   back = pg.load(out)
   assert np.allclose(back.values, a.values)
@@ -390,7 +390,7 @@ def test_cli_abbreviation_and_info():
 _ALLOWED = {
     "gpython":    set(),                                # the foreign floor (only ctypes owner)
     "numerics": set(),
-    "dg":     {"gpython"},                              # interp bridge + modal ops -> kernels
+    "dg":     {"gpython"},                              # interpolation bridge + modal ops -> kernels
     "io":     {"gpython", "numerics"},                  # C-native reader -> gkyl_array_rio;
                                                       # readers/writer reuse the pure-math
                                                       # leaf (idx_parser for ADIOS partial-load
@@ -419,7 +419,7 @@ _ALLOWED = {
                                                       # 12-diagnostics-loaders.md: the
                                                       # gyrokinetics/pkpm loaders build on
                                                       # pg.load/GData (modal arithmetic,
-                                                      # .interp()) to read simulation output
+                                                      # .interpolate()) to read simulation output
                                                       # -- api imports only core/ops/io, none
                                                       # of which import diagnostics, so this
                                                       # still cannot create a cycle; "render"

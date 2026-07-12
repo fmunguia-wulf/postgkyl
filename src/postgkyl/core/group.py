@@ -6,7 +6,7 @@ construction/flattening, the sequence protocol, combining, and a summary
 ``repr``. Like ``GDataState`` it knows nothing about verbs: no ``ops`` call,
 no matplotlib, ever, and it imports only downward (``collection``/``state``,
 both in ``core``). The fluent group that *broadcasts* verbs over its members
-(``interp``, ``sel``, ``plot``, ``info``, ...) is layer 10's job, one layer up
+(``interpolate``, ``sel``, ``plot``, ``info``, ...) is layer 10's job, one layer up
 — exactly the way :class:`postgkyl.api.gdata.GData` adds verb methods on top
 of ``GDataState`` without ``core`` ever importing ``api``.
 """

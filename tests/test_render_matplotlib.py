@@ -201,7 +201,7 @@ class TestFigureReuse:
 @needs_gkeyll
 class TestMappedGrids:
   def test_2d_curvilinear_grid_plots_via_pcolormesh(self):
-    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     mapped = ops.map(data, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
         space="conf")
     assert mapped.grid[0].ndim == 2  # genuinely curvilinear

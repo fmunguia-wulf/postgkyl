@@ -67,7 +67,7 @@ class TestMagB:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.magB(d)
 
 
@@ -99,7 +99,7 @@ class TestVt:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vt(d)
 
 
@@ -123,9 +123,9 @@ class TestVA:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     field = _field()
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vA(d, field)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vA(_species(), d)
 
 
@@ -143,7 +143,7 @@ class TestOmegaC:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.omegaC(d)
 
 
@@ -172,7 +172,7 @@ class TestOmegaP:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.omegaP(d)
 
 
@@ -186,7 +186,7 @@ class TestD:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     modal = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.d(modal)
 
 
@@ -202,7 +202,7 @@ class TestLambdaD:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.lambdaD(d)
 
 
@@ -224,9 +224,9 @@ class TestRho:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     field = _field()
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.rho(d, field)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.rho(_species(), d)
 
 
@@ -251,7 +251,7 @@ class TestBeta:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     field = _field()
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.beta(d, field)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.beta(_species(), d)

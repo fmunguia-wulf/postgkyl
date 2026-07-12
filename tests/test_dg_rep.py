@@ -72,7 +72,7 @@ def test_wrap_round_trips_values_unchanged():
   np.testing.assert_array_equal(wrapped.view(), values)
 
 
-def test_apply_pointwise_sqrt_matches_numpy_after_interp():
+def test_apply_pointwise_sqrt_matches_numpy_after_interpolate():
   """fn applied via quadrature matches applying fn directly to the exact
   (interpolated) values, for an in-basis-representable nonnegative field."""
   ndim, poly_order = 1, 1

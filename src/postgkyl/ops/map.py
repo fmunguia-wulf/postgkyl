@@ -34,7 +34,7 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
 
   Args:
     data: The dataset whose grid is deformed; must be NumPy-backed
-      (post-``interp()``), like ``select``.
+      (post-``interpolate()``), like ``select``.
     mapping: The coordinate-mapping field, as a filename or an
       already-loaded dataset. Read from its native modal coefficients --
       never interpolated. Its number of dimensions (``m``) sets how many
@@ -66,7 +66,7 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "map operates on interpolated (NumPy) target grids; call .interp() "
+        "map operates on interpolated (NumPy) target grids; call .interpolate() "
         "first -- deforming a native modal grid has no basis-space meaning.")
   # end
 

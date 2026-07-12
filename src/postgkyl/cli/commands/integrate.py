@@ -28,13 +28,13 @@ def command(ctx, axis, op, use, tag, label) -> None:
   native ``nodal``/``quad`` representation materialized to its true point
   locations) over the given axis/axes via NumPy trapezoidal quadrature,
   producing a new dataset with those axes collapsed -- like ``select``.
-  Raw modal DG coefficients raise; run ``interp`` first (representation
+  Raw modal DG coefficients raise; run ``interpolate`` first (representation
   changes to native ``nodal``/``quad`` -- ``.to_nodal()``/``.to_quad()`` --
   are fluent-API only, not exposed as CLI commands).
 
   Without ``--axis`` (the default), this is a terminal verb (like ``info``):
   it integrates the *whole* grid natively inside Gkeyll on modal
-  (pre-``interp()``) data via ``gkyl_array_integrate``, and prints one value
+  (pre-``interpolate()``) data via ``gkyl_array_integrate``, and prints one value
   per field component instead of producing a new dataset. ``--op`` only
   applies to this mode.
   """

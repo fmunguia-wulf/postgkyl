@@ -12,7 +12,7 @@ contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
 - ``_lib``     loads ``_gpython`` + the ``GPYTHON_API_VERSION`` handshake;
                ``available()`` is the single capability switch
 - ``array``    :class:`GkylArray` — Python owner of a native ``gkyl_array``
-- ``basis``    cached Gkeyll basis objects + interp/nodal/quad matrices
+- ``basis``    cached Gkeyll basis objects + interpolation/nodal/quad matrices
                built by evaluating Gkeyll's own basis through the shim
 - ``rio``      file loading through ``gkyl_array_rio``
 - ``kernels``  weak multiply/divide/inverse, coefficient lin-combs, reduce,

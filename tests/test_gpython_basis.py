@@ -155,11 +155,11 @@ def test_modal_quad_round_trip_exact_for_in_degree_polynomials():
   np.testing.assert_allclose(back, coeffs, atol=1e-12)
 
 
-def test_interp_matrix_layout_matches_fortran_tensor_order():
-  """Row i of a 2D interp matrix corresponds to np.unravel_index(i, [n,n],
-  order='F') -- dimension 0 fastest."""
+def test_interpolation_matrix_layout_matches_fortran_tensor_order():
+  """Row i of a 2D interpolation matrix corresponds to np.unravel_index(i,
+  [n,n], order='F') -- dimension 0 fastest."""
   n = 3
-  pts_1d = fb.interp_points_1d(n)
+  pts_1d = fb.interpolation_points_1d(n)
   pts_2d = fb.tensor_points(pts_1d, 2)
   for i in range(n * n):
     idx = np.unravel_index(i, (n, n), order="F")
@@ -167,9 +167,9 @@ def test_interp_matrix_layout_matches_fortran_tensor_order():
     np.testing.assert_allclose(pts_2d[i], expected)
 
 
-def test_interp_matrix_is_cached_and_read_only():
-  m1 = fb.interp_matrix("serendipity", 1, 1, 2)
-  m2 = fb.interp_matrix("serendipity", 1, 1, 2)
+def test_interpolation_matrix_is_cached_and_read_only():
+  m1 = fb.interpolation_matrix("serendipity", 1, 1, 2)
+  m2 = fb.interpolation_matrix("serendipity", 1, 1, 2)
   assert m1 is m2
   with pytest.raises(ValueError):
     m1[0, 0] = 5.0

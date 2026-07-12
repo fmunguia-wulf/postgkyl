@@ -72,7 +72,7 @@ def val2coord(data: "GDataState", *, x: str, y: str, periodic: bool = False,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "val2coord operates on interpolated (NumPy) values; call .interp() "
+        "val2coord operates on interpolated (NumPy) values; call .interpolate() "
         "first -- raw DG coefficients are not tabular columns.")
   # end
   values = data.values

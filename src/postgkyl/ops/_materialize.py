@@ -3,7 +3,7 @@
 Centralizes the check-and-bridge that ``plot`` and ``animate`` both need:
 point-value representations (nodal/quad) materialize directly at their true
 physical point locations; raw modal coefficients refuse -- the caller must
-choose ``.interp()``, ``.to_nodal()``, or ``.to_quad()`` explicitly. One home
+choose ``.interpolate()``, ``.to_nodal()``, or ``.to_quad()`` explicitly. One home
 for the fact, mirroring ``core/guards.py``'s centralization of the analogous
 field-domain check.
 """
@@ -39,7 +39,7 @@ def materialize_for_render(data: "GDataState") -> "GDataState":
   if rep == "modal":
     raise ValueError(
         "modal DG coefficients are not plottable; choose explicitly: "
-        ".interp() (uniform evaluation mesh), .to_nodal() or .to_quad() "
+        ".interpolate() (uniform evaluation mesh), .to_nodal() or .to_quad() "
         "(plot at the basis/quadrature points).")
   # end
   edges, values = dg.rep.materialize(

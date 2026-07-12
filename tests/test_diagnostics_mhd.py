@@ -68,7 +68,7 @@ class TestFieldExtraction:
   @needs_gkeyll
   def test_bx_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       mhd.bx(d)
 
 
@@ -110,7 +110,7 @@ class TestThermo:
   @needs_gkeyll
   def test_pressure_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       mhd.pressure(d)
 
 

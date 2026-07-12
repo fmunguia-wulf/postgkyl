@@ -6,7 +6,7 @@ exists for this app). The pure geometry helpers (``is_geo_mapc2p``,
 unconditionally; the node-plotting figure path is exercised against
 synthetic node arrays stubbed through ``utils.GData`` (single- and
 multi-block). The poloidal-flux (``psi_file``) and wall overlays additionally
-call ``GData.interp()`` on a *real* modal DG field (``gk_nodes`` hardcodes
+call ``GData.interpolate()`` on a *real* modal DG field (``gk_nodes`` hardcodes
 ``poly_order=2``/basis ``"mt"`` for the psi read) -- the repo ships no
 interpolatable p2-tensor poloidal-flux fixture, so that branch is skipped
 loudly rather than faked.
@@ -256,7 +256,7 @@ class TestGkNodesSynthetic:
 
 
 class TestGkNodesPsiOverlayRealFixtures:
-  """The psi overlay calls ``GData.interp()`` on a real modal DG field
+  """The psi overlay calls ``GData.interpolate()`` on a real modal DG field
   (``gk_nodes`` hardcodes ``poly_order=2``, basis ``"mt"``/tensor, and never
   selects a single component before handing the interpolated array straight
   to ``pcolormesh``/``contour``) -- skipped loudly since the repo's one

@@ -141,11 +141,11 @@ class TestConfMapRealFixture:
     # ops.map, not the fluent .map() -- api/gdata.py's fluent wiring for the
     # new physics/map verbs is a different layer's job (out of this layer's
     # scope; see the report).
-    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     return ops.map(data, os.path.join(GEN, mapfile), space="conf")
 
   def test_grid_becomes_curvilinear_with_shape_of_the_axes_it_replaces(self):
-    before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     mapped = self._mapped("2d_c2p_stretch_ms_p1.gkyl")
     expected_shape = (before.grid[0].shape[0], before.grid[1].shape[0])
     assert mapped.grid[0].shape == expected_shape
@@ -153,7 +153,7 @@ class TestConfMapRealFixture:
     assert mapped.grid[0].ndim == 2  # curvilinear: full N-D nodal array
 
   def test_values_untouched_by_stretch_map(self):
-    before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     mapped = self._mapped("2d_c2p_stretch_ms_p1.gkyl")
     np.testing.assert_array_equal(mapped.values, before.values)
 
@@ -219,17 +219,17 @@ class TestMapErrors:
   def test_rejects_modal_target(self):
     target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl"))  # not interpolated
     mapping_path = os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl")
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.map(target, mapping_path, space="conf")
 
   def test_bad_space_raises(self):
-    target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     with pytest.raises(ValueError, match="'space'"):
       ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="bogus")
 
   def test_map_too_large_for_dataset(self):
-    target = pg.load(os.path.join(GEN, "1d_ms_p1.gkyl")).interp()  # 1-D
+    target = pg.load(os.path.join(GEN, "1d_ms_p1.gkyl")).interpolate()  # 1-D
     with pytest.raises(ValueError, match="does not fit"):
       ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="conf")  # a 2-D map does not fit 1-D data
@@ -262,7 +262,7 @@ class TestMapErrors:
       for poly_order in (0, 1, 2):
         assert gpython.basis.num_basis(basis_type, 2, poly_order) != 2
 
-    target = pg.load(F_ELC).interp()
+    target = pg.load(F_ELC).interpolate()
     mapping.ctx.update(basis_type="serendipity", poly_order=1)
     with pytest.raises(ValueError, match="component"):
       ops.map(target, mapping, space="vel")
@@ -271,7 +271,7 @@ class TestMapErrors:
 # --------------------------------------------- select's curvilinear guard
 class TestSelectCurvilinearGuard:
   def _mapped(self):
-    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interp()
+    data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     return ops.map(data, os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl"),
         space="conf")
 

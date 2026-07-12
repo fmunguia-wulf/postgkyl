@@ -31,7 +31,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
       coefficients for a single physical coordinate ``x_d(z)`` over its own
       uniform grid. Modal by default; pass ``modal=False`` for a nodal-basis
       mapping file (converted through the exact ``nodal_to_modal`` matrix
-      first, same pattern as :func:`postgkyl.dg.interp.interpolate`).
+      first, same pattern as :func:`postgkyl.dg.interpolate.interpolate`).
     lower: length-``m`` array, the mapping's own domain lower bounds.
     upper: length-``m`` array, the mapping's own domain upper bounds.
     cells: length-``m`` array, the mapping's own cell counts (must match

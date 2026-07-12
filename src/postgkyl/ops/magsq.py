@@ -34,7 +34,7 @@ def magsq(data: "GDataState", *, coords: str = "0:3", inplace: bool = False,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "magsq operates on interpolated (NumPy) values; call .interp() "
+        "magsq operates on interpolated (NumPy) values; call .interpolate() "
         "first -- summing squares of raw DG coefficients would mix basis functions.")
   # end
   grid, values = numerics.mag_sq(data.grid, data.values, coords=coords)

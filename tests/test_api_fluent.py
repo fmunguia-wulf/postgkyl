@@ -34,7 +34,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "tests", "test_data")
 GEN = os.path.join(DATA, "generated")
 F1D = os.path.join(GEN, "1d_ms_p1.gkyl")
-F2D_VEC = os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl")  # 2 comps after interp
+F2D_VEC = os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl")  # 2 comps after interpolate
 
 
 @pytest.fixture(autouse=True)
@@ -65,7 +65,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # fluent spelling: either a GData instance method, or a module-level function
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
-INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "save",
+INSTANCE_VERBS = ["interpolate", "sel", "select", "plot", "save",
     "mul", "div", "integrate", "integrate_axis", "to_modal", "to_nodal",
     "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
@@ -202,21 +202,21 @@ class TestSubclassPropagation:
     np.testing.assert_allclose(out.grid[0], target.grid[0], atol=1e-12)
 
   @needs_gkeyll
-  def test_mul_div_interp_to_modal_nodal_quad_apply_integrate(self):
+  def test_mul_div_interpolate_to_modal_nodal_quad_apply_integrate(self):
     F1 = os.path.join(DATA,
         "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
     a, b = MyData(F1), MyData(F1)
     assert isinstance(a.mul(b), MyData)
     a2, b2 = MyData(F1), MyData(F1)
     assert isinstance(a2.div(b2), MyData)
-    assert isinstance(MyData(F1).interp(), MyData)
+    assert isinstance(MyData(F1).interpolate(), MyData)
     assert isinstance(MyData(F1).to_nodal(), MyData)
     assert isinstance(MyData(F1).to_nodal().to_modal(), MyData)
     assert isinstance(MyData(F1).to_quad(), MyData)
     assert isinstance(MyData(F1).apply(np.abs), MyData)
     result = MyData(F1).integrate()
     assert result is not None
-    assert isinstance(MyData(F1).interp().integrate_axis(0), MyData)
+    assert isinstance(MyData(F1).interpolate().integrate_axis(0), MyData)
 
 
 # ============================================================ keyword pass-through
@@ -245,20 +245,20 @@ class TestKeywordPassthrough:
 # ======================================================== end-to-end chains
 @needs_gkeyll
 class TestEndToEndChains:
-  def test_interp_magsq_plot(self):
-    fig = pg.load(F2D_VEC).interp().magsq().plot(show=False)
+  def test_interpolate_magsq_plot(self):
+    fig = pg.load(F2D_VEC).interpolate().magsq().plot(show=False)
     assert fig is not None
 
-  def test_interp_sel_fft(self):
+  def test_interpolate_sel_fft(self):
     # fft's output grid is a frequency axis (one entry per value, not a
     # nodal N+1 edge array), so it is not directly re-plottable through the
     # same render path as the other chains -- exercised on values instead.
-    out = pg.load(F1D).interp().sel(comp=0).fft(psd=True)
+    out = pg.load(F1D).interpolate().sel(comp=0).fft(psd=True)
     assert isinstance(out, pg.GData)
-    assert out.values.shape[0] == pg.load(F1D).interp().sel(comp=0).num_cells[0] // 2
+    assert out.values.shape[0] == pg.load(F1D).interpolate().sel(comp=0).num_cells[0] // 2
 
-  def test_interp_sel_mask_fit(self):
-    out = pg.load(F1D).interp().sel(comp=0).mask(lower=-1e30).fit("linear")
+  def test_interpolate_sel_mask_fit(self):
+    out = pg.load(F1D).interpolate().sel(comp=0).mask(lower=-1e30).fit("linear")
     assert isinstance(out, pg.GData)
     assert "fit_params" in out.ctx
 
@@ -327,7 +327,7 @@ class TestDatasetGroup:
   @needs_gkeyll
   def test_animate_is_explicit_not_broadcast(self):
     from matplotlib.animation import FuncAnimation
-    frames = [pg.load(F1D).interp().sel(comp=0) for _ in range(3)]
+    frames = [pg.load(F1D).interpolate().sel(comp=0) for _ in range(3)]
     g = ApiDatasetGroup(frames)
     anim = g.animate(show=False)
     assert isinstance(anim, FuncAnimation)
@@ -367,7 +367,7 @@ class TestDatasetGroup:
 class TestFacade:
   def test_documented_names_resolve(self):
     for name in ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
-        "interpolate", "interp", "select", "sel", "represent", "apply",
+        "interpolate", "select", "sel", "represent", "apply",
         "save", "collect", "evaluate", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
 

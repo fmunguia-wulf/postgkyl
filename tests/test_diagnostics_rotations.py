@@ -81,9 +81,9 @@ class TestParrotate:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     v = _make([np.array([0.0, 1.0])], np.array([[1.0, 0.0, 0.0]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       rotations.parrotate(d, v)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       rotations.parrotate(v, d)
 
 
@@ -111,7 +111,7 @@ class TestPerprotate:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     v = _make([np.array([0.0, 1.0])], np.array([[1.0, 0.0, 0.0]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       rotations.perprotate(d, v)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       rotations.perprotate(v, d)

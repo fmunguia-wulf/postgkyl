@@ -4,7 +4,7 @@ Point-value representations (nodal/quad) plot **directly**: their values are
 materialized at the true physical point locations (a non-uniform mesh whose
 cell centers coincide with the points -- ``_materialize.materialize_for_render``),
 then rendered by the unchanged backend. Modal data refuses: coefficients are
-not plottable; the user chooses ``.interp()``, ``.to_nodal()``, or
+not plottable; the user chooses ``.interpolate()``, ``.to_nodal()``, or
 ``.to_quad()`` explicitly.
 """
 

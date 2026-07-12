@@ -22,18 +22,15 @@ from .group import DatasetGroup
 
 
 class GData(GDataState):
-  """Fluent dataset: ``pg.load(...).interp().sel(z0=0.0).plot()``."""
+  """Fluent dataset: ``pg.load(...).interpolate().sel(z0=0.0).plot()``."""
 
   # ---------------------------------------------------------- fluent verbs
-  def interp(self, *, basis: str | None = None, p: int | None = None,
-      interp: int | None = None, inplace: bool = False,
+  def interpolate(self, *, basis: str | None = None, p: int | None = None,
+      num_interp: int | None = None, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
     """Interpolate DG coefficients onto a uniform mesh (see ``ops.interpolate``)."""
-    return ops.interpolate(self, basis=basis, p=p, interp=interp,
+    return ops.interpolate(self, basis=basis, p=p, num_interp=num_interp,
         inplace=inplace, tag=tag, label=label)
-
-  # explicit long alias
-  interpolate = interp
 
   def sel(self, *, comp=None, z0=None, z1=None, z2=None, z3=None, z4=None,
       z5=None, inplace: bool = False, tag: str | None = None,
@@ -80,7 +77,7 @@ class GData(GDataState):
 
     Works on already-interpolated (NumPy) data or a native nodal/quad
     representation; raw modal DG coefficients raise -- convert explicitly
-    first (``.interp()``/``.to_nodal()``/``.to_quad()``).
+    first (``.interpolate()``/``.to_nodal()``/``.to_quad()``).
     """
     return ops.integrate_axis(self, axis, inplace=inplace, tag=tag, label=label)
 

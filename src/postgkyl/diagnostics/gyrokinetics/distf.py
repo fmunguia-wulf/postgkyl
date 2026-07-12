@@ -74,7 +74,7 @@ def load_gk_distf(
     name: str, species: str, frame: int, *,
     tag: str = "f", suffix: str = "", use_c2p_vel: bool = False,
     use_mc2nu: bool = False, use_mapc2p: bool = False, block_idx: int | None = None,
-    interp: int | None = None,
+    num_interp: int | None = None,
     jf_file: str | None = None,
     mapc2p_vel_file: str | None = None,
     jacobvel_file: str | None = None,
@@ -97,7 +97,7 @@ def load_gk_distf(
     use_mapc2p: Convert position-space computational coordinates to
       Cartesian/cylindrical.
     block_idx: Use block-specific files with a ``_b<idx>`` prefix.
-    interp: Interpolate onto a general mesh of the specified amount
+    num_interp: Interpolate onto a general mesh of the specified amount
       (default: ``poly_order + 1`` points per cell).
     jf_file, mapc2p_vel_file, jacobvel_file, mc2nu_file, mapc2p_file,
     jacobtot_inv_file: Explicit filename overrides; each defaults to the
@@ -141,18 +141,18 @@ def load_gk_distf(
   fjxb_data.push(jf_data.get_grid(), fjxb_values)
 
   # Interpolate f * J_x * B and jacobtot_inv onto the same (refined) grid.
-  interpolated = fjxb_data.interp(basis="gkhyb", p=1, interp=interp)
-  jacobtot_inv_interp = jacobtot_inv_data.interp(basis="ms", p=1, interp=interp)
+  interpolated = fjxb_data.interpolate(basis="gkhyb", p=1, num_interp=num_interp)
+  jacobtot_inv_interpolated = jacobtot_inv_data.interpolate(basis="ms", p=1, num_interp=num_interp)
   out_grid = interpolated.get_grid()
-  fjxb_interp_values = np.squeeze(interpolated.get_values())
-  jacobtot_inv_values = np.squeeze(jacobtot_inv_interp.get_values())
+  fjxb_interpolated_values = np.squeeze(interpolated.get_values())
+  jacobtot_inv_values = np.squeeze(jacobtot_inv_interpolated.get_values())
 
   # Reshape jacobtot_inv to have 1 component over velocity dimensions, then
   # multiply.
-  vdim = fjxb_interp_values.ndim - jacobtot_inv_values.ndim
+  vdim = fjxb_interpolated_values.ndim - jacobtot_inv_values.ndim
   jacobtot_inv_reshaped = jacobtot_inv_values.reshape(
       jacobtot_inv_values.shape + (1,) * vdim)
-  f_values = fjxb_interp_values * jacobtot_inv_reshaped
+  f_values = fjxb_interpolated_values * jacobtot_inv_reshaped
   f_values = f_values.reshape(f_values.shape + (1,))  # component axis
 
   out = GData(tag=tag, ctx=jf_data.ctx)

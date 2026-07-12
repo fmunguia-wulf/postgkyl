@@ -5,7 +5,7 @@ Ported from ``src_bak/postgkyl/gk/gk_quantities/fetch_funcs.py``. Every
 ``fetch_*`` there computed through ``GkeyllDGops`` -- a ``ctypes`` binding
 that is dead in this tree (rule #2). Rewired here onto the new surface:
 every fetch function **interpolates its inputs first**
-(:meth:`~postgkyl.api.gdata.GData.interp`, the sanctioned "evaluation"
+(:meth:`~postgkyl.api.gdata.GData.interpolate`, the sanctioned "evaluation"
 bridge -- REFACTOR_GKEYLL_FFI.md's field domain) and then computes with
 plain NumPy on the interpolated values, exactly like every sibling equation
 module (``five_moment``, ``ten_moment``, ``mhd``, ...). This is a deliberate
@@ -52,11 +52,11 @@ def _get_ctx_val(gdata: "GDataState", key: str, **kwargs):
       f"pass it as an extra keyword argument (e.g. {key}=<value>).")
 
 
-def _ensure_interp(d: "GDataState") -> "GDataState":
+def _ensure_interpolated(d: "GDataState") -> "GDataState":
   """Interpolate ``d`` onto the field domain unless it already is.
 
   Uses the ``ops.interpolate`` verb directly (rather than the fluent
-  ``GData.interp()``) so this works on any ``GDataState``, not just the
+  ``GData.interpolate()``) so this works on any ``GDataState``, not just the
   fluent subclass -- these functions receive whatever
   ``GkQuantity.get_src_gdata`` hands them.
   """
@@ -68,7 +68,7 @@ def _ensure_interp(d: "GDataState") -> "GDataState":
 
 def _component(d: "GDataState", comp: int | None) -> "GDataState":
   """Interpolate ``d`` and select physical component ``comp`` (all if None)."""
-  interpolated = _ensure_interp(d)
+  interpolated = _ensure_interpolated(d)
   return interpolated if comp is None else ops.select(interpolated, comp=comp)
 
 
@@ -113,7 +113,7 @@ fetch_s1c0_div_s0c0 = _make_fetch_binop(1, 0, 0, 0, operator.truediv)
 # ------------------------------------------------------------------ moments
 def fetch_M1_from_H(gdatas, **kwargs):
   """M1 from the Hamiltonian moments: ``mass**-1 * (comp0 * comp1)``."""
-  hmom = _ensure_interp(gdatas[0])
+  hmom = _ensure_interpolated(gdatas[0])
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   values = hmom.values[..., 0, np.newaxis] * hmom.values[..., 1, np.newaxis]
   return hmom._result(hmom.grid, values / mass)
@@ -128,7 +128,7 @@ def fetch_Tpar_from_BiMax(gdatas, **kwargs):
 
 def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
   """``upar*M1 + M0*Tpar/m = M2par`` => ``Tpar = m*(M2par - upar*M1)/M0``."""
-  m0, m1, m2par = (_ensure_interp(g) for g in gdatas)
+  m0, m1, m2par = (_ensure_interpolated(g) for g in gdatas)
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   upar = m1.values / m0.values
   values = mass * (m2par.values - upar * m1.values) / m0.values
@@ -158,14 +158,14 @@ def fetch_temp_from_Max(gdatas, **kwargs):
 
 def fetch_temp_from_Tpar_Tperp(gdatas, **kwargs):
   """``temp = (Tpar + 2*Tperp) / 3``."""
-  Tpar, Tperp = (_ensure_interp(g) for g in gdatas)
+  Tpar, Tperp = (_ensure_interpolated(g) for g in gdatas)
   values = (Tpar.values + 2.0 * Tperp.values) / 3.0
   return Tpar._result(Tpar.grid, values)
 
 
 def fetch_press_from_Max(gdatas, **kwargs):
   """Pressure from Maxwellian moments: ``press = mass * comp0 * comp2``."""
-  maxmom = _ensure_interp(gdatas[0])
+  maxmom = _ensure_interpolated(gdatas[0])
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   values = mass * maxmom.values[..., 0, np.newaxis] * maxmom.values[..., 2, np.newaxis]
   return maxmom._result(maxmom.grid, values)
@@ -173,7 +173,7 @@ def fetch_press_from_Max(gdatas, **kwargs):
 
 def fetch_press_from_BiMax(gdatas, **kwargs):
   """Pressure from BiMaxwellian moments: ``press = comp0 * mass*(Tpar+2Tperp)/3``."""
-  bimax = _ensure_interp(gdatas[0])
+  bimax = _ensure_interpolated(gdatas[0])
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   Tpar_vals = bimax.values[..., 2, np.newaxis]
   Tperp_vals = bimax.values[..., 3, np.newaxis]
@@ -184,13 +184,13 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
 
 def fetch_press_p(gdatas, **kwargs):
   """Perpendicular/parallel pressure in J/m^3: ``p_p = n * T_p``."""
-  m0, Tp = (_ensure_interp(g) for g in gdatas)
+  m0, Tp = (_ensure_interpolated(g) for g in gdatas)
   return m0._result(m0.grid, m0.values * Tp.values)
 
 
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
   """``beta = 2*mu_0*press / bmag**2``."""
-  bmag, press = (_ensure_interp(g) for g in gdatas)
+  bmag, press = (_ensure_interpolated(g) for g in gdatas)
   values = 2.0 * constants.mu_0 * press.values / bmag.values ** 2
   return bmag._result(bmag.grid, values)
 
@@ -203,7 +203,7 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
   ``(b x grad f)_k / B = epsilon_{ijk} * b_i * d(f)/dx^j / (J B)``, where
   ``epsilon_{ijk}`` is the Levi-Civita tensor, ``f`` a scalar field, ``b_i``
   the covariant components of a vector field. The gradient is the numerical
-  (post-``interp()``) one (``ops.differentiate``); see
+  (post-``interpolate()``) one (``ops.differentiate``); see
   ``differentiate-decision.md`` -- an exact modal derivative needs a shim
   addition out of scope for this layer.
 
@@ -216,7 +216,7 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
   Raises:
     KeyError: if ``comp`` is not 0, 1, or 2.
   """
-  f = _ensure_interp(scalar)
+  f = _ensure_interpolated(scalar)
   cdim = f.num_dims
 
   diff_dir_pos = bi_c_pos = 0
@@ -246,8 +246,8 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
     raise KeyError("comp must be 0, 1, or 2.")
   # end
 
-  b_i_i = _ensure_interp(b_i)
-  jacobtot_inv_i = _ensure_interp(jacobtot_inv)
+  b_i_i = _ensure_interpolated(b_i)
+  jacobtot_inv_i = _ensure_interpolated(jacobtot_inv)
 
   pos_term = np.zeros_like(f.values)
   neg_term = np.zeros_like(f.values)
@@ -286,8 +286,8 @@ def fetch_gradB_vel(gdatas, **kwargs):
   # end
   jacobtot_inv, bmag, b_i, Tperp = gdatas
   out = _b_cross_grad_div_b_component(bmag, jacobtot_inv, b_i, kwargs["dir"])
-  bmag_i = _ensure_interp(bmag)
-  Tperp_i = _ensure_interp(Tperp)
+  bmag_i = _ensure_interpolated(bmag)
+  Tperp_i = _ensure_interpolated(Tperp)
   charge = _get_ctx_val(Tperp, "charge", **kwargs)
   values = out.values * Tperp_i.values / bmag_i.values / charge
   return out._result(out.grid, values)
@@ -303,7 +303,7 @@ def fetch_diamag_vel(gdatas, **kwargs):
   # end
   jacobtot_inv, bmag, b_i, m0, pressperp = gdatas
   out = _b_cross_grad_div_b_component(pressperp, jacobtot_inv, b_i, kwargs["dir"])
-  m0_i = _ensure_interp(m0)
+  m0_i = _ensure_interpolated(m0)
   charge = _get_ctx_val(pressperp, "charge", **kwargs)
   values = out.values / m0_i.values / charge
   return out._result(out.grid, values)
@@ -334,5 +334,5 @@ def load_distf(gdatas, **kwargs):
       use_mc2nu=dict_get_bool(extra, "mc2nu", False),
       use_mapc2p=dict_get_bool(extra, "mapc2p", False),
       block_idx=extra.get("block", None),
-      interp=0,
+      num_interp=0,
   )

@@ -4,7 +4,7 @@ Centralizes the check-and-raise boilerplate that was independently retyped
 across several ``ops`` physics verbs (moved to ``diagnostics`` by layer 10):
 each caller keeps its own ``reason`` clause (why *this* function's math has
 no meaning on raw modal coefficients), but the check itself --
-``backend == "gkyl"`` -> raise with the standard ".interp() first" message
+``backend == "gkyl"`` -> raise with the standard ".interpolate() first" message
 shape -- has one home. This is a state-invariant helper, not a verb, so it
 lives on ``core`` (which stays verb-less) rather than ``ops``.
 """
@@ -32,6 +32,6 @@ def require_field_domain(data: "GDataState", who: str, reason: str) -> None:
   """
   if data.backend == "gkyl":
     raise ValueError(
-        f"{who} operates on interpolated (NumPy) values; call .interp() "
+        f"{who} operates on interpolated (NumPy) values; call .interpolate() "
         f"first -- {reason}.")
   # end

@@ -34,7 +34,7 @@ def _close_figs():
 
 
 def _three_interpolated_frames():
-  return [pg.load(F1D).interp().sel(comp=c) for c in (0, 0, 0)]
+  return [pg.load(F1D).interpolate().sel(comp=c) for c in (0, 0, 0)]
 
 
 class TestAnimateVerb:
@@ -61,9 +61,9 @@ class TestAnimateVerb:
 
   def test_grouped_frames_preserve_structure(self):
     from matplotlib.animation import FuncAnimation
-    a = pg.load(F1D).interp()
-    b = pg.load(F1D).interp()
-    c = pg.load(F1D).interp()
+    a = pg.load(F1D).interpolate()
+    b = pg.load(F1D).interpolate()
+    c = pg.load(F1D).interpolate()
     anim = ops.animate([[a, b], [c]], show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 2

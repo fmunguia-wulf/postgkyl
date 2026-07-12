@@ -144,7 +144,7 @@ class TestLaguerreCompose:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     t_over_m = _make([np.array([0.0, 1.0])], np.array([[2.0]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pkpm.laguerre_compose(d, t_over_m)
 
 
@@ -217,11 +217,11 @@ class TestLoadPkpm:
     self._patch(monkeypatch, gf, gvars)
     out = pkpm.load_pkpm("sim", "ion", 0, 1)
 
-    gf_interp = gf.interp(basis="pkpmhyb", p=1)
-    gvars_interp = gvars.interp(basis="ms", p=1)
-    composed = pkpm.laguerre_compose(gf_interp, gvars_interp.sel(comp=3))
+    gf_interpolated = gf.interpolate(basis="pkpmhyb", p=1)
+    gvars_interpolated = gvars.interpolate(basis="ms", p=1)
+    composed = pkpm.laguerre_compose(gf_interpolated, gvars_interpolated.sel(comp=3))
     from postgkyl.diagnostics.kinetic import transform_frame
-    expected = transform_frame(composed, gvars_interp.sel(comp="0:3"), cdim=1)
+    expected = transform_frame(composed, gvars_interpolated.sel(comp="0:3"), cdim=1)
 
     np.testing.assert_allclose(out.values, expected.values)
     for d in range(3):

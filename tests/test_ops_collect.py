@@ -88,5 +88,5 @@ def test_empty_raises():
 def test_rejects_modal_data():
   modal = pg.load(F1)
   numpy_side = _frame(0.0, 1.0)
-  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.collect(modal, numpy_side)

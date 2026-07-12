@@ -42,7 +42,7 @@ def integrate(data: "GDataState", *, op: str = "none"):
   if data.backend != "gkyl":
     raise ValueError(
         "integrate wraps gkyl_array_integrate and needs native modal data; "
-        "it is not available after .interp() or without the Gkeyll library.")
+        "it is not available after .interpolate() or without the Gkeyll library.")
   if data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
         f"integrate expects the modal representation, not "
@@ -70,7 +70,7 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
     data: point-value dataset -- already-interpolated (NumPy) data, or a
       native ``nodal``/``quad`` representation (materialized to its true
       point locations first). Raw modal DG coefficients raise; convert
-      explicitly first (``.interp()``, ``.to_nodal()``, ``.to_quad()``).
+      explicitly first (``.interpolate()``, ``.to_nodal()``, ``.to_quad()``).
     axis: axis (or axes) to integrate over: an ``int``, a ``tuple`` of
       ``int``, a comma-separated string (``"0,1"``), a colon slice string
       (``"0:2"``), or ``None`` (integrate over every axis).
@@ -78,7 +78,7 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
   Returns:
     A new dataset with the integrated axes collapsed to a single, grid-mean
     cell (shape retained, like ``select``). Always NumPy-backed, whatever the
-    input's representation (like ``.interp()``'s result): stamped
+    input's representation (like ``.interpolate()``'s result): stamped
     ``interpolated=True`` and cleared of any stale ``representation`` tag so
     ``info``/``repr`` don't keep describing collapsed values as "modal".
   """

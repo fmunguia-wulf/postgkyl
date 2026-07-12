@@ -37,7 +37,7 @@ def grid(data: "GDataState", *, inplace: bool = False, tag: str | None = None,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "grid operates on interpolated (NumPy) values; call .interp() "
+        "grid operates on interpolated (NumPy) values; call .interpolate() "
         "first -- raw DG coefficients have no per-node coordinates.")
   # end
   grid_in = data.grid

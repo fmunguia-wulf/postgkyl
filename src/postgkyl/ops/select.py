@@ -34,7 +34,7 @@ def select(data: "GDataState", *, comp=None,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "select operates on interpolated (NumPy) values; call .interp() "
+        "select operates on interpolated (NumPy) values; call .interpolate() "
         "first — slicing raw DG coefficients would mix basis functions.")
   zs = (z0, z1, z2, z3, z4, z5)
   grid = list(data.grid)

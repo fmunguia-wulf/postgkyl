@@ -6,8 +6,8 @@ in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.m
 - ``backend == "gkyl"``: modal DG coefficients held as a native
   :class:`~postgkyl.gpython.array.GkylArray`. Gkeyll owns the memory and all math
   on it (weak ops, coefficient lin-combs, integrate). ``values`` exposes a
-  read-only NumPy *view* for inspection; ``__array__`` refuses (interp first).
-- ``backend == "numpy"``: post-``interp`` (or never-modal) values as a plain
+  read-only NumPy *view* for inspection; ``__array__`` refuses (interpolate first).
+- ``backend == "numpy"``: post-``interpolate`` (or never-modal) values as a plain
   ``np.ndarray`` — the field domain, where all NumPy math applies.
 
 It constructs itself by delegating to the :mod:`postgkyl.io` leaf and exposes
@@ -205,7 +205,7 @@ class GDataState:
   @property
   def is_interpolated(self) -> bool:
     """True when values are safe for element-wise math: never-modal data, or
-    modal data already run through ``interp`` (``ctx['interpolated']``)."""
+    modal data already run through ``interpolate`` (``ctx['interpolated']``)."""
     return (not self.ctx.get("is_modal", False)) or self.ctx.get("interpolated", False)
 
   def _require_operable(self) -> None:
@@ -221,7 +221,7 @@ class GDataState:
       raise ValueError(
           "Cannot do NumPy math on modal DG coefficients. Convert explicitly: "
           ".to_nodal()/.to_quad() (pointwise, stays native), .apply(fn) "
-          "(pointwise via quadrature, projects back to modal), or .interp() "
+          "(pointwise via quadrature, projects back to modal), or .interpolate() "
           "(leave for the NumPy field domain).")
 
   # ----------------------------------------------------- numpy interop (read)
@@ -240,7 +240,7 @@ class GDataState:
         return np.asarray(self.get_values(), dtype=dtype)
       raise ValueError(
           "This dataset holds modal DG coefficients in native Gkeyll storage; "
-          ".to_nodal()/.to_quad() for point values, or .interp() for NumPy.")
+          ".to_nodal()/.to_quad() for point values, or .interpolate() for NumPy.")
     return np.asarray(self._values, dtype=dtype)
 
   # -------------------------------------------------------------- reporting
@@ -301,7 +301,7 @@ class GDataState:
       if self.ctx.get("poly_order") is not None:
         dg += f" p{self.ctx['poly_order']}"
       if self.ctx.get("interpolated"):
-        dg += " interp"
+        dg += " interpolate"
       elif self.ctx.get("is_modal"):
         dg += " modal"
       parts.append(dg)

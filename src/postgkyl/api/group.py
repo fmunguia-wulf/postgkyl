@@ -17,7 +17,7 @@ every member, in order (**broadcasting**):
   invokes that method on each member with the same arguments. If every
   member's result is a ``GDataState`` (or subclass), the results are wrapped
   in a *new* group of the caller's own concrete class, so chains stay fluent:
-  ``group.interp().sel(z0=0.0)``. Otherwise -- a terminal verb whose result is
+  ``group.interpolate().sel(z0=0.0)``. Otherwise -- a terminal verb whose result is
   not a dataset (``.plot()`` -> one Figure per member, ``.write()`` -> one
   path per member, ``.integrate()`` -> one float per member,
   ``.extract_input()`` -> one string per member, ...) -- a plain ``list`` of

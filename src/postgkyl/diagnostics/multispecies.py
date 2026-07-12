@@ -177,7 +177,7 @@ def accumulate_current(data: "GDataState", *, qbym: bool = False,
   if data.backend == "gkyl":
     raise ValueError(
         "accumulate_current operates on interpolated (NumPy) values; call "
-        ".interp() first -- scaling raw DG coefficients by a per-species "
+        ".interpolate() first -- scaling raw DG coefficients by a per-species "
         "factor is still valid numerically, but this verb is field-domain "
         "only.")
   # end

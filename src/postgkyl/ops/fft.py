@@ -19,12 +19,12 @@ def fft(data: "GDataState", *, psd: bool = False, iso: bool = False,
   axes (dummy axes of length <= 2 are squeezed out first). Supports 1D, 2D,
   and 3D data. ``numerics.fft`` reads its sample spacing straight off the
   grid array's own length, so a nodal (edge) grid -- one entry longer than
-  the value count, the usual post-``.interp()`` shape -- is first collapsed
+  the value count, the usual post-``.interpolate()`` shape -- is first collapsed
   to cell centers (matching values); a grid that already matches (e.g. a
   dynvector's) is passed through unchanged.
 
   Args:
-    data: the dataset to transform; must be NumPy-backed (call ``.interp()``
+    data: the dataset to transform; must be NumPy-backed (call ``.interpolate()``
       first on native modal data).
     psd: when True, return the power spectral density ``|FT|^2`` over the
       positive frequencies only.
@@ -45,7 +45,7 @@ def fft(data: "GDataState", *, psd: bool = False, iso: bool = False,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "fft operates on interpolated (NumPy) values; call .interp() first "
+        "fft operates on interpolated (NumPy) values; call .interpolate() first "
         "-- Fourier transforming raw DG coefficients would mix basis functions.")
   # end
   grid, values = data.grid, data.values

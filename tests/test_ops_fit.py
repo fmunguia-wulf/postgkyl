@@ -131,7 +131,7 @@ def test_inplace_and_tag_label():
 @needs_gkeyll
 def test_rejects_modal_data():
   d = pg.load(F1)
-  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.fit(d, "linear")
 
 
@@ -183,5 +183,5 @@ def test_window_rejects_multi_dim_data():
 @needs_gkeyll
 def test_window_rejects_modal_data():
   d = pg.load(F1)
-  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.fit(d, "exp2", window=True)

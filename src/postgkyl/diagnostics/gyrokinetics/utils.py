@@ -2,8 +2,8 @@
 layer-13 program-scale diagnostics.
 
 Ported from ``src_bak/postgkyl/gk/gk_utils.py``. ``read_gfile``/
-``read_interp_gfile`` are adapted to the new API (``postgkyl.api.load`` +
-``.interp()``) in place of the retired ``GData``/``GInterpModal`` pair;
+``read_interpolated_gfile`` are adapted to the new API (``postgkyl.api.load``
++ ``.interpolate()``) in place of the retired ``GData``/``GInterpModal`` pair;
 ``read_gfile_if_present`` drops the old code's ``verb_print(ctx, ...)`` call
 (``ctx`` was never a parameter of that function in ``src_bak`` -- an existing
 bug -- and printing belongs to the CLI, not a loader) in favor of returning a
@@ -84,7 +84,7 @@ def read_time_trace_if_present(
   return found, time, values, gdata
 
 
-def read_interp_gfile(file_name: str, poly_order: int, basis_type: str,
+def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
     comp: int | str | None = None,
     ) -> tuple[list[np.ndarray], np.ndarray, GData]:
   """Read a Gkeyll file and interpolate it onto a uniform mesh.
@@ -103,7 +103,7 @@ def read_interp_gfile(file_name: str, poly_order: int, basis_type: str,
     squeezed per-dimension arrays) and values, and the interpolated dataset.
   """
   gdata = GData(file_name)
-  interpolated = gdata.interp(basis=basis_type, p=poly_order)
+  interpolated = gdata.interpolate(basis=basis_type, p=poly_order)
   if comp is not None:
     interpolated = interpolated.sel(comp=comp)
   # end

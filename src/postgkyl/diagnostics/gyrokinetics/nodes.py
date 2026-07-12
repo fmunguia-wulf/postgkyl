@@ -219,7 +219,7 @@ def gk_nodes(
   colorbar = True
   if psi_file:
     resolved_psi = psi_file if psi_file[0] == "/" else path + psi_file
-    psi_grid, psi_values, _ = utils.read_interp_gfile(resolved_psi, poly_order=2,
+    psi_grid, psi_values, _ = utils.read_interpolated_gfile(resolved_psi, poly_order=2,
         basis_type="mt")
     psi_grid_cc = [0.5 * (psi_grid[d][:-1] + psi_grid[d][1:]) for d in range(len(psi_grid))]
 

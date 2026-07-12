@@ -34,7 +34,7 @@ def apply(ctx, fn, *, use: str | None = None) -> None:
   """Replace each active (and, if ``use`` is given, tag-matching) dataset with
   ``fn(dataset)``; inactive or non-matching datasets pass through unchanged.
 
-  ``fn`` is a per-dataset transform (e.g. ``lambda d: d.interp()``). Terminal
+  ``fn`` is a per-dataset transform (e.g. ``lambda d: d.interpolate()``). Terminal
   commands (plot/info/save) act on :func:`active_datasets` directly instead.
   """
   ds = ctx.obj

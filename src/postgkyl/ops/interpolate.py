@@ -22,7 +22,7 @@ BASIS_MAP = {
 
 
 def interpolate(data: "GDataState", *, basis: str | None = None,
-    p: int | None = None, interp: int | None = None,
+    p: int | None = None, num_interp: int | None = None,
     inplace: bool = False, tag: str | None = None, label: str | None = None):
   """Interpolate DG (modal/nodal) data onto a uniform evaluation mesh.
 
@@ -47,11 +47,11 @@ def interpolate(data: "GDataState", *, basis: str | None = None,
 
   if data.backend == "gkyl" and data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
-        f"interp expects the modal representation, not "
+        f"interpolate expects the modal representation, not "
         f"'{data.ctx['representation']}'; call .to_modal() first.")
   # end
 
   grid, values = dg.interpolate(data.values, data.grid, poly_order=poly_order,
-      basis_type=basis_type, modal=modal, num_interp=interp)
+      basis_type=basis_type, modal=modal, num_interp=num_interp)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
       interpolated=True)

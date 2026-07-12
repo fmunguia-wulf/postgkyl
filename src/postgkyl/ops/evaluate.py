@@ -143,7 +143,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
       # end
       grid, values = None, np.array(dat.ctx[ctx_key])
     else:
-      # select() carries the field-domain guard (".interp() first") for
+      # select() carries the field-domain guard (".interpolate() first") for
       # every data token, comp-sliced or not.
       sel = select(dat, comp=comp)
       grid, values = sel.grid, sel.values

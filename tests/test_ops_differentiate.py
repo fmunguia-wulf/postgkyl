@@ -1,6 +1,6 @@
 """Tests for the ``differentiate`` verb — numerical gradient of field data.
 
-Per the layer-03 differentiate-decision note, this is a post-``.interp()``
+Per the layer-03 differentiate-decision note, this is a post-``.interpolate()``
 verb: it takes NumPy field values and refuses native modal (gkyl-backed)
 data, exactly like ``select``.
 """
@@ -95,5 +95,5 @@ def test_mismatched_grid_length_raises():
 @needs_gkeyll
 def test_rejects_modal_data():
   d = pg.load(F1)
-  with pytest.raises(ValueError, match=r"\.interp\(\)"):
+  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.differentiate(d)

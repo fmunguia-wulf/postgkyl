@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def _require_field_domain(data: "GDataState", who: str) -> None:
   if data.backend == "gkyl":
     raise ValueError(
-        f"relchange operates on interpolated (NumPy) values; call .interp() "
+        f"relchange operates on interpolated (NumPy) values; call .interpolate() "
         f"first on {who} -- dividing raw DG coefficients would mix basis functions.")
   # end
 

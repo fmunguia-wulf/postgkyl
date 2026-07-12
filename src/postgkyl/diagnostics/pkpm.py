@@ -145,13 +145,13 @@ def load_pkpm(name: str, species: str, idx: "str | int", poly_order: int, *,
 
   c_dim = gf.num_dims - 1
 
-  gf_interp = gf.interp(basis="pkpmhyb", p=poly_order)
-  gvars_interp = gvars.interp(basis="ms", p=poly_order)
+  gf_interpolated = gf.interpolate(basis="pkpmhyb", p=poly_order)
+  gvars_interpolated = gvars.interpolate(basis="ms", p=poly_order)
 
-  t_over_m = gvars_interp.sel(comp=3)
-  bulk_u = gvars_interp.sel(comp="0:3")
+  t_over_m = gvars_interpolated.sel(comp=3)
+  bulk_u = gvars_interpolated.sel(comp="0:3")
 
-  composed = laguerre_compose(gf_interp, t_over_m)
+  composed = laguerre_compose(gf_interpolated, t_over_m)
   out = transform_frame(composed, bulk_u, cdim=c_dim)
 
   if tag is not None:

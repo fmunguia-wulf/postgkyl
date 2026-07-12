@@ -136,7 +136,7 @@ def test_copy_with_data_deep_copies_gkyl_backend():
 
 @needs_gkeyll
 def test_result_applies_explicit_tag_and_label():
-  d = pg.load(F1).interp(tag="custom-tag", label="custom-label")
+  d = pg.load(F1).interpolate(tag="custom-tag", label="custom-label")
   assert d.tag == "custom-tag"
   assert d.label == "custom-label"
 
@@ -172,9 +172,9 @@ def test_repr_and_str_on_loaded_modal_dataset():
 
 
 def test_repr_on_interpolated_dataset():
-  d = pg.load(F1).interp()
+  d = pg.load(F1).interpolate()
   r = repr(d)
-  assert "interp" in r
+  assert "interpolate" in r
 
 
 @needs_gkeyll

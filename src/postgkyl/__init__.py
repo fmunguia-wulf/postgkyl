@@ -3,7 +3,7 @@
 Public surface (the facade). The golden script::
 
     import postgkyl as pg
-    pg.load('elc_M0_0.gkyl').interp().sel(z0=0.0).plot()
+    pg.load('elc_M0_0.gkyl').interpolate().sel(z0=0.0).plot()
 
 The facade is **pure re-export** — every public name is defined in the layer that
 owns it and simply gathered here:
@@ -14,7 +14,7 @@ owns it and simply gathered here:
     plot                             <- render/    (multi-dataset rendering)
     info                             <- ops/       (the info verb, one-or-many)
     integrate                        <- ops/       (grid integral, via Gkeyll)
-    interpolate/interp, select/sel   <- ops/       (functional verb spellings)
+    interpolate, select/sel          <- ops/       (functional verb spellings)
     represent, apply                 <- ops/       (representation verbs)
     available_evaluate_operators     <- ops/       (``evaluate``'s RPN token vocabulary)
     save                             <- io/        (file output)
@@ -35,7 +35,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
 
     floor      gpython/    compiled _gpython extension -> libg0core.so (the only foreign code)
     leaves     numerics/   (pure NumPy; imports nothing internal)
-    engine     dg/         interp bridge + modal ops   -> gpython
+    engine     dg/         interpolation bridge + modal ops -> gpython
     leaves     io/         readers (C-native first)    -> gpython
     container  core/       GDataState {gkyl|numpy} backend
     seam       ops/        one verb each
@@ -51,14 +51,13 @@ from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
     load_gk_distf, load_gk_quantity, available_quantities as available_gk_quantities)
 
-# Short aliases, mirroring the fluent methods (a.interp() / a.sel()).
-interp = interpolate
+# Short alias, mirroring the fluent method (a.sel()).
 sel = select
 
 __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
-    "interpolate", "interp", "select", "sel", "represent", "apply", "save",
+    "interpolate", "select", "sel", "represent", "apply", "save",
     "collect", "evaluate", "relchange", "animate", "available_evaluate_operators",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

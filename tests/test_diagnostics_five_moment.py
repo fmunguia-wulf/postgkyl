@@ -85,7 +85,7 @@ class TestDensity:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.density(d)
 
 
@@ -125,7 +125,7 @@ class TestVelocityComponents:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.xvel(d)
 
 
@@ -172,7 +172,7 @@ class TestPressureScalar:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.pressure(d)
 
 
@@ -197,7 +197,7 @@ class TestKineticEnergy:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.ke(d)
 
 
@@ -233,19 +233,19 @@ class TestTempSoundMach:
   @needs_gkeyll
   def test_temp_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.temp(d)
 
   @needs_gkeyll
   def test_sound_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.sound(d)
 
   @needs_gkeyll
   def test_mach_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.mach(d)
 
 
@@ -267,7 +267,7 @@ class TestVelocityVerb:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     field = _make([np.array([0.0, 1.0])], np.array([[1.0]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fm.velocity(d, field)
 
 

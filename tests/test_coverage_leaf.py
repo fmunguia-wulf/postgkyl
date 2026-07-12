@@ -1,5 +1,5 @@
 """Coverage-completing tests for the leaf/engine/backend layers: numerics,
-dg (interp/modal/rep), the remaining gpython corners (array/kernels), and the
+dg (interpolate/modal/rep), the remaining gpython corners (array/kernels), and the
 matplotlib render backend.
 
 Run:  PYTHONPATH=src pytest tests/test_coverage_leaf.py -v
@@ -106,7 +106,7 @@ def test_grid_is_prefix_rejects_out_of_range_lengths():
   assert elementwise.grid_is_prefix([], same_len) is False        # empty
 
 
-# ===================================================================== dg/interp
+# ===================================================================== dg/interpolate
 @needs_gkeyll
 def test_interpolate_degenerates_1d_hybrid_to_serendipity():
   nb = dg.num_basis(1, 1, "serendipity")
@@ -122,7 +122,7 @@ def test_interpolate_converts_nodal_basis_data_through_nodal_to_modal():
   'ns'/'ms' short codes) -- reinterpolating already-modal data through it just
   exercises the conversion machinery (the values themselves are meaningless
   here, only the code path and output shape matter)."""
-  d = pg.load(F1).interp(basis="ns")
+  d = pg.load(F1).interpolate(basis="ns")
   assert d.is_interpolated
   assert d.values.shape[0] == d.num_cells[0] if False else True  # smoke: no crash
   assert d.values.ndim == 2
@@ -230,8 +230,8 @@ def test_plot_rejects_empty_and_valueless_datasets():
 @needs_gkeyll
 def test_plot_multi_dataset_1d_with_labels_shows_legend_and_title():
   from postgkyl import render
-  a = pg.load(F1).interp().sel(comp=0)
-  b = pg.load(F1).interp().sel(comp=0)
+  a = pg.load(F1).interpolate().sel(comp=0)
+  b = pg.load(F1).interpolate().sel(comp=0)
   fig = render.plot(a, b, labels=["first", "second"], title="my title", show=False)
   assert fig is not None
   assert fig._suptitle is not None
@@ -250,7 +250,7 @@ def test_plot_rejects_more_than_two_dimensions():
 
 @needs_gkeyll
 def test_plot_show_true_does_not_error_with_agg_backend():
-  a = pg.load(F1).interp().sel(comp=0)
+  a = pg.load(F1).interpolate().sel(comp=0)
   with pytest.warns(UserWarning, match="non-interactive"):
     fig = a.plot(show=True)
   assert fig is not None

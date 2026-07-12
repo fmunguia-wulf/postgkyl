@@ -10,7 +10,7 @@ kernels the simulation used, with zero layout knowledge in Python.
 Interpolation points follow the historical postgkyl convention: ``num_interp``
 subcell centers per cell, ``z_i = -(n-1)/n + 2 i/n`` on [-1, 1], with
 multi-dimensional points ordered Fortran-style (dimension 0 fastest) to match
-the per-cell scatter in ``dg/interp.py``.
+the per-cell scatter in ``dg/interpolate.py``.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def num_basis(basis_type: str, ndim: int, poly_order: int) -> int:
   return get_basis(basis_type, ndim, poly_order).num_basis
 
 
-def interp_points_1d(num_interp: int) -> np.ndarray:
+def interpolation_points_1d(num_interp: int) -> np.ndarray:
   """Subcell-center evaluation points on [-1, 1] (legacy postgkyl convention)."""
   n = num_interp
   return np.array([-(n - 1.0) / n + 2.0 * i / n for i in range(n)])
@@ -175,17 +175,17 @@ def _cached(key, build):
   return _matrix_cache[key]
 
 
-def interp_matrix(basis_type: str, ndim: int, poly_order: int,
+def interpolation_matrix(basis_type: str, ndim: int, poly_order: int,
     num_interp: int) -> np.ndarray:
   """Evaluation matrix at ``num_interp`` subcell centers per dimension.
 
   Row ``i`` corresponds to the point with multi-index
   ``np.unravel_index(i, [num_interp]*ndim, order="F")`` — dimension 0 fastest,
-  matching the consumer in ``dg/interp.py``.
+  matching the consumer in ``dg/interpolate.py``.
   """
-  return _cached(("interp", basis_type, ndim, poly_order, num_interp),
+  return _cached(("interpolation", basis_type, ndim, poly_order, num_interp),
       lambda: eval_matrix(basis_type, ndim, poly_order,
-          tensor_points(interp_points_1d(num_interp), ndim)))
+          tensor_points(interpolation_points_1d(num_interp), ndim)))
 
 
 # ------------------------------------------------- nodal <-> modal (exact)

@@ -83,7 +83,7 @@ class TestPressureTensorComponents:
   @needs_gkeyll
   def test_pxx_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.pxx(d)
 
 
@@ -128,7 +128,7 @@ class TestPPar:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     b = _b(1.0, 0.0, 0.0)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.p_par(d, b)
 
 
@@ -151,7 +151,7 @@ class TestPPerp:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     b = _b(1.0, 0.0, 0.0)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.p_perp(d, b)
 
 
@@ -212,7 +212,7 @@ class TestAgyro:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     b = _b(0.0, 0.0, 1.0)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.agyro(d, b)
 
 
@@ -239,7 +239,7 @@ class TestMomAgyro:
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     field = _make(_G1D, np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 1.0]]))
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.mom_agyro(d, field)
 
 
@@ -320,7 +320,7 @@ class TestFiveMomentSetFixedAtTenMoments:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.density(d)
 
   @needs_gkeyll
@@ -328,7 +328,7 @@ class TestFiveMomentSetFixedAtTenMoments:
   def test_all_scalar_quantities_reject_modal_data(self, fn_name):
     d = pg.load(F1)
     fn = getattr(tm, fn_name)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fn(d)
 
 

@@ -12,9 +12,9 @@ from .._apply import apply
     help="DG basis code (ms, ns, mo, mt, gkhyb, pkpmhyb). Default: from file.")
 @click.option("--poly-order", "-p", "poly_order", type=int, default=None,
     help="Polynomial order. Default: from file.")
-@click.option("--interp", "-i", "interp", type=int, default=None,
+@click.option("--num-interp", "-i", "num_interp", type=int, default=None,
     help="Interpolation points per cell.")
 @click.pass_context
-def command(ctx, basis, poly_order, interp) -> None:
+def command(ctx, basis, poly_order, num_interp) -> None:
   """Interpolate DG data onto a uniform mesh."""
-  apply(ctx, lambda d: d.interp(basis=basis, p=poly_order, interp=interp))
+  apply(ctx, lambda d: d.interpolate(basis=basis, p=poly_order, num_interp=num_interp))

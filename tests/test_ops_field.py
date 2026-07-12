@@ -65,7 +65,7 @@ class TestFft:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.fft(d)
 
 
@@ -94,7 +94,7 @@ class TestMagsq:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.magsq(d)
 
 
@@ -134,9 +134,9 @@ class TestRelchange:
     grid = [np.linspace(0.0, 1.0, 5)]
     numpy_side = _make(grid, np.full((4, 1), 2.0))
     modal = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.relchange(modal, numpy_side)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.relchange(numpy_side, modal)
 
 
@@ -192,7 +192,7 @@ class TestMask:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.mask(d, lower=0.0)
 
 
@@ -238,7 +238,7 @@ class TestGrid:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.grid(d)
 
 
@@ -277,7 +277,7 @@ class TestVal2coord:
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
-    with pytest.raises(ValueError, match=r"\.interp\(\)"):
+    with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.val2coord(d, x="0", y="1")
 
 

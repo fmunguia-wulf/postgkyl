@@ -2,8 +2,8 @@
 
 Four modules, one per domain boundary:
 
-- :mod:`.interp` — the one-way modal -> NumPy bridge (matrix from Gkeyll's
-  basis functions, applied with NumPy).
+- :mod:`.interpolate` — the one-way modal -> NumPy bridge (matrix from
+  Gkeyll's basis functions, applied with NumPy).
 - :mod:`.modal` — operations that stay in the modal domain (weak algebra,
   coefficient linear combinations, integration), all executed by Gkeyll
   kernels on native arrays.
@@ -13,7 +13,7 @@ Four modules, one per domain boundary:
   at a target's own grid points (see ``MAPPING.md``).
 """
 
-from .interp import interpolate, num_basis
+from .interpolate import interpolate, num_basis
 from .map import eval_at_points, map_grid
 from . import modal, rep
 

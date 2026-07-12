@@ -127,9 +127,9 @@ def materialize(basis_type: str, ndim: int, poly_order: int, arr: GkylArray,
   """Point-value data -> ``(nonuniform edge grid, ndarray)`` at the TRUE
   physical point locations — the render path for nodal/quad datasets.
 
-  Unlike ``interp`` (which evaluates modal data on an equispaced mesh), this
-  performs no basis math at all: the values *are* the field at their points;
-  only coordinates and ordering are computed.
+  Unlike ``interpolate`` (which evaluates modal data on an equispaced mesh),
+  this performs no basis math at all: the values *are* the field at their
+  points; only coordinates and ordering are computed.
   """
   pts_1d, perm = _tensor_point_layout(basis_type, ndim, poly_order, rep, num_quad)
   counts = [len(p) for p in pts_1d]

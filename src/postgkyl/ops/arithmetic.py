@@ -79,7 +79,7 @@ def _modal_binary(op, a, b, pa, pb):
   other = b if pa is not None else a
   if not isinstance(other, (int, float, np.integer, np.floating)):
     raise ValueError(
-        "cannot mix native modal data with arrays; call .interp() on the "
+        "cannot mix native modal data with arrays; call .interpolate() on the "
         "modal operand first (or use scalars / another modal dataset).")
   return _modal_scalar(op, primary, float(other), scalar_first=pa is None)
 
@@ -92,7 +92,7 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
   if pb.backend != "gkyl" or pa.backend != "gkyl":
     raise ValueError(
         "one operand is modal (gkyl-native) and the other is interpolated; "
-        "call .interp() on the modal operand to combine them.")
+        "call .interpolate() on the modal operand to combine them.")
   if pa.num_dims != pb.num_dims:
     return _modal_conf_phase_mul(op, pa, pb)
   if not numerics.grids_compatible(pa.grid, pb.grid):

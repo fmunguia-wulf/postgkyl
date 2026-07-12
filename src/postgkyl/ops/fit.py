@@ -69,7 +69,7 @@ def fit(data: "GDataState", fit_type: str, *, guess=None, window: bool = False,
   """
   if data.backend == "gkyl":
     raise ValueError(
-        "fit operates on interpolated (NumPy) values; call .interp() first "
+        "fit operates on interpolated (NumPy) values; call .interpolate() first "
         "-- fitting raw DG coefficients would mix basis functions.")
   # end
   grid = data.grid
