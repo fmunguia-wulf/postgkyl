@@ -39,13 +39,13 @@ Four verbs are **not** broadcast because they combine the members into a
 single result rather than acting on each independently; these are defined
 explicitly below, delegating to the matching multi-dataset function in
 ``ops``/``api.verbs``: ``info`` (one combined summary), ``collect`` (stack
-into one dataset), ``ev`` (evaluate an RPN expression over the members),
+into one dataset), ``evaluate`` (evaluate an RPN expression over the members),
 ``animate`` (one animation, one frame per member) -- matching the deferred
 worklist from layer 05's report (the old ``src_bak`` class's non-broadcast
 methods were exactly ``__getattr__`` broadcasting, ``plot``, ``info``,
-``animate``, ``plotly_animate``, ``collect``, ``ev``; ``plot`` and
+``animate``, ``plotly_animate``, ``collect``, ``evaluate``; ``plot`` and
 ``plotly_animate`` are not in the new ``ops`` verb inventory as multi-dataset
-verbs, so only ``info``/``collect``/``ev``/``animate`` need the explicit
+verbs, so only ``info``/``collect``/``evaluate``/``animate`` need the explicit
 treatment here).
 
 ``ops.grid`` has no fluent spelling anywhere (not on ``GData``, so not
@@ -107,9 +107,9 @@ class DatasetGroup(_CoreDatasetGroup):
     return verbs.collect(*self._datasets, sumdata=sumdata, period=period,
         offset=offset, tag=tag, label=label)
 
-  def ev(self, chain: str, *, tag: str | None = None, label: str | None = None):
-    """Evaluate an RPN expression over the members (see ``api.verbs.ev``)."""
-    return verbs.ev(chain, *self._datasets, tag=tag, label=label)
+  def evaluate(self, chain: str, *, tag: str | None = None, label: str | None = None):
+    """Evaluate an RPN expression over the members (see ``api.verbs.evaluate``)."""
+    return verbs.evaluate(chain, *self._datasets, tag=tag, label=label)
 
   def animate(self, **kwargs):
     """Animate the members, one frame each (see ``api.verbs.animate``)."""

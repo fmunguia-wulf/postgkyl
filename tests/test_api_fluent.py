@@ -69,7 +69,7 @@ INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "save",
     "mul", "div", "integrate", "to_modal", "to_nodal", "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
     "differentiate", "map"]
-MODULE_VERBS = ["collect", "ev", "relchange", "animate"]
+MODULE_VERBS = ["collect", "evaluate", "relchange", "animate"]
 
 
 class TestMethodInventory:
@@ -169,11 +169,11 @@ class TestSubclassPropagation:
     out = api_verbs.collect(a, b)
     assert isinstance(out, MyData)
 
-  def test_ev(self):
+  def test_evaluate(self):
     grid = [np.linspace(0.0, 1.0, 5)]
     a = _make(MyData, grid, np.full((4, 1), 2.0))
     b = _make(MyData, grid, np.full((4, 1), 3.0))
-    out = api_verbs.ev("f0 f1 +", a, b)
+    out = api_verbs.evaluate("f0 f1 +", a, b)
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_values(), 5.0)
 
@@ -316,9 +316,9 @@ class TestDatasetGroup:
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_grid()[0], [0.0, 1.0, 2.0])
 
-  def test_ev_combines_named_members(self):
+  def test_evaluate_combines_named_members(self):
     g = ApiDatasetGroup(self._frames()[:2])
-    out = g.ev("f0 f1 +")
+    out = g.evaluate("f0 f1 +")
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_values(), 3.0)  # 1.0 + 2.0
 
@@ -366,7 +366,7 @@ class TestFacade:
   def test_documented_names_resolve(self):
     for name in ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
         "interpolate", "interp", "select", "sel", "represent", "apply",
-        "save", "collect", "ev", "relchange", "animate", "__version__"]:
+        "save", "collect", "evaluate", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
 
   def test_all_is_consistent(self):
@@ -379,6 +379,6 @@ class TestFacade:
 
   def test_module_verbs_are_the_api_ones(self):
     assert pg.collect is api_verbs.collect
-    assert pg.ev is api_verbs.ev
+    assert pg.evaluate is api_verbs.evaluate
     assert pg.relchange is api_verbs.relchange
     assert pg.animate is api_verbs.animate

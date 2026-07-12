@@ -259,7 +259,7 @@ def divergence(in_grid, in_values):
     # src_bak warned and computed a partial result (using only the first
     # num_dims components) here; this raises instead per PYTHON_PRINCIPLES §10.
     raise ValueError(
-        f"ERROR in 'ev div': Length of the provided vector ({num_comps:d}) "
+        f"ERROR in 'evaluate div': Length of the provided vector ({num_comps:d}) "
         f"is longer than number of dimensions ({num_dims:d}).")
   # end
   out_shape = list(in_values[0].shape)
@@ -283,7 +283,7 @@ def curl(in_grid, in_values):
   if num_dims == 1:
     if num_comps != 3:
       raise ValueError(
-          f"ERROR in 'ev curl': Curl in 1D requires 3-component input and "
+          f"ERROR in 'evaluate curl': Curl in 1D requires 3-component input and "
           f"{num_comps:d}-component field was provided.")
     # end
     zc0 = 0.5*(in_grid[0][0][1:] + in_grid[0][0][:-1])
@@ -295,7 +295,7 @@ def curl(in_grid, in_values):
     zc1 = 0.5 * (in_grid[0][1][1:] + in_grid[0][1][:-1])
     if num_comps < 2:
       raise ValueError(
-          f"ERROR in 'ev curl': Length of the provided vector ({num_comps:d}) "
+          f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
           f"is smaller than number of dimensions ({num_dims:d}). Curl can't "
           f"be calculated.")
     elif num_comps == 2:
@@ -312,7 +312,7 @@ def curl(in_grid, in_values):
         # first 3 components) here; this raises instead per
         # PYTHON_PRINCIPLES §10.
         raise ValueError(
-            f"ERROR in 'ev curl': Length of the provided vector "
+            f"ERROR in 'evaluate curl': Length of the provided vector "
             f"({num_comps:d}) is longer than number of dimensions "
             f"({num_dims:d}).")
       # end
@@ -327,11 +327,11 @@ def curl(in_grid, in_values):
       # first 3 components) here; this raises instead per
       # PYTHON_PRINCIPLES §10.
       raise ValueError(
-          f"ERROR in 'ev curl': Length of the provided vector ({num_comps:d}) "
+          f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
           f"is longer than number of dimensions ({num_dims:d}).")
     elif num_comps < 3:
       raise ValueError(
-          f"ERROR in 'ev curl': Length of the provided vector ({num_comps:d}) "
+          f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
           f"is smaller than number of dimensions ({num_dims:d}). Curl can't "
           f"be calculated.")
     # end

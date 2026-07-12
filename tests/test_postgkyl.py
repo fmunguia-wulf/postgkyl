@@ -363,13 +363,13 @@ def test_info_returns_string(capsys):
 
 
 def test_cli_chained(tmp_path):
-  """The chained CLI: bare filename -> load, interp, sel, plot --save."""
+  """The chained CLI: bare filename -> load, interp, sel, plot --saveas."""
   from click.testing import CliRunner
   from postgkyl.cli.app import cli
 
   out = tmp_path / "cli.png"
   result = CliRunner().invoke(cli, [
-      "--batch-mode", F1, "interp", "sel", "--comp", "0", "plot", "--save", str(out)])
+      "--batch-mode", F1, "interp", "sel", "--comp", "0", "plot", "--saveas", str(out)])
   assert result.exit_code == 0, result.output
   assert out.exists()
 

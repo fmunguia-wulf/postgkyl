@@ -167,7 +167,8 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
       datasets drawn together (overlaid, as in ``matplotlib.plot``).
     interval: live-animation delay between frames, in milliseconds.
     fixed_range: hold a constant value/color scale across every frame
-      (``vmin``/``vmax``, unless already given in ``plot_kwargs``).
+      (``ymin``/``ymax``/``zmin``/``zmax``, unless already given in
+      ``plot_kwargs``).
     cutoffglobalrange: clip the fixed range to this central percentile band
       (see ``_frame_value_range``); ``None`` uses the true min/max.
     notitle: suppress the per-frame frame/time title.
@@ -198,8 +199,12 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
 
   if fixed_range:
     vmin, vmax = _frame_value_range(frames, cutoffglobalrange)
-    plot_kwargs.setdefault("vmin", vmin)
-    plot_kwargs.setdefault("vmax", vmax)
+    # Applied as both the 1-D y-limits (ymin/ymax) and the 2-D color range
+    # (zmin/zmax) -- whichever the frame's dimensionality actually uses.
+    plot_kwargs.setdefault("ymin", vmin)
+    plot_kwargs.setdefault("ymax", vmax)
+    plot_kwargs.setdefault("zmin", vmin)
+    plot_kwargs.setdefault("zmax", vmax)
   # end
 
   num_frames = len(frames)

@@ -62,9 +62,8 @@ class TestMultiPanel:
 
   def test_four_components_use_a_square_grid(self):
     fig = backend.plot(_field_2d(ncomp=4), show=False)
-    # 4 components -> 2x2 grid -> 4 drawing axes (colorbars add more axes).
-    drawing_axes = [ax for ax in fig.axes if ax.get_title().startswith("comp")]
-    assert len(drawing_axes) == 4
+    # 4 components -> 2x2 grid -> 4 panel axes, each with its own colorbar axes.
+    assert len(fig.axes) == 8
 
   def test_five_components_hides_the_leftover_axis(self):
     fig = backend.plot(_field_2d(ncomp=5), show=False)
@@ -118,16 +117,16 @@ class TestLogAxes:
 
 
 # --------------------------------------------------------------------------
-# vmin / vmax
+# value ranges: ymin/ymax (1-D), zmin/zmax (2-D color range)
 # --------------------------------------------------------------------------
 
 class TestValueRange:
-  def test_vmin_vmax_set_1d_ylim(self):
-    fig = backend.plot(_line(), show=False, vmin=-5.0, vmax=50.0)
+  def test_ymin_ymax_set_1d_ylim(self):
+    fig = backend.plot(_line(), show=False, ymin=-5.0, ymax=50.0)
     assert fig.axes[0].get_ylim() == (-5.0, 50.0)
 
-  def test_vmin_vmax_set_2d_colormap_range(self):
-    fig = backend.plot(_field_2d(), show=False, vmin=0.0, vmax=1.0)
+  def test_zmin_zmax_set_2d_colormap_range(self):
+    fig = backend.plot(_field_2d(), show=False, zmin=0.0, zmax=1.0)
     im = fig.axes[0].collections[0]
     assert im.get_clim() == (0.0, 1.0)
 
@@ -138,7 +137,10 @@ class TestValueRange:
 
 class TestAspect:
   def test_aspect_applies_to_2d_axes(self):
-    fig = backend.plot(_field_2d(), show=False, aspect=1.0)
+    # aspect only takes effect with fixaspect=True -- --aspect on the CLI
+    # implies --fix-aspect (see cli/commands/plot.py), but the render engine
+    # itself keeps the two independent, exactly as main's output.plot did.
+    fig = backend.plot(_field_2d(), show=False, fixaspect=True, aspect=1.0)
     assert fig.axes[0].get_aspect() == 1.0
 
   def test_aspect_none_leaves_default(self):

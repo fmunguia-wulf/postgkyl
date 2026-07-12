@@ -8,9 +8,9 @@ Public surface (the facade). The golden script::
 The facade is **pure re-export** — every public name is defined in the layer that
 owns it and simply gathered here:
 
-    load, GData, DatasetGroup        <- api/       (fluent surface)
-    collect, ev, relchange, animate  <- api/       (module-level multi-dataset
-                                                     verbs -- no single ``self``)
+    load, GData, DatasetGroup          <- api/       (fluent surface)
+    collect, evaluate, relchange,      <- api/       (module-level multi-dataset
+    animate                                          verbs -- no single ``self``)
     plot                             <- render/    (multi-dataset rendering)
     info                             <- ops/       (the info verb, one-or-many)
     integrate                        <- ops/       (grid integral, via Gkeyll)
@@ -43,7 +43,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
     facade     __init__    re-exports only
 """
 
-from postgkyl.api import GData, load, DatasetGroup, animate, collect, ev, relchange
+from postgkyl.api import GData, load, DatasetGroup, animate, collect, evaluate, relchange
 from postgkyl.ops import apply, info, integrate, interpolate, represent, select
 from postgkyl.render import plot
 from postgkyl.io import save
@@ -58,6 +58,6 @@ __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
     "interpolate", "interp", "select", "sel", "represent", "apply", "save",
-    "collect", "ev", "relchange", "animate",
+    "collect", "evaluate", "relchange", "animate",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

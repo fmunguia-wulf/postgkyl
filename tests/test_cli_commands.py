@@ -131,7 +131,7 @@ class TestChainedPipelines:
   def test_bare_filename_load_interp_sel_plot_save(self, tmp_path):
     out = tmp_path / "cli.png"
     result = _ok(["--batch-mode", F1, "interp", "sel", "--comp", "0", "plot",
-        "--save", str(out)])
+        "--saveas", str(out)])
     assert out.exists()
 
   def test_load_command_is_hidden_but_resolvable(self):
@@ -143,20 +143,20 @@ class TestChainedPipelines:
     result = _ok([DISTF_P2_0, DISTF_P2_1, "info"])
     assert result.output.count("Number of components") == 2
 
-  def test_ev_expression(self):
-    result = _ok([DISTF_P2_0, "ev", "f 2 *", "print"])
+  def test_evaluate_expression(self):
+    result = _ok([DISTF_P2_0, "evaluate", "f 2 *", "print"])
     assert result.exit_code == 0
 
-  def test_ev_requires_at_least_one_dataset(self):
-    result = _run(["ev", "f 2 *"])
+  def test_evaluate_requires_at_least_one_dataset(self):
+    result = _run(["evaluate", "f 2 *"])
     assert result.exit_code != 0
 
-  def test_ev_preserves_untouched_dataset(self):
-    # Regression test for review C1: ``ev`` used to replace the *entire*
+  def test_evaluate_preserves_untouched_dataset(self):
+    # Regression test for review C1: ``evaluate`` used to replace the *entire*
     # working set with its own result, silently dropping datasets that were
     # deactivated (and thus not part of its input pool) rather than leaving
     # them in place, reactivatable via ``status --activate``.
-    result = _ok([ENERGY, ENERGY, "status", "--deactivate", "0", "ev",
+    result = _ok([ENERGY, ENERGY, "status", "--deactivate", "0", "evaluate",
         "f 2 *", "status"])
     lines = [l for l in result.output.splitlines() if l.startswith("[")]
     assert len(lines) == 3
@@ -335,7 +335,7 @@ class TestPlotOptionParity:
   def test_plot_grows_log_and_colorbar_options(self, tmp_path):
     out = tmp_path / "p.png"
     _ok(["--batch-mode", F1, "interp", "sel", "--comp", "0", "plot",
-        "--save", str(out), "--logy", "--no-colorbar", "--title", "t"])
+        "--saveas", str(out), "--logy", "--title", "t"])
     assert out.exists()
 
   def test_plot_no_datasets_fails_closed(self):

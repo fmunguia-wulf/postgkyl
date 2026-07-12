@@ -244,7 +244,7 @@ def test_plot_rejects_more_than_two_dimensions():
   d = GDataState()
   d.push([np.linspace(0, 1, 3), np.linspace(0, 1, 3), np.linspace(0, 1, 3)],
       np.zeros((2, 2, 2, 1)))
-  with pytest.raises(ValueError, match="plotting is not supported"):
+  with pytest.raises(ValueError, match="Only 1D and 2D plots are currently supported"):
     render.plot(d)
 
 

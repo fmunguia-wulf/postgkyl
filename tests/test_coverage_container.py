@@ -197,7 +197,7 @@ def test_cli_hidden_alias_pl_resolves_to_plot(tmp_path):
 
   out = tmp_path / "alias.png"
   result = CliRunner().invoke(cli, [
-      "--batch-mode", F1, "interp", "sel", "--comp", "0", "pl", "--save", str(out)])
+      "--batch-mode", F1, "interp", "sel", "--comp", "0", "pl", "--saveas", str(out)])
   assert result.exit_code == 0, result.output
   assert out.exists()
 
@@ -239,7 +239,8 @@ def test_cli_plot_batch_mode_default_save_path():
         "--batch-mode", "--saveframes-prefix", "myrun",
         F1, "interp", "sel", "--comp", "0", "plot"])
     assert result.exit_code == 0, result.output
-    assert os.path.exists("myrun.png")
+    # main's batch-mode file name is "<prefix>_<dataset index>.png".
+    assert os.path.exists("myrun_0.png")
 
 
 def test_cli_module_entry_point_runs_as_script(monkeypatch, capsys):

@@ -1,14 +1,14 @@
 """Module-level fluent verbs — the multi-dataset verbs that have no single
 ``self``.
 
-``collect``, ``ev``, ``relchange``, and ``animate`` each combine *several*
+``collect``, ``evaluate``, ``relchange``, and ``animate`` each combine *several*
 datasets into one result (or, for ``animate``, into one animation), so they
 cannot be one dataset's method the way ``interp``/``sel``/``fft``/... are on
 :class:`~postgkyl.api.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.ops` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
 drift apart. :class:`~postgkyl.api.group.DatasetGroup` re-uses these same
-functions for its own ``collect``/``ev``/``animate`` terminal methods.
+functions for its own ``collect``/``evaluate``/``animate`` terminal methods.
 """
 
 from __future__ import annotations
@@ -33,13 +33,13 @@ def collect(*datasets: "GDataState", sumdata: bool = False,
       tag=tag, label=label)
 
 
-def ev(chain: str, *datasets: "GDataState", tag: str | None = None,
+def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     label: str | None = None) -> "GDataState":
   """Evaluate an RPN math expression over an explicit list of datasets.
 
-  See ``ops.ev``. ``f``/``fN`` tokens in ``chain`` refer to ``datasets[N]``.
+  See ``ops.evaluate``. ``f``/``fN`` tokens in ``chain`` refer to ``datasets[N]``.
   """
-  return ops.ev(chain, *datasets, tag=tag, label=label)
+  return ops.evaluate(chain, *datasets, tag=tag, label=label)
 
 
 def relchange(data0: "GDataState", data: "GDataState", *,

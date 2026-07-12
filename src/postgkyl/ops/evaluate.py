@@ -1,4 +1,4 @@
-"""The ``ev`` verb — evaluate RPN math expressions over datasets.
+"""The ``evaluate`` verb — evaluate RPN math expressions over datasets.
 
 The numeric operators live in :mod:`postgkyl.numerics.ev_ops` (pure
 ``(grid, values)`` functions, keyed by token in ``numerics.ev_cmds``); this
@@ -139,7 +139,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
     dat = datasets[idx]
     if ctx_key is not None:
       if ctx_key not in dat.ctx:
-        raise ValueError(f"ev: unknown ctx key '{ctx_key}' on dataset f{idx}")
+        raise ValueError(f"evaluate: unknown ctx key '{ctx_key}' on dataset f{idx}")
       # end
       grid, values = None, np.array(dat.ctx[ctx_key])
     else:
@@ -171,7 +171,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
   return True
 
 
-def ev(chain: str, *datasets: "GDataState", tag: str | None = None,
+def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     label: str | None = None) -> "GDataState":
   """Evaluate an RPN expression over an explicit list of datasets.
 
@@ -195,7 +195,7 @@ def ev(chain: str, *datasets: "GDataState", tag: str | None = None,
       is unrecognized, or an operator fails.
   """
   if not datasets:
-    raise ValueError("ev: at least one dataset is required.")
+    raise ValueError("evaluate: at least one dataset is required.")
   # end
 
   grid_stack, value_stack, ctx_stack = [], [], []
@@ -204,12 +204,12 @@ def ev(chain: str, *datasets: "GDataState", tag: str | None = None,
       continue
     # end
     if not _push_token(token, datasets, grid_stack, value_stack, ctx_stack):
-      raise ValueError(f"ev: token '{token}' is neither data nor an operator")
+      raise ValueError(f"evaluate: token '{token}' is neither data nor an operator")
     # end
   # end
 
   if not value_stack:
-    raise ValueError("ev: expression produced no result")
+    raise ValueError("evaluate: expression produced no result")
   # end
 
   final_grid = grid_stack[-1][0]

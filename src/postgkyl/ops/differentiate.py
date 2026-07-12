@@ -7,8 +7,8 @@ compiled shim (``gkeyll/core/zero/gkyl_gpython.h``/``gpython.c`` +
 ``gpython``. This
 verb instead differentiates *after* ``.interp()``, with ``np.gradient`` on the
 plain NumPy field values (via ``numerics.ev_ops.grad``/``grad2``, the
-existing pure ``(grid, values)`` gradient operators shared with the ``ev``
-verb) -- a numerical (second-order accurate, cell-centered), not exact,
+existing pure ``(grid, values)`` gradient operators shared with the
+``evaluate`` verb) -- a numerical (second-order accurate, cell-centered), not exact,
 derivative. Exactness on the modal polynomial is unnecessary here precisely
 because the data have already been interpolated to a uniform mesh.
 """
