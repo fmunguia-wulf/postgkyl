@@ -17,3 +17,6 @@ tests_bak/
 /*.json
 # built gpython/_gpython extension (scripts/build_gpython.sh)
 src/postgkyl/gpython/_gpython.so
+
+# scratch output from running examples/scripts/*.py directly
+examples/scripts/output/

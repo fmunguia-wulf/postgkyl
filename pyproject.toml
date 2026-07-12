@@ -74,4 +74,6 @@ testpaths = ["tests"]
 filterwarnings = [
     "ignore:Animation was deleted without rendering anything:UserWarning",
     "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
+    "ignore:invalid value encountered in divide:RuntimeWarning",
+    "ignore::scipy.optimize.OptimizeWarning",
 ]
