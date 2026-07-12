@@ -257,6 +257,38 @@ class TestGkEnergyBalanceSynthetic:
       plt.close(fig)
     # end
 
+  def test_relative_error_apar_dot_present_without_apar_energy(self, stub, tmp_path):
+    """Regression for C1: a run can ship ``apar_energy_dot.gkyl`` (read in
+    the unrelated, earlier per-block loop that sets ``has_apar_dot``)
+    without shipping ``apar_energy.gkyl`` (read inside the relative-error
+    branch's own loop, which sets ``has_apar``). The relative-error branch
+    must gate every apar-dependent line -- the ``[1:]`` slicing, the
+    ``energy_balance_error`` call, and the ``denom`` computation -- on
+    ``has_apar``, not ``has_apar_dot``; gating on the wrong flag leaves
+    ``apar`` as ``None`` (never accumulated, since ``has_apar`` is False)
+    while still trying to slice it, raising
+    ``TypeError: 'NoneType' object is not subscriptable``."""
+    path = _build_sim(stub, tmp_path, with_apar=True)  # stages apar_energy_dot.gkyl only.
+    n = 5
+    time = np.linspace(0.0, 1.0, n)
+    # No "sim-apar_energy.gkyl" staged -- has_apar stays False.
+    stub.add(f"{path}sim-field_energy.gkyl", time, np.full((n, 1), 3.0))
+    f_vals = np.zeros((n, 3))
+    f_vals[:, 2] = 10.0
+    stub.add(f"{path}sim-ion_integrated_moms.gkyl", time, f_vals)
+    dt_time = np.linspace(0.0, 1.0, n - 1)
+    stub.add(f"{path}sim-dt.gkyl", dt_time, np.full((n - 1, 1), 0.2))
+
+    fig, traces = eb.gk_energy_balance("sim", ["ion"], path=path, relative_error=True)
+    try:
+      # No TypeError, and the electromagnetic term is correctly excluded
+      # (has_apar-gated) -- matches the electrostatic relative-error formula.
+      assert traces.mom_err_norm is not None
+      assert traces.mom_err_norm.shape[0] == n - 1
+    finally:
+      plt.close(fig)
+    # end
+
   def test_missing_required_field_dot_file_raises(self, stub, tmp_path):
     path = str(tmp_path) + "/"
     with pytest.raises(FileNotFoundError, match="field_energy_dot"):

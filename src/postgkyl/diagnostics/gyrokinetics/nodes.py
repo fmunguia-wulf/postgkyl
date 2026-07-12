@@ -98,10 +98,6 @@ def multib_tag(base: str, block_idx: int, num_blocks: int) -> str:
   return f"{base}_b{block_idx}" if num_blocks > 1 else base
 
 
-def _set_tick_font_size(ax, size: float) -> None:
-  ax.tick_params(axis="both", labelsize=size)
-
-
 def _parse_levels(clevels: str | None, cnlevels: int) -> np.ndarray | int:
   if clevels is None:
     return cnlevels
@@ -261,7 +257,7 @@ def gk_nodes(
   if ylim:
     ax.set_ylim(ylim[0], ylim[1])
   # end
-  _set_tick_font_size(ax, _TICK_FONT_SIZE)
+  utils.set_tick_font_size(ax, _TICK_FONT_SIZE)
 
   if saveas:
     fig.savefig(saveas)

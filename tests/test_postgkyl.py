@@ -423,14 +423,20 @@ _ALLOWED = {
                                                       # -- api imports only core/ops/io, none
                                                       # of which import diagnostics, so this
                                                       # still cannot create a cycle; "render"
-                                                      # added by 13-diagnostics-programs.md:
-                                                      # the program-scale diagnostics
-                                                      # (gk_nodes, trajectory) build figures
-                                                      # directly with matplotlib/render
-                                                      # helpers -- render imports only
-                                                      # core/numerics, neither of which
-                                                      # imports diagnostics, so this still
-                                                      # cannot create a cycle
+                                                      # pre-authorized by 13-diagnostics-
+                                                      # programs.md for future program-scale
+                                                      # diagnostics that may want render's
+                                                      # generic plot() -- as of this layer's
+                                                      # landing, none of the six program
+                                                      # modules (energy_balance, particle_
+                                                      # balance, nodes, trajectory, enstrophy,
+                                                      # ke_dke) actually import it, each
+                                                      # building its own bespoke figure
+                                                      # directly with matplotlib instead;
+                                                      # render imports only core/numerics,
+                                                      # neither of which imports diagnostics,
+                                                      # so this cannot create a cycle whether
+                                                      # or not the edge is ever exercised
     "api":    {"core", "ops", "io"},
     "":       {"api", "ops", "render", "io", "diagnostics"}, # facade: pure re-export of
                                                       # public names; "diagnostics" added by

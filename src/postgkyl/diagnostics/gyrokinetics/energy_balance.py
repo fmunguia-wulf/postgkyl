@@ -87,12 +87,6 @@ def energy_balance_error(fdot: np.ndarray, src: np.ndarray, bflux_tot: np.ndarra
   return src - bflux_tot - fdot_terms
 
 
-def _set_tick_font_size(ax, size: float) -> None:
-  ax.tick_params(axis="both", labelsize=size)
-  ax.yaxis.get_offset_text().set_size(size)
-  ax.xaxis.get_offset_text().set_size(size)
-
-
 def _block_prefix(file_prefix: str, block_idx: int) -> str:
   return file_prefix.replace("*", str(block_idx))
 
@@ -110,19 +104,6 @@ def _resolve(path: str, override: str | None, default: str,
     resolved = resolved.replace("*", species)
   # end
   return resolved
-
-
-def _read_trace(file_name: str):
-  """Read a 1-D time-trace file if present: ``(found, time, values, gdata)``.
-
-  ``utils.read_gfile_if_present`` always returns the grid as a *list* of
-  per-dimension arrays (``GDataState.grid`` never hands back a bare
-  ``ndarray``, only a list of one for 1-D data) -- this unwraps that single
-  entry into the plain time array every trace here is indexed against.
-  """
-  found, grid, values, gdata = utils.read_gfile_if_present(file_name)
-  time = grid[0] if found else None
-  return found, time, values, gdata
 
 
 def gk_energy_balance(
@@ -217,7 +198,7 @@ def gk_energy_balance(
 
     fd_name = _resolve(path, field_dot_file,
         block_prefix + "field_energy_dot.gkyl", block_idx)
-    found, t, v, _ = _read_trace(fd_name)
+    found, t, v, _ = utils.read_time_trace_if_present(fd_name)
     if not found:
       raise FileNotFoundError(f"Required file not found: {fd_name}")
     # end
@@ -225,7 +206,7 @@ def gk_energy_balance(
 
     ad_name = _resolve(path, apar_dot_file,
         block_prefix + "apar_energy_dot.gkyl", block_idx)
-    has_apar_dot, t, v, _ = _read_trace(ad_name)
+    has_apar_dot, t, v, _ = utils.read_time_trace_if_present(ad_name)
     if has_apar_dot:
       time_apar_dot, apar_dot_pb = t, v
     # end
@@ -234,7 +215,7 @@ def gk_energy_balance(
     for sp in species:
       fdot_name = _resolve(path, fdot_file,
           block_prefix + sp + "_fdot_integrated_moms.gkyl", block_idx, sp)
-      found, t, v, _ = _read_trace(fdot_name)
+      found, t, v, _ = utils.read_time_trace_if_present(fdot_name)
       if not found:
         raise FileNotFoundError(f"Required file not found: {fdot_name}")
       # end
@@ -243,7 +224,7 @@ def gk_energy_balance(
 
       src_name = _resolve(path, source_file,
           block_prefix + sp + "_source_integrated_moms.gkyl", block_idx, sp)
-      has_src, t, v, _ = _read_trace(src_name)
+      has_src, t, v, _ = utils.read_time_trace_if_present(src_name)
       if has_src:
         src_sp = v[:, _ENERGY_MOMENT]
       else:
@@ -257,7 +238,7 @@ def gk_energy_balance(
           bf_name = _resolve(path, bflux_files.get(key),
               block_prefix + sp + f"_bflux_{d}{e}_integrated_HamiltonianMoments.gkyl",
               block_idx, sp)
-          found_b, t, v, _ = _read_trace(bf_name)
+          found_b, t, v, _ = utils.read_time_trace_if_present(bf_name)
           if found_b:
             has_bflux = True
             time_bflux_tot = t
@@ -325,25 +306,25 @@ def gk_energy_balance(
     mom_err_norm = None
   else:
     dt_name = _resolve(path, dt_file, file_prefix.replace("_b*", "") + "dt.gkyl", 0)
-    _, time_dt, dt, _ = _read_trace(dt_name)
+    _, time_dt, dt, _ = utils.read_time_trace_if_present(dt_name)
 
     field = apar = distf = None
     for block_idx in blocks:
       block_prefix = _block_prefix(file_prefix, block_idx)
 
       fld_name = _resolve(path, field_file, block_prefix + "field_energy.gkyl", block_idx)
-      has_field, t, v, _ = _read_trace(fld_name)
+      has_field, t, v, _ = utils.read_time_trace_if_present(fld_name)
       field_pb = v if has_field else None
 
       ap_name = _resolve(path, apar_file, block_prefix + "apar_energy.gkyl", block_idx)
-      has_apar, t, v, _ = _read_trace(ap_name)
+      has_apar, t, v, _ = utils.read_time_trace_if_present(ap_name)
       apar_pb = v if has_apar else None
 
       distf_pb = None
       for sp in species:
         f_name = _resolve(path, f_file, block_prefix + sp + "_integrated_moms.gkyl",
             block_idx, sp)
-        _, t, v, _ = _read_trace(f_name)
+        _, t, v, _ = utils.read_time_trace_if_present(f_name)
         distf_pb = _accumulate(distf_pb, v[:, _ENERGY_MOMENT])
       # end
 
@@ -355,14 +336,14 @@ def gk_energy_balance(
     # end
 
     field, field_dot = field[1:], field_dot[1:]
-    if has_apar_dot:
+    if has_apar:
       apar, apar_dot = apar[1:], apar_dot[1:]
     # end
     fdot, src, bflux_tot, distf = fdot[1:], src[1:], bflux_tot[1:], distf[1:]
 
     mom_err = energy_balance_error(fdot, src, bflux_tot, field_dot,
-        apar_dot if has_apar_dot else None)
-    denom = (distf - field - apar) if has_apar_dot else (distf - field)
+        apar_dot if has_apar else None)
+    denom = (distf - field - apar) if has_apar else (distf - field)
     mom_err_norm = mom_err * dt / denom
 
     ax.plot(time_dt, absy_func(mom_err_norm))
@@ -383,7 +364,7 @@ def gk_energy_balance(
   ax.set_ylabel(ylabel_string, fontsize=_XY_LABEL_FONT_SIZE)
   ax.set_title(title_string, fontsize=_TITLE_FONT_SIZE)
   ax.set_xlim(time_fdot[0], time_fdot[-1])
-  _set_tick_font_size(ax, _TICK_FONT_SIZE)
+  utils.set_tick_font_size(ax, _TICK_FONT_SIZE)
 
   if saveas:
     fig.savefig(saveas)

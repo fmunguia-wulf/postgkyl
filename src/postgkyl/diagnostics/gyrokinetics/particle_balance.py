@@ -64,12 +64,6 @@ def particle_balance_error(fdot: np.ndarray, src: np.ndarray,
   return src - bflux_tot - fdot
 
 
-def _set_tick_font_size(ax, size: float) -> None:
-  ax.tick_params(axis="both", labelsize=size)
-  ax.yaxis.get_offset_text().set_size(size)
-  ax.xaxis.get_offset_text().set_size(size)
-
-
 def _block_prefix(file_prefix: str, block_idx: int) -> str:
   return file_prefix.replace("*", str(block_idx))
 
@@ -83,19 +77,6 @@ def _resolve(path: str, override: str | None, default: str,
     return default
   # end
   return (path + override).replace("*", str(block_idx))
-
-
-def _read_trace(file_name: str):
-  """Read a 1-D time-trace file if present: ``(found, time, values, gdata)``.
-
-  ``utils.read_gfile_if_present`` always returns the grid as a *list* of
-  per-dimension arrays (``GDataState.grid`` never hands back a bare
-  ``ndarray``, only a list of one for 1-D data) -- this unwraps that single
-  entry into the plain time array every trace here is indexed against.
-  """
-  found, grid, values, gdata = utils.read_gfile_if_present(file_name)
-  time = grid[0] if found else None
-  return found, time, values, gdata
 
 
 def gk_particle_balance(
@@ -179,7 +160,7 @@ def gk_particle_balance(
 
     fdot_name = _resolve(path, fdot_file,
         block_prefix + species + "_fdot_integrated_moms.gkyl", block_idx)
-    found, t, v, _ = _read_trace(fdot_name)
+    found, t, v, _ = utils.read_time_trace_if_present(fdot_name)
     if not found:
       raise FileNotFoundError(f"Required file not found: {fdot_name}")
     # end
@@ -188,7 +169,7 @@ def gk_particle_balance(
 
     src_name = _resolve(path, source_file,
         block_prefix + species + "_source_integrated_moms.gkyl", block_idx)
-    has_src, t, v, _ = _read_trace(src_name)
+    has_src, t, v, _ = utils.read_time_trace_if_present(src_name)
     src_pb = v[:, _DENSITY_MOMENT] if has_src else 0.0 * fdot_pb
 
     bflux_terms = []
@@ -198,7 +179,7 @@ def gk_particle_balance(
         bf_name = _resolve(path, bflux_files.get(key),
             block_prefix + species + f"_bflux_{d}{e}_integrated_HamiltonianMoments.gkyl",
             block_idx)
-        found_b, t, v, _ = _read_trace(bf_name)
+        found_b, t, v, _ = utils.read_time_trace_if_present(bf_name)
         if found_b:
           has_bflux = True
           time_bflux_tot = t
@@ -246,14 +227,14 @@ def gk_particle_balance(
     mom_err_norm = None
   else:
     dt_name = _resolve(path, dt_file, file_prefix.replace("_b*", "") + "dt.gkyl", 0)
-    _, time_dt, dt, _ = _read_trace(dt_name)
+    _, time_dt, dt, _ = utils.read_time_trace_if_present(dt_name)
 
     distf = None
     for block_idx in blocks:
       block_prefix = _block_prefix(file_prefix, block_idx)
       f_name = _resolve(path, f_file,
           block_prefix + species + "_integrated_moms.gkyl", block_idx)
-      _, t, v, _ = _read_trace(f_name)
+      _, t, v, _ = utils.read_time_trace_if_present(f_name)
       distf = _accumulate(distf, v[:, _DENSITY_MOMENT])
     # end
 
@@ -279,7 +260,7 @@ def gk_particle_balance(
   ax.set_ylabel(ylabel_string, fontsize=_XY_LABEL_FONT_SIZE)
   ax.set_title(title_string, fontsize=_TITLE_FONT_SIZE)
   ax.set_xlim(time_fdot[0], time_fdot[-1])
-  _set_tick_font_size(ax, _TICK_FONT_SIZE)
+  utils.set_tick_font_size(ax, _TICK_FONT_SIZE)
 
   if saveas:
     fig.savefig(saveas)

@@ -1,14 +1,17 @@
 """Small file/geometry helpers shared by the gyrokinetic loaders and the
 layer-13 program-scale diagnostics.
 
-Ported from ``src_bak/postgkyl/gk/gk_utils.py``. Matplotlib bits
-(``set_tick_font_size``) are NOT ported -- that is a rendering concern
-(``render``/``cli``), not a loader concern. ``read_gfile``/``read_interp_gfile``
-are adapted to the new API (``postgkyl.api.load`` + ``.interp()``) in place of
-the retired ``GData``/``GInterpModal`` pair; ``read_gfile_if_present`` drops
-the old code's ``verb_print(ctx, ...)`` call (``ctx`` was never a parameter of
-that function in ``src_bak`` -- an existing bug -- and printing belongs to the
-CLI, not a loader) in favor of returning a plain ``found`` flag.
+Ported from ``src_bak/postgkyl/gk/gk_utils.py``. ``read_gfile``/
+``read_interp_gfile`` are adapted to the new API (``postgkyl.api.load`` +
+``.interp()``) in place of the retired ``GData``/``GInterpModal`` pair;
+``read_gfile_if_present`` drops the old code's ``verb_print(ctx, ...)`` call
+(``ctx`` was never a parameter of that function in ``src_bak`` -- an existing
+bug -- and printing belongs to the CLI, not a loader) in favor of returning a
+plain ``found`` flag. ``read_time_trace_if_present`` and
+``set_tick_font_size`` are shared by the three program-scale diagnostics that
+build figures directly with matplotlib (``energy_balance``,
+``particle_balance``, ``nodes``) rather than each keeping its own private
+copy.
 """
 
 from __future__ import annotations
@@ -25,31 +28,28 @@ from postgkyl.api import GData
 MAX_NUM_BLOCKS = 10000
 
 
-def read_gfile(file_name: str) -> tuple[list[np.ndarray] | np.ndarray, np.ndarray, GData]:
+def read_gfile(file_name: str) -> tuple[list[np.ndarray], np.ndarray, GData]:
   """Read a Gkeyll file, squeezing singleton axes out of the grid and values.
 
   Args:
     file_name: Path to the ``.gkyl``/``.bp`` file.
 
   Returns:
-    ``(grid, values, gdata)``: the squeezed grid (a single array for 1-D
-    data, else a list of squeezed per-dimension arrays), the squeezed value
-    array, and the loaded dataset itself (for further chaining).
+    ``(grid, values, gdata)``: the squeezed grid (a list of squeezed
+    per-dimension arrays -- ``GDataState.grid`` never hands back a bare
+    ``ndarray``), the squeezed value array, and the loaded dataset itself
+    (for further chaining).
   """
   gdata = GData(file_name)
   grid = gdata.get_grid()
   values = gdata.get_values()
-  if isinstance(grid, np.ndarray):
-    grid_out = np.squeeze(grid)
-  else:
-    grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
-  # end
+  grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
   return grid_out, np.squeeze(values), gdata
 
 
 def read_gfile_if_present(
     file_name: str,
-) -> tuple[bool, list[np.ndarray] | np.ndarray | None, np.ndarray | None, GData | None]:
+) -> tuple[bool, list[np.ndarray] | None, np.ndarray | None, GData | None]:
   """Read a Gkeyll file if it exists.
 
   Args:
@@ -66,9 +66,27 @@ def read_gfile_if_present(
   return True, grid, values, gdata
 
 
+def read_time_trace_if_present(
+    file_name: str,
+) -> tuple[bool, np.ndarray | None, np.ndarray | None, GData | None]:
+  """Read a 1-D time-trace file if present: ``(found, time, values, gdata)``.
+
+  ``read_gfile_if_present`` always returns the grid as a *list* of
+  per-dimension arrays (``GDataState.grid`` never hands back a bare
+  ``ndarray``, only a list of one for 1-D data) -- this unwraps that single
+  entry into the plain time array every trace in
+  :mod:`~postgkyl.diagnostics.gyrokinetics.energy_balance`/
+  :mod:`~postgkyl.diagnostics.gyrokinetics.particle_balance` is indexed
+  against.
+  """
+  found, grid, values, gdata = read_gfile_if_present(file_name)
+  time = grid[0] if found else None
+  return found, time, values, gdata
+
+
 def read_interp_gfile(file_name: str, poly_order: int, basis_type: str,
     comp: int | str | None = None,
-    ) -> tuple[list[np.ndarray] | np.ndarray, np.ndarray, GData]:
+    ) -> tuple[list[np.ndarray], np.ndarray, GData]:
   """Read a Gkeyll file and interpolate it onto a uniform mesh.
 
   Args:
@@ -81,8 +99,8 @@ def read_interp_gfile(file_name: str, poly_order: int, basis_type: str,
       every component.
 
   Returns:
-    ``(grid, values, gdata)``: the squeezed interpolated grid/values and the
-    interpolated dataset.
+    ``(grid, values, gdata)``: the squeezed interpolated grid (a list of
+    squeezed per-dimension arrays) and values, and the interpolated dataset.
   """
   gdata = GData(file_name)
   interpolated = gdata.interp(basis=basis_type, p=poly_order)
@@ -91,12 +109,15 @@ def read_interp_gfile(file_name: str, poly_order: int, basis_type: str,
   # end
   grid = interpolated.get_grid()
   values = interpolated.get_values()
-  if isinstance(grid, np.ndarray):
-    grid_out = np.squeeze(grid)
-  else:
-    grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
-  # end
+  grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
   return grid_out, np.squeeze(values), interpolated
+
+
+def set_tick_font_size(ax, size: float) -> None:
+  """Set an axes' tick-label and offset-text font size to ``size``."""
+  ax.tick_params(axis="both", labelsize=size)
+  ax.yaxis.get_offset_text().set_size(size)
+  ax.xaxis.get_offset_text().set_size(size)
 
 
 def dict_get_bool(dict_in: dict, key: str, default: bool) -> bool:
