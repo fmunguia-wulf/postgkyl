@@ -260,13 +260,13 @@ def test_dataspace_is_iterable():
   assert list(ds) == [1, 2, 3]
 
 
-def test_cli_write_command(tmp_path):
+def test_cli_save_command(tmp_path):
   from click.testing import CliRunner
   from postgkyl.cli.app import cli
 
   out = tmp_path / "written.txt"
   result = CliRunner().invoke(cli, [
-      F1, "interp", "sel", "--comp", "0", "write", "-o", str(out), "-f", "txt"])
+      F1, "interp", "sel", "--comp", "0", "save", "-o", str(out), "-f", "txt"])
   assert result.exit_code == 0, result.output
   assert out.exists()
   assert "wrote" in result.output
