@@ -24,6 +24,7 @@ from .select import select
 from .info import info
 from .integrate import integrate, integrate_axis
 from .average import average
+from .eval_at_coord_proj import eval_at_coord_proj
 from .plot import plot
 from .animate import animate
 from .represent import apply, represent
@@ -42,6 +43,7 @@ from .evaluate import available_operators as available_evaluate_operators, evalu
 from .map import map
 
 __all__ = ["interpolate", "select", "info", "integrate", "integrate_axis", "average",
+    "eval_at_coord_proj",
     "plot", "animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",

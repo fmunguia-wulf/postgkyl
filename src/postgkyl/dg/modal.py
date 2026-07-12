@@ -121,6 +121,50 @@ def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
   return keep_dirs, cells_avg, out
 
 
+def differentiate(basis_type: str, ndim: int, poly_order: int, a: GkylArray,
+    dir: int, diff_order: int, dx: float) -> GkylArray:
+  """``d^diff_order/dx_dir^diff_order a``, field by field
+  (``gkyl_dg_differentiate_op_local`` -- exact on the polynomial each cell
+  already represents; no inter-cell stencil). The field loop lives in the
+  shim (like :func:`weak_mul`), so this is a direct pass-through."""
+  return gpython.kernels.weak_differentiate(basis_type, ndim, poly_order,
+      dir, diff_order, dx, a)
+
+
+def eval_at_coord_proj(grid: dict, basis_type: str, ndim: int,
+    poly_order: int, a: GkylArray, eval_dirs, eval_coords):
+  """Evaluate a modal field at ``eval_coords`` in ``eval_dirs`` and project
+  onto the surviving directions' target basis (``gkyl_dg_eval_at_coord_proj``).
+
+  ``grid`` is the donor grid dict (``ndim``/``lower``/``upper``/``cells``,
+  e.g. from ``rio``). The donor's configuration-space dimension count (needed
+  by the underlying updater) is derived from ``basis_type``/``ndim`` via
+  ``gpython.basis.cdim_vdim``.
+
+  Returns:
+    ``(keep_dirs, cells_tar, out, target_basis_type, target_poly_order,
+    target_cdim, target_vdim)`` -- ``keep_dirs``/``cells_tar`` follow the
+    same full-reduction convention :func:`average` uses (empty/``[1]`` when
+    every donor direction is evaluated away, since Gkeyll always keeps at
+    least one target dimension).
+  """
+  eval_dirs = sorted(set(int(d) for d in eval_dirs))
+  if not eval_dirs or eval_dirs[0] < 0 or eval_dirs[-1] >= ndim:
+    raise ValueError(
+        f"eval_dirs {eval_dirs} out of range for a {ndim}D field")
+  keep_dirs = [d for d in range(ndim) if d not in eval_dirs]
+  cells = np.asarray(grid["cells"])
+  ndim_tar = len(keep_dirs) if keep_dirs else 1
+  cells_tar = [int(cells[d]) for d in keep_dirs] if keep_dirs else [1]
+  cdim_do, _vdim_do = gpython.basis.cdim_vdim(basis_type, ndim)
+
+  out, btype, poly_order_tar, cdim_tar, vdim_tar = (
+      gpython.kernels.eval_at_coord_proj(basis_type, ndim, poly_order,
+          cdim_do, grid, eval_dirs, eval_coords, ndim_tar, cells_tar, a))
+  return (keep_dirs, cells_tar, out, btype, poly_order_tar, cdim_tar,
+      vdim_tar)
+
+
 def power(basis_type: str, ndim: int, poly_order: int,
     a: GkylArray, exponent) -> GkylArray:
   """``f ** n`` for a positive integer ``n``, as repeated weak multiplies."""

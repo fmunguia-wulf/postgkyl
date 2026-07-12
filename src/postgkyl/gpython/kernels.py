@@ -372,3 +372,160 @@ def integrate(grid: dict, basis_type: str, poly_order: int, a: GkylArray,
                      f"({int(np.prod(cells))} vs {a.size} cells)")
   return _lib.require().array_integrate(lower, upper, cells, basis._cap,
       nfields, INTEGRATE_OPS[op], float(factor), a._cap)
+
+
+# --------------------------------------------------------------- differentiate
+# gkyl_dg_differentiate_op_local's kernel tables (gkyl_dg_differentiate_priv.h
+# ser_differentiate_list/ten_differentiate_list) cover only serendipity and
+# tensor, with NO bounds check at all in the dispatch (an unconditional
+# `assert(diff_op)` on a NULL table entry -- a process abort, not a Python
+# exception), so this guard must run before every call.
+_DIFFERENTIATE_MAX_POLY_ORDER = {
+    "serendipity": {1: 2, 2: 2, 3: 1},
+    "tensor": {1: 2, 2: 2},  # ndim 3: no tensor differentiate kernels at all
+}
+
+
+def _check_differentiate(basis_type: str, ndim: int, poly_order: int,
+    dir: int, diff_order: int):
+  basis_type = basis_type.lower()
+  limits = _DIFFERENTIATE_MAX_POLY_ORDER.get(basis_type)
+  if limits is None:
+    raise NotImplementedError(
+        f"gkyl_dg_differentiate_op_local supports serendipity/tensor, not "
+        f"'{basis_type}'")
+  max_p = limits.get(ndim)
+  if max_p is None:
+    raise NotImplementedError(
+        f"Gkeyll's {basis_type} differentiate kernels support ndim "
+        f"{sorted(limits)}, got {ndim}")
+  if not 1 <= poly_order <= max_p:
+    raise NotImplementedError(
+        f"Gkeyll's {basis_type} differentiate kernels in {ndim}D support "
+        f"poly_order 1..{max_p}, got {poly_order}")
+  if not 0 <= dir < ndim:
+    raise ValueError(f"differentiate dir {dir} out of range for a {ndim}D "
+                     "field")
+  if diff_order not in (1, 2):
+    raise ValueError(f"differentiate order must be 1 or 2, got {diff_order}")
+
+
+def weak_differentiate(basis_type: str, ndim: int, poly_order: int, dir: int,
+    diff_order: int, dx: float, a: GkylArray) -> GkylArray:
+  """Local DG derivative ``d^diff_order/dx_dir^diff_order a`` via
+  ``gkyl_dg_differentiate_op_local``, field by field.
+
+  Differentiates the DG expansion independently in every cell (no
+  inter-cell stencil) -- an exact derivative of the polynomial each cell
+  already represents, not a finite-difference approximation across cells.
+  Serendipity/tensor only (a Gkeyll limit); ``dx`` is the cell length along
+  ``dir``.
+  """
+  _check_differentiate(basis_type, ndim, poly_order, dir, diff_order)
+  basis = get_basis(basis_type, ndim, poly_order)
+  out = GkylArray.alloc(a.ncomp, a.size)
+  _lib.require().dg_differentiate(basis._cap, dir, diff_order, float(dx),
+      out._cap, a._cap)
+  return out
+
+
+# ------------------------------------------------------- evaluate-and-project
+# gkyl_dg_eval_at_coord_proj's own dispatch (gkyl_dg_eval_at_coord_proj_priv.h)
+# covers serendipity (ndim 1-4 at p1-p2, ndim 5-6 at p1 only), tensor (ndim
+# 1 and 3 at p1 only, ndim 2 at p1-p2), and gkhybrid (p1 only, at the same
+# (cdim, vdim) combinations basis.py's own hybrid table already recognizes).
+# Plain "hybrid" is not in that dispatch's switch at all. Like the tables
+# above, an out-of-coverage combination is a process abort (an unconditional
+# `assert(kers->ev_ker)` on a NULL table entry), not a Python exception.
+_EVAL_AT_COORD_PROJ_MAX_POLY_ORDER = {
+    "serendipity": {1: 2, 2: 2, 3: 2, 4: 2, 5: 1, 6: 1},
+    "tensor": {1: 1, 2: 2, 3: 1},
+}
+
+# gkyl_basis_type ordinals (gkeyll/core/zero/gkyl_basis.h) -- the target
+# basis pg0_eval_at_coord_proj reports can differ in TYPE from the donor
+# (e.g. eliminating a gkhybrid velocity direction can yield a plain
+# serendipity target), so its ordinal must be translated back to postgkyl's
+# string vocabulary here.
+_BASIS_TYPE_ORDINALS = {
+    0: "serendipity",
+    1: "tensor",
+    2: "hybrid",
+    3: "gkhybrid",
+    4: "gkhybrid_vel",
+}
+
+
+def _check_eval_at_coord_proj(basis_type: str, ndim: int, poly_order: int,
+    eval_dirs):
+  basis_type = basis_type.lower()
+  if basis_type == "gkhybrid":
+    if poly_order != 1:
+      raise NotImplementedError(
+          "gkyl_dg_eval_at_coord_proj's gkhybrid kernels exist at "
+          f"poly_order 1 only, got {poly_order}")
+  else:
+    limits = _EVAL_AT_COORD_PROJ_MAX_POLY_ORDER.get(basis_type)
+    if limits is None:
+      raise NotImplementedError(
+          "gkyl_dg_eval_at_coord_proj supports serendipity/tensor/gkhybrid, "
+          f"not '{basis_type}'")
+    max_p = limits.get(ndim)
+    if max_p is None:
+      raise NotImplementedError(
+          f"Gkeyll's {basis_type} eval_at_coord_proj kernels support ndim "
+          f"{sorted(limits)}, got {ndim}")
+    if not 1 <= poly_order <= max_p:
+      raise NotImplementedError(
+          f"Gkeyll's {basis_type} eval_at_coord_proj kernels in {ndim}D "
+          f"support poly_order 1..{max_p}, got {poly_order}")
+  eval_dirs = sorted(set(int(d) for d in eval_dirs))
+  if not eval_dirs or eval_dirs[0] < 0 or eval_dirs[-1] >= ndim:
+    raise ValueError(f"eval_dirs {eval_dirs} out of range for a {ndim}D "
+                     "field")
+  return eval_dirs
+
+
+def eval_at_coord_proj(basis_type: str, ndim: int, poly_order: int,
+    cdim_do: int, grid: dict, eval_dirs, eval_coords, ndim_tar: int,
+    cells_tar, a: GkylArray):
+  """Evaluate ``a`` at ``eval_coords`` in ``eval_dirs`` and project onto the
+  lower-dimensional target basis Gkeyll picks for that elimination, via
+  ``gkyl_dg_eval_at_coord_proj``.
+
+  ``grid`` is the donor grid dict (``ndim``/``lower``/``upper``/``cells``,
+  e.g. from ``rio``). ``cdim_do`` is the donor's configuration-space
+  dimension count (equal to ``ndim`` for serendipity/tensor; the (cdim,
+  vdim) split for gkhybrid -- see ``basis._HYBRID_CDIM_VDIM``).
+  ``ndim_tar``/``cells_tar`` describe the target's rectangular index range
+  with the same convention :func:`array_average` uses: the surviving donor
+  dims' cell counts in donor order, or ``ndim_tar=1``/``cells_tar=[1]`` for
+  a full reduction (every donor direction evaluated away).
+
+  Returns:
+    ``(out, target_basis_type, target_poly_order, target_cdim,
+    target_vdim)`` -- the target array, field by field like the donor
+    (``ncomp`` scaled to the donor's field count), and the target basis's
+    metadata (which can differ in TYPE from the donor's, e.g. eliminating a
+    gkhybrid velocity direction can yield a plain serendipity target).
+  """
+  eval_dirs = _check_eval_at_coord_proj(basis_type, ndim, poly_order,
+      eval_dirs)
+  basis = get_basis(basis_type, ndim, poly_order)
+  lower = np.asarray(grid["lower"], dtype=np.float64)
+  upper = np.asarray(grid["upper"], dtype=np.float64)
+  cells = np.asarray(grid["cells"], dtype=np.int32)
+  if int(np.prod(cells)) != a.size:
+    raise ValueError(f"grid cells {tuple(cells)} do not cover the array "
+                     f"({int(np.prod(cells))} vs {a.size} cells)")
+  eval_dirs_arr = np.asarray(eval_dirs, dtype=np.int32)
+  eval_coords_arr = np.asarray(eval_coords, dtype=np.float64)
+  if eval_coords_arr.shape != eval_dirs_arr.shape:
+    raise ValueError("eval_dirs and eval_coords must have the same length")
+  cells_tar = np.asarray(cells_tar, dtype=np.int32)
+  out_cap, btype, poly_order_tar, cdim_tar, vdim_tar = (
+      _lib.require().eval_at_coord_proj(basis._cap, int(cdim_do), lower,
+          upper, cells, eval_dirs_arr, eval_coords_arr, int(ndim_tar),
+          cells_tar, a._cap))
+  return (GkylArray(out_cap), _BASIS_TYPE_ORDINALS[btype], poly_order_tar,
+      cdim_tar, vdim_tar)

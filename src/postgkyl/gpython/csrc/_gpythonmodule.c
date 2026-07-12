@@ -757,6 +757,110 @@ fail:
   return NULL;
 }
 
+/* ------------------------------------------------------- differentiate */
+static PyObject *
+py_dg_differentiate(PyObject *self, PyObject *args)
+{
+  PyObject *bcap, *ocap, *icap;
+  int dir, diff_order;
+  double dx;
+  if (!PyArg_ParseTuple(args, "OiidOO", &bcap, &dir, &diff_order, &dx, &ocap,
+          &icap))
+    return NULL;
+  pg0_basis *b = basis_arg(bcap);
+  pg0_array *out = array_arg(ocap), *in = array_arg(icap);
+  if (!b || !out || !in)
+    return NULL;
+  if (pg0_dg_differentiate(b, dir, diff_order, dx, out, in) != 0) {
+    PyErr_SetString(PyExc_ValueError,
+        "dg_differentiate: operand shapes incompatible with the basis, or "
+        "dir/diff_order out of range");
+    return NULL;
+  }
+  Py_RETURN_NONE;
+}
+
+/* ---------------------------------------------------- evaluate-and-project */
+static PyObject *
+py_eval_at_coord_proj(PyObject *self, PyObject *args)
+{
+  PyObject *bcap, *loobj, *upobj, *ncobj, *evaldirsobj, *evalcoordsobj,
+      *ncavgobj, *icap;
+  int cdim_do, ndim_tar;
+  if (!PyArg_ParseTuple(args, "OiOOOOOiOO", &bcap, &cdim_do, &loobj, &upobj,
+          &ncobj, &evaldirsobj, &evalcoordsobj, &ndim_tar, &ncavgobj, &icap))
+    return NULL;
+  pg0_basis *b = basis_arg(bcap);
+  pg0_array *in = array_arg(icap);
+  if (!b || !in)
+    return NULL;
+  PyArrayObject *lo = (PyArrayObject *)PyArray_FROM_OTF(
+      loobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *up = (PyArrayObject *)PyArray_FROM_OTF(
+      upobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *nc = (PyArrayObject *)PyArray_FROM_OTF(
+      ncobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *evaldirs = (PyArrayObject *)PyArray_FROM_OTF(
+      evaldirsobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *evalcoords = (PyArrayObject *)PyArray_FROM_OTF(
+      evalcoordsobj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyArrayObject *ncavg = (PyArrayObject *)PyArray_FROM_OTF(
+      ncavgobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  if (!lo || !up || !nc || !evaldirs || !evalcoords || !ncavg)
+    goto fail;
+  int ndim = (int)PyArray_SIZE(lo);
+  int num_eval = (int)PyArray_SIZE(evaldirs);
+  if (ndim < 1 || ndim > PG0_MAX_DIM || PyArray_SIZE(up) != ndim ||
+      PyArray_SIZE(nc) != ndim) {
+    PyErr_SetString(PyExc_ValueError,
+        "eval_at_coord_proj: grid arrays must share ndim <= 7");
+    goto fail;
+  }
+  if (PyArray_SIZE(evalcoords) != num_eval) {
+    PyErr_SetString(PyExc_ValueError,
+        "eval_at_coord_proj: eval_dirs and eval_coords must have the same "
+        "length");
+    goto fail;
+  }
+  if (ndim_tar < 1 || ndim_tar > PG0_MAX_DIM || PyArray_SIZE(ncavg) != ndim_tar) {
+    PyErr_SetString(PyExc_ValueError,
+        "eval_at_coord_proj: cells_tar must have between 1 and 7 entries "
+        "matching ndim_tar");
+    goto fail;
+  }
+  int out_btype, out_poly_order, out_cdim, out_vdim;
+  pg0_array *out = pg0_eval_at_coord_proj(b, cdim_do, ndim,
+      PyArray_DATA(lo), PyArray_DATA(up), PyArray_DATA(nc), num_eval,
+      PyArray_DATA(evaldirs), PyArray_DATA(evalcoords), ndim_tar,
+      PyArray_DATA(ncavg), in, &out_btype, &out_poly_order, &out_cdim,
+      &out_vdim);
+  Py_DECREF(lo);
+  Py_DECREF(up);
+  Py_DECREF(nc);
+  Py_DECREF(evaldirs);
+  Py_DECREF(evalcoords);
+  Py_DECREF(ncavg);
+  if (!out) {
+    PyErr_SetString(PyExc_ValueError,
+        "eval_at_coord_proj: operand shapes incompatible with the "
+        "basis/grid, or eval_dirs out of range");
+    return NULL;
+  }
+  PyObject *outcap = wrap_array(out);
+  if (!outcap)
+    return NULL;
+  return Py_BuildValue("(Niiii)", outcap, out_btype, out_poly_order,
+      out_cdim, out_vdim);
+fail:
+  Py_XDECREF(lo);
+  Py_XDECREF(up);
+  Py_XDECREF(nc);
+  Py_XDECREF(evaldirs);
+  Py_XDECREF(evalcoords);
+  Py_XDECREF(ncavg);
+  return NULL;
+}
+
 /* --------------------------------------------------------- dynvectors */
 static PyObject *
 py_dynvec_read(PyObject *self, PyObject *args)
@@ -867,6 +971,12 @@ static PyMethodDef gpython_methods[] = {
     "int dx op(f) per field" },
   { "array_average", py_array_average, METH_VARARGS,
     "weighted (or plain) average over the flagged dims (single field)" },
+  { "dg_differentiate", py_dg_differentiate, METH_VARARGS,
+    "local DG derivative (per field, no inter-cell stencil)" },
+  { "eval_at_coord_proj", py_eval_at_coord_proj, METH_VARARGS,
+    "evaluate at coords and project onto the lower-dim target basis; "
+    "returns (array, target_btype, target_poly_order, target_cdim, "
+    "target_vdim)" },
   { "write_field", py_write_field, METH_VARARGS,
     "write (lower, upper, cells, meta_bytes_or_None, array) to a .gkyl file" },
   { "dynvec_read", py_dynvec_read, METH_VARARGS,

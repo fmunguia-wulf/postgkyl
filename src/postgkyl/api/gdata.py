@@ -94,6 +94,20 @@ class GData(GDataState):
     return ops.average(self, dims, weight=weight, inplace=inplace, tag=tag,
         label=label)
 
+  def eval_at_coord_proj(self, eval_dirs, eval_coords, *,
+      inplace: bool = False, tag: str | None = None,
+      label: str | None = None) -> "GData":
+    """Evaluate modal data at physical coordinates in ``eval_dirs`` and
+    project onto the surviving directions' target basis, via
+    ``gkyl_dg_eval_at_coord_proj`` (see ``ops.eval_at_coord_proj``).
+
+    Runs inside Gkeyll on native modal (pre-``interpolate()``) data, like
+    ``.average()``; produces a new, lower-dimensional dataset, still modal
+    and gkyl-native.
+    """
+    return ops.eval_at_coord_proj(self, eval_dirs, eval_coords,
+        inplace=inplace, tag=tag, label=label)
+
   # --------------------------------------- representation changes (explicit)
   # Conversions never happen implicitly — these verbs are the only doorway
   # between the modal / nodal / quadrature representations (all gkyl-native).

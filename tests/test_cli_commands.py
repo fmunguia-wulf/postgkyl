@@ -362,6 +362,25 @@ class TestAverage:
     assert "Number of dimensions: 1" in result.output
 
 
+class TestEvalAtCoordProj:
+  @needs_gkeyll
+  def test_requires_at_least_one_coordinate_flag(self):
+    result = _run([F1, "evalatcoordproj"])
+    assert result.exit_code != 0
+    assert "at least one --z0" in result.output
+
+  @needs_gkeyll
+  def test_eliminates_the_chosen_direction(self):
+    result = _ok([F1, "evalatcoordproj", "--z0", "0.0", "info"])
+    assert "Number of dimensions: 1" in result.output
+    assert "Dim 0: Num. cells: 1;" in result.output
+
+  @needs_gkeyll
+  def test_on_interpolated_data_fails_closed(self):
+    result = _run([F1, "interp", "evalatcoordproj", "--z0", "0.0"])
+    assert result.exit_code != 0
+
+
 # ---------------------------------------------------------------------------
 # animate (Agg-safe: saveframes writes PNGs instead of opening a window).
 # ---------------------------------------------------------------------------

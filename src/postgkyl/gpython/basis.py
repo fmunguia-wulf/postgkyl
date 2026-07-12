@@ -134,6 +134,25 @@ def num_basis(basis_type: str, ndim: int, poly_order: int) -> int:
   return get_basis(basis_type, ndim, poly_order).num_basis
 
 
+def cdim_vdim(basis_type: str, ndim: int) -> tuple[int, int]:
+  """``(cdim, vdim)`` for a basis: the hybrid/gkhybrid split from
+  :data:`_HYBRID_CDIM_VDIM`, or ``(ndim, 0)`` for a plain configuration-space
+  basis (serendipity/tensor have no velocity-space concept).
+
+  Raises:
+    ValueError: ``basis_type`` is hybrid/gkhybrid and ``ndim`` is not one of
+      the ``(cdim, vdim)`` combinations Gkeyll generates kernels for.
+  """
+  basis_type = basis_type.lower()
+  if basis_type in _HYBRID_CDIM_VDIM:
+    cdim_vdim_ = _HYBRID_CDIM_VDIM[basis_type].get(ndim)
+    if cdim_vdim_ is None:
+      raise ValueError(f"Gkeyll's {basis_type} basis supports ndim "
+                       f"{sorted(_HYBRID_CDIM_VDIM[basis_type])}, got {ndim}")
+    return cdim_vdim_
+  return (ndim, 0)
+
+
 def interpolation_points_1d(num_interp: int) -> np.ndarray:
   """Subcell-center evaluation points on [-1, 1] (legacy postgkyl convention)."""
   n = num_interp
