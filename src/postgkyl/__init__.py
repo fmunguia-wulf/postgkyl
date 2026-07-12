@@ -16,7 +16,7 @@ owns it and simply gathered here:
     integrate                        <- ops/       (grid integral, via Gkeyll)
     interpolate/interp, select/sel   <- ops/       (functional verb spellings)
     represent, apply                 <- ops/       (representation verbs)
-    write                            <- io/        (file output)
+    save                             <- io/        (file output)
     load_gk_quantity,                <- diagnostics/gyrokinetics/
     load_gk_distf, available_gk_quantities        (equation-internal loaders)
 

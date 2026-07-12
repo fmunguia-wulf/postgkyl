@@ -65,7 +65,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 # fluent spelling: either a GData instance method, or a module-level function
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
-INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "write",
+INSTANCE_VERBS = ["interp", "interpolate", "sel", "select", "plot", "save",
     "mul", "div", "integrate", "to_modal", "to_nodal", "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
     "differentiate", "map"]
@@ -290,7 +290,7 @@ class TestDatasetGroup:
 
   def test_broadcast_write_returns_a_list_of_paths(self, tmp_path):
     g = ApiDatasetGroup(self._frames())
-    paths = g.write(out_name=str(tmp_path / "frame"))
+    paths = g.save(out_name=str(tmp_path / "frame"))
     assert isinstance(paths, list)
     assert len(paths) == 3
     for p in paths:
@@ -366,7 +366,7 @@ class TestFacade:
   def test_documented_names_resolve(self):
     for name in ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
         "interpolate", "interp", "select", "sel", "represent", "apply",
-        "write", "collect", "ev", "relchange", "animate", "__version__"]:
+        "save", "collect", "ev", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
 
   def test_all_is_consistent(self):
