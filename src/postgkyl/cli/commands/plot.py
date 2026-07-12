@@ -312,12 +312,12 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
       plt.savefig(f"{saveframes}_{i}.png", dpi=dpi)
     # end
 
-    if ds.batch:
+    if ds.batch and not (save or saveas or saveframes):
       plt.savefig(f"{ds.prefix}_{i}.png", dpi=dpi)
     # end
   # end
 
-  if save or saveas:
+  if (save or saveas) and file_name:
     plt.savefig(str(file_name), dpi=dpi)
   # end
 
