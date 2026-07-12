@@ -5,7 +5,7 @@ drop-in: create ``commands/<verb>.py`` with a ``command`` and add it to
 ``COMMANDS`` below (or discover via entry points).
 """
 
-from . import load, interpolate, select, plot, info, write
+from . import load, interpolate, save, select, plot, info
 
 COMMANDS = [
     load.command,
@@ -13,7 +13,7 @@ COMMANDS = [
     select.command,
     plot.command,
     info.command,
-    write.command,
+    save.command,
 ]
 
 __all__ = ["COMMANDS"]
