@@ -122,7 +122,7 @@ def _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx) -
     np.array(lo, dtype=dtf).tofile(fh, sep="")
     np.array(up, dtype=dtf).tofile(fh, sep="")
     np.array([num_comps * 8], dtype=dti).tofile(fh, sep="")  # elem_sz
-    np.array([np.size(values)], dtype=dti).tofile(fh, sep="")  # asize
+    np.array([int(np.prod(num_cells))], dtype=dti).tofile(fh, sep="")  # asize
     np.array(values, dtype=dtf).tofile(fh, sep="")
 
 
