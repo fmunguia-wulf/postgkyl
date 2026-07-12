@@ -295,17 +295,27 @@ def save_rotating_plotly_figure(fig, file_name: str,
   with tempfile.TemporaryDirectory(prefix="pgkyl_rotate_") as tmp_dir:
     frame_pattern = os.path.join(tmp_dir, "frame_%05d.png")
     num_frames = max(2, int(round(float(fps) * float(rotation_period))))
-    for idx in range(num_frames):
-      theta = np.deg2rad(starting_azimuthal_angle + 360.0 * idx / num_frames)
-      camera = dict(
-          eye=dict(x=float(xy_radius * np.cos(theta)),
-                   y=float(xy_radius * np.sin(theta)), z=float(z_eye)),
-          up=dict(x=0.0, y=0.0, z=1.0), center=dict(x=0.0, y=0.0, z=0.0))
-      fig.update_layout(**{name: dict(camera=camera) for name in scene_names})
-      png_bytes = fig.to_image(format="png")
-      with open(os.path.join(tmp_dir, f"frame_{idx:05d}.png"), "wb") as frame_file:
-        frame_file.write(png_bytes)
+    # Kaleido launches a fresh headless-Chrome process per to_image() call
+    # unless a persistent render server is running; for a multi-frame export
+    # that means one Chrome startup per frame. Hold the server open for the
+    # whole loop so only the first frame pays that cost.
+    import kaleido
+    kaleido.start_sync_server(silence_warnings=True)
+    try:
+      for idx in range(num_frames):
+        theta = np.deg2rad(starting_azimuthal_angle + 360.0 * idx / num_frames)
+        camera = dict(
+            eye=dict(x=float(xy_radius * np.cos(theta)),
+                     y=float(xy_radius * np.sin(theta)), z=float(z_eye)),
+            up=dict(x=0.0, y=0.0, z=1.0), center=dict(x=0.0, y=0.0, z=0.0))
+        fig.update_layout(**{name: dict(camera=camera) for name in scene_names})
+        png_bytes = fig.to_image(format="png")
+        with open(os.path.join(tmp_dir, f"frame_{idx:05d}.png"), "wb") as frame_file:
+          frame_file.write(png_bytes)
+        # end
       # end
+    finally:
+      kaleido.stop_sync_server(silence_warnings=True)
     # end
 
     if ext == ".mp4":

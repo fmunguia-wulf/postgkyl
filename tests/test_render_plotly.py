@@ -449,15 +449,20 @@ class TestSaveRotatingPlotlyFigure:
 
   @needs_ffmpeg
   def test_gif_export_end_to_end(self, tmp_path):
+    # fps * rotation_period = 2 -- the minimum frame count that still
+    # exercises the multi-frame rotation loop (fewer, and the `max(2, ...)`
+    # floor in save_rotating_plotly_figure would hide fps/rotation_period
+    # from the frame count entirely). Each frame drives a real Kaleido
+    # render, so keeping this small matters for test runtime.
     out = tmp_path / "out.gif"
-    save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 4, 1.0, 2.0)
+    save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 2, 1.0, 1.0)
     assert out.exists()
     assert out.stat().st_size > 0
 
   @needs_ffmpeg
   def test_mp4_export_end_to_end(self, tmp_path):
     out = tmp_path / "out.mp4"
-    save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 4, 1.0, 2.0)
+    save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 2, 1.0, 1.0)
     assert out.exists()
     assert out.stat().st_size > 0
 
