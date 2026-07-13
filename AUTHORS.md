@@ -4,7 +4,6 @@
 
 - Ammar Hakim (PPPL) <ahakim@pppl.gov>
 - Petr Cagas (HZDR/CASUS) <p.cagas@hzdr.de>
-- Maxwell Rosen (PPPL) <mhrosen@pppl.gov>
 
 ## Contributors (ultra alphabetically)
 
