@@ -249,10 +249,8 @@ def _(
     PgkylSession, dir_input, direction, extra, field_dropdown, frames,
     gk_extra, info, load_mode, plt, quantity, simprefix, species,
 ):
-    # --- probe the selected field's grid (for dynamic select sliders) -------
-    # Load the first frame only (bounds are independent of frame & of the later
-    # interpolation), so the select sliders stay put while scrubbing frames.
-    def _probe_grid():
+    # --- probe the RAW field's grid (for transform bounds like x_idx) -------
+    def _probe_base_grid():
         try:
             plt.close("all")
             pg = PgkylSession()
@@ -281,12 +279,79 @@ def _(
             return {"ok": True, "ndim": ndim, "dims": dims,
                     "ncomps": int(dat.get_num_comps())}
         except Exception as exc:
-            print("Error probing grid:", exc)
             return {"ok": False, "msg": f"{type(exc).__name__}: {exc}"}
 
-    grid_info = _probe_grid()
-    return (grid_info,)
+    base_grid_info = _probe_base_grid()
+    return (base_grid_info,)
 
+@app.cell
+def _(
+    PgkylSession, dir_input, direction, extra, field_dropdown, frames,
+    gk_extra, info, load_mode, plt, quantity, simprefix, species,
+    transform, interp_pts, mapc2p_file, phi_tor_val, x_idx
+):
+    # --- probe the TRANSFORMED grid (for dynamic select sliders) ------------
+    def _probe_transformed_grid():
+        try:
+            plt.close("all")
+            pg = PgkylSession()
+            
+            # 1) Load
+            if load_mode.value == "gk-load-quantity":
+                if not (quantity.value and simprefix.value and frames):
+                    return {"ok": False, "msg": "Choose a quantity and a sim prefix."}
+                pg.gk_load_quantity(
+                    quantity=quantity.value, name=simprefix.value,
+                    path=dir_input.value.strip(), frame=str(frames[0]),
+                    species=species.value.strip() or None,
+                    extra=gk_extra(direction, extra))
+            else:
+                if not field_dropdown.value:
+                    return {"ok": False, "msg": "No field selected."}
+                src = (f"{info['stem']}_{info['frames'][0]}.gkyl"
+                       if info["type"] == "series" else info["path"])
+                pg.load(src)
+
+            # 2) Transform
+            def _opt(widget):
+                v = (widget.value or "").strip()
+                return v or None
+
+            if transform.value == "interpolate":
+                pg.interpolate(interp=int(interp_pts.value) if interp_pts.value else None)
+            elif transform.value == "dg-local-poly":
+                pg.dg_local_poly(npoints=int(interp_pts.value) if interp_pts.value else 2)
+            elif transform.value == "gk-rz":
+                phi_rad = float(phi_tor_val.value) * 3.141592653589793 / 180.0
+                pg.gk_rz(
+                    mapc2p=_opt(mapc2p_file), 
+                    phi_tor=phi_rad, 
+                    nz_interp=int(interp_pts.value) if interp_pts.value else 8
+                )
+            elif transform.value == "gk-fluxsurf":
+                pg.gk_fluxsurf(
+                    mapc2p=_opt(mapc2p_file), 
+                    x_idx=int(x_idx.value) if x_idx.value else 0,
+                    nz_interp=int(interp_pts.value) if interp_pts.value else 8
+                )
+            
+            # 3) Probe the resulting data bounds
+            dat = next(pg.data.iterator(None))
+            lo, up = dat.get_bounds()
+            ncells = dat.get_num_cells()
+            ndim = dat.get_num_dims()
+            dims = [
+                {"lo": float(lo[i]), "up": float(up[i]), "n": int(ncells[i])}
+                for i in range(ndim)
+            ]
+            return {"ok": True, "ndim": ndim, "dims": dims,
+                    "ncomps": int(dat.get_num_comps())}
+        except Exception as exc:
+            print("Error probing transformed grid:", exc)
+            return {"ok": False, "msg": f"{type(exc).__name__}: {exc}"}
+
+    grid_info = _probe_transformed_grid()
+    return (grid_info,)
 
 @app.cell
 def _(
@@ -367,10 +432,10 @@ def _(mo):
 
 
 @app.cell
-def _(get_xidx, grid_info, mo, set_xidx):
+def _(base_grid_info, get_xidx, mo, set_xidx):
     # --- processing chain: dynamic flux surface slider ----------------------
-    if grid_info.get("ok") and len(grid_info["dims"]) > 0:
-        max_x = grid_info["dims"][0]["n"] - 1
+    if base_grid_info.get("ok") and len(base_grid_info["dims"]) > 0:
+        max_x = base_grid_info["dims"][0]["n"] - 1
         _prev = get_xidx()
         _val = _prev if _prev <= max_x else 0
         x_idx = mo.ui.slider(
@@ -565,7 +630,7 @@ def _(
 
         # 3) select (slice by coordinate value from the dynamic sliders) ----
         sel_kwargs = {}
-        if grid_info.get("ok") and transform.value != "gk-rz":
+        if grid_info.get("ok"):
             for i in range(grid_info["ndim"]):
                 if sel_enables.value[i]:
                     sel_kwargs[f"z{i}"] = repr(float(sel_sliders.value[i]))
@@ -706,9 +771,7 @@ def _(
     species,
 ):
     # --- assemble select rows (one per grid dimension) ----------------------
-    if transform.value in ("gk-rz", "gk-fluxsurf"):
-        _select_block = mo.md(f"_Selection disabled for {transform.value} transform._")
-    elif grid_info.get("ok"):
+    if grid_info.get("ok"):
         _rows = [
             mo.hstack(
                 [sel_enables[i], mo.md(f"**z{i}**"), sel_sliders[i]],
