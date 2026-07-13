@@ -362,9 +362,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       nodal_grid = _get_nodal_grid(grid, cells)
       x = (nodal_grid[0] + xshift)*xscale
       y = (values[..., comp] + yshift)*yscale
-        if transpose:  # put the coordinate on the vertical axis
-          x, y = y, x
-        # end
+      if transpose:  # put the coordinate on the vertical axis
+        x, y = y, x
+      # end
       im = cax.plot(x, y, *args, color=color, label=label, markersize=markersize)
 
     elif num_dims == 2:
