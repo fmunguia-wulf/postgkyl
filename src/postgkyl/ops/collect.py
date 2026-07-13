@@ -63,6 +63,7 @@ def collect(*datasets, sumdata: bool = False, period: float | None = None,
     val = dat.values
     if sumdata:
       values.append(np.nansum(val, axis=tuple(range(dat.num_dims))))
+    # end
     else:
       values.append(val)
     # end
@@ -85,3 +86,4 @@ def collect(*datasets, sumdata: bool = False, period: float | None = None,
   out_grid = [time] if sumdata else [np.array(time)] + grid
   return states[0]._result(out_grid, values, tag=(tag or "default"),
       label=(label if label is not None else "collect"))
+# end

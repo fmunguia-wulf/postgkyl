@@ -59,12 +59,14 @@ def _parrotate(grid: list[np.ndarray], values: np.ndarray,
         "parrotate requires three-component vector fields; data has "
         f"{values.shape[-1]:d} components, rotator (after 'rotate_coords' "
         f"slicing) has {valuesrot.shape[-1]:d}")
+  # end
 
   scale = np.sum(values * valuesrot, axis=-1) / np.sum(
       valuesrot * valuesrot, axis=-1)
   outrot = scale[..., np.newaxis] * valuesrot
 
   return list(grid), outrot
+# end
 
 
 def _perprotate(grid: list[np.ndarray], values: np.ndarray,
@@ -78,6 +80,7 @@ def _perprotate(grid: list[np.ndarray], values: np.ndarray,
   grid, par = _parrotate(grid, values, rotator_values,
       rotate_coords=rotate_coords)
   return grid, values - par
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -115,6 +118,7 @@ def parrotate(array: "GDataState", rotator: "GDataState", *,
   grid, values = _parrotate(array.grid, array.values, rotator.values,
       rotate_coords=coords)
   return array._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def perprotate(array: "GDataState", rotator: "GDataState", *,
@@ -150,3 +154,4 @@ def perprotate(array: "GDataState", rotator: "GDataState", *,
   grid, values = _perprotate(array.grid, array.values, rotator.values,
       rotate_coords=coords)
   return array._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end

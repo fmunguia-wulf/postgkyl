@@ -48,4 +48,5 @@ def command(ctx, name, species, frame, suffix, num_interp, c2p_vel, mc2nu, mapc2
         mc2nu_file=mc2nu_file, mapc2p_file=mapc2p_file,
         mapc2p_vel_file=mapc2p_vel_file)
     ctx.obj.datasets.append(out)
+# end
   # end

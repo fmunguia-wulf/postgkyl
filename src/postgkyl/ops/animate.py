@@ -28,8 +28,10 @@ def animate(data, **kwargs):
   for item in data:
     if isinstance(item, GDataState):
       frames.append(materialize_for_render(item))
+    # end
     else:
       frames.append([materialize_for_render(dat) for dat in item])
     # end
   # end
   return render.animate.animate(frames, **kwargs)
+# end

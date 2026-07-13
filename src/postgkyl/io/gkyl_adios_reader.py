@@ -16,6 +16,7 @@ import numpy as np
 
 try:
   import adios2
+# end
 except ImportError:
   adios2 = None
 # end
@@ -59,6 +60,8 @@ class GkylAdiosReader:
     self.ctx = ctx if ctx is not None else {}
     if "grid_type" not in self.ctx:
       self.ctx["grid_type"] = "uniform"
+    # end
+  # end
 
   def is_compatible(self) -> bool:
     """Checks if the file can be read with the ADIOS2 reader."""
@@ -94,8 +97,10 @@ class GkylAdiosReader:
       self.is_frame = True
       fh.close()
       return True
+    # end
     except (TypeError, AttributeError, RuntimeError, FileNotFoundError, OSError):
       return False
+  # end
     # end
 
   def _create_offset_count(self, num_elems: np.ndarray, zs: tuple,
@@ -111,9 +116,11 @@ class GkylAdiosReader:
         if isinstance(z, int):
           offset[d] = z
           count[d] = 1
+        # end
         elif isinstance(z, slice):
           offset[d] = z.start
           count[d] = z.stop - z.start
+        # end
         else:
           raise TypeError("'z' is neither number or slice")
         # end
@@ -126,9 +133,11 @@ class GkylAdiosReader:
       if isinstance(comp, int):
         offset[-1] = comp
         count[-1] = 1
+      # end
       elif isinstance(comp, slice):
         offset[-1] = comp.start
         count[-1] = comp.stop - comp.start
+      # end
       else:
         raise TypeError("'comp' is neither number or slice")
       # end
@@ -137,7 +146,9 @@ class GkylAdiosReader:
 
     if cnt > 0:
       return tuple(offset), tuple(count)
+    # end
     return (), ()
+  # end
 
   def _preload_frame(self) -> None:
     fh = adios2.FileReader(self._file_name)
@@ -149,25 +160,33 @@ class GkylAdiosReader:
     available_attrs = fh.available_attributes()
     if "changeset" in available_attrs:
       self.ctx["changeset"] = fh.read_attribute_string("changeset")
+    # end
     if "builddate" in available_attrs:
       self.ctx["builddate"] = fh.read_attribute_string("builddate")
+    # end
     if "polyOrder" in available_attrs:
       self.ctx["poly_order"] = int(fh.read_attribute("polyOrder"))
       self.ctx["is_modal"] = True
+    # end
     if "basisType" in available_attrs:
       self.ctx["basis_type"] = fh.read_attribute_string("basisType")
       self.ctx["is_modal"] = True
+    # end
     if "charge" in available_attrs:
       self.ctx["charge"] = float(fh.read_attribute("charge"))
+    # end
     if "mass" in available_attrs:
       self.ctx["mass"] = float(fh.read_attribute("mass"))
+    # end
     if "time" in fh.available_variables():
       self.ctx["time"] = fh.read("time")
+    # end
     if "frame" in fh.available_variables():
       self.ctx["frame"] = fh.read("frame")
     # end
 
     fh.close()
+  # end
 
   def _load_frame(self) -> Tuple[list, np.ndarray]:
     fh = adios2.FileReader(self._file_name)
@@ -187,6 +206,7 @@ class GkylAdiosReader:
     offset, count = self._create_offset_count(num_elems, self.axes, self.comp, grid)
     if offset:
       data = fh.read(self.var_name, start=offset, count=count)
+    # end
     else:
       data = fh.read(self.var_name)
     # end
@@ -212,6 +232,7 @@ class GkylAdiosReader:
 
     fh.close()
     return grid, data
+  # end
 
   def _load_diagnostic(self) -> Tuple[list, np.ndarray]:
     fh = adios2.FileReader(self._file_name)
@@ -232,6 +253,7 @@ class GkylAdiosReader:
       if i == 0:
         data = np.atleast_1d(fh.read(data_lst[i]))
         grid = np.atleast_1d(fh.read(time_lst[i]))
+      # end
       else:
         next_data = np.atleast_1d(fh.read(data_lst[i]))
         next_grid = np.atleast_1d(fh.read(time_lst[i]))
@@ -246,6 +268,7 @@ class GkylAdiosReader:
     fh.close()
 
     return [np.squeeze(grid)], data
+  # end
 
   # ---- Exposed functions -----
   def preload(self) -> None:
@@ -255,6 +278,7 @@ class GkylAdiosReader:
       self.ctx["cells"] = self.cells
       self.ctx["lower"] = self.lower
       self.ctx["upper"] = self.upper
+  # end
     # end
 
   def load(self) -> Tuple[list, np.ndarray]:
@@ -268,11 +292,15 @@ class GkylAdiosReader:
     """
     if self.is_frame:
       grid, data = self._load_frame()
+    # end
     elif self.is_diagnostic:
       grid, data = self._load_diagnostic()
+    # end
     else:
       raise TypeError(f"'{self._file_name}' is neither a frame nor a diagnostic ADIOS2 file")
     # end
 
     self.ctx["num_comps"] = data.shape[-1]
     return grid, data
+  # end
+# end

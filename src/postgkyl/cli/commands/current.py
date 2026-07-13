@@ -26,13 +26,16 @@ def command(ctx, qbym, charge, mass, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("current: no datasets to accumulate current from")
+  # end
   results = []
   for d in pool:
     try:
       out = pg.diagnostics.multispecies.accumulate_current(d, qbym=qbym,
           charge=charge, mass=mass, tag=tag, label=label)
+    # end
     except ValueError as err:
       raise click.UsageError(str(err))
     # end
@@ -40,3 +43,4 @@ def command(ctx, qbym, charge, mass, use, tag, label) -> None:
     results.append(out)
   # end
   ctx.obj.datasets = ctx.obj.datasets + results
+# end

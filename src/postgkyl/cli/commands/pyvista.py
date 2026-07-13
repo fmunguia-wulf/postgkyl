@@ -38,8 +38,10 @@ def command(ctx, use, no_show, no_spin, max_points_per_axis, contour_levels,
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("pyvista: no datasets to plot")
+  # end
   ds = ctx.obj
   for i, d in enumerate(pool):
     save_path = saveas
@@ -51,4 +53,5 @@ def command(ctx, use, no_show, no_spin, max_points_per_axis, contour_levels,
         contour_levels=contour_levels, is_contour=not no_contour, is_log=logc,
         cmin=cmin, cmax=cmax, cmap=cmap, diverging=diverging, title=title,
         saveas=save_path)
+# end
   # end

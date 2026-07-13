@@ -68,6 +68,7 @@ def resolve_frames(
   upper = int(parts[1]) if parts[1] else available[-1] + 1
   step = int(parts[2]) if len(parts) == 3 and parts[2] else 1
   return [f for f in available if lower <= f < upper and (f - lower) % step == 0]
+# end
 
 
 def load_gk_distf(
@@ -169,6 +170,7 @@ def load_gk_distf(
   if use_mc2nu:
     out = ops.map(out, mc2nu_file, space="conf")
     grid_type.append("mc2nu")
+  # end
   elif use_mapc2p:
     out = ops.map(out, mapc2p_file, space="conf")
     grid_type.append("mapc2p")
@@ -177,3 +179,4 @@ def load_gk_distf(
     out.ctx["grid_type"] = " + ".join(grid_type)
   # end
   return out
+# end

@@ -27,3 +27,4 @@ def command(ctx, array_tag, field_tag, tag, label) -> None:
   set_active(array, False)
   set_active(field, False)
   ctx.obj.datasets.append(result)
+# end

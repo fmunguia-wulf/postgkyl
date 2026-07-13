@@ -53,6 +53,9 @@ def _transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
 
       for i in range(nx):
         out_grid[c_dim + v_idx][i, ...] += ext_u[i]
+      # end
+    # end
+  # end
 
   elif c_dim == 2:
     for v_idx in range(v_dim):
@@ -67,6 +70,10 @@ def _transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
       for i in range(nx):
         for j in range(ny):
           out_grid[c_dim + v_idx][i, j, ...] += ext_u[i, j]
+        # end
+      # end
+    # end
+  # end
 
   else:
     for v_idx in range(v_dim):
@@ -83,8 +90,14 @@ def _transform_frame(f_grid: list[np.ndarray], f_values: np.ndarray,
         for j in range(ny):
           for k in range(nz):
             out_grid[c_dim + v_idx][i, j, k, ...] += ext_u[i, j, k]
+          # end
+        # end
+      # end
+    # end
+  # end
 
   return out_grid, f_values
+# end
 
 
 # ---------------------------------------------------------------- GData verb
@@ -121,3 +134,4 @@ def transform_frame(distribution: "GDataState", bulk: "GDataState", *,
       bulk.values, cdim)
   return distribution._result(grid, values, inplace=inplace, tag=tag,
       label=label)
+# end

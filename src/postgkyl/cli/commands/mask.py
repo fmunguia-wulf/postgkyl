@@ -26,3 +26,4 @@ def command(ctx, filename, lower, upper, use, tag, label) -> None:
   mask_data = pg.load(filename) if filename else None
   apply(ctx, lambda d: d.mask(mask_data, lower=lower, upper=upper, tag=tag,
       label=label), use=use)
+# end

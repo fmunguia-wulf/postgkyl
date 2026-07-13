@@ -45,11 +45,14 @@ def _get_ctx_val(gdata: "GDataState", key: str, **kwargs):
   """``gdata.ctx[key]``, falling back to ``kwargs[key]``, else raise."""
   if key in gdata.ctx:
     return gdata.ctx[key]
+  # end
   if key in kwargs:
     return kwargs[key]
+  # end
   raise KeyError(
       f"fetch function: context key '{key}' not found in the dataset; "
       f"pass it as an extra keyword argument (e.g. {key}=<value>).")
+# end
 
 
 def _ensure_interpolated(d: "GDataState") -> "GDataState":
@@ -64,12 +67,14 @@ def _ensure_interpolated(d: "GDataState") -> "GDataState":
     return d
   # end
   return ops.interpolate(d)
+# end
 
 
 def _component(d: "GDataState", comp: int | None) -> "GDataState":
   """Interpolate ``d`` and select physical component ``comp`` (all if None)."""
   interpolated = _ensure_interpolated(d)
   return interpolated if comp is None else ops.select(interpolated, comp=comp)
+# end
 
 
 # --------------------------------------------------- generic fetch factories
@@ -80,6 +85,7 @@ def _make_fetch_comp(icomp: int | None):
   # end
   fetch.__name__ = f"fetch_comp{icomp}" if icomp is not None else "fetch_compAll"
   return fetch
+# end
 
 
 def _make_fetch_binop(si: int, ci: int, sj: int, cj: int, op):
@@ -92,6 +98,7 @@ def _make_fetch_binop(si: int, ci: int, sj: int, cj: int, op):
   # end
   fetch.__name__ = f"fetch_s{si}c{ci}_{op.__name__}_s{sj}c{cj}"
   return fetch
+# end
 
 
 # Extract a single component.
@@ -117,6 +124,7 @@ def fetch_M1_from_H(gdatas, **kwargs):
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   values = hmom.values[..., 0, np.newaxis] * hmom.values[..., 1, np.newaxis]
   return hmom._result(hmom.grid, values / mass)
+# end
 
 
 def fetch_Tpar_from_BiMax(gdatas, **kwargs):
@@ -124,6 +132,7 @@ def fetch_Tpar_from_BiMax(gdatas, **kwargs):
   Tpar = fetch_s0c2(gdatas)
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   return Tpar._result(Tpar.grid, mass * Tpar.values)
+# end
 
 
 def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
@@ -133,6 +142,7 @@ def fetch_Tpar_from_M0_M1_M2par(gdatas, **kwargs):
   upar = m1.values / m0.values
   values = mass * (m2par.values - upar * m1.values) / m0.values
   return m0._result(m0.grid, values)
+# end
 
 
 def fetch_Tperp_from_BiMax(gdatas, **kwargs):
@@ -140,6 +150,7 @@ def fetch_Tperp_from_BiMax(gdatas, **kwargs):
   Tperp = fetch_s0c3(gdatas)
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   return Tperp._result(Tperp.grid, mass * Tperp.values)
+# end
 
 
 def fetch_Tperp_from_M0_M2perp(gdatas, **kwargs):
@@ -147,6 +158,7 @@ def fetch_Tperp_from_M0_M2perp(gdatas, **kwargs):
   Tperp = fetch_s1c0_div_s0c0(gdatas)
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   return Tperp._result(Tperp.grid, 0.5 * mass * Tperp.values)
+# end
 
 
 def fetch_temp_from_Max(gdatas, **kwargs):
@@ -154,6 +166,7 @@ def fetch_temp_from_Max(gdatas, **kwargs):
   temp = fetch_s0c2(gdatas)
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   return temp._result(temp.grid, mass * temp.values)
+# end
 
 
 def fetch_temp_from_Tpar_Tperp(gdatas, **kwargs):
@@ -161,6 +174,7 @@ def fetch_temp_from_Tpar_Tperp(gdatas, **kwargs):
   Tpar, Tperp = (_ensure_interpolated(g) for g in gdatas)
   values = (Tpar.values + 2.0 * Tperp.values) / 3.0
   return Tpar._result(Tpar.grid, values)
+# end
 
 
 def fetch_press_from_Max(gdatas, **kwargs):
@@ -169,6 +183,7 @@ def fetch_press_from_Max(gdatas, **kwargs):
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   values = mass * maxmom.values[..., 0, np.newaxis] * maxmom.values[..., 2, np.newaxis]
   return maxmom._result(maxmom.grid, values)
+# end
 
 
 def fetch_press_from_BiMax(gdatas, **kwargs):
@@ -180,12 +195,14 @@ def fetch_press_from_BiMax(gdatas, **kwargs):
   temp_vals = mass * (Tpar_vals + 2.0 * Tperp_vals) / 3.0
   values = bimax.values[..., 0, np.newaxis] * temp_vals
   return bimax._result(bimax.grid, values)
+# end
 
 
 def fetch_press_p(gdatas, **kwargs):
   """Perpendicular/parallel pressure in J/m^3: ``p_p = n * T_p``."""
   m0, Tp = (_ensure_interpolated(g) for g in gdatas)
   return m0._result(m0.grid, m0.values * Tp.values)
+# end
 
 
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
@@ -193,6 +210,7 @@ def fetch_beta_from_bmag_press(gdatas, **kwargs):
   bmag, press = (_ensure_interpolated(g) for g in gdatas)
   values = 2.0 * constants.mu_0 * press.values / bmag.values ** 2
   return bmag._result(bmag.grid, values)
+# end
 
 
 # ------------------------------------------------------------ drift speeds
@@ -227,20 +245,24 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
     diff_dir_pos = bi_c_neg = cdim - 1
     if cdim < 3:
       calc_term = [True, False]
+  # end
     # end
   elif comp == 1:
     bi_c_pos, bi_c_neg = 2, 0
     diff_dir_neg, diff_dir_pos = cdim - 1, 0
     if cdim == 1:
       calc_term = [False, True]
+  # end
     # end
   elif comp == 2:
     diff_dir_neg = bi_c_pos = 0
     diff_dir_pos = bi_c_neg = 1
     if cdim == 1:
       calc_term = [False, False]
+    # end
     elif cdim == 2:
       calc_term = [False, True]
+  # end
     # end
   else:
     raise KeyError("comp must be 0, 1, or 2.")
@@ -262,6 +284,7 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
 
   values = (pos_term + neg_term) * jacobtot_inv_i.values
   return f._result(f.grid, values)
+# end
 
 
 def fetch_ExB_vel(gdatas, **kwargs):
@@ -274,6 +297,7 @@ def fetch_ExB_vel(gdatas, **kwargs):
   # end
   jacobtot_inv, _bmag, b_i, phi = gdatas
   return _b_cross_grad_div_b_component(phi, jacobtot_inv, b_i, kwargs["dir"])
+# end
 
 
 def fetch_gradB_vel(gdatas, **kwargs):
@@ -291,6 +315,7 @@ def fetch_gradB_vel(gdatas, **kwargs):
   charge = _get_ctx_val(Tperp, "charge", **kwargs)
   values = out.values * Tperp_i.values / bmag_i.values / charge
   return out._result(out.grid, values)
+# end
 
 
 def fetch_diamag_vel(gdatas, **kwargs):
@@ -307,6 +332,7 @@ def fetch_diamag_vel(gdatas, **kwargs):
   charge = _get_ctx_val(pressperp, "charge", **kwargs)
   values = out.values / m0_i.values / charge
   return out._result(out.grid, values)
+# end
 
 
 # --------------------------------------------------------- phase space (f)
@@ -336,3 +362,4 @@ def load_distf(gdatas, **kwargs):
       block_idx=extra.get("block", None),
       num_interp=0,
   )
+# end

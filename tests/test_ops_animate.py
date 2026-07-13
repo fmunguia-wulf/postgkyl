@@ -31,10 +31,12 @@ def _close_figs():
   plt.close("all")
   yield
   plt.close("all")
+# end
 
 
 def _three_interpolated_frames():
   return [pg.load(F1D).interpolate().select(comp=c) for c in (0, 0, 0)]
+# end
 
 
 class TestAnimateVerb:
@@ -43,6 +45,7 @@ class TestAnimateVerb:
     anim = ops.animate(_three_interpolated_frames(), show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 3
+  # end
 
   def test_modal_frames_are_materialized_first(self):
     """A raw (non-interpolated) modal dataset is bridged through its NumPy
@@ -53,11 +56,14 @@ class TestAnimateVerb:
     anim = ops.animate([a, b], show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 2
+  # end
 
   def test_raw_modal_frame_without_representation_raises(self):
     a = pg.load(F1D)  # still modal coefficients
     with pytest.raises(ValueError, match="not plottable"):
       ops.animate([a], show=False)
+    # end
+  # end
 
   def test_grouped_frames_preserve_structure(self):
     from matplotlib.animation import FuncAnimation
@@ -67,6 +73,7 @@ class TestAnimateVerb:
     anim = ops.animate([[a, b], [c]], show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 2
+  # end
 
   def test_saveframes_end_to_end(self, tmp_path):
     prefix = str(tmp_path / "frame")
@@ -75,4 +82,6 @@ class TestAnimateVerb:
     assert len(paths) == 3
     for p in paths:
       assert os.path.isfile(p)
+  # end
+# end
     # end

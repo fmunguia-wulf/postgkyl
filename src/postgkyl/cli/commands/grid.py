@@ -20,3 +20,4 @@ def command(ctx, use, tag, label) -> None:
   # ``grid`` has no fluent GData method (see api/gdata.py) -- reachable only
   # as ``postgkyl.ops.grid``, via attribute access on the facade.
   apply(ctx, lambda d: pg.ops.grid(d, tag=tag, label=label), use=use)
+# end

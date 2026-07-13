@@ -39,6 +39,7 @@ def _get_pxx(grid: list[np.ndarray],
   _, rho = _get_density(grid, values)
   _, vx = _get_vx(grid, values)
   return list(grid), values[..., 4, np.newaxis] - rho * vx * vx
+# end
 
 
 def _get_pxy(grid: list[np.ndarray],
@@ -48,6 +49,7 @@ def _get_pxy(grid: list[np.ndarray],
   _, vx = _get_vx(grid, values)
   _, vy = _get_vy(grid, values)
   return list(grid), values[..., 5, np.newaxis] - rho * vx * vy
+# end
 
 
 def _get_pxz(grid: list[np.ndarray],
@@ -57,6 +59,7 @@ def _get_pxz(grid: list[np.ndarray],
   _, vx = _get_vx(grid, values)
   _, vz = _get_vz(grid, values)
   return list(grid), values[..., 6, np.newaxis] - rho * vx * vz
+# end
 
 
 def _get_pyy(grid: list[np.ndarray],
@@ -65,6 +68,7 @@ def _get_pyy(grid: list[np.ndarray],
   _, rho = _get_density(grid, values)
   _, vy = _get_vy(grid, values)
   return list(grid), values[..., 7, np.newaxis] - rho * vy * vy
+# end
 
 
 def _get_pyz(grid: list[np.ndarray],
@@ -74,6 +78,7 @@ def _get_pyz(grid: list[np.ndarray],
   _, vy = _get_vy(grid, values)
   _, vz = _get_vz(grid, values)
   return list(grid), values[..., 8, np.newaxis] - rho * vy * vz
+# end
 
 
 def _get_pzz(grid: list[np.ndarray],
@@ -82,6 +87,7 @@ def _get_pzz(grid: list[np.ndarray],
   _, rho = _get_density(grid, values)
   _, vz = _get_vz(grid, values)
   return list(grid), values[..., 9, np.newaxis] - rho * vz * vz
+# end
 
 
 def _get_pij(grid: list[np.ndarray],
@@ -104,6 +110,7 @@ def _get_pij(grid: list[np.ndarray],
   out_values[..., 5] = np.squeeze(pzz)
 
   return list(grid), out_values
+# end
 
 
 def _get_p_par(p_grid: list[np.ndarray], p_values: np.ndarray,
@@ -141,6 +148,7 @@ def _get_p_par(p_grid: list[np.ndarray], p_values: np.ndarray,
       + 2.0 * (b_x * b_y * p_xy + b_x * b_z * p_xz + b_y * b_z * p_yz)
       ) / mag_b_sq
   return grid, out
+# end
 
 
 def _get_gkyl_10m_p_par(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -151,6 +159,7 @@ def _get_gkyl_10m_p_par(species_grid: list[np.ndarray], species_values: np.ndarr
   p_grid, p_values = _get_pij(species_grid, species_values)
   b_values = field_values[..., 3:6]
   return _get_p_par(p_grid, p_values, field_grid, b_values)
+# end
 
 
 def _get_p_perp(p_grid: list[np.ndarray], p_values: np.ndarray,
@@ -168,6 +177,7 @@ def _get_p_perp(p_grid: list[np.ndarray], p_values: np.ndarray,
   grid, p_par = _get_p_par(p_grid, p_values, b_grid, b_values)
 
   return grid, (p_xx + p_yy + p_zz - p_par) / 2.0
+# end
 
 
 def _get_gkyl_10m_p_perp(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -178,6 +188,7 @@ def _get_gkyl_10m_p_perp(species_grid: list[np.ndarray], species_values: np.ndar
   p_grid, p_values = _get_pij(species_grid, species_values)
   b_values = field_values[..., 3:6]
   return _get_p_perp(p_grid, p_values, field_grid, b_values)
+# end
 
 
 def _get_agyro(p_grid: list[np.ndarray], p_values: np.ndarray,
@@ -226,6 +237,7 @@ def _get_agyro(p_grid: list[np.ndarray], p_values: np.ndarray,
         - (p_xy * p_xy + p_xz * p_xz + p_yz * p_yz))
     # Tensor algebra of Appendix A of Swisdak 2015.
     out = np.sqrt(1 - 4 * I2 / ((I1 - p_par) * (I1 + 3 * p_par)))
+  # end
   elif measure_lower == "frobenius":
     p_ixx = p_xx - (p_par * b_x * b_x / mag_b_sq
         + p_perp * (1 - b_x * b_x / mag_b_sq))
@@ -242,12 +254,15 @@ def _get_agyro(p_grid: list[np.ndarray], p_values: np.ndarray,
     out = (np.sqrt(p_ixx**2 + 2 * p_ixy**2 + 2 * p_ixz**2 + p_iyy**2
         + 2 * p_iyz**2 + p_izz**2)
         / np.sqrt(2 * p_perp**2 + 4 * p_par * p_perp))
+  # end
   else:
     raise ValueError(
         f"Measure specified is {measure_lower:s}; it needs to be either "
         "'swisdak' or 'frobenius'")
+  # end
 
   return grid, out
+# end
 
 
 def _get_gkyl_10m_agyro(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -258,6 +273,7 @@ def _get_gkyl_10m_agyro(species_grid: list[np.ndarray], species_values: np.ndarr
   p_grid, p_values = _get_pij(species_grid, species_values)
   b_values = field_values[..., 3:6]
   return _get_agyro(p_grid, p_values, field_grid, b_values, measure=measure)
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -274,6 +290,7 @@ def pressure(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_p(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=10)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def ke(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -288,6 +305,7 @@ def ke(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_ke(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=10)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -302,6 +320,7 @@ def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_temp(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=10)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -316,6 +335,7 @@ def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_sound(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=10)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -330,6 +350,7 @@ def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mach(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=10)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pxx(data: "GDataState", *, inplace: bool = False,
@@ -342,6 +363,7 @@ def pxx(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pxx", _REASON)
   grid, values = _get_pxx(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pxy(data: "GDataState", *, inplace: bool = False,
@@ -354,6 +376,7 @@ def pxy(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pxy", _REASON)
   grid, values = _get_pxy(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pxz(data: "GDataState", *, inplace: bool = False,
@@ -366,6 +389,7 @@ def pxz(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pxz", _REASON)
   grid, values = _get_pxz(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pyy(data: "GDataState", *, inplace: bool = False,
@@ -378,6 +402,7 @@ def pyy(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pyy", _REASON)
   grid, values = _get_pyy(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pyz(data: "GDataState", *, inplace: bool = False,
@@ -390,6 +415,7 @@ def pyz(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pyz", _REASON)
   grid, values = _get_pyz(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pzz(data: "GDataState", *, inplace: bool = False,
@@ -402,6 +428,7 @@ def pzz(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pzz", _REASON)
   grid, values = _get_pzz(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pressure_tensor(data: "GDataState", *, inplace: bool = False,
@@ -415,6 +442,7 @@ def pressure_tensor(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "pressure_tensor", _REASON)
   grid, values = _get_pij(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def p_par(ptensor: "GDataState", bfield: "GDataState", *,
@@ -442,6 +470,7 @@ def p_par(ptensor: "GDataState", bfield: "GDataState", *,
   grid, values = _get_p_par(ptensor.grid, ptensor.values, bfield.grid,
       bfield.values)
   return ptensor._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def p_perp(ptensor: "GDataState", bfield: "GDataState", *,
@@ -470,6 +499,7 @@ def p_perp(ptensor: "GDataState", bfield: "GDataState", *,
   grid, values = _get_p_perp(ptensor.grid, ptensor.values, bfield.grid,
       bfield.values)
   return ptensor._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def agyro(ptensor: "GDataState", bfield: "GDataState", *,
@@ -505,6 +535,7 @@ def agyro(ptensor: "GDataState", bfield: "GDataState", *,
   grid, values = _get_agyro(ptensor.grid, ptensor.values, bfield.grid,
       bfield.values, measure=measure)
   return ptensor._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def mom_agyro(species: "GDataState", field: "GDataState", *,
@@ -540,6 +571,7 @@ def mom_agyro(species: "GDataState", field: "GDataState", *,
   grid, values = _get_gkyl_10m_agyro(species.grid, species.values,
       field.grid, field.values, measure=measure)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 VARIABLES = {

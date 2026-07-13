@@ -33,6 +33,7 @@ def _require_ffmpeg() -> None:
         "animate: saving to a video container requires ffmpeg on PATH "
         "(not found). Install ffmpeg, or pass 'saveframes' to write PNGs "
         "without compiling a movie.")
+# end
   # end
 
 
@@ -44,6 +45,7 @@ def _normalize_frames(data) -> list[list["GDataState"]]:
     raise ValueError("animate: no datasets to animate.")
   # end
   return frames
+# end
 
 
 def _frame_value_range(frames: list[list["GDataState"]],
@@ -66,6 +68,7 @@ def _frame_value_range(frames: list[list["GDataState"]],
     vmin = float(np.percentile(extrema, boundary))
   # end
   return vmin, vmax
+# end
 
 
 def _render_frame(index: int, frames: list[list["GDataState"]],
@@ -88,6 +91,7 @@ def _render_frame(index: int, frames: list[list["GDataState"]],
     kwargs["title"] = " ".join(parts)
   # end
   return backend.plot(*frame, fig=fig, show=False, **kwargs)
+# end
 
 
 def _save_frames(frames: list[list["GDataState"]], prefix: str, *,
@@ -104,11 +108,13 @@ def _save_frames(frames: list[list["GDataState"]], prefix: str, *,
       path = f"{prefix}_{i}.png"
       fig.savefig(path, dpi=dpi)
       paths.append(path)
+  # end
     # end
   finally:
     plt.close(fig)
   # end
   return paths
+# end
 
 
 def _compile_movie(frame_files: list[str], output_file: str, *,
@@ -144,6 +150,7 @@ def _compile_movie(frame_files: list[str], output_file: str, *,
           ax.axis("off")
           ax.imshow(Image.open(frame_file))
           writer.grab_frame()
+    # end
         # end
       # end
     finally:
@@ -152,6 +159,7 @@ def _compile_movie(frame_files: list[str], output_file: str, *,
     return
   # end
   raise ValueError(f"animate: unsupported output format {ext!r}")
+# end
 
 
 def animate(data, *, interval: int = 100, fixed_range: bool = True,
@@ -234,3 +242,4 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
     plt.show()
   # end
   return anim
+# end

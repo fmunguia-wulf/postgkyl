@@ -33,17 +33,23 @@ class PgkylGroup(click.Group):
     cmd = super().get_command(ctx, name)
     if cmd is not None:
       return cmd
+    # end
     if name in _ALIASES:
       return super().get_command(ctx, _ALIASES[name])
+    # end
     matches = [c for c in self.list_commands(ctx) if c.startswith(name)]
     if len(matches) == 1:
       return super().get_command(ctx, matches[0])
+    # end
     if matches:
       ctx.fail(f"Ambiguous command '{name}': {', '.join(sorted(matches))}")
+    # end
     if glob(name):
       ctx.obj.in_data_strings.append(name)
       return super().get_command(ctx, "load")
+    # end
     ctx.fail(f"'{name}' is not a command name nor a data file")
+  # end
 
   def format_commands(self, ctx, formatter) -> None:
     """Group ``pgkyl --help``'s command listing under section headers.
@@ -66,6 +72,8 @@ class PgkylGroup(click.Group):
       if rows:
         with formatter.section(section):
           formatter.write_dl(rows)
+  # end
+# end
         # end
       # end
     # end
@@ -85,6 +93,7 @@ def cli(ctx, batch_mode, saveframes_prefix) -> None:
       pgkyl file.gkyl interp sel --z0 0 plot
   """
   ctx.obj = DataSpace(batch=batch_mode, prefix=saveframes_prefix)
+# end
 
 
 for _command in COMMANDS:
@@ -94,3 +103,4 @@ for _command in COMMANDS:
 
 if __name__ == "__main__":
   cli()
+# end

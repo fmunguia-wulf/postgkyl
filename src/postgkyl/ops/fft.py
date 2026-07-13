@@ -55,3 +55,4 @@ def fft(data: "GDataState", *, psd: bool = False, iso: bool = False,
   # end
   freq, ft_values = numerics.fft(grid, values, psd=psd, iso=iso)
   return data._result(freq, ft_values, inplace=inplace, tag=tag, label=label)
+# end

@@ -29,6 +29,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 _G1 = [np.array([0.0, 1.0])]
@@ -48,27 +49,34 @@ _MOM5 = np.array([[_RHO, _RHO * _VX, 0.0, 0.0, _E]])
 
 def _field():
   return _make(_G1, _FIELD_VALS)
+# end
 
 
 def _species():
   return _make(_G1, _MOM5)
+# end
 
 
 class TestMagB:
   def test_magnitude(self):
     out = pp.magB(_field())
     np.testing.assert_allclose(out.values.flat[0], _MAGB, rtol=1e-10)
+  # end
 
   def test_inplace_mutates_field(self):
     field = _field()
     out = pp.magB(field, inplace=True)
     assert out is field
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.magB(d)
+    # end
+  # end
+# end
 
 
 class TestVt:
@@ -76,16 +84,19 @@ class TestVt:
     out = pp.vt(_species())
     T = _P / _RHO
     np.testing.assert_allclose(out.values.flat[0], np.sqrt(2.0 * T), rtol=1e-10)
+  # end
 
   def test_sqrt2_false(self):
     out = pp.vt(_species(), sqrt2=False)
     T = _P / _RHO
     np.testing.assert_allclose(out.values.flat[0], np.sqrt(T), rtol=1e-10)
+  # end
 
   def test_mass_scales_result(self):
     out = pp.vt(_species(), mass=2.0, sqrt2=False)
     T = _P / _RHO
     np.testing.assert_allclose(out.values.flat[0], np.sqrt(T / 2.0), rtol=1e-10)
+  # end
 
   def test_mhd_uses_mhd_temperature(self):
     bx, by, bz = 1.0, 0.0, 0.0
@@ -95,12 +106,16 @@ class TestVt:
     d = _make(_G1, mhd_vals)
     out = pp.vt(d, gas_gamma=_GAMMA, mhd=True, sqrt2=False)
     np.testing.assert_allclose(out.values.flat[0], np.sqrt(_P / _RHO), rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vt(d)
+    # end
+  # end
+# end
 
 
 class TestVA:
@@ -108,16 +123,19 @@ class TestVA:
     out = pp.vA(_species(), _field())
     expected = _MAGB / np.sqrt(_RHO)
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   def test_mu0_scales_result(self):
     out = pp.vA(_species(), _field(), mu_0=2.0)
     expected = _MAGB / np.sqrt(2.0 * _RHO)
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   def test_result_carries_species_grid(self):
     species, field = _species(), _field()
     out = pp.vA(species, field, inplace=True)
     assert out is species
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -125,26 +143,35 @@ class TestVA:
     field = _field()
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vA(d, field)
+    # end
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.vA(_species(), d)
+    # end
+  # end
+# end
 
 
 class TestOmegaC:
   def test_cyclotron_frequency(self):
     out = pp.omegaC(_field(), mass=1.0, charge=1.0)
     np.testing.assert_allclose(out.values.flat[0], _MAGB, rtol=1e-10)
+  # end
 
   def test_uses_absolute_charge(self):
     oC_pos = pp.omegaC(_field(), mass=1.0, charge=1.0)
     oC_neg = pp.omegaC(_field(), mass=1.0, charge=-1.0)
     np.testing.assert_allclose(oC_pos.values.flat[0], oC_neg.values.flat[0],
         rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.omegaC(d)
+    # end
+  # end
+# end
 
 
 class TestOmegaP:
@@ -152,6 +179,7 @@ class TestOmegaP:
     out = pp.omegaP(_species(), mass=1.0, charge=1.0, epsilon_0=1.0)
     expected = np.sqrt(_RHO)
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   def test_hydrogen_matches_nrl_formulary(self):
     # NRL Plasma Formulary: f_pi[Hz] = 2.1e2 * Z * sqrt(n[cm^-3] / mu) for a
@@ -168,12 +196,16 @@ class TestOmegaP:
     n_cm3 = n * 1e-6
     omega_nrl = 2 * np.pi * 2.1e2 * np.sqrt(n_cm3)
     np.testing.assert_allclose(out.values.flat[0], omega_nrl, rtol=5e-3)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.omegaP(d)
+    # end
+  # end
+# end
 
 
 class TestD:
@@ -182,12 +214,16 @@ class TestD:
     omegaP = pp.omegaP(_species(), mass=1.0, charge=1.0, epsilon_0=1.0)
     expected = 1.0 / omegaP.values.flat[0]
     np.testing.assert_allclose(dd.values.flat[0], expected, rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     modal = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.d(modal)
+    # end
+  # end
+# end
 
 
 class TestLambdaD:
@@ -198,12 +234,16 @@ class TestLambdaD:
     omegaP_out = pp.omegaP(_species(), mass=1.0, charge=1.0, epsilon_0=1.0)
     expected = vt_out.values.flat[0] / omegaP_out.values.flat[0] / np.sqrt(2.0)
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.lambdaD(d)
+    # end
+  # end
+# end
 
 
 class TestRho:
@@ -213,12 +253,14 @@ class TestRho:
     omegaC_out = pp.omegaC(_field(), mass=1.0, charge=1.0)
     expected = vt_out.values.flat[0] / omegaC_out.values.flat[0]
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   def test_sqrt2_false_matches_sqrt2_true_times_sqrt2(self):
     rho_true = pp.rho(_species(), _field(), mass=1.0, charge=1.0, sqrt2=True)
     rho_false = pp.rho(_species(), _field(), mass=1.0, charge=1.0, sqrt2=False)
     np.testing.assert_allclose(
         rho_false.values.flat[0] / rho_true.values.flat[0], 1.0, rtol=1e-8)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -226,8 +268,12 @@ class TestRho:
     field = _field()
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.rho(d, field)
+    # end
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.rho(_species(), d)
+    # end
+  # end
+# end
 
 
 class TestBeta:
@@ -237,6 +283,7 @@ class TestBeta:
     vA_out = pp.vA(_species(), _field(), mu_0=1.0)
     expected = vt_out.values.flat[0]**2 / vA_out.values.flat[0]**2
     np.testing.assert_allclose(out.values.flat[0], expected, rtol=1e-10)
+  # end
 
   def test_sqrt2_false_matches_sqrt2_true(self):
     # The "* 2.0" correction for sqrt2=False exactly compensates for the
@@ -246,6 +293,7 @@ class TestBeta:
     beta_false = pp.beta(_species(), _field(), mu_0=1.0, sqrt2=False)
     np.testing.assert_allclose(beta_false.values.flat[0],
         beta_true.values.flat[0], rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -253,5 +301,9 @@ class TestBeta:
     field = _field()
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.beta(d, field)
+    # end
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       pp.beta(_species(), d)
+    # end
+  # end
+# end

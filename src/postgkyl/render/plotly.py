@@ -37,8 +37,10 @@ def _apply_plot_style(style: str | None, rcParams: dict | None,
   background_name = (background or "dark").strip().lower()
   if style:
     apply_style(style)
+  # end
   elif background_name == "light":
     apply_style("default")
+  # end
   else:
     apply_style(DEFAULT_STYLE)
   # end
@@ -56,6 +58,7 @@ def _apply_plot_style(style: str | None, rcParams: dict | None,
     theme_colors = dict(
         paper_color="#ffffff", scene_color="#ffffff", text_color="#111111",
         grid_color="#b8b8b8", axis_line_color="#222222")
+  # end
   else:
     theme_colors = dict(
         paper_color="#000000", scene_color="#000000", text_color="#e6e6e6",
@@ -82,6 +85,7 @@ def _apply_plot_style(style: str | None, rcParams: dict | None,
   # end
 
   return theme_colors
+# end
 
 
 def _plotly_colorscale(cmap_name: str, n: int = 256):
@@ -95,6 +99,7 @@ def _plotly_colorscale(cmap_name: str, n: int = 256):
         f"rgba({int(r * 255)}, {int(g * 255)}, {int(b * 255)}, {float(a):.3f})"])
   # end
   return colorscale
+# end
 
 
 def _opacity_mapping(colorscale, min_alpha: float, max_alpha: float,
@@ -117,14 +122,17 @@ def _opacity_mapping(colorscale, min_alpha: float, max_alpha: float,
         r, g, b = parts[0], parts[1], parts[2]
         alpha = min_a + (max_a - min_a) * mapped_stop
         out.append([stop_value, f"rgba({r}, {g}, {b}, {alpha:.3f})"])
+      # end
       else:
         out.append([stop_value, color])
+    # end
       # end
     else:
       out.append([stop_value, color])
     # end
   # end
   return out
+# end
 
 
 def _finite_range(values: np.ndarray) -> tuple[float, float]:
@@ -135,6 +143,7 @@ def _finite_range(values: np.ndarray) -> tuple[float, float]:
     return float(np.nanmin(finite_values)), float(np.nanmax(finite_values))
   # end
   return float("nan"), float("nan")
+# end
 
 
 def _axis_range(values: np.ndarray, axis_range, log_axis: bool = False):
@@ -144,6 +153,7 @@ def _axis_range(values: np.ndarray, axis_range, log_axis: bool = False):
     lower, upper = np.log10(lower), np.log10(upper)
   # end
   return [lower, upper]
+# end
 
 
 def _log_colorbar_ticks(log_min: float, log_max: float, max_ticks: int = 7):
@@ -160,6 +170,7 @@ def _log_colorbar_ticks(log_min: float, log_max: float, max_ticks: int = 7):
     tick_vals.append(hi)
   # end
   return [float(v) for v in tick_vals], [f"10<sup>{v:d}</sup>" for v in tick_vals]
+# end
 
 
 def _apply_log_colorscale(render_color_value: np.ndarray, cmin_val, cmax_val,
@@ -172,6 +183,7 @@ def _apply_log_colorscale(render_color_value: np.ndarray, cmin_val, cmax_val,
   if np.any(valid_mask):
     valid_min = float(np.nanmin(log_value[valid_mask]))
     valid_max = float(np.nanmax(log_value[valid_mask]))
+  # end
   else:
     valid_min, valid_max = 0.0, 1.0
   # end
@@ -196,6 +208,7 @@ def _apply_log_colorscale(render_color_value: np.ndarray, cmin_val, cmax_val,
     colorbar_kwargs["ticktext"] = tick_text
   # end
   return render_color_value, valid_min, valid_max
+# end
 
 
 def _resolve_plotly_aspect(aspect: str | float | None):
@@ -213,6 +226,7 @@ def _resolve_plotly_aspect(aspect: str | float | None):
   # end
   ratio = float(aspect)
   return "manual", dict(x=ratio, y=ratio, z=ratio)
+# end
 
 
 def _build_rotation_post_script(scene_name: str, starting_azimuthal_angle: float,
@@ -234,6 +248,7 @@ def _build_rotation_post_script(scene_name: str, starting_azimuthal_angle: float
     template = template.replace(token, value)
   # end
   return template
+# end
 
 
 def save_rotating_plotly_figure(fig, file_name: str,
@@ -286,6 +301,7 @@ def save_rotating_plotly_figure(fig, file_name: str,
       post_script = _build_rotation_post_script(scene_name,
           starting_azimuthal_angle, polar_angle, rotation_period, radius)
       fig.write_html(file_name, include_plotlyjs="cdn", post_script=post_script)
+    # end
     else:
       fig.write_html(file_name)
     # end
@@ -312,6 +328,7 @@ def save_rotating_plotly_figure(fig, file_name: str,
         png_bytes = fig.to_image(format="png")
         with open(os.path.join(tmp_dir, f"frame_{idx:05d}.png"), "wb") as frame_file:
           frame_file.write(png_bytes)
+    # end
         # end
       # end
     finally:
@@ -321,12 +338,14 @@ def save_rotating_plotly_figure(fig, file_name: str,
     if ext == ".mp4":
       ffmpeg_cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
           "-pix_fmt", "yuv420p", file_name]
+    # end
     else:
       ffmpeg_cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
           "-vf", "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", file_name]
     # end
     subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
+# end
   # end
 
 
@@ -340,6 +359,7 @@ def _prepare_3d_coordinates(coords, value_shape):
     return mesh[0], mesh[1], mesh[2]
   # end
   return arrays[0], arrays[1], arrays[2]
+# end
 
 
 def _prepare_2d_coordinates(coords, value_shape):
@@ -352,6 +372,7 @@ def _prepare_2d_coordinates(coords, value_shape):
     return mesh[0], mesh[1]
   # end
   return arrays[0], arrays[1]
+# end
 
 
 def _scene_axis(label: str | None, log_axis: bool, axis_range, showgrid: bool,
@@ -364,6 +385,7 @@ def _scene_axis(label: str | None, log_axis: bool, axis_range, showgrid: bool,
       backgroundcolor=theme["scene_color"], gridcolor=theme["grid_color"],
       linecolor=theme["axis_line_color"], tickfont=dict(color=theme["text_color"]),
       zerolinecolor=theme["grid_color"])
+# end
 
 
 def plotly(data: "GDataState", *, squeeze: bool = False,
@@ -445,6 +467,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     fig = go.Figure()
     scene_names = ["scene"]
     grid_shape = (1, 1)
+  # end
   else:
     num_rows, num_cols = subplot_grid(num_comps, num_subplot_row, num_subplot_col)
     specs = [[{"type": "scene"} for _ in range(num_cols)] for _ in range(num_rows)]
@@ -486,6 +509,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
       x = (np.asarray(x_grid) + xshift) * xscale
       y = (np.asarray(y_grid) + yshift) * yscale
       z = np.asarray(value)
+    # end
     else:
       x_grid, y_grid, z_grid = _prepare_3d_coordinates(cc_grid, value.shape)
       x_coord, y_coord, z_coord = (np.asarray(x_grid), np.asarray(y_grid),
@@ -517,9 +541,11 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     if diverging:
       cmax_val = float(np.nanmax(np.abs(color_value)))
       cmin_val = -cmax_val
+    # end
     else:
       if clim is not None:
         cmin_local, cmax_local = clim
+      # end
       else:
         cmin_local, cmax_local = cmin, cmax
       # end
@@ -544,6 +570,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
           showscale=show_colorbar,
           colorbar=trace_colorbar_kwargs if show_colorbar else None,
           opacity=opacity, name=trace_name, showlegend=show_trace_legend)]
+    # end
     else:
       if logz:
         positive = np.where(render_color_value > 0, render_color_value, np.nan)
@@ -583,6 +610,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
                 showscale=show_colorbar,
                 colorbar=trace_colorbar_kwargs if show_colorbar else None),
             name=trace_name, showlegend=show_trace_legend)]
+      # end
       else:
         volume_opacity_scale = [[0.0, 0.0], [0.5, 0.2], [1.0, 0.8]]
         trace_list = [go.Volume(
@@ -599,6 +627,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     for trace in trace_list:
       if grid_shape == (1, 1):
         fig.add_trace(trace)
+      # end
       else:
         fig.add_trace(trace, row=row, col=col)
       # end
@@ -617,6 +646,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
   # end
   fig.update_layout(margin=dict(l=10, r=10, t=40 if title else 10, b=10))
   return fig
+# end
 
 
 def plotly_animate(data_sequence: list["GDataState"],
@@ -687,6 +717,7 @@ def plotly_animate(data_sequence: list["GDataState"],
           "pad": {"t": 24}, "steps": slider_steps}],
   )
   return base_fig
+# end
 
 
 __all__ = ["plotly", "plotly_animate", "save_rotating_plotly_figure"]

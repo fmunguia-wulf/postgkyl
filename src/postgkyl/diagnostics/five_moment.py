@@ -45,6 +45,7 @@ def _get_density(grid: list[np.ndarray],
     ``(grid, values)`` with the density as a single trailing component.
   """
   return list(grid), values[..., 0, np.newaxis]
+# end
 
 
 def _get_vx(grid: list[np.ndarray],
@@ -52,6 +53,7 @@ def _get_vx(grid: list[np.ndarray],
   """Extract the x velocity: x momentum (component 1) over density."""
   _, rho = _get_density(grid, values)
   return list(grid), values[..., 1, np.newaxis] / rho
+# end
 
 
 def _get_vy(grid: list[np.ndarray],
@@ -59,6 +61,7 @@ def _get_vy(grid: list[np.ndarray],
   """Extract the y velocity: y momentum (component 2) over density."""
   _, rho = _get_density(grid, values)
   return list(grid), values[..., 2, np.newaxis] / rho
+# end
 
 
 def _get_vz(grid: list[np.ndarray],
@@ -66,6 +69,7 @@ def _get_vz(grid: list[np.ndarray],
   """Extract the z velocity: z momentum (component 3) over density."""
   _, rho = _get_density(grid, values)
   return list(grid), values[..., 3, np.newaxis] / rho
+# end
 
 
 def _get_vi(grid: list[np.ndarray],
@@ -73,20 +77,25 @@ def _get_vi(grid: list[np.ndarray],
   """Extract the velocity vector ``(vx, vy, vz)``: momentum (1:4) over density."""
   _, rho = _get_density(grid, values)
   return list(grid), values[..., 1:4] / rho
+# end
 
 
 def _infer_num_moms(values: np.ndarray, num_moms: int | None) -> int:
   """Resolve the moment count, inferring it from the component count."""
   if num_moms is not None:
     return num_moms
+  # end
   num_comps = values.shape[-1]
   if num_comps == 5:
     return 5
+  # end
   if num_comps == 10:
     return 10
+  # end
   raise ValueError(
       f"Number of components appears to be {num_comps:d}; it needs to be "
       "specified using 'num_moms' (5 or 10)")
+# end
 
 
 def _get_p(grid: list[np.ndarray], values: np.ndarray, *,
@@ -120,6 +129,7 @@ def _get_p(grid: list[np.ndarray], values: np.ndarray, *,
     _, vz = _get_vz(grid, values)
     out_values = (gas_gamma - 1) * (
         values[..., 4, np.newaxis] - 0.5 * rho * (vx**2 + vy**2 + vz**2))
+  # end
   else:  # num_moms == 10
     # Trace of the pressure tensor, computed inline (rather than calling
     # ten_moment._get_pxx/_get_pyy/_get_pzz) to keep five_moment ->
@@ -133,8 +143,10 @@ def _get_p(grid: list[np.ndarray], values: np.ndarray, *,
     pyy = values[..., 7, np.newaxis] - rho * vy * vy
     pzz = values[..., 9, np.newaxis] - rho * vz * vz
     out_values = (pxx + pyy + pzz) / 3.0
+  # end
 
   return list(grid), out_values
+# end
 
 
 def _get_ke(grid: list[np.ndarray], values: np.ndarray, *,
@@ -161,14 +173,17 @@ def _get_ke(grid: list[np.ndarray], values: np.ndarray, *,
   if num_moms == 5:
     _, pr = _get_p(grid, values, gas_gamma=gas_gamma, num_moms=num_moms)
     out_values = values[..., 4, np.newaxis] - pr / (gas_gamma - 1)
+  # end
   else:  # num_moms == 10
     _, rho = _get_density(grid, values)
     _, vx = _get_vx(grid, values)
     _, vy = _get_vy(grid, values)
     _, vz = _get_vz(grid, values)
     out_values = 0.5 * rho * (vx**2 + vy**2 + vz**2)
+  # end
 
   return list(grid), out_values
+# end
 
 
 def _get_temp(grid: list[np.ndarray], values: np.ndarray, *,
@@ -178,6 +193,7 @@ def _get_temp(grid: list[np.ndarray], values: np.ndarray, *,
   _, rho = _get_density(grid, values)
   _, pr = _get_p(grid, values, gas_gamma=gas_gamma, num_moms=num_moms)
   return list(grid), pr / rho
+# end
 
 
 def _get_sound(grid: list[np.ndarray], values: np.ndarray, *,
@@ -187,6 +203,7 @@ def _get_sound(grid: list[np.ndarray], values: np.ndarray, *,
   _, rho = _get_density(grid, values)
   _, pr = _get_p(grid, values, gas_gamma=gas_gamma, num_moms=num_moms)
   return list(grid), np.sqrt(gas_gamma * pr / rho)
+# end
 
 
 def _get_mach(grid: list[np.ndarray], values: np.ndarray, *,
@@ -198,6 +215,7 @@ def _get_mach(grid: list[np.ndarray], values: np.ndarray, *,
   _, vz = _get_vz(grid, values)
   _, cs = _get_sound(grid, values, gas_gamma=gas_gamma, num_moms=num_moms)
   return list(grid), np.sqrt(vx**2 + vy**2 + vz**2) / cs
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -220,6 +238,7 @@ def density(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "density", _REASON)
   grid, values = _get_density(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def xvel(data: "GDataState", *, inplace: bool = False,
@@ -241,6 +260,7 @@ def xvel(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "xvel", _REASON)
   grid, values = _get_vx(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def yvel(data: "GDataState", *, inplace: bool = False,
@@ -253,6 +273,7 @@ def yvel(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "yvel", _REASON)
   grid, values = _get_vy(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def zvel(data: "GDataState", *, inplace: bool = False,
@@ -265,6 +286,7 @@ def zvel(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "zvel", _REASON)
   grid, values = _get_vz(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def vel(data: "GDataState", *, inplace: bool = False,
@@ -277,6 +299,7 @@ def vel(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "vel", _REASON)
   grid, values = _get_vi(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pressure(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -304,6 +327,7 @@ def pressure(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_p(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=num_moms)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def ke(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -319,6 +343,7 @@ def ke(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_ke(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=num_moms)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -334,6 +359,7 @@ def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_temp(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=num_moms)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -349,6 +375,7 @@ def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_sound(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=num_moms)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -364,6 +391,7 @@ def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mach(data.grid, data.values, gas_gamma=gas_gamma,
       num_moms=num_moms)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def velocity(density: "GDataState", momentum: "GDataState", *,
@@ -395,6 +423,7 @@ def velocity(density: "GDataState", momentum: "GDataState", *,
   values = momentum.values / density.values
   return density._result(density.grid, values, inplace=inplace, tag=tag,
       label=label)
+# end
 
 
 VARIABLES = {

@@ -78,6 +78,7 @@ def fit(data: "GDataState", fit_type: str, *, guess=None, window: bool = False,
 
   if any(grid[d].shape[0] == spatial_shape[d] + 1 for d in range(len(grid))):
     cc_grid = numerics.nodal_to_cell_centered_grid(grid, spatial_shape)
+  # end
   else:
     cc_grid = list(grid)
   # end
@@ -105,6 +106,7 @@ def fit(data: "GDataState", fit_type: str, *, guess=None, window: bool = False,
 
   if len(cc_grid) == 1:
     xdata = cc_grid[0]
+  # end
   else:
     mesh = np.meshgrid(cc_grid[0], cc_grid[1], indexing="ij")
     xdata = np.array([mesh[0].flatten(), mesh[1].flatten()])
@@ -123,6 +125,7 @@ def fit(data: "GDataState", fit_type: str, *, guess=None, window: bool = False,
     if window:
       params, cov, r2, _n = numerics.fit_best_window(xdata, ydata, fit_type,
           min_n=min_n, p0=guess_list)
+    # end
     else:
       p0 = guess_list if guess_list is not None else numerics.auto_guess(fit_type, xdata, ydata)
       params, cov, r2 = numerics.fit(xdata, ydata, fit_type, p0=p0)
@@ -138,3 +141,4 @@ def fit(data: "GDataState", fit_type: str, *, guess=None, window: bool = False,
   fit_grid = [grid[d] for d in active]
   return data._result(fit_grid, fit_values, inplace=inplace, tag=tag, label=label,
       fit_params=all_params, fit_std=all_std, fit_R2=all_r2)
+# end

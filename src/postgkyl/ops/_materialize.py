@@ -47,3 +47,4 @@ def materialize_for_render(data: "GDataState") -> "GDataState":
       int(data.ctx["poly_order"]), data.native, data.grid, rep,
       data.ctx.get("num_quad"))
   return data._result(edges, values)
+# end

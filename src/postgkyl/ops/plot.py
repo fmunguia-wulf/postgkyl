@@ -24,3 +24,4 @@ if TYPE_CHECKING:
 def plot(data: "GDataState", **kwargs):
   """Render a single dataset. Returns the matplotlib figure."""
   return render.plot(materialize_for_render(data), **kwargs)
+# end

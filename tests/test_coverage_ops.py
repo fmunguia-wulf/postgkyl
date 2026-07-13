@@ -38,6 +38,7 @@ def _dynvec_dataset(tmp_path, time, values):
   path = str(tmp_path / "series.gkyl")
   rio.write_dynvec(path, np.asarray(time), np.asarray(values))
   return pg.load(path)
+# end
 
 
 # ============================================================== ops.select
@@ -64,6 +65,8 @@ def test_select_by_coordinate_on_a_nodal_grid(tmp_path):
 
   with pytest.raises(TypeError, match="single index or a slice"):
     d.select(z0="1,2")  # comma selector is comp-only syntax, not valid for z-axes
+  # end
+# end
 
 
 @needs_gkeyll
@@ -79,6 +82,7 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
   by_slice = g.select(z0="2:5")
   assert by_slice.values.shape[0] == 3
   assert by_slice.grid[0].shape[0] == 4
+# end
 
 
 # ========================================================== ops.arithmetic
@@ -89,11 +93,14 @@ def test_numpy_domain_rejects_incompatible_grids_and_shapes():
   b_sub = b.select(comp=0)  # different shape than the full 'a'
   with pytest.raises(ValueError, match="incompatible shapes"):
     a + b_sub
+  # end
 
   c = pg.load(F1).interpolate()
   c.grid[0] = c.grid[0] + 1.0  # displace the grid -> no longer "compatible"
   with pytest.raises(ValueError, match="different grids"):
     a + c
+  # end
+# end
 
 
 @needs_gkeyll
@@ -102,6 +109,8 @@ def test_basis_of_raises_when_metadata_missing():
   del a.ctx["poly_order"]
   with pytest.raises(ValueError, match="basis_type/poly_order"):
     a * b
+  # end
+# end
 
 
 @needs_gkeyll
@@ -109,6 +118,8 @@ def test_modal_binary_rejects_mixing_with_a_plain_array():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="cannot mix native modal data"):
     a * np.zeros((24, 6))
+  # end
+# end
 
 
 @needs_gkeyll
@@ -118,11 +129,14 @@ def test_modal_dataset_pair_rejects_grid_and_basis_mismatch():
   b.grid[0] = b.grid[0] + 100.0
   with pytest.raises(ValueError, match="different grids"):
     a * b
+  # end
 
   c = pg.load(F1)
   c.ctx["basis_type"] = "tensor"
   with pytest.raises(ValueError, match="different DG bases"):
     a * c
+  # end
+# end
 
 
 @needs_gkeyll
@@ -130,6 +144,8 @@ def test_modal_dataset_pair_rejects_unsupported_op():
   a, b = pg.load(F1), pg.load(F1)
   with pytest.raises(ValueError, match="not defined between two"):
     a ** b
+  # end
+# end
 
 
 @needs_gkeyll
@@ -152,6 +168,8 @@ def test_conf_phase_mul_requires_both_operands_modal():
   phase_nodal = phase.to_nodal()
   with pytest.raises(ValueError, match="modal DG coefficients only"):
     conf * phase_nodal
+  # end
+# end
 
 
 @needs_gkeyll
@@ -166,6 +184,7 @@ def test_modal_scalar_operator_combinations(expr):
   out = expr(a)
   assert isinstance(out, pg.GData)
   assert out.backend == "gkyl"
+# end
 
 
 @needs_gkeyll
@@ -173,6 +192,8 @@ def test_modal_scalar_rejects_reflected_power():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="not defined for modal"):
     2.0 ** a
+  # end
+# end
 
 
 @needs_gkeyll
@@ -180,6 +201,7 @@ def test_apply_ufunc_method_and_out_kwarg_are_rejected():
   a = pg.load(F1).interpolate()
   assert a.__array_ufunc__(np.add, "reduce", a) is NotImplemented
   assert a.__array_ufunc__(np.sqrt, "__call__", a, out=(np.zeros(1),)) is NotImplemented
+# end
 
 
 @needs_gkeyll
@@ -188,6 +210,8 @@ def test_apply_ufunc_rejects_shape_mismatch():
   b = pg.load(F1).interpolate().select(comp=0)
   with pytest.raises(ValueError, match="incompatible shapes"):
     np.add(a, b)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -196,6 +220,7 @@ def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
   out = np.add(a, 2.0)
   np.testing.assert_allclose(out.values, a.values + 2.0)
   assert a.__array_ufunc__(np.add, "__call__", a, "not-a-number") is NotImplemented
+# end
 
 
 # ========================================================== ops.interpolate
@@ -203,12 +228,15 @@ def test_interpolate_rejects_unknown_short_basis_code():
   d = pg.load(F1)
   with pytest.raises(ValueError, match="Unknown basis"):
     d.interpolate(basis="bogus")
+  # end
+# end
 
 
 @needs_gkeyll
 def test_interpolate_accepts_a_short_basis_code():
   d = pg.load(F1).interpolate(basis="ms")
   assert d.is_interpolated
+# end
 
 
 def test_interpolate_requires_basis_type_when_none_given():
@@ -216,6 +244,8 @@ def test_interpolate_requires_basis_type_when_none_given():
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   with pytest.raises(ValueError, match="no stored 'basis_type'"):
     d.interpolate()
+  # end
+# end
 
 
 def test_interpolate_requires_poly_order_when_none_given():
@@ -224,6 +254,8 @@ def test_interpolate_requires_poly_order_when_none_given():
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   with pytest.raises(ValueError, match="No polynomial order"):
     d.interpolate()
+  # end
+# end
 
 
 # =========================================================== ops.represent
@@ -232,11 +264,14 @@ def test_represent_rejects_numpy_backed_and_missing_metadata():
   interpolated = pg.load(F1).interpolate()
   with pytest.raises(ValueError, match="NumPy-backed"):
     interpolated.to_modal()
+  # end
 
   a = pg.load(F1)
   del a.ctx["poly_order"]
   with pytest.raises(ValueError, match="no basis_type/poly_order"):
     a.to_nodal()
+  # end
+# end
 
 
 @needs_gkeyll
@@ -244,6 +279,8 @@ def test_represent_rejects_unknown_target():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="unknown representation"):
     ops.represent(a, to="bogus")
+  # end
+# end
 
 
 @needs_gkeyll
@@ -252,6 +289,8 @@ def test_represent_rejects_quad_dataset_missing_num_quad():
   del q.ctx["num_quad"]
   with pytest.raises(ValueError, match="lost its 'num_quad'"):
     q.to_modal()
+  # end
+# end
 
 
 @needs_gkeyll
@@ -260,6 +299,7 @@ def test_represent_same_representation_clones():
   same = a.to_modal()  # already modal -> the "cur == to" clone branch
   np.testing.assert_allclose(same.values, a.values)
   assert same.native is not a.native
+# end
 
 
 @needs_gkeyll
@@ -267,6 +307,8 @@ def test_apply_rejects_non_modal_data():
   a = pg.load(F1).to_nodal()
   with pytest.raises(ValueError, match="expects modal data"):
     a.apply(np.sqrt)
+  # end
+# end
 
 
 # =============================================================== ops.info
@@ -276,6 +318,7 @@ def test_info_verb_handles_multiple_datasets():
   summaries = pg.info(a, b)
   assert len(summaries) == 2
   assert all("Number of components" in s for s in summaries)
+# end
 
 
 # ============================================================ ops.integrate
@@ -285,6 +328,8 @@ def test_integrate_requires_basis_metadata():
   del a.ctx["basis_type"]
   with pytest.raises(ValueError, match="basis_type/poly_order"):
     a.integrate()
+  # end
+# end
 
 
 # ============================================================== ops.average
@@ -300,6 +345,7 @@ def test_average_full_reduction_matches_integrate_over_volume():
   b0 = 2.0 ** (-avg.num_dims / 2.0)
   np.testing.assert_allclose(np.asarray(avg.native.view())[0, ::2] * b0,
       np.asarray(integral) / volume, rtol=1e-8)
+# end
 
 
 @needs_gkeyll
@@ -324,6 +370,7 @@ def test_average_partial_reduction_of_a_constant_field():
   b0_avg = 2.0 ** (-1 / 2.0)
   np.testing.assert_allclose(np.asarray(out.native.view())[:, 0] * b0_avg, 3.0,
       atol=1e-10)
+# end
 
 
 @needs_gkeyll
@@ -331,10 +378,13 @@ def test_average_rejects_numpy_backed_and_non_modal():
   interpolated = pg.load(F1).interpolate()
   with pytest.raises(ValueError, match="native modal data"):
     interpolated.average([0])
+  # end
 
   nodal = pg.load(F1).to_nodal()
   with pytest.raises(ValueError, match="modal representation"):
     nodal.average([0])
+  # end
+# end
 
 
 @needs_gkeyll
@@ -343,6 +393,8 @@ def test_average_rejects_missing_basis_metadata():
   del a.ctx["poly_order"]
   with pytest.raises(ValueError, match="basis_type/poly_order"):
     a.average([0])
+  # end
+# end
 
 
 @needs_gkeyll
@@ -356,16 +408,20 @@ def test_average_rejects_weight_mismatch():
       gpython.array.GkylArray.from_numpy(np.zeros((12, 4))))
   with pytest.raises(ValueError, match="dims but the field has"):
     a.average([0], weight=weight_wrong_dims)
+  # end
 
   weight_wrong_basis = pg.load(F1)
   weight_wrong_basis.ctx["basis_type"] = "tensor"
   with pytest.raises(ValueError, match="basis_type"):
     a.average([0], weight=weight_wrong_basis)
+  # end
 
   weight_wrong_p = pg.load(F1)
   weight_wrong_p.ctx["poly_order"] = 2
   with pytest.raises(ValueError, match="poly_order"):
     a.average([0], weight=weight_wrong_p)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -380,6 +436,7 @@ def test_average_tag_and_label_and_inplace():
   mutated = b.average([0], inplace=True)
   assert mutated is b
   assert b.ctx["cells"].tolist() == [1]
+# end
 
 
 # ======================================================= ops.integrate_axis
@@ -388,6 +445,8 @@ def test_integrate_axis_rejects_raw_modal_data():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="modal DG coefficients"):
     a.integrate_axis(0)
+  # end
+# end
 
 
 def test_integrate_axis_on_interpolated_data_collapses_the_axis():
@@ -397,6 +456,7 @@ def test_integrate_axis_on_interpolated_data_collapses_the_axis():
   assert r.num_cells[0] == 1
   assert before > 1  # sanity: the axis actually had more than one cell
   assert r.ctx.get("interpolated") is True
+# end
 
 
 def test_integrate_axis_matches_manual_trapezoidal_sum():
@@ -405,12 +465,14 @@ def test_integrate_axis_matches_manual_trapezoidal_sum():
   dz = np.diff(a.grid[0])
   expected = np.tensordot(dz, np.asarray(a.values), axes=([0], [0]))
   np.testing.assert_allclose(np.asarray(r.values)[0], expected)
+# end
 
 
 def test_integrate_axis_default_integrates_every_axis():
   a = pg.load(F1).interpolate()
   r = a.integrate_axis()
   assert all(n == 1 for n in r.num_cells)
+# end
 
 
 @needs_gkeyll
@@ -422,6 +484,7 @@ def test_integrate_axis_on_native_nodal_representation():
   assert r.backend == "numpy"
   assert r.num_cells[0] == 1
   assert r.ctx.get("representation") is None  # stale tag cleared, not "nodal"
+# end
 
 
 def test_integrate_axis_tag_and_label():
@@ -430,6 +493,7 @@ def test_integrate_axis_tag_and_label():
   assert r.tag == "reduced"
   assert r.label == "my label"
   assert a.num_cells[0] > 1  # original left untouched (inplace=False default)
+# end
 
 
 def test_integrate_axis_inplace_mutates_the_dataset():
@@ -437,3 +501,4 @@ def test_integrate_axis_inplace_mutates_the_dataset():
   out = a.integrate_axis(0, inplace=True)
   assert out is a
   assert a.num_cells[0] == 1
+# end

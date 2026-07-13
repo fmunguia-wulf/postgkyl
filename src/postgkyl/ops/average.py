@@ -26,15 +26,19 @@ def _native_basis(data: "GDataState", what: str):
         f"average wraps gkyl_array_average and needs native modal data; "
         f"{what} is not available after .interpolate() or without the "
         "Gkeyll library.")
+  # end
   if data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
         f"average expects the modal representation, not "
         f"'{data.ctx['representation']}' ({what}); call .to_modal() first.")
+  # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
   if basis_type is None or poly_order is None:
     raise ValueError(f"{what} has no basis_type/poly_order metadata")
+  # end
   return str(basis_type), int(poly_order)
+# end
 
 
 def average(data: "GDataState", dims, *, weight: "GDataState | None" = None,
@@ -70,13 +74,17 @@ def average(data: "GDataState", dims, *, weight: "GDataState | None" = None,
     if weight.num_dims != ndim:
       raise ValueError(
           f"weight has {weight.num_dims} dims but the field has {ndim}")
+    # end
     if w_basis_type != basis_type:
       raise ValueError(
           f"weight basis_type '{w_basis_type}' != field's '{basis_type}'")
+    # end
     if w_poly_order != poly_order:
       raise ValueError(
           f"weight poly_order {w_poly_order} != field's {poly_order}")
+    # end
     weight_native = weight.native
+  # end
 
   grid = {
       "ndim": ndim,
@@ -89,9 +97,11 @@ def average(data: "GDataState", dims, *, weight: "GDataState | None" = None,
 
   if keep_dirs:
     new_grid = [np.asarray(data.grid[d]) for d in keep_dirs]
+  # end
   else:
     new_grid = [np.array([0.0, 1.0])]
   # end
 
   return data._result(new_grid, out_native, inplace=inplace, tag=tag,
       label=label, cells=np.asarray(cells_avg))
+# end

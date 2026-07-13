@@ -19,15 +19,18 @@ import click
 def is_active(d) -> bool:
   """True unless ``status``/``deactivate`` marked ``d`` inactive."""
   return getattr(d, "_cli_active", True)
+# end
 
 
 def set_active(d, value: bool) -> None:
   d._cli_active = value
+# end
 
 
 def active_datasets(ctx) -> list:
   """The working set's datasets, excluding any deactivated by ``status``."""
   return [d for d in ctx.obj.datasets if is_active(d)]
+# end
 
 
 def apply(ctx, fn, *, use: str | None = None) -> None:
@@ -42,11 +45,15 @@ def apply(ctx, fn, *, use: str | None = None) -> None:
   def _maybe(d):
     if not is_active(d):
       return d
+    # end
     if use is not None and d.tag != use:
       return d
+    # end
     return fn(d)
+  # end
 
   ds.datasets = [_maybe(d) for d in ds.datasets]
+# end
 
 
 def find_by_tag(ctx, tag: str):
@@ -58,7 +65,10 @@ def find_by_tag(ctx, tag: str):
   for d in ctx.obj.datasets:
     if d.tag == tag:
       return d
+    # end
+  # end
   raise click.UsageError(f"no dataset tagged '{tag}' in the working set")
+# end
 
 
 def parse_indices(spec: str, length: int) -> list[int]:
@@ -66,10 +76,13 @@ def parse_indices(spec: str, length: int) -> list[int]:
   concrete list of indices into a sequence of the given ``length``."""
   if "," in spec:
     return [int(s) for s in spec.split(",")]
+  # end
   if ":" in spec:
     parts = (spec.split(":") + ["", "", ""])[:3]
     lo = int(parts[0]) if parts[0] else 0
     hi = int(parts[1]) if parts[1] else length
     step = int(parts[2]) if parts[2] else 1
     return list(range(lo, hi, step))
+  # end
   return [int(spec)]
+# end

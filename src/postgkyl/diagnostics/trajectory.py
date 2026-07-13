@@ -42,6 +42,7 @@ def _masked(coord: np.ndarray, lo: float | None, hi: float | None) -> np.ndarray
     out = np.where(out < hi, out, np.nan)
   # end
   return out
+# end
 
 
 def _update(i, ax, datasets, leap, velocity, xmin, xmax, ymin, ymax, zmin, zmax):
@@ -66,6 +67,7 @@ def _update(i, ax, datasets, leap, velocity, xmin, xmax, ymin, ymax, zmin, zmax)
     if velocity and dataset.num_comps == 6:
       if t_idx + leap >= len(time):
         dt = time[-1] - time[t_idx]
+      # end
       else:
         dt = time[int(t_idx + leap)] - time[t_idx]
       # end
@@ -86,6 +88,7 @@ def _update(i, ax, datasets, leap, velocity, xmin, xmax, ymin, ymax, zmin, zmax)
   ax.set_xlim3d(xmin, xmax)
   ax.set_ylim3d(ymin, ymax)
   ax.set_zlim3d(zmin, zmax)
+# end
 
 
 def trajectory(
@@ -154,3 +157,4 @@ def trajectory(
   # end
 
   return anim
+# end

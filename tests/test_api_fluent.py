@@ -42,22 +42,26 @@ def _close_figs():
   plt.close("all")
   yield
   plt.close("all")
+# end
 
 
 class MyData(pg.GData):
   """A ``GData`` subclass, used to verify subclass propagation through every
   fluent method (the ``_result``/``type(self)`` contract)."""
+# end
 
 
 def _make(cls, grid, values, **ctx):
   d = cls(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
   grid = [np.linspace(0.0, 1.0, n + 1)]
   return _make(cls, grid, np.full((n, 1), value), tag=tag)
+# end
 
 
 # ============================================================ method roster
@@ -78,11 +82,15 @@ class TestMethodInventory:
     for name in INSTANCE_VERBS:
       assert hasattr(pg.GData, name), f"GData has no {name!r} method"
       assert callable(getattr(pg.GData, name))
+    # end
+  # end
 
   def test_every_module_verb_exists_in_api_verbs(self):
     for name in MODULE_VERBS:
       assert hasattr(api_verbs, name), f"api.verbs has no {name!r} function"
       assert callable(getattr(api_verbs, name))
+    # end
+  # end
 
   def test_grid_is_deliberately_not_a_fluent_method(self):
     """``ops.grid`` has no fluent spelling: ``GData.grid`` must stay the
@@ -93,6 +101,8 @@ class TestMethodInventory:
     assert isinstance(d.grid, list)
     assert not callable(d.grid)
     assert hasattr(ops, "grid") and callable(ops.grid)
+  # end
+# end
 
 
 # ==================================================== subclass propagation
@@ -103,16 +113,19 @@ class TestSubclassPropagation:
     assert isinstance(out, MyData)
     out_psd = d.fft(psd=True)
     assert isinstance(out_psd, MyData)
+  # end
 
   def test_magsq(self):
     d = _make(MyData, [np.linspace(0.0, 1.0, 5)], np.tile([1.0, 2.0, 3.0], (4, 1)))
     out = d.magsq()
     assert isinstance(out, MyData)
+  # end
 
   def test_mask(self):
     d = _make(MyData, [np.linspace(0.0, 1.0, 6)], np.arange(5.0)[:, np.newaxis])
     out = d.mask(lower=2.0)
     assert isinstance(out, MyData)
+  # end
 
   def test_relchange(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -120,6 +133,7 @@ class TestSubclassPropagation:
     cur = _make(MyData, grid, np.full((4, 1), 3.0))
     out = api_verbs.relchange(ref, cur)
     assert isinstance(out, MyData)
+  # end
 
   def test_val2coord_returns_fluent_group_of_the_subclass(self):
     d = _make(MyData, [np.arange(5.0)], np.arange(15.0).reshape(5, 3))
@@ -128,6 +142,8 @@ class TestSubclassPropagation:
     assert len(group) == 2
     for member in group:
       assert isinstance(member, MyData)
+    # end
+  # end
 
   def test_extract_input_returns_a_plain_string(self):
     d = _line()
@@ -137,6 +153,7 @@ class TestSubclassPropagation:
     d2 = _make(MyData, [np.linspace(0.0, 1.0, 3)], np.ones((2, 1)),
         input_file=encoded)
     assert d2.extract_input() == text
+  # end
 
   def test_fit(self):
     edges = np.linspace(0.0, 1.0, 21)
@@ -146,6 +163,7 @@ class TestSubclassPropagation:
     out = d.fit("linear")
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 1.0], atol=1e-8)
+  # end
 
   def test_fit_window_growth_rate(self):
     edges = np.linspace(0.0, 1.0, 61)
@@ -155,6 +173,7 @@ class TestSubclassPropagation:
     out = d.fit("exp2", window=True)
     assert isinstance(out, MyData)
     assert out.ctx["fit_params"][0][1] == pytest.approx(0.5, abs=1e-2)
+  # end
 
   def test_differentiate(self):
     edges = np.linspace(0.0, 1.0, 17)
@@ -162,6 +181,7 @@ class TestSubclassPropagation:
     d = _make(MyData, [edges], (centers**2)[:, np.newaxis])
     out = d.differentiate()
     assert isinstance(out, MyData)
+  # end
 
   def test_collect(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -169,6 +189,7 @@ class TestSubclassPropagation:
     b = _make(MyData, grid, np.full((4, 1), 3.0), time=1.0)
     out = api_verbs.collect(a, b)
     assert isinstance(out, MyData)
+  # end
 
   def test_evaluate(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -177,6 +198,7 @@ class TestSubclassPropagation:
     out = api_verbs.evaluate("f0 f1 +", a, b)
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_values(), 5.0)
+  # end
 
   @needs_gkeyll
   def test_map(self):
@@ -200,6 +222,7 @@ class TestSubclassPropagation:
     out = target.map(mapping, space="conf")
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.grid[0], target.grid[0], atol=1e-12)
+  # end
 
   @needs_gkeyll
   def test_mul_div_interpolate_to_modal_nodal_quad_apply_integrate(self):
@@ -217,6 +240,8 @@ class TestSubclassPropagation:
     result = MyData(F1).integrate()
     assert result is not None
     assert isinstance(MyData(F1).interpolate().integrate_axis(0), MyData)
+  # end
+# end
 
 
 # ============================================================ keyword pass-through
@@ -226,6 +251,7 @@ class TestKeywordPassthrough:
     full = d.fft(psd=False)
     half = d.fft(psd=True)
     assert half.values.shape[0] == full.values.shape[0] // 2
+  # end
 
   def test_magsq_coords_kwarg_reaches_the_verb(self):
     d = _make(MyData, [np.linspace(0.0, 1.0, 5)], np.tile([1.0, 2.0, 3.0], (4, 1)))
@@ -233,6 +259,7 @@ class TestKeywordPassthrough:
     partial = d.magsq(coords="0:2")   # 1+4
     np.testing.assert_allclose(default.get_values().flat[0], 14.0)
     np.testing.assert_allclose(partial.get_values().flat[0], 5.0)
+  # end
 
   def test_mask_lower_vs_upper_kwarg_reaches_the_verb(self):
     d = _make(MyData, [np.linspace(0.0, 1.0, 6)], np.arange(5.0)[:, np.newaxis])
@@ -240,6 +267,8 @@ class TestKeywordPassthrough:
     upper = d.mask(upper=2.0)
     assert lower.get_values().mask[0, 0] and not lower.get_values().mask[-1, 0]
     assert upper.get_values().mask[-1, 0] and not upper.get_values().mask[0, 0]
+  # end
+# end
 
 
 # ======================================================== end-to-end chains
@@ -248,6 +277,7 @@ class TestEndToEndChains:
   def test_interpolate_magsq_plot(self):
     fig = pg.load(F2D_VEC).interpolate().magsq().plot(show=False)
     assert fig is not None
+  # end
 
   def test_interpolate_select_fft(self):
     # fft's output grid is a frequency axis (one entry per value, not a
@@ -256,11 +286,14 @@ class TestEndToEndChains:
     out = pg.load(F1D).interpolate().select(comp=0).fft(psd=True)
     assert isinstance(out, pg.GData)
     assert out.values.shape[0] == pg.load(F1D).interpolate().select(comp=0).num_cells[0] // 2
+  # end
 
   def test_interpolate_select_mask_fit(self):
     out = pg.load(F1D).interpolate().select(comp=0).mask(lower=-1e30).fit("linear")
     assert isinstance(out, pg.GData)
     assert "fit_params" in out.ctx
+  # end
+# end
 
 
 # ================================================================== group
@@ -269,6 +302,7 @@ class TestDatasetGroup:
     grid = [np.linspace(0.0, 1.0, 5)]
     return [_make(cls, grid, np.full((4, 1), v), time=t)
         for t, v in ((0.0, 1.0), (1.0, 2.0), (2.0, 3.0))]
+  # end
 
   def test_broadcast_non_terminal_verb_returns_a_group_of_the_same_class(self):
     g = ApiDatasetGroup(self._frames())
@@ -277,18 +311,22 @@ class TestDatasetGroup:
     assert len(out) == 3
     for member in out:
       assert isinstance(member, MyData)
+    # end
+  # end
 
   def test_broadcast_chains(self):
     g = ApiDatasetGroup(self._frames())
     out = g.select(comp=0).mask(lower=-1e30)
     assert isinstance(out, ApiDatasetGroup)
     assert len(out) == 3
+  # end
 
   def test_broadcast_terminal_verb_returns_a_plain_list(self):
     g = ApiDatasetGroup(self._frames())
     figs = g.plot(show=False)
     assert isinstance(figs, list)
     assert len(figs) == 3
+  # end
 
   def test_broadcast_write_returns_a_list_of_paths(self, tmp_path):
     g = ApiDatasetGroup(self._frames())
@@ -297,6 +335,8 @@ class TestDatasetGroup:
     assert len(paths) == 3
     for p in paths:
       assert os.path.isfile(p)
+    # end
+  # end
 
   def test_broadcast_non_callable_property_returns_a_plain_list(self):
     g = ApiDatasetGroup(self._frames())
@@ -304,6 +344,7 @@ class TestDatasetGroup:
     assert isinstance(dims, list)
     assert len(dims) == 3
     assert all(d == g[0].num_dims for d in dims)
+  # end
 
   def test_info_is_explicit_not_broadcast_and_enumerates_members(self):
     g = ApiDatasetGroup(self._frames())
@@ -311,18 +352,21 @@ class TestDatasetGroup:
     assert isinstance(summaries, list)
     assert len(summaries) == 3
     assert "#0" in summaries[0] and "#1" in summaries[1] and "#2" in summaries[2]
+  # end
 
   def test_collect_combines_members_into_one_dataset(self):
     g = ApiDatasetGroup(self._frames())
     out = g.collect()
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_grid()[0], [0.0, 1.0, 2.0])
+  # end
 
   def test_evaluate_combines_named_members(self):
     g = ApiDatasetGroup(self._frames()[:2])
     out = g.evaluate("f0 f1 +")
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_values(), 3.0)  # 1.0 + 2.0
+  # end
 
   @needs_gkeyll
   def test_animate_is_explicit_not_broadcast(self):
@@ -331,6 +375,7 @@ class TestDatasetGroup:
     g = ApiDatasetGroup(frames)
     anim = g.animate(show=False)
     assert isinstance(anim, FuncAnimation)
+  # end
 
   def test_with_and_and_preserve_the_concrete_class(self):
     a, b, c = self._frames()
@@ -340,6 +385,7 @@ class TestDatasetGroup:
     assert len(g2) == 3
     g3 = g & c
     assert isinstance(g3, ApiDatasetGroup)
+  # end
 
   def test_slicing_preserves_the_concrete_class(self):
     g = ApiDatasetGroup(self._frames())
@@ -347,13 +393,17 @@ class TestDatasetGroup:
     assert isinstance(sub, ApiDatasetGroup)
     assert len(sub) == 2
     assert isinstance(g[0], MyData)
+  # end
 
   def test_private_and_unknown_attributes_are_not_broadcast(self):
     g = ApiDatasetGroup(self._frames())
     with pytest.raises(AttributeError):
       g._not_a_real_attribute
+    # end
     with pytest.raises(AttributeError):
       g.this_verb_does_not_exist()
+    # end
+  # end
 
   def test_is_a_core_dataset_group_too(self):
     """The fluent group is a genuine subclass of the verb-less container
@@ -361,6 +411,8 @@ class TestDatasetGroup:
     g = ApiDatasetGroup(self._frames())
     assert isinstance(g, CoreDatasetGroup)
     assert repr(g) == "<DatasetGroup [3 datasets]>"
+  # end
+# end
 
 
 # ================================================================== facade
@@ -370,17 +422,24 @@ class TestFacade:
         "interpolate", "select", "represent", "apply",
         "save", "collect", "evaluate", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
+    # end
+  # end
 
   def test_all_is_consistent(self):
     assert hasattr(pg, "__all__")
     for name in pg.__all__:
       assert hasattr(pg, name), f"pg.__all__ names {name!r} but it is missing"
+    # end
+  # end
 
   def test_dataset_group_is_the_fluent_one(self):
     assert pg.DatasetGroup is ApiDatasetGroup
+  # end
 
   def test_module_verbs_are_the_api_ones(self):
     assert pg.collect is api_verbs.collect
     assert pg.evaluate is api_verbs.evaluate
     assert pg.relchange is api_verbs.relchange
     assert pg.animate is api_verbs.animate
+  # end
+# end

@@ -42,6 +42,7 @@ def test_adios_frame_p1():
   grid, values = io.read(F_P1)
   assert values.shape[:-1] == (64, 32)
   assert [g.shape[0] - 1 for g in grid] == [64, 32]
+# end
 
 
 @needs_adios2
@@ -54,6 +55,7 @@ def test_adios_frame_p2():
   assert r.ctx["basis_type"] == "serendipity"
   assert r.ctx["poly_order"] == 2
   assert r.ctx["is_modal"] is True
+# end
 
 
 @needs_adios2
@@ -63,6 +65,7 @@ def test_adios_frame_partial_axis_and_comp():
   r.preload()
   grid, data = r.load()
   np.testing.assert_array_equal(data.shape, (1, 32, 1))
+# end
 
 
 @needs_adios2
@@ -73,6 +76,7 @@ def test_adios_frame_partial_slice_axis():
   grid, data = r.load()
   assert data.shape[0] == 8
   assert data.shape[1] == 32
+# end
 
 
 @needs_adios2
@@ -84,6 +88,7 @@ def test_adios_dynvector_diagnostic():
   np.testing.assert_array_equal(data.shape[0], 15714)
   assert grid[0].shape == (15714,)
   assert r.ctx["num_comps"] == data.shape[-1]
+# end
 
 
 @needs_adios2
@@ -97,11 +102,13 @@ def test_adios_dynvector_matches_direct_readback():
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     key = lambda k: [convert(c) for c in re.split("([0-9]+)", k)]
     return sorted(items, key=key)
+  # end
 
   time_lst = natural_sort(v for v in fh.available_variables() if "TimeMesh" in v)
   total_time = 0
   for t in time_lst:
     total_time += np.atleast_1d(fh.read(t)).shape[0]
+  # end
   fh.close()
 
   r = GkylAdiosReader(F_ENERGY, ctx={})
@@ -109,6 +116,7 @@ def test_adios_dynvector_matches_direct_readback():
   r.preload()
   _, data = r.load()
   assert data.shape[0] == total_time
+# end
 
 
 def test_is_compatible_false_for_a_gkyl_binary_file():
@@ -117,11 +125,13 @@ def test_is_compatible_false_for_a_gkyl_binary_file():
   gkyl_file = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-elc_250.gkyl")
   r = GkylAdiosReader(gkyl_file, ctx={})
   assert r.is_compatible() is False
+# end
 
 
 def test_is_compatible_false_for_a_nonexistent_path():
   r = GkylAdiosReader("/no/such/file.bp", ctx={})
   assert r.is_compatible() is False
+# end
 
 
 @needs_adios2
@@ -131,6 +141,8 @@ def test_load_raises_for_missing_variable_name():
   r.preload()
   with pytest.raises(ValueError, match="Could not find the variable"):
     r.load()
+  # end
+# end
 
 
 @needs_adios2
@@ -149,15 +161,20 @@ def test_dynvec_diagnostic_pads_a_restart_chunk_missing_its_second_dimension(mon
           "TimeMesh1": np.array([0.2]),
           "Data1": np.array([5.0]),  # ncomp=1 restart chunk: squeezed to 1-D
       }
+    # end
 
     def available_variables(self):
       return {k: {} for k in self._data}
+    # end
 
     def read(self, name):
       return self._data[name]
+    # end
 
     def close(self):
       pass
+    # end
+  # end
 
   monkeypatch.setattr(adios_reader_mod.adios2, "FileReader", _FakeFileReader)
   r = GkylAdiosReader(F_ENERGY, ctx={})
@@ -166,6 +183,7 @@ def test_dynvec_diagnostic_pads_a_restart_chunk_missing_its_second_dimension(mon
   assert data.shape == (3, 1)
   np.testing.assert_allclose(data[:, 0], [1.0, 3.0, 5.0])
   np.testing.assert_allclose(grid[0], [0.0, 0.1, 0.2])
+# end
 
 
 @needs_adios2
@@ -176,6 +194,8 @@ def test_load_raises_when_neither_frame_nor_diagnostic():
   r = GkylAdiosReader(F_P1, ctx={})
   with pytest.raises(TypeError, match="neither a frame nor a diagnostic"):
     r.load()
+  # end
+# end
 
 
 def test_is_compatible_false_when_adios2_not_installed(monkeypatch):
@@ -186,6 +206,7 @@ def test_is_compatible_false_when_adios2_not_installed(monkeypatch):
   monkeypatch.setattr(adios_reader_mod, "adios2", None)
   r = GkylAdiosReader(F_P1, ctx={})
   assert r.is_compatible() is False
+# end
 
 
 def test_module_sets_adios2_to_none_when_import_fails(monkeypatch):
@@ -200,7 +221,9 @@ def test_module_sets_adios2_to_none_when_import_fails(monkeypatch):
   def blocking_import(name, *args, **kwargs):
     if name == "adios2":
       raise ImportError("simulated: adios2 is not installed")
+    # end
     return real_import(name, *args, **kwargs)
+  # end
 
   monkeypatch.setattr(builtins, "__import__", blocking_import)
   try:
@@ -208,6 +231,7 @@ def test_module_sets_adios2_to_none_when_import_fails(monkeypatch):
     assert adios_reader_mod.adios2 is None
     r = adios_reader_mod.GkylAdiosReader(F_P1, ctx={})
     assert r.is_compatible() is False
+  # end
   finally:
     # Restore the real binding regardless of the patched import above --
     # sys.modules keeps this reloaded module object, so a later test's
@@ -215,6 +239,8 @@ def test_module_sets_adios2_to_none_when_import_fails(monkeypatch):
     # `adios2 is None`.
     monkeypatch.setattr(builtins, "__import__", real_import)
     importlib.reload(adios_reader_mod)
+  # end
+# end
 
 
 def test_create_offset_count_raises_for_non_int_slice_axis_selector():
@@ -225,6 +251,8 @@ def test_create_offset_count_raises_for_non_int_slice_axis_selector():
   num_elems = np.array([4, 8], dtype=np.int32)
   with pytest.raises(TypeError, match="'z' is neither number or slice"):
     r._create_offset_count(num_elems, ("0,1", None), None, grid)
+  # end
+# end
 
 
 def test_create_offset_count_handles_slice_comp_selector():
@@ -233,6 +261,7 @@ def test_create_offset_count_handles_slice_comp_selector():
   offset, count = r._create_offset_count(num_elems, (None, None), "0:2", None)
   assert offset[-1] == 0
   assert count[-1] == 2
+# end
 
 
 def test_create_offset_count_raises_for_non_int_slice_comp_selector():
@@ -240,3 +269,5 @@ def test_create_offset_count_raises_for_non_int_slice_comp_selector():
   num_elems = np.array([4, 8], dtype=np.int32)
   with pytest.raises(TypeError, match="'comp' is neither number or slice"):
     r._create_offset_count(num_elems, (None, None), "0,1", None)
+  # end
+# end

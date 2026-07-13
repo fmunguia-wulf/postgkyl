@@ -33,6 +33,7 @@ def test_load_metadata():
   assert d.ctx["basis_type"] == "serendipity"
   assert d.ctx["poly_order"] == 1
   assert not d.is_interpolated          # raw modal data
+# end
 
 
 def test_golden_script_1d():
@@ -44,6 +45,7 @@ def test_golden_script_1d():
   assert type(g).__name__ == "GData"    # subclass propagated through verbs
   fig = g.plot(show=False)
   assert fig is not None
+# end
 
 
 def test_golden_script_2d():
@@ -51,6 +53,7 @@ def test_golden_script_2d():
   assert g.num_dims == 2
   assert g.values.shape == (16, 16, 1)
   assert g.plot(show=False) is not None
+# end
 
 
 def test_arithmetic_and_ufunc():
@@ -63,6 +66,7 @@ def test_arithmetic_and_ufunc():
   assert isinstance(mag, pg.GData)
   assert np.allclose(mag.values, np.sqrt(a.values ** 2 + b.values ** 2))
   assert np.asarray(a).shape == a.values.shape  # __array__
+# end
 
 
 def test_capability_guardrails_on_modal_data():
@@ -70,12 +74,17 @@ def test_capability_guardrails_on_modal_data():
   a = pg.load(F1)
   with pytest.raises(ValueError):
     np.sqrt(a)                                   # general ufunc: no modal meaning
+  # end
   with pytest.raises(ValueError):
     np.asarray(a)                                # coefficients are not point values
+  # end
   with pytest.raises(ValueError):
     a.select(comp=0)                                # slicing would mix basis functions
+  # end
   with pytest.raises(ValueError):
     _ = a + a.interpolate()                           # mixed modal + field domains
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -97,6 +106,7 @@ def test_load_lands_in_the_modal_domain():
   g = d.interpolate()                                 # the one-way bridge
   assert g.backend == "numpy"                    # ...to a by-value NumPy array
   assert g.values.flags.writeable
+# end
 
 
 @needs_gkeyll
@@ -111,6 +121,7 @@ def test_shim_handshake():
   b = gpython.basis.get_basis("serendipity", 2, 1)
   assert (b.ndim, b.poly_order, b.num_basis) == (2, 1, 4)
   assert b.id == "serendipity"
+# end
 
 
 @needs_gkeyll
@@ -125,6 +136,7 @@ def test_gkhybrid_basis_loads_and_interpolates():
   g = d.interpolate()
   assert g.backend == "numpy"
   assert g.values.shape == (64, 32, 16, 1)        # (p+1=2) interpolation points/cell
+# end
 
 
 @needs_gkeyll
@@ -137,6 +149,7 @@ def test_interpolation_matrix_matches_analytic_basis():
   m2 = gpython.basis.interpolation_matrix("serendipity", 1, 2, 3)  # p2, points -+2/3, 0
   z = np.array([-2.0 / 3.0, 0.0, 2.0 / 3.0])
   assert np.allclose(m2[:, 2], 2.371708245126285 * z ** 2 - 0.7905694150420951)
+# end
 
 
 @needs_gkeyll
@@ -148,6 +161,8 @@ def test_weak_algebra_identities():
   for f in (0, 2):  # density and T; field 1 (u_par) is identically ~0 -> 0/0
     scale = np.abs(ref[..., f]).max()
     assert np.abs(back[..., f] - ref[..., f]).max() / scale < 1e-12
+  # end
+# end
 
 
 @needs_gkeyll
@@ -161,6 +176,7 @@ def test_modal_linear_ops_commute_with_interpolate():
   assert np.allclose((a ** 2).interpolate().values, (a * a).interpolate().values)
   shifted = (a + 1.0e18).interpolate().values - a.interpolate().values
   assert np.allclose(shifted, 1.0e18, rtol=1e-6)
+# end
 
 
 def _make_modal(grid, cells, basis_type, poly_order, coeffs):
@@ -171,6 +187,7 @@ def _make_modal(grid, cells, basis_type, poly_order, coeffs):
       cells=np.array(cells))
   d.push(grid, gpython.array.GkylArray.from_numpy(coeffs))
   return d
+# end
 
 
 @needs_gkeyll
@@ -199,6 +216,7 @@ def test_conf_phase_mul_is_automatic_and_commutative():
   assert isinstance(out1, pg.GData) and out1.num_dims == 2
   np.testing.assert_allclose(out1.values.reshape(12, 6), pop)
   np.testing.assert_allclose(out2.values.reshape(12, 6), pop)
+# end
 
 
 @needs_gkeyll
@@ -210,19 +228,24 @@ def test_conf_phase_mul_rejects_non_mul_ops_and_mismatched_grids():
       "hybrid", 1, np.zeros((12, 6)))
   with pytest.raises(ValueError, match="only '\\*' is defined"):
     conf / phase
+  # end
   with pytest.raises(ValueError, match="only '\\*' is defined"):
     conf + phase
+  # end
 
   mismatched = _make_modal(
       [np.linspace(0.0, 2.0, 4), np.linspace(-1.0, 1.0, 5)], [3, 4],
       "hybrid", 1, np.zeros((12, 6)))
   with pytest.raises(ValueError, match="not the same simulation"):
     conf * mismatched
+  # end
+# end
 
 
 def _relerr(x, y):
   x, y = np.asarray(x, float), np.asarray(y, float)
   return np.abs(x - y).max() / np.abs(y).max()
+# end
 
 
 @needs_gkeyll
@@ -243,6 +266,7 @@ def test_representation_round_trips():
   manual = np.einsum("pk,cfk->cfp", m2n,
       np.asarray(a.values).reshape(24, 3, 2)).reshape(24, 6)
   assert np.allclose(n.values, manual)
+# end
 
 
 @needs_gkeyll
@@ -257,6 +281,8 @@ def test_apply_pointwise_via_quadrature():
   assert chained.ctx.get("representation", "modal") == "modal"
   with pytest.raises(ValueError):
     a.apply(lambda v: v.sum(axis=-1))            # fn must act pointwise
+  # end
+# end
 
 
 @needs_gkeyll
@@ -266,18 +292,26 @@ def test_conversions_are_always_explicit():
   n, q = a.to_nodal(), a.to_quad()
   with pytest.raises(ValueError):
     _ = a + n                                    # mixed representations
+  # end
   with pytest.raises(ValueError):
     _ = np.add(n, q)                             # mixed reps through a ufunc
+  # end
   with pytest.raises(ValueError):
     q.interpolate()                                   # interp needs modal
+  # end
   with pytest.raises(ValueError):
     n.integrate()                                # integrate needs modal
+  # end
   with pytest.raises(ValueError):
     np.sqrt(a)                                   # ufuncs have no modal meaning
+  # end
   with pytest.raises(ValueError):
     np.asarray(a)                                # coefficients are not values
+  # end
   with pytest.raises(ValueError):
     a.plot(show=False)                           # coefficients are not plottable
+  # end
+# end
 
 
 @needs_gkeyll
@@ -296,6 +330,7 @@ def test_pointwise_numpy_on_point_values():
   fn = lambda v: np.sqrt(np.abs(v))
   assert _relerr(np.sqrt(np.abs(q)).to_modal().values, a.apply(fn).values) < 1e-15
   assert np.asarray(n).shape == (24, 6)          # __array__ allowed on points
+# end
 
 
 @needs_gkeyll
@@ -310,6 +345,8 @@ def test_plot_point_values_directly():
   p2 = pg.load(os.path.join(DATA, "generated", "2d_ms_p2.gkyl"))
   with pytest.raises(ValueError):
     p2.to_nodal().plot(show=False)               # non-tensor node set -> to_quad
+  # end
+# end
 
 
 @needs_gkeyll
@@ -319,6 +356,7 @@ def test_linear_ops_valid_in_any_representation():
   n = a.to_nodal()
   assert _relerr((2 * n - n + n).to_modal().values, (2 * a).values) < 1e-13
   assert _relerr((n + 5.0e17).to_modal().values, (a + 5.0e17).values) < 1e-13
+# end
 
 
 @needs_gkeyll
@@ -332,6 +370,7 @@ def test_values_view_pins_native_memory():
   gc.collect()
   assert np.array_equal(v, expected)
   assert _relerr(got, 2 * expected) < 1e-13
+# end
 
 
 @needs_gkeyll
@@ -348,6 +387,8 @@ def test_integrate_via_gkeyll():
   assert np.all(a.integrate(op="abs") >= np.abs(result) * (1 - 1e-12))
   with pytest.raises(ValueError):
     a.interpolate().integrate()                       # field domain: not a modal verb
+  # end
+# end
 
 
 def test_write_roundtrip(tmp_path):
@@ -355,11 +396,13 @@ def test_write_roundtrip(tmp_path):
   out = a.save(str(tmp_path / "rt.gkyl"))
   back = pg.load(out)
   assert np.allclose(back.values, a.values)
+# end
 
 
 def test_info_returns_string(capsys):
   s = pg.load(F1).info()
   assert "Number of components" in s
+# end
 
 
 def test_cli_chained(tmp_path):
@@ -372,6 +415,7 @@ def test_cli_chained(tmp_path):
       "--batch-mode", F1, "interp", "sel", "--comp", "0", "plot", "--saveas", str(out)])
   assert result.exit_code == 0, result.output
   assert out.exists()
+# end
 
 
 def test_cli_abbreviation_and_info():
@@ -382,6 +426,7 @@ def test_cli_abbreviation_and_info():
   result = CliRunner().invoke(cli, [F1, "interp", "sel", "--comp", "0", "info"])
   assert result.exit_code == 0, result.output
   assert "interpolated" in result.output
+# end
 
 
 # --------------------------------------------------------------------------
@@ -452,6 +497,7 @@ _LAYERS = set(_ALLOWED)
 def _layer(path, pkg_root):
   parts = os.path.relpath(path, pkg_root).split(os.sep)
   return parts[0] if len(parts) > 1 else ""
+# end
 
 
 def _import_targets(node):
@@ -460,15 +506,24 @@ def _import_targets(node):
       if n.name == "postgkyl" or n.name.startswith("postgkyl."):
         t = n.name.split(".")
         yield t[1] if len(t) > 1 else ""
+      # end
+    # end
+  # end
   elif isinstance(node, ast.ImportFrom):
     if node.level:
       return
+    # end
     mod = node.module or ""
     if mod == "postgkyl":
       for n in node.names:
         yield n.name if n.name in _LAYERS else ""
+      # end
+    # end
     elif mod.startswith("postgkyl."):
       yield mod.split(".")[1]
+    # end
+  # end
+# end
 
 
 def _build_edges(pkg_root=None):
@@ -479,16 +534,24 @@ def _build_edges(pkg_root=None):
     for f in files:
       if not f.endswith(".py"):
         continue
+      # end
       p = os.path.join(dp, f)
       src = _layer(p, pkg_root)
       for node in ast.walk(ast.parse(open(p).read(), p)):
         for tgt in _import_targets(node):
           if tgt == src:
             continue
+          # end
           edges[src].add(tgt)
           if tgt not in _ALLOWED.get(src, set()):
             violations.append(f"{os.path.relpath(p, pkg_root)} [{src or 'facade'}] -> [{tgt or 'facade'}]")
+          # end
+        # end
+      # end
+    # end
+  # end
   return edges, violations
+# end
 
 
 def test_facade_is_pure_reexport():
@@ -498,11 +561,13 @@ def test_facade_is_pure_reexport():
   defs = [n.name for n in tree.body
           if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]
   assert not defs, f"facade should be pure re-export, but defines: {defs}"
+# end
 
 
 def test_import_contract_no_violations():
   _, violations = _build_edges()
   assert not violations, "layer contract violations:\n" + "\n".join(violations)
+# end
 
 
 def _foreign_floor_offenders(pkg_root):
@@ -511,23 +576,33 @@ def _foreign_floor_offenders(pkg_root):
     for f in files:
       if not f.endswith(".py"):
         continue
+      # end
       p = os.path.join(dp, f)
       in_gpython = _layer(p, pkg_root) == "gpython"
       for node in ast.walk(ast.parse(open(p).read(), p)):
         names = []
         if isinstance(node, ast.Import):
           names = [n.name for n in node.names]
+        # end
         elif isinstance(node, ast.ImportFrom):
           names = [node.module or ""] + (
               [n.name for n in node.names] if node.level or "." in (node.module or "")
               or (node.module or "") == "postgkyl" else [])
+        # end
         for name in names:
           root = name.split(".")[0]
           if root == "ctypes":
             offenders.append(f"{os.path.relpath(p, pkg_root)}: ctypes")
+          # end
           if ("_gpython" in name.split(".") or name == "_gpython") and not in_gpython:
             offenders.append(f"{os.path.relpath(p, pkg_root)}: _gpython")
+          # end
+        # end
+      # end
+    # end
+  # end
   return offenders
+# end
 
 
 def test_foreign_floor_confined_to_gpython():
@@ -538,6 +613,7 @@ def test_foreign_floor_confined_to_gpython():
   pkg_root = os.path.join(SRC, "postgkyl")
   offenders = _foreign_floor_offenders(pkg_root)
   assert not offenders, f"foreign floor leaked above gpython/: {offenders}"
+# end
 
 
 def _find_cycles(edges):
@@ -549,20 +625,28 @@ def _find_cycles(edges):
     for w in edges.get(u, ()):
       if color[w] == 1:
         cycles.append(stack + [w])
+      # end
       elif color[w] == 0:
         dfs(w, stack + [w])
+      # end
+    # end
     color[u] = 2
+  # end
 
   for n in list(edges):
     if color[n] == 0:
       dfs(n, [n])
+    # end
+  # end
   return cycles
+# end
 
 
 def test_import_graph_is_acyclic():
   edges, _ = _build_edges()
   cycles = _find_cycles(edges)
   assert not cycles, f"import cycle(s): {cycles}"
+# end
 
 
 # --------------------------------------------------------------------------
@@ -576,6 +660,8 @@ def _write_module(pkg_root, layer, name, body):
   os.makedirs(d, exist_ok=True)
   with open(os.path.join(d, name), "w") as fh:
     fh.write(body)
+  # end
+# end
 
 
 def test_build_edges_flags_a_disallowed_import(tmp_path):
@@ -583,6 +669,7 @@ def test_build_edges_flags_a_disallowed_import(tmp_path):
   _write_module(pkg_root, "badlayer", "mod.py", "import postgkyl.ops\n")
   _, violations = _build_edges(pkg_root)
   assert any("badlayer" in v and "ops" in v for v in violations)
+# end
 
 
 def test_import_graph_detects_a_real_cycle(tmp_path):
@@ -592,6 +679,7 @@ def test_import_graph_detects_a_real_cycle(tmp_path):
   edges, _ = _build_edges(pkg_root)
   cycles = _find_cycles(edges)
   assert cycles, "expected the fake layer_a <-> layer_b cycle to be detected"
+# end
 
 
 def test_foreign_floor_offenders_flags_ctypes_and_gpython_outside_gpython(tmp_path):
@@ -601,3 +689,4 @@ def test_foreign_floor_offenders_flags_ctypes_and_gpython_outside_gpython(tmp_pa
   offenders = _foreign_floor_offenders(pkg_root)
   assert any(o.endswith(": ctypes") for o in offenders)
   assert any(o.endswith(": _gpython") for o in offenders)
+# end

@@ -27,6 +27,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 # ============================================================== ops.fft
@@ -44,58 +45,73 @@ class TestFft:
     ft = out.get_values()
     peak = freq[np.argmax(np.abs(ft[:, 0]))]
     assert abs(abs(peak) - f0) < 1e-9
+  # end
 
   def test_psd_returns_positive_frequencies_only(self):
     N = 16
     d = _make([np.linspace(0.0, 1.0, N + 1)], np.ones((N, 1)))
     out = ops.fft(d, psd=True)
     assert out.get_values().shape[0] == N // 2
+  # end
 
   def test_inplace_mutates(self):
     d = _make([np.linspace(0.0, 1.0, 17)], np.ones((16, 1)))
     out = ops.fft(d, inplace=True)
     assert out is d
+  # end
 
   def test_tag_and_label(self):
     d = _make([np.linspace(0.0, 1.0, 17)], np.ones((16, 1)))
     out = ops.fft(d, tag="spec", label="lbl")
     assert out.get_tag() == "spec"
     assert out.get_label() == "lbl"
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.fft(d)
+    # end
+  # end
+# end
 
 
 # ============================================================ ops.magsq
 class TestMagsq:
   def _vec3(self):
     return _make([np.linspace(0.0, 1.0, 5)], np.tile([1.0, 2.0, 3.0], (4, 1)))
+  # end
 
   def test_value_and_num_comps(self):
     out = ops.magsq(self._vec3())
     np.testing.assert_allclose(out.get_values().flat[0], 14.0)  # 1+4+9
     assert out.get_num_comps() == 1
+  # end
 
   def test_custom_coords(self):
     out = ops.magsq(self._vec3(), coords="1:3")
     np.testing.assert_allclose(out.get_values().flat[0], 13.0)  # 4+9
+  # end
 
   def test_inplace(self):
     d = self._vec3()
     assert ops.magsq(d, inplace=True) is d
+  # end
 
   def test_tag(self):
     out = ops.magsq(self._vec3(), tag="m")
     assert out.get_tag() == "m"
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.magsq(d)
+    # end
+  # end
+# end
 
 
 # ========================================================= ops.relchange
@@ -106,6 +122,7 @@ class TestRelchange:
     cur = _make(grid, np.full((4, 1), 3.0))
     out = ops.relchange(ref, cur)
     np.testing.assert_allclose(out.get_values(), 0.5)  # (3-2)/2
+  # end
 
   def test_value_with_explicit_comp(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -114,6 +131,7 @@ class TestRelchange:
     out = ops.relchange(ref, cur, comp=0)  # normalize both by ref comp 0 (=2)
     np.testing.assert_allclose(out.get_values()[..., 0], 1.0)   # (4-2)/2
     np.testing.assert_allclose(out.get_values()[..., 1], -3.0)  # (4-10)/2
+  # end
 
   def test_result_built_from_data_not_reference(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -121,6 +139,7 @@ class TestRelchange:
     cur = _make(grid, np.full((4, 1), 3.0), tag="cur")
     out = ops.relchange(ref, cur, tag="rc")
     assert out.get_tag() == "rc"
+  # end
 
   def test_inplace_mutates_data(self):
     grid = [np.linspace(0.0, 1.0, 5)]
@@ -128,6 +147,7 @@ class TestRelchange:
     cur = _make(grid, np.full((4, 1), 4.0))
     out = ops.relchange(ref, cur, inplace=True)
     assert out is cur
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -136,28 +156,36 @@ class TestRelchange:
     modal = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.relchange(modal, numpy_side)
+    # end
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.relchange(numpy_side, modal)
+    # end
+  # end
+# end
 
 
 # ============================================================== ops.mask
 class TestMask:
   def _data(self):
     return _make([np.linspace(0.0, 1.0, 6)], np.arange(5.0)[:, np.newaxis])
+  # end
 
   def test_mask_lower(self):
     out = ops.mask(self._data(), lower=2.0)
     assert np.ma.is_masked(out.get_values())
     assert out.get_values().mask[0, 0]
     assert not out.get_values().mask[-1, 0]
+  # end
 
   def test_mask_upper(self):
     out = ops.mask(self._data(), upper=2.0)
     assert out.get_values().mask[-1, 0]
+  # end
 
   def test_mask_outside(self):
     out = ops.mask(self._data(), lower=1.0, upper=3.0)
     assert np.ma.is_masked(out.get_values())
+  # end
 
   def test_mask_from_dataset(self):
     grid = [np.linspace(0.0, 1.0, 6)]
@@ -168,10 +196,13 @@ class TestMask:
     assert np.ma.is_masked(values)
     assert values.mask[1, 0] and values.mask[1, 1]
     assert not values.mask[0, 0]
+  # end
 
   def test_mask_no_args_raises(self):
     with pytest.raises(ValueError):
       ops.mask(self._data())
+    # end
+  # end
 
   def test_mask_from_dataset_multi_component_raises(self):
     """mask_data must have exactly one component (see mask.py's docstring);
@@ -183,17 +214,23 @@ class TestMask:
         [[1.0, 1.0], [-1.0, -1.0], [1.0, 1.0], [-1.0, -1.0], [1.0, 1.0]]))
     with pytest.raises(IndexError):
       ops.mask(d, mask_field)
+    # end
+  # end
 
   def test_inplace(self):
     d = self._data()
     out = ops.mask(d, lower=2.0, inplace=True)
     assert out is d
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.mask(d, lower=0.0)
+    # end
+  # end
+# end
 
 
 # ============================================================== ops.grid
@@ -203,6 +240,7 @@ class TestGrid:
     d = _make([edges], np.ones((4, 1)))
     out = ops.grid(d)
     np.testing.assert_allclose(out.get_values()[..., 0], edges)
+  # end
 
   def test_2d_meshgrid_shape(self):
     edges = [np.linspace(0.0, 1.0, 5), np.linspace(0.0, 2.0, 4)]
@@ -210,12 +248,14 @@ class TestGrid:
     out = ops.grid(d)
     assert out.get_num_comps() == 2
     assert out.get_values().shape == (5, 4, 2)
+  # end
 
   def test_inplace(self):
     edges = np.linspace(0.0, 1.0, 5)
     d = _make([edges], np.ones((4, 1)))
     out = ops.grid(d, inplace=True)
     assert out is d
+  # end
 
   def test_curvilinear_grid_passthrough(self):
     # A curvilinear (post-'map') grid: every per-axis array already has
@@ -228,18 +268,24 @@ class TestGrid:
     assert out.get_values().shape == (nx + 1, ny + 1, 2)
     np.testing.assert_allclose(out.get_values()[..., 0], gx)
     np.testing.assert_allclose(out.get_values()[..., 1], gy)
+  # end
 
   def test_dimension_mismatch_raises(self):
     d = _make([np.linspace(0.0, 1.0, 5)], np.ones((4, 1)))
     d.ctx["cells"] = np.array([4, 4])  # claims 2 dims; grid has 1 axis
     with pytest.raises(ValueError, match="dimension"):
       ops.grid(d)
+    # end
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.grid(d)
+    # end
+  # end
+# end
 
 
 # ========================================================= ops.val2coord
@@ -247,6 +293,7 @@ class TestVal2coord:
   def _table(self):
     # 5 samples, 3 columns: [x, y0, y1]
     return _make([np.arange(5.0)], np.arange(15.0).reshape(5, 3))
+  # end
 
   def test_single_x_multiple_y(self):
     group = ops.val2coord(self._table(), x="0", y="1,2")
@@ -255,6 +302,7 @@ class TestVal2coord:
     np.testing.assert_allclose(group[0].get_grid()[0], np.arange(5.0) * 3.0)
     np.testing.assert_allclose(group[0].get_values().flatten(),
         np.arange(5.0) * 3.0 + 1.0)
+  # end
 
   def test_periodic_appends_first_sample(self):
     group = ops.val2coord(self._table(), x="0", y="1", periodic=True)
@@ -262,10 +310,13 @@ class TestVal2coord:
     assert d.get_values().shape[0] == 6
     np.testing.assert_allclose(d.get_values().flatten()[-1],
         d.get_values().flatten()[0])
+  # end
 
   def test_mismatched_x_y_counts_raises(self):
     with pytest.raises(ValueError):
       ops.val2coord(self._table(), x="0,1", y="2")
+    # end
+  # end
 
   def test_colon_range_selector_with_negative_indices_and_step(self):
     # 4 columns; "-3:-1:1" exercises the negative-lo, negative-hi, and
@@ -273,12 +324,16 @@ class TestVal2coord:
     d = _make([np.arange(6.0)], np.arange(24.0).reshape(6, 4))
     group = ops.val2coord(d, x="0", y="-3:-1:1")
     assert len(group) == 2  # columns 1, 2
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.val2coord(d, x="0", y="1")
+    # end
+  # end
+# end
 
 
 # ===================================================== ops.extract_input
@@ -286,13 +341,17 @@ class TestExtractInput:
   def test_missing_returns_empty_string(self):
     d = _make([np.linspace(0.0, 1.0, 3)], np.ones((2, 1)))
     assert ops.extract_input(d) == ""
+  # end
 
   def test_decodes_base64_ctx_field(self):
     text = "title = my sim\nnFrames = 10\n"
     encoded = base64.encodebytes(text.encode("utf-8")).decode("utf-8")
     d = _make([np.linspace(0.0, 1.0, 3)], np.ones((2, 1)), input_file=encoded)
     assert ops.extract_input(d) == text
+  # end
 
   def test_returns_a_plain_string_not_a_dataset(self):
     d = _make([np.linspace(0.0, 1.0, 3)], np.ones((2, 1)))
     assert isinstance(ops.extract_input(d), str)
+  # end
+# end

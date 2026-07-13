@@ -37,6 +37,8 @@ def command(ctx, z0, z1, z2, z3, z4, z5, weight, use, tag, label) -> None:
   dims = [i for i, z in enumerate((z0, z1, z2, z3, z4, z5)) if z]
   if not dims:
     raise click.UsageError("average requires at least one direction flag (--z0 ... --z5).")
+  # end
   weight_data = pg.load(weight) if weight else None
   apply(ctx, lambda d: d.average(dims, weight=weight_data, tag=tag, label=label),
       use=use)
+# end

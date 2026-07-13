@@ -39,5 +39,7 @@ def command(ctx, z0, z1, z2, z3, z4, z5, use, tag, label) -> None:
   if not eval_dirs:
     raise click.UsageError(
         "evalatcoordproj requires at least one --z0 ... --z5 coordinate.")
+  # end
   apply(ctx, lambda d: d.eval_at_coord_proj(eval_dirs, eval_coords, tag=tag,
       label=label), use=use)
+# end

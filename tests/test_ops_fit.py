@@ -23,6 +23,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 def _linear_dataset(a=2.0, b=1.0, n=20):
@@ -30,6 +31,7 @@ def _linear_dataset(a=2.0, b=1.0, n=20):
   centers = 0.5 * (edges[:-1] + edges[1:])
   y = a * centers + b
   return _make([edges], y[:, np.newaxis]), centers
+# end
 
 
 def _growth_series(a=1.0, b=0.5, n=60):
@@ -37,6 +39,7 @@ def _growth_series(a=1.0, b=0.5, n=60):
   centers = 0.5 * (edges[:-1] + edges[1:])
   y = a * np.exp(2.0 * b * centers)
   return _make([edges], y[:, np.newaxis]), centers
+# end
 
 
 def test_linear_fit_recovers_parameters():
@@ -45,6 +48,7 @@ def test_linear_fit_recovers_parameters():
   params = out.ctx["fit_params"][0]
   np.testing.assert_allclose(params, [2.0, 1.0], atol=1e-8)
   assert out.ctx["fit_R2"][0] > 0.999
+# end
 
 
 def test_fitted_curve_matches_evaluated_model():
@@ -52,12 +56,14 @@ def test_fitted_curve_matches_evaluated_model():
   out = ops.fit(d, "linear")
   expected = 3.0 * centers - 2.0
   np.testing.assert_allclose(out.get_values().flatten(), expected, atol=1e-8)
+# end
 
 
 def test_explicit_guess_is_used():
   d, _ = _linear_dataset(a=2.0, b=1.0)
   out = ops.fit(d, "linear", guess="1.5,0.5")
   np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 1.0], atol=1e-6)
+# end
 
 
 def test_explicit_guess_as_string_matches_sequence():
@@ -65,6 +71,7 @@ def test_explicit_guess_as_string_matches_sequence():
   out_str = ops.fit(d, "linear", guess="1.0,0.0")
   out_seq = ops.fit(d, "linear", guess=[1.0, 0.0])
   np.testing.assert_allclose(out_str.ctx["fit_params"][0], out_seq.ctx["fit_params"][0])
+# end
 
 
 def test_gaussian_fit_rpn_and_multi_component():
@@ -76,18 +83,23 @@ def test_gaussian_fit_rpn_and_multi_component():
   out = ops.fit(d, "gaussian")
   assert len(out.ctx["fit_params"]) == 2
   np.testing.assert_allclose(out.ctx["fit_params"][0][:2], [3.0, 0.0], atol=1e-3)
+# end
 
 
 def test_wrong_dimensionality_raises():
   d, _ = _linear_dataset()
   with pytest.raises(ValueError, match="requires"):
     ops.fit(d, "plane")  # plane needs 2 spatial dims, data has 1
+  # end
+# end
 
 
 def test_unknown_fit_type_raises():
   d, _ = _linear_dataset()
   with pytest.raises(ValueError):
     ops.fit(d, "not_a_real_model_@@")
+  # end
+# end
 
 
 def test_drops_collapsed_axes():
@@ -100,6 +112,7 @@ def test_drops_collapsed_axes():
   out = ops.fit(d, "linear")
   np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 1.0], atol=1e-8)
   assert out.get_values().ndim == 2  # the collapsed axis was dropped
+# end
 
 
 def test_grid_already_cell_centered_needs_no_conversion():
@@ -108,6 +121,7 @@ def test_grid_already_cell_centered_needs_no_conversion():
   d = _make([centers], y[:, np.newaxis])
   out = ops.fit(d, "linear")
   np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 1.0], atol=1e-8)
+# end
 
 
 def test_plane_fit_2d():
@@ -118,6 +132,7 @@ def test_plane_fit_2d():
   d = _make([e0, e1], z[..., np.newaxis])
   out = ops.fit(d, "plane")
   np.testing.assert_allclose(out.ctx["fit_params"][0], [2.0, 3.0, 1.0], atol=1e-6)
+# end
 
 
 def test_inplace_and_tag_label():
@@ -126,6 +141,7 @@ def test_inplace_and_tag_label():
   assert out is d
   assert d.get_tag() == "t"
   assert d.get_label() == "l"
+# end
 
 
 @needs_gkeyll
@@ -133,6 +149,8 @@ def test_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.fit(d, "linear")
+  # end
+# end
 
 
 # ── window=True -- growth-rate-style leading-window fits ─────────────────────
@@ -141,12 +159,14 @@ def test_window_recovers_growth_rate():
   d, _ = _growth_series(a=1.0, b=1.5)
   out = ops.fit(d, "exp2", window=True)
   assert out.ctx["fit_params"][0][1] == pytest.approx(1.5, abs=1e-3)
+# end
 
 
 def test_window_output_shape_matches_full_grid():
   d, centers = _growth_series()
   out = ops.fit(d, "exp2", window=True)
   assert out.get_values().shape[0] == len(centers)
+# end
 
 
 def test_window_explicit_guess_string_and_sequence_agree():
@@ -155,12 +175,14 @@ def test_window_explicit_guess_string_and_sequence_agree():
   out_seq = ops.fit(d, "exp2", window=True, guess=(1.0, 1.0))
   np.testing.assert_allclose(
       out_str.ctx["fit_params"][0], out_seq.ctx["fit_params"][0])
+# end
 
 
 def test_window_min_n_controls_minimum_window():
   d, _ = _growth_series(a=1.0, b=1.0, n=100)
   out = ops.fit(d, "exp2", window=True, min_n=5)
   assert out.ctx["fit_params"][0][1] == pytest.approx(1.0, abs=1e-2)
+# end
 
 
 def test_window_inplace_and_tag_label():
@@ -169,6 +191,7 @@ def test_window_inplace_and_tag_label():
   assert out is d
   assert d.get_tag() == "g"
   assert d.get_label() == "growth-fit"
+# end
 
 
 def test_window_rejects_multi_dim_data():
@@ -178,6 +201,8 @@ def test_window_rejects_multi_dim_data():
   d = _make([e0, e1], (X + Y)[..., np.newaxis])
   with pytest.raises(ValueError, match="window=True is only supported"):
     ops.fit(d, "plane", window=True)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -185,3 +210,5 @@ def test_window_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.fit(d, "exp2", window=True)
+  # end
+# end

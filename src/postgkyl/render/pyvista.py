@@ -29,12 +29,15 @@ def _require_gl_context(action):
   clear ``RuntimeError`` instead of an opaque one from deep inside VTK."""
   try:
     return action()
+  # end
   except (RuntimeError, ValueError):
     raise
+  # end
   except Exception as exc:  # pragma: no cover - depends on the host's GL stack
     raise RuntimeError(
         "pyvista rendering requires a working (possibly off-screen) OpenGL "
         f"context; the render backend raised: {exc!r}") from exc
+# end
   # end
 
 
@@ -203,22 +206,27 @@ def pyvista(data: "GDataState", *, show: bool = True, spin: bool = True,
       if mesh_clip_plane:
         pl.add_mesh_clip_plane(contours, cmap=cmap, clim=clim, normal="-x",
             opacity=opacity, scalar_bar_args=scalar_bar_args, factor=1.0)
+      # end
       elif mesh_slice_plane:
         pl.add_mesh_slice(contours, cmap=cmap, clim=clim, normal="-x",
             opacity=opacity, scalar_bar_args=scalar_bar_args, factor=1.0)
+      # end
       else:
         pl.add_mesh(contours, cmap=cmap, clim=clim, opacity=opacity,
             scalar_bar_args=scalar_bar_args)
+    # end
       # end
     else:
       if mesh_clip_plane:
         pl.add_mesh_clip_plane(grid3d, scalars="f_plot", cmap=cmap, clim=clim,
             opacity=opacity, normal="-x", scalar_bar_args=scalar_bar_args,
             factor=1.0)
+      # end
       elif mesh_slice_plane:
         pl.add_mesh_slice(grid3d, scalars="f_plot", cmap=cmap, clim=clim,
             opacity=opacity, normal="-x", scalar_bar_args=scalar_bar_args,
             factor=1.0)
+      # end
       else:
         vol = pl.add_volume(grid3d, scalars="f_plot", cmap=cmap, clim=clim,
             opacity=opacity, shade=is_shaded, scalar_bar_args=scalar_bar_args)
@@ -234,6 +242,7 @@ def pyvista(data: "GDataState", *, show: bool = True, spin: bool = True,
 
     if hide_axes:
       pl.hide_axes()
+    # end
     else:
       # The mesh itself is normalized to +/-aspect_ratio (see above), so its
       # own bounds carry no physical meaning; axes_ranges relabels the ticks
@@ -265,9 +274,11 @@ def pyvista(data: "GDataState", *, show: bool = True, spin: bool = True,
         # end
         state["angle"] += 0.5
         pl.camera.azimuth = state["angle"] % 360
+      # end
 
       def _on_click(*_args):
         state["interacting"] = True
+      # end
 
       pl.add_timer_event(max_steps=99999999, duration=50, callback=_rotate)
       pl.iren.add_observer("LeftButtonPressEvent", _on_click)
@@ -276,12 +287,16 @@ def pyvista(data: "GDataState", *, show: bool = True, spin: bool = True,
     if saveas != "":
       if saveas.endswith(".html"):
         pl.export_html(saveas)
+      # end
       elif saveas.endswith((".pdf", ".svg")):
         pl.save_graphic(saveas)
+      # end
       elif saveas.endswith((".png", ".jpg", ".jpeg")):
         pl.screenshot(saveas)
+      # end
       elif saveas.endswith(".gltf"):
         pl.export_gltf(saveas)
+      # end
       elif saveas.endswith(".vtksz"):
         pl.export_vtksz(saveas)
       # end
@@ -289,11 +304,14 @@ def pyvista(data: "GDataState", *, show: bool = True, spin: bool = True,
 
     if show:
       pl.show()
+    # end
     else:
       pl.close()
+  # end
     # end
 
   _require_gl_context(_build_and_render)
+# end
 
 
 __all__ = ["pyvista"]

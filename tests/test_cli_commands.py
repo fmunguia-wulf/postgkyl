@@ -43,12 +43,14 @@ F1D = os.path.join(DATA, "generated", "1d_ms_p1.gkyl")
 
 def _run(args):
   return CliRunner().invoke(cli, args)
+# end
 
 
 def _ok(args):
   result = _run(args)
   assert result.exit_code == 0, result.output
   return result
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ class TestHelpWiring:
     for cmd in COMMANDS:
       result = _run([cmd.name, "--help"])
       assert result.exit_code == 0, f"{cmd.name} --help failed:\n{result.output}"
+  # end
     # end
 
   def test_top_level_help_lists_every_command(self):
@@ -68,6 +71,7 @@ class TestHelpWiring:
     for cmd in COMMANDS:
       assert cmd.name in listed, f"{cmd.name} missing from COMMAND_SECTIONS"
       assert cmd.name in result.output
+  # end
     # end
 
   def test_sections_are_registered_commands(self):
@@ -75,6 +79,10 @@ class TestHelpWiring:
     for names in COMMAND_SECTIONS.values():
       for name in names:
         assert name in registered
+      # end
+    # end
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +92,7 @@ class TestHelpWiring:
 class TestAbbreviation:
   def _registered_names(self):
     return sorted(cmd.name for cmd in COMMANDS)
+  # end
 
   def test_shortest_unique_prefix_resolves(self):
     """For every command with a globally-unique first letter, a 1-char
@@ -96,6 +105,7 @@ class TestAbbreviation:
     for name in unique_letter_names:
       result = _run([ENERGY, name[0], "--help"])
       assert result.exit_code == 0, result.output
+  # end
     # end
 
   def test_shared_prefix_fails_closed(self):
@@ -114,15 +124,19 @@ class TestAbbreviation:
       result = _run([letter])
       assert result.exit_code != 0
       assert "Ambiguous command" in result.output
+  # end
     # end
 
   def test_interp_and_sel_abbreviations(self):
     result = _ok([F1, "interp", "sel", "--comp", "0", "info"])
     assert "interpolated" in result.output
+  # end
 
   def test_pr_resolves_to_print(self):
     result = _ok([ENERGY, "pr"])
     assert result.exit_code == 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -135,23 +149,28 @@ class TestChainedPipelines:
     result = _ok(["--batch-mode", F1, "interp", "sel", "--comp", "0", "plot",
         "--saveas", str(out)])
     assert out.exists()
+  # end
 
   def test_load_command_is_hidden_but_resolvable(self):
     # Bare filenames dispatch through the hidden 'load' command implicitly.
     result = _ok([F1, "info"])
     assert "Number of components" in result.output
+  # end
 
   def test_info_on_multiple_files(self):
     result = _ok([DISTF_P2_0, DISTF_P2_1, "info"])
     assert result.output.count("Number of components") == 2
+  # end
 
   def test_evaluate_expression(self):
     result = _ok([DISTF_P2_0, "evaluate", "f 2 *", "print"])
     assert result.exit_code == 0
+  # end
 
   def test_evaluate_requires_at_least_one_dataset(self):
     result = _run(["evaluate", "f 2 *"])
     assert result.exit_code != 0
+  # end
 
   def test_evaluate_preserves_untouched_dataset(self):
     # Regression test for review C1: ``evaluate`` used to replace the *entire*
@@ -163,22 +182,28 @@ class TestChainedPipelines:
     lines = [l for l in result.output.splitlines() if l.startswith("[")]
     assert len(lines) == 3
     assert "inactive" in lines[0]
+  # end
 
   def test_fft_chain(self):
     _ok([DISTF_P2_0, "interp", "fft"])
+  # end
 
   def test_fft_psd(self):
     _ok([DISTF_P2_0, "interp", "fft", "--psd"])
+  # end
 
   def test_magsq_chain(self):
     _ok([DISTF_P2_0, "interp", "magsq"])
+  # end
 
   def test_magsq_with_tag(self):
     result = _ok([DISTF_P2_0, "interp", "magsq", "--tag", "mags", "info"])
     assert "mags" not in result.output or True  # tag not printed by info; smoke only
+  # end
 
   def test_grid_chain(self):
     _ok([DISTF_P2_0, "interp", "grid"])
+  # end
 
   def test_dg_local_poly_chain_and_help_example(self, tmp_path):
     """The exact chain from ``dg_local_poly --help``'s docstring example
@@ -188,38 +213,47 @@ class TestChainedPipelines:
     result = _ok(["--batch-mode", DISTF_P2_0, "dg_local_poly", "select",
         "--z1", "0.0", "--z2", "0.0", "plot", "--saveas", str(out)])
     assert out.exists()
+  # end
 
   def test_dg_local_poly_npoints_and_tag(self):
     result = _ok([F1D, "dg_local_poly", "-n", "3", "--tag", "lp", "info"])
     assert "interpolated" in result.output
+  # end
 
   def test_relchange_against_baseline(self):
     result = _ok([ENERGY, ENERGY, "relchange"])
     assert result.exit_code == 0
+  # end
 
   def test_relchange_with_use_filter(self):
     result = _ok([ENERGY, "relchange", "--use", "default", "--index", "0"])
     assert result.exit_code == 0
+  # end
 
   def test_save_gkyl(self, tmp_path):
     out = tmp_path / "out"
     _ok([DISTF_P2_0, "save", "--out", str(out), "--format", "gkyl"])
     assert (tmp_path / "out.gkyl").exists()
+  # end
 
   def test_save_npy(self, tmp_path):
     out = tmp_path / "out"
     _ok([DISTF_P2_0, "save", "--out", str(out), "--format", "npy"])
     assert (tmp_path / "out.npy").exists()
+  # end
 
   def test_differentiate_chain(self):
     _ok([DISTF_P2_0, "interp", "differentiate"])
+  # end
 
   def test_differentiate_direction(self):
     _ok([DISTF_P2_0, "interp", "differentiate", "--direction", "0"])
+  # end
 
   def test_collect_two_frames(self):
     result = _ok([DISTF_P2_0, DISTF_P2_1, "interp", "collect"])
     assert result.exit_code == 0
+  # end
 
   def test_collect_preserves_untouched_dataset(self):
     # Regression test for review C1 (see test_ev_preserves_untouched_dataset
@@ -229,13 +263,16 @@ class TestChainedPipelines:
     lines = [l for l in result.output.splitlines() if l.startswith("[")]
     assert len(lines) == 3
     assert "inactive" in lines[0]
+  # end
 
   def test_mask_thresholds(self):
     _ok([DISTF_P2_0, "interp", "mask", "--lower", "-1e10"])
+  # end
 
   def test_val2coord(self):
     result = _run([ENERGY, "val2coord", "-x", "0", "-y", "1"])
     assert result.exit_code == 0, result.output
+  # end
 
   def test_val2coord_preserves_untouched_dataset(self):
     # Regression test for review C1.
@@ -244,6 +281,7 @@ class TestChainedPipelines:
     lines = [l for l in result.output.splitlines() if l.startswith("[")]
     assert len(lines) == 3
     assert "inactive" in lines[0]
+  # end
 
   def test_val2coord_use_no_match_fails_closed(self):
     # Regression test for review C1's second, more severe manifestation:
@@ -252,25 +290,32 @@ class TestChainedPipelines:
     result = _run([ENERGY, "val2coord", "-x", "0", "-y", "1", "--use",
         "nonexistent_tag"])
     assert result.exit_code != 0
+  # end
 
   def test_extractinput_no_embedded_input(self):
     result = _ok([ENERGY, "extractinput"])
     assert "No embedded input file!" in result.output or result.exit_code == 0
+  # end
 
   def test_map_missing_file_option_errors(self):
     result = _run([DISTF_P2_0, "interp", "map"])
     assert result.exit_code != 0
+  # end
 
   def test_status_lists_active_datasets(self):
     result = _ok([DISTF_P2_0, "status"])
     assert "active" in result.output
+  # end
 
   def test_status_deactivate_then_info_skips(self):
     result = _ok([DISTF_P2_0, DISTF_P2_1, "status", "--deactivate", "0", "info"])
     assert result.output.count("Number of components") == 1
+  # end
 
   def test_print_grid(self):
     _ok([ENERGY, "print", "--grid"])
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +327,7 @@ class TestFitAndGrowth:
   def test_fit_linear_on_synthetic_series(self, tmp_path):
     result = _ok([ENERGY, "fit", "linear"])
     assert "R^2" in result.output
+  # end
 
   def test_fit_type_prefix_not_supported_fails_closed(self):
     # Review C4: FIT_TYPE prefix-matching (old CLI's ``fit lin`` ->
@@ -293,6 +339,7 @@ class TestFitAndGrowth:
     # so a future change doesn't quietly reintroduce partial matching.
     result = _run([ENERGY, "fit", "lin"])
     assert result.exit_code != 0
+  # end
 
   def test_fit_window_flag_precedes_argument(self):
     # --min-n close to the series length keeps the leading-window scan (an
@@ -301,14 +348,18 @@ class TestFitAndGrowth:
     # CLI wiring, so it doesn't need the full ~15k-point sweep.
     result = _ok([ENERGY, "fit", "--window", "--min-n", "15700", "exp2"])
     assert "R^2" in result.output
+  # end
 
   def test_growth_rate(self):
     result = _ok([ENERGY, "growth", "--min-n", "15700"])
     assert "growth rate" in result.output
+  # end
 
   def test_fit_unknown_type_fails_closed(self):
     result = _run([ENERGY, "fit", "not_a_model"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -321,19 +372,24 @@ class TestIntegrate:
   def test_integrate_prints_a_value(self):
     result = _ok([F1, "integrate"])
     assert "[0]" in result.output
+  # end
 
   def test_integrate_on_interpolated_data_fails_closed(self):
     result = _run([F1, "interp", "integrate"])
     assert result.exit_code != 0
+  # end
 
   def test_integrate_axis_collapses_the_chosen_axis(self):
     result = _ok([DISTF_P2_0, "interp", "integrate", "--axis", "0", "info"])
     assert "Dim 0: Num. cells: 1;" in result.output
     assert "Dim 1: Num. cells: 96;" in result.output
+  # end
 
   def test_integrate_axis_on_raw_modal_data_fails_closed(self):
     result = _run([DISTF_P2_0, "integrate", "--axis", "0"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -346,17 +402,20 @@ class TestAverage:
     result = _run([F1, "average"])
     assert result.exit_code != 0
     assert "at least one direction flag" in result.output
+  # end
 
   @needs_gkeyll
   def test_average_collapses_the_chosen_direction(self):
     result = _ok([F1, "average", "--z0", "info"])
     assert "Number of dimensions: 1" in result.output
     assert "Dim 0: Num. cells: 1;" in result.output
+  # end
 
   @needs_gkeyll
   def test_average_on_interpolated_data_fails_closed(self):
     result = _run([F1, "interp", "average", "--z0"])
     assert result.exit_code != 0
+  # end
 
   @needs_gkeyll
   def test_average_with_weight_file(self, tmp_path):
@@ -374,6 +433,8 @@ class TestAverage:
 
     result = _ok([F1, "average", "--z0", "--weight", weight_path, "info"])
     assert "Number of dimensions: 1" in result.output
+  # end
+# end
 
 
 class TestEvalAtCoordProj:
@@ -382,17 +443,21 @@ class TestEvalAtCoordProj:
     result = _run([F1, "evalatcoordproj"])
     assert result.exit_code != 0
     assert "at least one --z0" in result.output
+  # end
 
   @needs_gkeyll
   def test_eliminates_the_chosen_direction(self):
     result = _ok([F1, "evalatcoordproj", "--z0", "0.0", "info"])
     assert "Number of dimensions: 1" in result.output
     assert "Dim 0: Num. cells: 1;" in result.output
+  # end
 
   @needs_gkeyll
   def test_on_interpolated_data_fails_closed(self):
     result = _run([F1, "interp", "evalatcoordproj", "--z0", "0.0"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -406,10 +471,13 @@ class TestAnimate:
         "--saveframes", prefix])
     assert os.path.exists(f"{prefix}_0.png")
     assert os.path.exists(f"{prefix}_1.png")
+  # end
 
   def test_animate_requires_datasets(self):
     result = _run(["animate"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -422,10 +490,12 @@ class TestPlotOptionParity:
     _ok(["--batch-mode", F1, "interp", "sel", "--comp", "0", "plot",
         "--saveas", str(out), "--logy", "--title", "t"])
     assert out.exists()
+  # end
 
   def test_plot_no_datasets_fails_closed(self):
     result = _run(["plot"])
     assert result.exit_code != 0
+  # end
 
   def test_plot_malformed_figsize_fails_closed(self):
     # Regression test for review C7: a malformed --figsize used to raise an
@@ -433,11 +503,14 @@ class TestPlotOptionParity:
     result = _run([DISTF_P2_0, "interp", "plot", "--figsize", "10"])
     assert result.exit_code != 0
     assert "figsize" in result.output
+  # end
 
   def test_plot_non_numeric_figsize_fails_closed(self):
     result = _run([DISTF_P2_0, "interp", "plot", "--figsize", "a,b"])
     assert result.exit_code != 0
     assert "figsize" in result.output
+  # end
+# end
 
 
 class TestPlotly:
@@ -445,15 +518,19 @@ class TestPlotly:
     out = tmp_path / "surf.html"
     _ok([DISTF_P2_0, "interp", "plotly", "--save", str(out)])
     assert out.exists()
+  # end
 
   def test_plotly_animate_html(self, tmp_path):
     out = tmp_path / "anim.html"
     _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate", "--save", str(out)])
     assert out.exists()
+  # end
 
   def test_plotly_no_datasets_fails_closed(self):
     result = _run(["plotly"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 class TestPyvista:
@@ -464,16 +541,21 @@ class TestPyvista:
     _ok(["--batch-mode", self.GK_3D, "interp", "pyvista", "--no-show",
         "--no-spin", "--saveas", str(out)])
     assert out.exists()
+  # end
+# end
 
 
 class TestStyle:
   def test_style_print(self):
     result = _ok(["style", "--print"])
     assert ":" in result.output
+  # end
 
   def test_style_set_param(self):
     result = _ok(["style", "--set", "lines.linewidth:3", "--print"])
     assert "lines.linewidth : 3" in result.output
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -486,21 +568,25 @@ class TestLoaders:
     result = _ok(["gk_distf", "-n", GK_NAME, "-s", "elc", "-f", "250",
         "--jacobtot-inv-file", GK_JACOBTOT_INV, "info"])
     assert "Number of components" in result.output
+  # end
 
   @needs_gkeyll
   def test_gk_load_quantity_qlist(self):
     result = _ok(["gk_load_quantity", "--qlist"])
     assert "Available quantities" in result.output
+  # end
 
   @needs_gkeyll
   def test_gk_load_quantity_loads(self):
     result = _ok(["gk_load_quantity", "-q", "geo_int_jacobtot_inv", "-n",
         GK_NAME, "-p", DATA, "info"])
     assert "Number of components" in result.output
+  # end
 
   def test_gk_load_quantity_requires_name(self):
     result = _run(["gk_load_quantity", "-q", "field"])
     assert result.exit_code != 0
+  # end
 
   def test_gkyl_pkpm_wiring(self, monkeypatch):
     """No PKPM fixture is staged; monkeypatch the loader (mirrors
@@ -515,11 +601,14 @@ class TestLoaders:
       out = GData(tag=tag or "default", label=label or "")
       out.push([np.array([0.0, 1.0])], np.zeros((1, 1)))
       return out
+    # end
 
     monkeypatch.setattr(pg.diagnostics.pkpm, "load_pkpm", fake_load_pkpm)
     result = _ok(["gkyl_pkpm", "-n", "sim", "-s", "ion", "-i", "0", "-p", "1", "info"])
     assert calls == {"name": "sim", "species": "ion", "idx": "0", "poly_order": 1}
     assert "Number of components" in result.output
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -530,24 +619,30 @@ class TestUtility:
   def test_listoutputs(self):
     result = _ok(["listoutputs", "--path", DATA])
     assert "gkyl:" in result.output or "bp:" in result.output
+  # end
 
   def test_listoutputs_no_matches(self, tmp_path):
     result = _ok(["listoutputs", "--path", str(tmp_path)])
     assert result.output == ""
+  # end
 
   def test_status_no_args_reports_all_active(self):
     result = _ok([DISTF_P2_0, "status"])
     assert "[0] active" in result.output
+  # end
 
   def test_status_activate_reactivates(self):
     result = _ok([DISTF_P2_0, "status", "--deactivate", ":", "status",
         "--activate", "0", "status"])
     lines = [l for l in result.output.splitlines() if l.startswith("[0]")]
     assert lines[-1] == "[0] active  tag='default'"
+  # end
 
   def test_print_values(self):
     result = _ok([ENERGY, "print"])
     assert result.exit_code == 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -566,3 +661,4 @@ def test_config_and_dg_commands_are_not_registered():
   assert "dg_avg" not in names
   assert "dg_evproj" not in names
   assert "dg_local_poly" in names
+# end

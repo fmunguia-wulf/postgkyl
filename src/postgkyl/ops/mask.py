@@ -66,15 +66,20 @@ def mask(data: "GDataState", mask_data: "GDataState | None" = None, *,
     mask_field = mask_data.values
     mask_rep = np.repeat(mask_field, data.num_comps, axis=-1)
     masked = np.ma.masked_where(mask_rep < 0.0, values)
+  # end
   elif lower is not None and upper is not None:
     masked = np.ma.masked_outside(values, lower, upper)
+  # end
   elif lower is not None:
     masked = np.ma.masked_less(values, lower)
+  # end
   elif upper is not None:
     masked = np.ma.masked_greater(values, upper)
+  # end
   else:
     raise ValueError(
         "mask: no masking information specified (provide mask_data, lower, "
         "or upper).")
   # end
   return data._result(data.grid, masked, inplace=inplace, tag=tag, label=label)
+# end

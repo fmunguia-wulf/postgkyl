@@ -41,12 +41,16 @@ class _FakeGData:
     self._grid = grid
     self._values = values
     self.ctx = ctx or {}
+  # end
 
   def get_grid(self):
     return self._grid
+  # end
 
   def get_values(self):
     return self._values
+  # end
+# end
 
 
 class _StubFiles:
@@ -58,18 +62,23 @@ class _StubFiles:
     self._tmp_path = tmp_path
     self._registry: dict[str, _FakeGData] = {}
     monkeypatch.setattr(gk_utils, "GData", self._dispatch)
+  # end
 
   def _dispatch(self, file_name):
     return self._registry[file_name]
+  # end
 
   def add(self, file_name: str, time_edges: np.ndarray, values: np.ndarray) -> None:
     open(file_name, "w").close()
     self._registry[file_name] = _FakeGData([np.asarray(time_edges)], np.asarray(values))
+  # end
+# end
 
 
 @pytest.fixture
 def stub(tmp_path, monkeypatch):
   return _StubFiles(tmp_path, monkeypatch)
+# end
 
 
 def _build_sim(stub, tmp_path, name="sim", species=("ion",), *, with_src=True,
@@ -110,6 +119,7 @@ def _build_sim(stub, tmp_path, name="sim", species=("ion",), *, with_src=True,
   # end
 
   return path
+# end
 
 
 class TestEnergyBalanceErrorPure:
@@ -122,6 +132,7 @@ class TestEnergyBalanceErrorPure:
     field_dot = np.array([1.0, 1.0])
     err = eb.energy_balance_error(fdot, src, bflux, field_dot)
     np.testing.assert_allclose(err, src - bflux - (fdot - field_dot))
+  # end
 
   def test_with_apar(self):
     fdot = np.array([2.0])
@@ -131,6 +142,8 @@ class TestEnergyBalanceErrorPure:
     apar_dot = np.array([0.25])
     err = eb.energy_balance_error(fdot, src, bflux, field_dot, apar_dot)
     np.testing.assert_allclose(err, src - bflux - (fdot - field_dot - apar_dot))
+  # end
+# end
 
 
 class TestAccumulatePure:
@@ -140,20 +153,26 @@ class TestAccumulatePure:
     out = eb._accumulate(None, a)
     out[0] = 99.0
     assert a[0] == 1.0
+  # end
 
   def test_accumulates_sum(self):
     out = eb._accumulate(np.array([1.0, 2.0]), np.array([3.0, 4.0]))
     np.testing.assert_allclose(out, [4.0, 6.0])
+  # end
+# end
 
 
 class TestResolvePure:
 
   def test_no_override_uses_default(self):
     assert eb._resolve("/p/", None, "default.gkyl", 0) == "default.gkyl"
+  # end
 
   def test_override_substitutes_block_then_species(self):
     out = eb._resolve("/p/", "custom_*_*.gkyl", "unused", 3, "ion")
     assert out == "/p/custom_3_ion.gkyl"
+  # end
+# end
 
 
 class TestGkEnergyBalanceSynthetic:
@@ -169,8 +188,10 @@ class TestGkEnergyBalanceSynthetic:
       assert traces.time.shape[0] == 5
       # src[0] is zeroed before computing the residual.
       assert traces.mom_err.shape == (5,)
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_missing_source_and_bflux(self, stub, tmp_path):
@@ -179,8 +200,10 @@ class TestGkEnergyBalanceSynthetic:
     try:
       assert traces.src is None
       assert traces.bflux_tot is None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_electromagnetic_branch(self, stub, tmp_path):
@@ -188,8 +211,10 @@ class TestGkEnergyBalanceSynthetic:
     fig, traces = eb.gk_energy_balance("sim", ["ion"], path=path)
     try:
       assert traces.apar_dot is not None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_multi_species_sums(self, stub, tmp_path):
@@ -202,8 +227,10 @@ class TestGkEnergyBalanceSynthetic:
       single_path = _build_sim(stub, single_dir, species=("ion",))
       _, single_traces = eb.gk_energy_balance("sim", ["ion"], path=single_path)
       np.testing.assert_allclose(traces.fdot, 2 * single_traces.fdot)
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_relative_error_branch(self, stub, tmp_path):
@@ -228,8 +255,10 @@ class TestGkEnergyBalanceSynthetic:
       assert traces.mom_err_norm is not None
       # One point is dropped (t=0) relative to the absolute-error path.
       assert traces.mom_err_norm.shape[0] == n - 1
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_relative_error_electromagnetic_absy_and_saveas(self, stub, tmp_path):
@@ -253,8 +282,10 @@ class TestGkEnergyBalanceSynthetic:
     try:
       assert traces.mom_err_norm is not None
       assert os.path.exists(out_path)
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_relative_error_apar_dot_present_without_apar_energy(self, stub, tmp_path):
@@ -285,14 +316,17 @@ class TestGkEnergyBalanceSynthetic:
       # (has_apar-gated) -- matches the electrostatic relative-error formula.
       assert traces.mom_err_norm is not None
       assert traces.mom_err_norm.shape[0] == n - 1
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_missing_required_field_dot_file_raises(self, stub, tmp_path):
     path = str(tmp_path) + "/"
     with pytest.raises(FileNotFoundError, match="field_energy_dot"):
       eb.gk_energy_balance("sim", ["ion"], path=path)
+  # end
     # end
 
   def test_missing_required_fdot_file_raises(self, stub, tmp_path):
@@ -302,6 +336,7 @@ class TestGkEnergyBalanceSynthetic:
     stub.add(f"{path}sim-field_energy_dot.gkyl", time, np.zeros((n, 1)))
     with pytest.raises(FileNotFoundError, match="fdot_integrated_moms"):
       eb.gk_energy_balance("sim", ["ion"], path=path)
+  # end
     # end
 
   def test_bflux_override_and_absy_logy(self, stub, tmp_path):
@@ -319,8 +354,11 @@ class TestGkEnergyBalanceSynthetic:
     try:
       assert traces.bflux_tot is not None
       np.testing.assert_allclose(traces.bflux_tot, -0.05)
+    # end
     finally:
       plt.close(fig)
+  # end
+# end
     # end
 
 
@@ -342,3 +380,5 @@ class TestGkEnergyBalanceRealFixtures:
           "stubbed data instead.")
     # end
     pytest.fail("fixture files appeared -- wire up a real-data assertion here")
+  # end
+# end

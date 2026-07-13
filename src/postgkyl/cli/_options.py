@@ -22,17 +22,22 @@ def use_option(f):
   """``--use``/``-u``: restrict a transform to datasets tagged with this tag."""
   return click.option("--use", "-u", default=None,
       help="Restrict to datasets tagged with this tag (default: all).")(f)
+# end
 
 
 def tag_option(default: str | None = None, help: str = "Optional tag for the resulting array."):
   """``--tag``/``-t``: tag for the command's result."""
   def decorator(f):
     return click.option("--tag", "-t", default=default, help=help)(f)
+  # end
   return decorator
+# end
 
 
 def label_option(default: str | None = None, help: str = "Custom label for the result."):
   """``--label``/``-l``: custom label for the command's result."""
   def decorator(f):
     return click.option("--label", "-l", default=default, help=help)(f)
+  # end
   return decorator
+# end

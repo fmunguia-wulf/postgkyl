@@ -30,12 +30,14 @@ from postgkyl.gpython import basis as gpython_basis
 def num_basis(dim: int, poly_order: int, basis_type: str) -> int:
   """Number of DG basis functions, straight from Gkeyll's basis object."""
   return gpython_basis.num_basis(basis_type, dim, poly_order)
+# end
 
 
 def _make_mesh(num_interp: int, edges: np.ndarray) -> np.ndarray:
   """Refine a 1-D nodal mesh by ``num_interp`` points per cell (uniform)."""
   nx = edges.shape[0] - 1
   return np.linspace(edges[0], edges[-1], num_interp * nx + 1)
+# end
 
 
 def _interpolate_on_mesh(c_mat: np.ndarray, q_in: np.ndarray,
@@ -54,6 +56,7 @@ def _interpolate_on_mesh(c_mat: np.ndarray, q_in: np.ndarray,
     q_out[tuple(idxs)] = temp
   # end
   return q_out
+# end
 
 
 def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
@@ -93,12 +96,14 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
     q = values[..., c * nodes:(c + 1) * nodes]
     if n2m is not None:
       q = np.einsum("jk,...k->...j", n2m, q)
+    # end
     interpolated_c = _interpolate_on_mesh(c_mat, q, num_interp)[..., np.newaxis]
     out = interpolated_c if out is None else np.append(out, interpolated_c, axis=-1)
   # end
 
   grid_out = [_make_mesh(num_interp, grid[d]) for d in range(num_dims)]
   return grid_out, out
+# end
 
 
 def _cell_edges_to_nodes(edges: np.ndarray, nodes_1d: np.ndarray) -> np.ndarray:
@@ -110,6 +115,7 @@ def _cell_edges_to_nodes(edges: np.ndarray, nodes_1d: np.ndarray) -> np.ndarray:
   dx = edges[1:] - edges[:-1]
   return (cell_center[:, np.newaxis]
           + nodes_1d[np.newaxis, :] * dx[:, np.newaxis] / 2).reshape(-1)
+# end
 
 
 def local_poly(values: np.ndarray, grid: list, *, poly_order: int,
@@ -158,6 +164,7 @@ def local_poly(values: np.ndarray, grid: list, *, poly_order: int,
     q = values[..., c * nb:(c + 1) * nb]
     if n2m is not None:
       q = np.einsum("jk,...k->...j", n2m, q)
+    # end
     field_c = _interpolate_on_mesh(c_mat, q, num_nodes)[..., np.newaxis]
     out = field_c if out is None else np.append(out, field_c, axis=-1)
   # end
@@ -171,3 +178,4 @@ def local_poly(values: np.ndarray, grid: list, *, poly_order: int,
   # end
 
   return grid_out, out
+# end

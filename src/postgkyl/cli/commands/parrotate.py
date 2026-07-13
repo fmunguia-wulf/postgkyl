@@ -29,3 +29,4 @@ def command(ctx, array_tag, rotator_tag, coords, tag, label) -> None:
   set_active(array, False)
   set_active(rotator, False)
   ctx.obj.datasets.append(result)
+# end

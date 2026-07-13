@@ -76,8 +76,10 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
 
   if space == "conf":
     offset = 0
+  # end
   elif space == "vel":
     offset = num_dims - m
+  # end
   else:
     raise ValueError(f"map: 'space' must be 'conf' or 'vel', got {space!r}.")
   # end
@@ -130,3 +132,4 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
 
   return data._result(grid, data.values, inplace=inplace, tag=tag,
       label=label, grid_type="mapped", mapped_axes=mapped_axes)
+# end

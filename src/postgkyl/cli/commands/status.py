@@ -35,5 +35,6 @@ def command(ctx, activate_spec, deactivate_spec) -> None:
     for i, d in enumerate(datasets):
       state = "active" if is_active(d) else "inactive"
       click.echo(f"[{i}] {state}  tag={d.tag!r}")
+# end
     # end
   # end

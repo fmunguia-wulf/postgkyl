@@ -39,6 +39,7 @@ def test_mul_div_explicit_aliases_match_operators():
   np.testing.assert_allclose(a.mul(b).values, (a * b).values)
   a2, b2 = pg.load(F1), pg.load(F1)
   np.testing.assert_allclose(a2.div(b2).values, (a2 / b2).values)
+# end
 
 
 # --------------------------------------------------------------------- tags
@@ -48,6 +49,7 @@ def test_tag_setter_ignores_falsy_value():
   assert d.tag == "custom"
   d.tag = ""  # falsy: must not clobber the existing tag
   assert d.tag == "custom"
+# end
 
 
 def test_label_getter_setter():
@@ -55,6 +57,7 @@ def test_label_getter_setter():
   assert d.label == ""
   d.label = "raw-label"
   assert d.label == "raw-label"
+# end
 
 
 # ---------------------------------------------------------------- shape info
@@ -65,6 +68,7 @@ def test_num_cells_falls_back_to_values_shape_then_empty():
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   del d.ctx["cells"]
   assert np.array_equal(d.num_cells, [3])
+# end
 
 
 def test_num_comps_falls_back_to_values_shape_then_zero():
@@ -74,6 +78,7 @@ def test_num_comps_falls_back_to_values_shape_then_zero():
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   del d.ctx["num_comps"]
   assert d.num_comps == 2
+# end
 
 
 @needs_gkeyll
@@ -81,6 +86,7 @@ def test_num_comps_falls_back_for_gkyl_backed_values():
   d = pg.load(F1)
   del d.ctx["num_comps"]
   assert d.num_comps == d.native.ncomp
+# end
 
 
 def test_num_dims_falls_back_to_values_ndim_then_zero():
@@ -90,6 +96,7 @@ def test_num_dims_falls_back_to_values_ndim_then_zero():
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
   del d.ctx["cells"]
   assert d.num_dims == 1
+# end
 
 
 def test_bounds_falls_back_to_grid_then_none():
@@ -102,6 +109,7 @@ def test_bounds_falls_back_to_grid_then_none():
   lo, up = d.bounds
   np.testing.assert_allclose(lo, [0.0])
   np.testing.assert_allclose(up, [2.0])
+# end
 
 
 # ------------------------------------------------------------ getitem / copy
@@ -109,12 +117,15 @@ def test_getitem_raises_when_empty():
   d = GDataState()
   with pytest.raises(ValueError):
     d[0]
+  # end
+# end
 
 
 def test_getitem_selects_component_when_loaded():
   d = GDataState()
   d.push([np.linspace(0.0, 1.0, 4)], np.arange(6, dtype=float).reshape(3, 2))
   np.testing.assert_allclose(d[1], [1.0, 3.0, 5.0])
+# end
 
 
 def test_copy_with_data_deep_copies_numpy_backend():
@@ -124,6 +135,7 @@ def test_copy_with_data_deep_copies_numpy_backend():
   c.values[0, 0] = 99.0
   assert d.values[0, 0] == 1.0
   assert c.grid[0] is not d.grid[0]
+# end
 
 
 @needs_gkeyll
@@ -132,6 +144,7 @@ def test_copy_with_data_deep_copies_gkyl_backend():
   c = d.clone(data=True)
   assert c.native is not d.native
   np.testing.assert_allclose(c.values, d.values)
+# end
 
 
 @needs_gkeyll
@@ -139,12 +152,15 @@ def test_result_applies_explicit_tag_and_label():
   d = pg.load(F1).interpolate(tag="custom-tag", label="custom-label")
   assert d.tag == "custom-tag"
   assert d.label == "custom-label"
+# end
 
 
 def test_require_operable_raises_on_empty_dataset():
   d = GDataState()
   with pytest.raises(ValueError):
     d._require_operable()
+  # end
+# end
 
 
 # -------------------------------------------------------------------- info
@@ -153,6 +169,7 @@ def test_info_reports_nodal_and_quad_representation():
   a = pg.load(F1)
   assert "nodal representation" in a.to_nodal().info()
   assert "quad representation" in a.to_quad().info()
+# end
 
 
 # ---------------------------------------------------------- repr/str/summary
@@ -160,6 +177,7 @@ def test_repr_and_str_on_empty_dataset():
   d = GDataState()
   assert "empty" in repr(d)
   assert repr(d) == str(d)
+# end
 
 
 def test_repr_and_str_on_loaded_modal_dataset():
@@ -169,12 +187,14 @@ def test_repr_and_str_on_loaded_modal_dataset():
   s = str(d)
   assert s.startswith(r)
   assert "modal" in r or "gkyl-native" in r
+# end
 
 
 def test_repr_on_interpolated_dataset():
   d = pg.load(F1).interpolate()
   r = repr(d)
   assert "interpolate" in r
+# end
 
 
 @needs_gkeyll
@@ -182,12 +202,14 @@ def test_repr_on_nodal_and_quad_datasets():
   a = pg.load(F1)
   assert "nodal" in repr(a.to_nodal())
   assert "quad" in repr(a.to_quad())
+# end
 
 
 # ------------------------------------------------------------- collections
 def test_flatten_datasets_passes_through_non_dataset_items():
   out = flatten_datasets([1, [2, 3], "x"])
   assert out == [1, 2, 3, "x"]
+# end
 
 
 # ------------------------------------------------------------------ cli app
@@ -200,6 +222,7 @@ def test_cli_hidden_alias_pl_resolves_to_plot(tmp_path):
       "--batch-mode", F1, "interp", "sel", "--comp", "0", "pl", "--saveas", str(out)])
   assert result.exit_code == 0, result.output
   assert out.exists()
+# end
 
 
 def test_cli_ambiguous_abbreviation_fails():
@@ -209,6 +232,7 @@ def test_cli_ambiguous_abbreviation_fails():
   result = CliRunner().invoke(cli, [F1, "in"])  # "in" prefixes both info and interpolate
   assert result.exit_code != 0
   assert "Ambiguous command" in result.output
+# end
 
 
 def test_cli_unknown_token_is_neither_command_nor_file():
@@ -218,6 +242,7 @@ def test_cli_unknown_token_is_neither_command_nor_file():
   result = CliRunner().invoke(cli, ["not-a-command-or-file-xyz"])
   assert result.exit_code != 0
   assert "is not a command name nor a data file" in result.output
+# end
 
 
 def test_cli_plot_without_datasets_raises_usage_error():
@@ -227,6 +252,7 @@ def test_cli_plot_without_datasets_raises_usage_error():
   result = CliRunner().invoke(cli, ["plot"])
   assert result.exit_code != 0
   assert "no datasets to plot" in result.output
+# end
 
 
 def test_cli_plot_batch_mode_default_save_path():
@@ -241,6 +267,8 @@ def test_cli_plot_batch_mode_default_save_path():
     assert result.exit_code == 0, result.output
     # main's batch-mode file name is "<prefix>_<dataset index>.png".
     assert os.path.exists("myrun_0.png")
+  # end
+# end
 
 
 def test_cli_module_entry_point_runs_as_script(monkeypatch, capsys):
@@ -251,14 +279,17 @@ def test_cli_module_entry_point_runs_as_script(monkeypatch, capsys):
   app_path = os.path.join(SRC, "postgkyl", "cli", "app.py")
   with pytest.raises(SystemExit) as exc:
     runpy.run_path(app_path, run_name="__main__")
+  # end
   assert exc.value.code == 0
   assert "Postprocessing and plotting tool" in capsys.readouterr().out
+# end
 
 
 def test_dataspace_is_iterable():
   from postgkyl.cli.state import DataSpace
   ds = DataSpace(datasets=[1, 2, 3])
   assert list(ds) == [1, 2, 3]
+# end
 
 
 def test_cli_save_command(tmp_path):
@@ -271,3 +302,4 @@ def test_cli_save_command(tmp_path):
   assert result.exit_code == 0, result.output
   assert out.exists()
   assert "wrote" in result.output
+# end

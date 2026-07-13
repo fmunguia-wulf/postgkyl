@@ -39,3 +39,4 @@ def magsq(data: "GDataState", *, coords: str = "0:3", inplace: bool = False,
   # end
   grid, values = numerics.mag_sq(data.grid, data.values, coords=coords)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end

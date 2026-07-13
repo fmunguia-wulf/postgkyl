@@ -37,18 +37,24 @@ class TestGeometryEnum:
   def test_mapc2p_index_matches_gkeyll_header(self):
     # gkeyll/core/zero/gkyl_eqn_type.h: GKYL_GEOMETRY_MAPC2P = 3.
     assert nodes.GKYL_GEOMETRY_ID.index("GKYL_GEOMETRY_MAPC2P") == 3
+  # end
+# end
 
 
 class TestIsGeoMapc2p:
 
   def test_defaults_true_when_absent(self):
     assert nodes.is_geo_mapc2p({}) is True
+  # end
 
   def test_true_for_mapc2p(self):
     assert nodes.is_geo_mapc2p({"geometry_type": 3}) is True
+  # end
 
   def test_false_for_tokamak(self):
     assert nodes.is_geo_mapc2p({"geometry_type": 1}) is False
+  # end
+# end
 
 
 class TestNodesToRZ:
@@ -63,6 +69,7 @@ class TestNodesToRZ:
     major_r, vert_z = nodes.nodes_to_RZ(nodes_arr, is_mapc2p=True)
     np.testing.assert_allclose(major_r, 1.0)
     np.testing.assert_allclose(vert_z, 5.0)
+  # end
 
   def test_non_mapc2p_2d(self):
     shape = (3, 2)
@@ -72,6 +79,7 @@ class TestNodesToRZ:
     major_r, vert_z = nodes.nodes_to_RZ(nodes_arr, is_mapc2p=False)
     np.testing.assert_allclose(major_r, 2.0)
     np.testing.assert_allclose(vert_z, -1.0)
+  # end
 
   def test_mapc2p_1d(self):
     shape = (4,)
@@ -82,6 +90,7 @@ class TestNodesToRZ:
     major_r, vert_z = nodes.nodes_to_RZ(nodes_arr, is_mapc2p=True)
     np.testing.assert_allclose(major_r, 5.0)  # sqrt(3^2+4^2)
     np.testing.assert_allclose(vert_z, 7.0)
+  # end
 
   def test_mapc2p_3d_slices_at_yidx_zero(self):
     # cdim == 3 slices the y axis at index 0 before extracting X, Y, Z.
@@ -94,29 +103,38 @@ class TestNodesToRZ:
     major_r, vert_z = nodes.nodes_to_RZ(nodes_arr, is_mapc2p=True)
     np.testing.assert_allclose(major_r, 1.0)
     np.testing.assert_allclose(vert_z, 9.0)
+  # end
+# end
 
 
 class TestMultibTag:
 
   def test_single_block_no_suffix(self):
     assert nodes.multib_tag("nodes", 0, 1) == "nodes"
+  # end
 
   def test_multiblock_suffix(self):
     assert nodes.multib_tag("nodes", 2, 3) == "nodes_b2"
+  # end
+# end
 
 
 class TestParseLevels:
 
   def test_none_returns_cnlevels(self):
     assert nodes._parse_levels(None, 11) == 11
+  # end
 
   def test_range_string(self):
     out = nodes._parse_levels("0:1:3", 11)
     np.testing.assert_allclose(out, [0.0, 0.5, 1.0])
+  # end
 
   def test_comma_list(self):
     out = nodes._parse_levels("0.1,0.2,0.3", 11)
     np.testing.assert_allclose(out, [0.1, 0.2, 0.3])
+  # end
+# end
 
 
 class _FakeGData:
@@ -124,30 +142,39 @@ class _FakeGData:
     self._grid = grid
     self._values = values
     self.ctx = ctx or {}
+  # end
 
   def get_grid(self):
     return self._grid
+  # end
 
   def get_values(self):
     return self._values
+  # end
+# end
 
 
 class _StubFiles:
   def __init__(self, monkeypatch):
     self._registry: dict[str, _FakeGData] = {}
     monkeypatch.setattr(gk_utils, "GData", self._dispatch)
+  # end
 
   def _dispatch(self, file_name):
     return self._registry[file_name]
+  # end
 
   def add(self, file_name: str, grid, values, ctx=None) -> None:
     open(file_name, "w").close()
     self._registry[file_name] = _FakeGData(grid, values, ctx)
+  # end
+# end
 
 
 @pytest.fixture
 def stub(monkeypatch):
   return _StubFiles(monkeypatch)
+# end
 
 
 def _square_nodes(nx=3, ny=3):
@@ -162,6 +189,7 @@ def _square_nodes(nx=3, ny=3):
   out[..., 1] = yy
   out[..., 2] = xx  # Z varies with x, giving a nonzero vertical extent.
   return out
+# end
 
 
 class TestGkNodesSynthetic:
@@ -173,8 +201,10 @@ class TestGkNodesSynthetic:
     try:
       assert fig is not None
       assert len(fig.axes) == 1
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_multiblock_sums_extrema_across_blocks(self, stub, tmp_path):
@@ -186,8 +216,10 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path, multib="0,1")
     try:
       assert fig is not None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_non_mapc2p_geometry_type(self, stub, tmp_path):
@@ -200,8 +232,10 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path)
     try:
       assert fig is not None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_wall_file_overlay(self, stub, tmp_path):
@@ -212,8 +246,10 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path, wall_file="wall.csv")
     try:
       assert fig is not None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_absolute_nodes_file_override(self, stub, tmp_path):
@@ -223,8 +259,10 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path, nodes_file=abs_file)
     try:
       assert fig is not None
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_xlim_ylim_and_saveas(self, stub, tmp_path):
@@ -237,8 +275,10 @@ class TestGkNodesSynthetic:
       assert fig.axes[0].get_xlim() == (0.0, 2.0)
       assert fig.axes[0].get_ylim() == (-1.0, 1.0)
       assert os.path.exists(out_path)
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_1d_node_array_uses_line_plot_branch(self, stub, tmp_path):
@@ -250,8 +290,11 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path)
     try:
       assert fig is not None
+    # end
     finally:
       plt.close(fig)
+  # end
+# end
     # end
 
 
@@ -281,3 +324,5 @@ class TestGkNodesPsiOverlayRealFixtures:
         "never selects a single component before pcolormesh/contour, so "
         "this fixture cannot exercise that path meaningfully. See "
         "TestGkNodesSynthetic for the node-plotting coverage instead.")
+  # end
+# end

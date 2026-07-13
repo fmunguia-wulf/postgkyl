@@ -39,6 +39,7 @@ def _pgkyl_colorbar(im, fig, ax, *, label: str = "", extend: str | None = None):
   divider = make_axes_locatable(ax)
   cax2 = divider.append_axes("right", size="3%", pad=0.05)
   return fig.colorbar(im, cax=cax2, label=label or "", extend=extend)
+# end
 
 
 def _nodal_grid(grid: list, cells: np.ndarray) -> list:
@@ -58,19 +59,25 @@ def _nodal_grid(grid: list, cells: np.ndarray) -> list:
     if g.ndim == 1:
       if g.shape[0] == cells[d]:
         out.append(g)
+      # end
       elif g.shape[0] == cells[d] + 1:
         out.append(0.5 * (g[:-1] + g[1:]))
+      # end
       else:
         raise ValueError("Something is terribly wrong...")
+    # end
       # end
     else:
       if g.shape[d] == cells[d]:
         out.append(g)
+      # end
       elif g.shape[d] == cells[d] + 1:
         if num_dims == 1:
           out.append(0.5 * (g[:-1] + g[1:]))
+        # end
         else:
           out.append(0.5 * (g[:-1, :-1] + g[1:, 1:]))
+      # end
         # end
       else:
         raise ValueError("Something is terribly wrong...")
@@ -78,6 +85,7 @@ def _nodal_grid(grid: list, cells: np.ndarray) -> list:
     # end
   # end
   return out
+# end
 
 
 def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
@@ -155,6 +163,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
   # end
   if cmap:
     mpl.rcParams["image.cmap"] = cmap
+  # end
   elif diverging:
     mpl.rcParams["image.cmap"] = "RdBu_r"
   # end
@@ -193,8 +202,10 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     layout_xlabel = _AXES_LABELS[0] if lineouts != 1 else _AXES_LABELS[1]
     if xshift != 0.0 and xscale != 1.0:
       layout_xlabel = rf"({layout_xlabel:s} + {xshift:.2e}) $\times$ {xscale:.2e}"
+    # end
     elif xshift != 0.0:
       layout_xlabel = rf"{layout_xlabel:s} + {xshift:.2e}"
+    # end
     elif xscale != 1.0:
       layout_xlabel = rf"{layout_xlabel:s} $\times$ {xscale:.2e}"
     # end
@@ -205,8 +216,10 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     # a literal main bug (commands.plot's ylabel branch), kept for fidelity.
     if yshift != 0.0 and yscale != 1.0:
       layout_ylabel = rf"({layout_ylabel:s} + {yshift:.2e}) $\times$ {yscale:.2e}"
+    # end
     elif xshift != 0.0:
       layout_ylabel = rf"{layout_ylabel:s} + {yshift:.2e}"
+    # end
     elif xscale != 1.0:
       layout_ylabel = rf"{layout_ylabel:s} $\times$ {yscale:.2e}"
     # end
@@ -224,14 +237,19 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
   if fig is not None:
     mpl_fig = fig
     mpl_fig.clf()
+  # end
   elif figure is None:
     mpl_fig = plt.figure(figsize=figsize)
+  # end
   elif isinstance(figure, int):
     mpl_fig = plt.figure(figure, figsize=figsize)
+  # end
   elif isinstance(figure, mpl.figure.Figure):
     mpl_fig = figure
+  # end
   elif isinstance(figure, str):
     mpl_fig = plt.figure(int(figure), figsize=figsize)
+  # end
   else:
     raise TypeError(
         "'figure' keyword needs to be one of None (default), int, str, "
@@ -246,6 +264,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     ax = mpl_fig.axes
     if not squeeze and layout_num_comps > len(ax):
       raise ValueError("Trying to plot into figure with not enough axes")
+  # end
     # end
   else:
     if squeeze:  # Plotting into 1 panel
@@ -255,12 +274,14 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
       ax[0].set_ylabel(layout_ylabel)
       if title is not None:
         ax[0].set_title(title, y=1.08)
+    # end
       # end
     else:  # Plotting each component into its own subplot
       num_rows, num_cols = subplot_grid(layout_num_comps, num_subplot_row,
           num_subplot_col)
       if ref_num_dims == 1 or lineouts is not None:
         mpl_fig.subplots(num_rows, num_cols, sharex=True)
+      # end
       else:  # In 2D, share y-axis as well
         mpl_fig.subplots(num_rows, num_cols, sharex=True, sharey=True)
       # end
@@ -270,8 +291,10 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
       # end
       if title:
         mpl_fig.suptitle(title)
+      # end
       if layout_xlabel:
         mpl_fig.supxlabel(layout_xlabel)
+      # end
       if layout_ylabel:
         mpl_fig.supylabel(layout_ylabel)
       # end
@@ -298,8 +321,10 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
   for ds_i, data in enumerate(states):
     if labels is not None and ds_i < len(labels):
       label_prefix = labels[ds_i]
+    # end
     elif len(states) > 1 or forcelegend:
       label_prefix = data.get_label()
+    # end
     else:
       label_prefix = ""
     # end
@@ -349,6 +374,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
         y = (values[..., comp] + yshift) * yscale
         im = cax.plot(x, y, *args, color=color, label=comp_label,
             markersize=markersize)
+      # end
 
       elif num_dims == 2:
         extend = None
@@ -357,10 +383,12 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
           levels = 10
           if cnlevels:
             levels = int(cnlevels) - 1
+          # end
           elif clevels:
             if ":" in clevels:
               s = clevels.split(":")
               levels = np.linspace(float(s[0]), float(s[1]), int(s[2]))
+            # end
             else:
               levels = np.array(clevels.split(","))
               levels = np.array(list(filter(None, levels)))
@@ -377,6 +405,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
               colors=color, linewidths=linewidth)
           if cont_label:
             cax.clabel(im, inline=1)
+        # end
           # end
 
         elif quiver:  # -----------------------------------------------------
@@ -386,6 +415,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
           if nodal_grid[0].ndim == 1:
             x = (nodal_grid[0][skip2::skip] + xshift) * xscale
             y = (nodal_grid[1][skip2::skip] + yshift) * yscale
+          # end
           else:
             x = (nodal_grid[0][skip2::skip, skip2::skip] + xshift) * xscale
             y = (nodal_grid[1][skip2::skip, skip2::skip] + yshift) * yscale
@@ -395,10 +425,12 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
           z2 = (values[skip2::skip, skip2::skip, 2 * comp + 1].transpose()
                 + zshift) * zscale
           im = cax.quiver(x, y, z1, z2)
+        # end
 
         elif streamline:  # -------------------------------------------------
           if color:
             cl = color
+          # end
           else:
             cl = np.sqrt(values[..., 2 * comp] ** 2
                 + values[..., 2 * comp + 1] ** 2).transpose()
@@ -410,6 +442,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
           z2 = (values[..., 2 * comp + 1].transpose() + zshift) * zscale
           im = cax.streamplot(x, y, z1, z2, *args, density=sdensity,
               broken_streamlines=False, color=cl, linewidth=linewidth)
+        # end
 
         elif lineouts is not None:  # ---------------------------------------
           num_lines = values.shape[1] if lineouts == 0 else values.shape[0]
@@ -420,6 +453,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
             line_vmin = (nodal_grid[1][0] + yshift) * yscale
             line_vmax = (nodal_grid[1][-1] + yshift) * yscale
             cbar_label = clabel or axes_labels[1]
+          # end
           else:
             x = (nodal_grid[1] + xshift) * xscale
             line_vmin = (nodal_grid[0][0] + yshift) * yscale
@@ -432,6 +466,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
             line_color = cm.inferno(line / (num_lines - 1))
             if lineouts == 0:
               line_idx[1] = line
+            # end
             else:
               line_idx[0] = line
             # end
@@ -444,12 +479,15 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
           _pgkyl_colorbar(mappable, mpl_fig, cax, label=cbar_label)
           comp_colorbar = False
           comp_legend = False
+        # end
 
         else:  # ------------------------------------------------------------
           if zmin is not None and zmax is not None:
             extend = "both"
+          # end
           elif zmax is not None:
             extend = "max"
+          # end
           elif zmin is not None:
             extend = "min"
           # end
@@ -476,6 +514,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
               tmp = vmax / 1000
               norm = colors.SymLogNorm(linthresh=tmp, linscale=tmp,
                   vmin=vmin, vmax=vmax, base=10)
+            # end
             else:
               norm = colors.LogNorm(vmin=vmin, vmax=vmax)
             # end
@@ -486,6 +525,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
         # end
         if not color and comp_colorbar and not streamline:
           _pgkyl_colorbar(im, mpl_fig, cax, extend=extend, label=layout_clabel)
+      # end
         # end
       else:
         raise ValueError(f"{num_dims:d}D data not supported")
@@ -495,6 +535,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
       if comp_legend:
         if num_dims == 1 and comp_label != "":
           cax.legend(loc=0)
+        # end
         else:
           cax.text(0.03, 0.96, comp_label,
               bbox={"facecolor": "w", "edgecolor": "w", "alpha": 0.8,
@@ -528,11 +569,13 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
       # end
       if fixaspect:
         plt.setp(cax, aspect=aspect)
+    # end
       # end
     # end component loop
 
     if num_axes:
       cur_start_axes += num_comps
+  # end
     # end
   # end dataset loop
 
@@ -541,3 +584,4 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     plt.show()
   # end
   return mpl_fig
+# end

@@ -80,6 +80,7 @@ def _laguerre_compose(f_grid: list[np.ndarray], f_values: np.ndarray,
   f = f[..., np.newaxis]  # Adding the component index
 
   return [x, vpar, vperp], f
+# end
 
 
 # ---------------------------------------------------------------- GData verb
@@ -114,6 +115,7 @@ def laguerre_compose(distribution: "GDataState", variables: "GDataState", *,
       variables.values)
   return distribution._result(grid, values, inplace=inplace, tag=tag,
       label=label)
+# end
 
 
 # ------------------------------------------------------------------- loader
@@ -161,3 +163,4 @@ def load_pkpm(name: str, species: str, idx: "str | int", poly_order: int, *,
     out.set_label(label)
   # end
   return out
+# end

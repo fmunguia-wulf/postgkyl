@@ -24,3 +24,4 @@ def mag_sq(grid: list[np.ndarray], values: np.ndarray,
   comps = values[..., slice(int(lo), int(hi))]
   out = np.sum(comps * comps, axis=-1)[..., np.newaxis]
   return list(grid), out
+# end

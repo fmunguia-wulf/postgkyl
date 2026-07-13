@@ -27,3 +27,4 @@ def rel_change(grid: list[np.ndarray], values0: np.ndarray, values: np.ndarray,
     out[..., i] = (values[..., i] - values0[..., i]) / denom
   # end
   return list(grid), out
+# end

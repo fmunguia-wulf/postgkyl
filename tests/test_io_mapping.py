@@ -22,6 +22,7 @@ def test_uniform_grid_has_cells_plus_one_edges():
   assert len(grid) == 2
   np.testing.assert_allclose(grid[0], [0.0, 0.5, 1.0, 1.5, 2.0])
   np.testing.assert_allclose(grid[1], [-1.0, 0.0, 1.0])
+# end
 
 
 def test_adjust_for_ghost_cells_no_op_when_shapes_match():
@@ -32,6 +33,7 @@ def test_adjust_for_ghost_cells_no_op_when_shapes_match():
   assert c[0] == 4
   assert lo[0] == pytest.approx(0.0)
   assert up[0] == pytest.approx(1.0)
+# end
 
 
 def test_c2p_grid_splits_packed_node_axis_by_hand():
@@ -46,6 +48,7 @@ def test_c2p_grid_splits_packed_node_axis_by_hand():
   assert len(blocks) == 2
   np.testing.assert_array_equal(blocks[0], np.array([[0.0], [1.0], [2.0]]))
   np.testing.assert_array_equal(blocks[1], np.array([[10.0], [11.0], [12.0]]))
+# end
 
 
 def test_c2p_grid_with_multiple_coefficients_per_dim():
@@ -55,3 +58,5 @@ def test_c2p_grid_with_multiple_coefficients_per_dim():
   assert len(blocks) == 3
   for d in range(3):
     np.testing.assert_array_equal(blocks[d], nodes[:, d * 2:(d + 1) * 2])
+  # end
+# end

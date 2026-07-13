@@ -36,3 +36,4 @@ def extract_input(data: "GDataState") -> str:
     return base64.decodebytes(encoded.encode("utf-8")).decode("utf-8")
   # end
   return ""
+# end

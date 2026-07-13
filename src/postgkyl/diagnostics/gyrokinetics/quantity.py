@@ -65,10 +65,13 @@ class GkQuantity:
     number (geo files have no frame, so no trailing separator)."""
     if self.is_geo:
       return os.path.join(path, f"{name}-{src}")
+    # end
     if self.is_species_dep:
       src_ = f"{src}_" if src else ""
       return os.path.join(path, f"{name}-{species}_{src_}")
+    # end
     return os.path.join(path, f"{name}-{src}_")
+  # end
 
   def _src_file_name(self, path: str, name: str, species: str, src: str,
       frame: int | None) -> str:
@@ -76,13 +79,16 @@ class GkQuantity:
     stem = self._src_stem(path, name, species, src)
     if self.is_geo:
       return f"{stem}.gkyl"
+    # end
     return f"{stem}{frame}.gkyl"
+  # end
 
   def _avail_frames_src(self, path: str, name: str, species: str, src: str,
       frames: list[int] | None = None) -> set[int]:
     """Available frames for a string source's ``<stem><frame>.gkyl`` family."""
     stem = self._src_stem(path, name, species, src)
     return discovery.available_frames(stem, frames=frames)
+  # end
 
   def _avail_combo_frames(self, path: str, name: str, species: str,
       frames: list[int] | None = None) -> tuple[int, set[int]]:
@@ -107,6 +113,7 @@ class GkQuantity:
 
         if isinstance(src, str):
           frames_avail_q = self._avail_frames_src(path, name, species, src, frames)
+        # end
         else:
           _, frames_avail_q = src._avail_combo_frames(path, name, species, frames)
         # end
@@ -119,13 +126,16 @@ class GkQuantity:
         if frames_avail_q:
           if not frames_avail:
             frames_avail = set(frames_avail_q)
+          # end
           elif frames_avail_q != frames_avail:
             frames_avail = set()
             break
           # end
           combo_idx = cidx
+        # end
         else:
           break
+      # end
         # end
       else:
         if not frames_avail:
@@ -139,6 +149,7 @@ class GkQuantity:
       # end
     # end
     return combo_idx, frames_avail
+  # end
 
   # -------------------------------------------------------------- public
   def get_label(self, species: str | None = None,
@@ -151,6 +162,7 @@ class GkQuantity:
       return self.label % str(species[0]) if species is not None else self.label % "s"
     # end
     return self.label
+  # end
 
   def get_avail_source(self, path: str, name: str, species: str,
       frame_inp: str | None) -> tuple[int, list]:
@@ -176,6 +188,7 @@ class GkQuantity:
       frame_inp = frame_inp.strip()
       if "," in frame_inp:
         frame_list = [int(f.strip()) for f in frame_inp.split(",")]
+      # end
       elif ":" not in frame_inp:
         frame_list = [int(frame_inp)]
       # end
@@ -205,6 +218,7 @@ class GkQuantity:
     # end
 
     return combo_idx, frame_list
+  # end
 
   def get_src_gdata(self, src: "str | GkQuantity", path: str, name: str,
       species: str, frame: int | None, **extra) -> "GDataState":
@@ -220,6 +234,7 @@ class GkQuantity:
     gdatas = [src.get_src_gdata(s, path, name, species, frame, **extra)
               for s in combo]
     return fetch_func(gdatas, **extra)
+  # end
 
   def fetch(self, path: str, name: str, species: str, frame: int | None,
       combo_idx: int, **extra) -> "GDataState":
@@ -230,6 +245,8 @@ class GkQuantity:
               for src in combo]
     extra = dict(extra, path=path, name=name, species=species, frame=frame)
     return fetch_func(gdatas, **extra)
+  # end
+# end
 
 
 class GkQuantityRegistry:
@@ -237,19 +254,25 @@ class GkQuantityRegistry:
 
   def __init__(self):
     self._registry: dict[str, GkQuantity] = {}
+  # end
 
   def register(self, quantity: GkQuantity) -> None:
     """Register a new gyrokinetic quantity."""
     self._registry[quantity.name] = quantity
+  # end
 
   def get(self, name: str) -> GkQuantity | None:
     """Get a registered quantity by name, or ``None`` if unregistered."""
     return self._registry.get(name)
+  # end
 
   def list(self) -> list[str]:
     """Sorted list of all registered quantity names."""
     return sorted(self._registry)
+  # end
 
   def has(self, name: str) -> bool:
     """Whether ``name`` is registered."""
     return name in self._registry
+  # end
+# end

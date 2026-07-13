@@ -59,6 +59,7 @@ def downsample(*arrays: np.ndarray,
       idx = np.append(idx, size - 1)
     # end
     return idx
+  # end
 
   axis_indices = [
       _axis_indices(size, step)
@@ -71,5 +72,7 @@ def downsample(*arrays: np.ndarray,
       out = np.take(out, idx, axis=axis)
     # end
     return out
+  # end
 
   return tuple(_take_indices(arr) for arr in arrays)
+# end

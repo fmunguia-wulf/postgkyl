@@ -65,6 +65,7 @@ def fft(grid: list[np.ndarray], values: np.ndarray, *, psd: bool = False,
       ft_values = np.abs(ft_values[:N // 2, :])**2
     # end
     return freq, ft_values
+  # end
 
   if num_dims > 3:
     # src_bak raised this same message, but only from deep inside the
@@ -88,6 +89,7 @@ def fft(grid: list[np.ndarray], values: np.ndarray, *, psd: bool = False,
   # end
   if not psd:
     return freq, ft_values
+  # end
 
   for i in range(num_dims):
     freq[i] = freq[i][:N[i] // 2]
@@ -96,12 +98,15 @@ def fft(grid: list[np.ndarray], values: np.ndarray, *, psd: bool = False,
     ft_values = np.abs(ft_values[:N[0] // 2, :N[1] // 2, :])**2
     if iso:
       freq.append(0)  # dummy third index, only meaningful to init_polar below
+    # end
+  # end
   else:  # num_dims == 3 (num_dims > 3 already raised above)
     ft_values = np.abs(ft_values[:N[0] // 2, :N[1] // 2, :N[2] // 2, :])**2
   # end
 
   if not iso:
     return freq, ft_values
+  # end
 
   nkpolar = int(np.sqrt(np.sum(N[:]**2)))
   nkx = N[0] // 2
@@ -115,6 +120,7 @@ def fft(grid: list[np.ndarray], values: np.ndarray, *, psd: bool = False,
         nbin, ft_values[..., comp], kx, ky, kz)
   # end
   return [akp], fft_iso
+# end
 
 
 def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
@@ -150,6 +156,7 @@ def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
     nbin = 0
     polar_index = []
     akplim = []
+  # end
   elif nkz == 0:
     nbin = np.zeros(nkpolar)  # Number of kx,ky in each polar bins
     polar_index = np.zeros((nkx, nky), dtype=int)  # Polar index to simplify binning
@@ -161,12 +168,16 @@ def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
       # the evidently intended ``and``, proven by the parity-sensitive
       # test in test_numerics_fft.py.
       dkp = 0
+    # end
     elif nkx == 1:
       dkp = ky[1]
+    # end
     elif nky == 1:
       dkp = kx[1]
+    # end
     else:
       dkp = max(kx[1], ky[1])
+    # end
     akp = (np.linspace(1, nkpolar, nkpolar)) * dkp  # Kperp grid
     akplim = dkp / 2 + (np.linspace(0, nkpolar, nkpolar + 1))*dkp  # Bin limits
     # Re-written to avoid loops. Necessary for large grids.
@@ -181,6 +192,8 @@ def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
       pn = np.where((kp < akplim[ik + 1]) & (kp >= akplim[ik]))
       polar_index[pn[0], pn[1]] = ik
       nbin[ik] = nbin[ik] + len(pn[0])
+    # end
+  # end
   else:
     # 3D data
     nbin = np.zeros(nkpolar)
@@ -189,14 +202,19 @@ def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
       # NB: same ``&``-vs-``==``-precedence bug as the 2D branch above,
       # fixed the same way.
       dkp = 0
+    # end
     elif nkx == 1:
       dkp = max(ky[1], kz[1])
+    # end
     elif nky == 1:
       dkp = max(kx[1], kz[1])
+    # end
     elif nkz == 1:
       dkp = max(kx[1], ky[1])
+    # end
     else:
       dkp = max(kx[1], ky[1], kz[1])
+    # end
     akp = (np.linspace(1, nkpolar, nkpolar)) * dkp  # kperp grid
     akplim = dkp / 2 + (np.linspace(0, nkpolar, nkpolar + 1)) * dkp  # bin limits
     # Re-written to avoid loops
@@ -209,9 +227,11 @@ def init_polar(nkx, nky, nkz, kx, ky, kz, nkpolar):
       pn = np.where((kp < akplim[ik + 1]) & (kp >= akplim[ik]))
       polar_index[pn[0], pn[1], pn[2]] = ik
       nbin[ik] = nbin[ik] + len(pn[0])
+    # end
   # end
 
   return akp, nbin, polar_index, akplim
+# end
 
 
 def polar_isotropic(nkpolar, nkx, nky, nkz, polar_index, nbin, fft_matrix, kx, ky, kz):
@@ -249,6 +269,7 @@ def polar_isotropic(nkpolar, nkx, nky, nkz, polar_index, nbin, fft_matrix, kx, k
     for i in range(nkx):
       for j in range(nky):
         fft_isok[polar_index[i, j]] = fft_isok[polar_index[i, j]] + fft_matrix[i, j]
+  # end
       # end
     # end
   else:
@@ -263,3 +284,4 @@ def polar_isotropic(nkpolar, nkx, nky, nkz, polar_index, nbin, fft_matrix, kx, k
 
   fft_isok = fft_isok / nbin[:]
   return fft_isok
+# end

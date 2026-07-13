@@ -15,6 +15,8 @@ from postgkyl.render.style import DEFAULT_STYLE, apply_style
 def _restore_rcparams():
   with mpl.rc_context():
     yield
+  # end
+# end
 
 
 class TestApplyStyle:
@@ -22,27 +24,35 @@ class TestApplyStyle:
     apply_style()
     assert mpl.rcParams["image.cmap"] == "inferno"
     assert mpl.rcParams["image.origin"] == "lower"
+  # end
 
   def test_named_postgkyl_style_matches_default(self):
     apply_style(DEFAULT_STYLE)
     assert mpl.rcParams["image.cmap"] == "inferno"
+  # end
 
   def test_cycler_line_is_parsed_by_matplotlib(self):
     apply_style()
     cycle = list(mpl.rcParams["axes.prop_cycle"])
     assert len(cycle) == 7
+  # end
 
   def test_matplotlib_named_style_is_forwarded(self):
     apply_style("default")
     # "default" resets to Matplotlib's own baseline cmap.
     assert mpl.rcParams["image.cmap"] == "viridis"
+  # end
 
   def test_arbitrary_mplstyle_path_is_applied(self, tmp_path):
     style_file = tmp_path / "custom.mplstyle"
     style_file.write_text("image.cmap: plasma\n")
     apply_style(str(style_file))
     assert mpl.rcParams["image.cmap"] == "plasma"
+  # end
 
   def test_unknown_style_name_raises(self):
     with pytest.raises(OSError):
       apply_style("this-style-does-not-exist")
+    # end
+  # end
+# end

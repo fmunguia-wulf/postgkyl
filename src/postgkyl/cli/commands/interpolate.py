@@ -18,3 +18,4 @@ from .._apply import apply
 def command(ctx, basis, poly_order, num_interp) -> None:
   """Interpolate DG data onto a uniform mesh."""
   apply(ctx, lambda d: d.interpolate(basis=basis, p=poly_order, num_interp=num_interp))
+# end

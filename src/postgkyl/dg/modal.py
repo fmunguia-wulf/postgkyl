@@ -37,7 +37,9 @@ def shift_mean(basis_type: str, ndim: int, poly_order: int,
   out = a
   for f in range(a.ncomp // nb):
     out = gpython.kernels.shiftc(out, coeff_shift, f * nb)
+  # end
   return out
+# end
 
 
 def shift_all(a: GkylArray, val: float) -> GkylArray:
@@ -46,7 +48,9 @@ def shift_all(a: GkylArray, val: float) -> GkylArray:
   out = a.clone()
   for k in range(a.ncomp):
     out = gpython.kernels.shiftc(out, float(val), k)
+  # end
   return out
+# end
 
 
 def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
@@ -79,6 +83,7 @@ def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
   if not avg_dirs or avg_dirs[0] < 0 or avg_dirs[-1] >= ndim:
     raise ValueError(
         f"average dirs {avg_dirs} out of range for a {ndim}D field")
+  # end
   keep_dirs = [d for d in range(ndim) if d not in avg_dirs]
   ndim_avg = len(keep_dirs) if keep_dirs else 1
   cells = np.asarray(grid["cells"])
@@ -88,14 +93,17 @@ def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
   nb = gpython.basis.num_basis(basis_type, ndim, poly_order)
   if a.ncomp % nb:
     raise ValueError(f"ncomp {a.ncomp} is not a multiple of num_basis {nb}")
+  # end
   nfields = a.ncomp // nb
   if weight is not None and weight.ncomp != nb:
     raise ValueError(f"average weight ncomp ({weight.ncomp}) must equal "
                      f"the donor basis's num_basis ({nb})")
+  # end
 
   if nfields == 1:
     out = gpython.kernels.array_average(grid, basis_type, poly_order,
         ndim_avg, cells_avg, avg_dim, a, weight=weight)
+  # end
   else:
     a_view = a.view().reshape(a.size, nfields, nb)
     fields_out = []
@@ -104,7 +112,9 @@ def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
       out_f = gpython.kernels.array_average(grid, basis_type, poly_order,
           ndim_avg, cells_avg, avg_dim, a_f, weight=weight)
       fields_out.append(out_f.view())
+    # end
     out = GkylArray.from_numpy(np.concatenate(fields_out, axis=-1))
+  # end
 
   if not keep_dirs and weight is None:
     # Full reduction (every donor dim averaged), unweighted only: Gkeyll's
@@ -118,7 +128,9 @@ def average(grid: dict, basis_type: str, ndim: int, poly_order: int,
     # other modal dataset in the system -- verified against
     # gkyl_array_integrate on a constant field (see test_dg_modal_average).
     out = gpython.kernels.scale(out, 2.0 ** (ndim_avg / 2.0))
+  # end
   return keep_dirs, cells_avg, out
+# end
 
 
 def differentiate(basis_type: str, ndim: int, poly_order: int, a: GkylArray,
@@ -129,6 +141,7 @@ def differentiate(basis_type: str, ndim: int, poly_order: int, a: GkylArray,
   shim (like :func:`weak_mul`), so this is a direct pass-through."""
   return gpython.kernels.weak_differentiate(basis_type, ndim, poly_order,
       dir, diff_order, dx, a)
+# end
 
 
 def eval_at_coord_proj(grid: dict, basis_type: str, ndim: int,
@@ -152,6 +165,7 @@ def eval_at_coord_proj(grid: dict, basis_type: str, ndim: int,
   if not eval_dirs or eval_dirs[0] < 0 or eval_dirs[-1] >= ndim:
     raise ValueError(
         f"eval_dirs {eval_dirs} out of range for a {ndim}D field")
+  # end
   keep_dirs = [d for d in range(ndim) if d not in eval_dirs]
   cells = np.asarray(grid["cells"])
   ndim_tar = len(keep_dirs) if keep_dirs else 1
@@ -163,6 +177,7 @@ def eval_at_coord_proj(grid: dict, basis_type: str, ndim: int,
           cdim_do, grid, eval_dirs, eval_coords, ndim_tar, cells_tar, a))
   return (keep_dirs, cells_tar, out, btype, poly_order_tar, cdim_tar,
       vdim_tar)
+# end
 
 
 def power(basis_type: str, ndim: int, poly_order: int,
@@ -173,7 +188,10 @@ def power(basis_type: str, ndim: int, poly_order: int,
     raise ValueError(
         f"modal power supports positive integer exponents only, got {n!r}; "
         "interpolate first for general powers.")
+  # end
   out = a.clone()
   for _ in range(int(n) - 1):
     out = weak_mul(basis_type, ndim, poly_order, out, a)
+  # end
   return out
+# end

@@ -23,25 +23,33 @@ def _split_axis_string(axis: str) -> tuple:
   """
   if len(axis.split(",")) > 1:
     return tuple(int(a) for a in axis.split(","))
+  # end
   if len(axis.split(":")) == 2:
     lo, hi = axis.split(":")
     return tuple(range(int(lo), int(hi)))
+  # end
   return (int(axis),)
+# end
 
 
 def _parse_axis(axis: int | tuple | str | None, num_dims: int) -> tuple:
   """Turn an axis selector into a tuple of integer axes."""
   if axis is None:
     return tuple(range(num_dims))
+  # end
   if isinstance(axis, int):
     return (axis,)
+  # end
   if isinstance(axis, tuple):
     return axis
+  # end
   if isinstance(axis, str):
     return _split_axis_string(axis)
+  # end
   raise TypeError(
       "'axis' needs to be integer, tuple, string of comma separated "
       "integers, or a slice ('int:int')")
+# end
 
 
 def integrate(grid: list[np.ndarray], values: np.ndarray,
@@ -87,6 +95,7 @@ def integrate(grid: list[np.ndarray], values: np.ndarray,
     if len(grid[ax]) > 1:
       values = np.moveaxis(values, ax, -1)
       values = np.dot(values, dz[ax])
+    # end
     else:
       values = values.mean(axis=ax)
     # end
@@ -98,3 +107,4 @@ def integrate(grid: list[np.ndarray], values: np.ndarray,
   # end
 
   return grid, values
+# end

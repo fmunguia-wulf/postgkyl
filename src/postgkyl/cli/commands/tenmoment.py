@@ -27,3 +27,4 @@ def command(ctx, variable_name, gas_gamma, use, tag, label) -> None:
   fn = pg.diagnostics.ten_moment.VARIABLES[variable_name]
   apply(ctx, lambda d: call_variable(fn, d, tag=tag, label=label,
       gas_gamma=gas_gamma), use=use)
+# end

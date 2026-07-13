@@ -17,6 +17,7 @@ def _print_fit(d, res) -> None:
     prefix = f"  Component {i}: " if multi else "  "
     body = "  ".join(f"{p:.6e} +/- {s:.2e}" for p, s in zip(params[i], stds[i]))
     click.echo(f"{prefix}{body}    R^2 = {r2s[i]:.6f}")
+# end
   # end
 
 
@@ -63,13 +64,16 @@ def command(ctx, fit_type, guess, window, min_n, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("fit: no datasets to fit")
+  # end
   results = []
   for d in pool:
     try:
       res = d.fit(fit_type, guess=guess, window=window, min_n=min_n, tag=tag,
           label=label)
+    # end
     except ValueError as err:
       raise click.UsageError(str(err))
     # end
@@ -77,3 +81,4 @@ def command(ctx, fit_type, guess, window, min_n, use, tag, label) -> None:
     results.append(res)
   # end
   ctx.obj.datasets = ctx.obj.datasets + results
+# end

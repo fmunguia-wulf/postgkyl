@@ -28,6 +28,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 _G1D = [np.array([0.0, 1.0])]
@@ -43,10 +44,12 @@ _MOM10 = np.array([[_RHO, _RHO * _VX, _RHO * _VY, _RHO * _VZ,
 
 def _diagonal_pressure(pxx, pyy, pzz):
   return _make(_G1D, np.array([[pxx, 0.0, 0.0, pyy, 0.0, pzz]]))
+# end
 
 
 def _b(bx, by, bz):
   return _make(_G1D, np.array([[bx, by, bz]]))
+# end
 
 
 class TestPressureTensorComponents:
@@ -54,22 +57,26 @@ class TestPressureTensorComponents:
     d = _make(_G1D, _MOM10)
     out = tm.pxx(d)
     np.testing.assert_allclose(out.values[0, 0], _P_T, rtol=1e-10)
+  # end
 
   def test_pxy_pxz_pyz_zero_for_diagonal_flow(self):
     d = _make(_G1D, _MOM10)
     np.testing.assert_allclose(tm.pxy(d).values[0, 0], 0.0, atol=1e-14)
     np.testing.assert_allclose(tm.pxz(d).values[0, 0], 0.0, atol=1e-14)
     np.testing.assert_allclose(tm.pyz(d).values[0, 0], 0.0, atol=1e-14)
+  # end
 
   def test_pyy(self):
     d = _make(_G1D, _MOM10)
     out = tm.pyy(d)
     np.testing.assert_allclose(out.values[0, 0], _P_T, rtol=1e-10)
+  # end
 
   def test_pzz(self):
     d = _make(_G1D, _MOM10)
     out = tm.pzz(d)
     np.testing.assert_allclose(out.values[0, 0], _P_T, rtol=1e-10)
+  # end
 
   def test_pressure_tensor_shape_and_diagonal(self):
     d = _make(_G1D, _MOM10)
@@ -79,12 +86,16 @@ class TestPressureTensorComponents:
     np.testing.assert_allclose(out.values[0, 3], _P_T, rtol=1e-10)
     np.testing.assert_allclose(out.values[0, 5], _P_T, rtol=1e-10)
     np.testing.assert_allclose(out.values[0, [1, 2, 4]], 0.0, atol=1e-14)
+  # end
 
   @needs_gkeyll
   def test_pxx_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.pxx(d)
+    # end
+  # end
+# end
 
 
 class TestPPar:
@@ -93,36 +104,42 @@ class TestPPar:
     b = _b(1.0, 0.0, 0.0)
     out = tm.p_par(p, b)
     np.testing.assert_allclose(out.values.flat[0], 1.0, rtol=1e-12)
+  # end
 
   def test_b_along_y_pyy_is_p_par(self):
     p = _diagonal_pressure(0.5, 2.0, 0.5)
     b = _b(0.0, 1.0, 0.0)
     out = tm.p_par(p, b)
     np.testing.assert_allclose(out.values.flat[0], 2.0, rtol=1e-12)
+  # end
 
   def test_b_along_z_pzz_is_p_par(self):
     p = _diagonal_pressure(0.5, 0.5, 3.0)
     b = _b(0.0, 0.0, 1.0)
     out = tm.p_par(p, b)
     np.testing.assert_allclose(out.values.flat[0], 3.0, rtol=1e-12)
+  # end
 
   def test_isotropic_pressure_p_par_equals_p(self):
     p = _diagonal_pressure(2.0, 2.0, 2.0)
     b = _b(1.0, 1.0, 0.0)
     out = tm.p_par(p, b)
     np.testing.assert_allclose(out.values.flat[0], 2.0, rtol=1e-10)
+  # end
 
   def test_b_diagonal_gives_average(self):
     p = _diagonal_pressure(1.0, 2.0, 0.0)
     b = _b(1.0 / np.sqrt(2), 1.0 / np.sqrt(2), 0.0)
     out = tm.p_par(p, b)
     np.testing.assert_allclose(out.values.flat[0], 1.5, rtol=1e-12)
+  # end
 
   def test_inplace_mutates_ptensor(self):
     p = _diagonal_pressure(1.0, 0.5, 0.5)
     b = _b(1.0, 0.0, 0.0)
     out = tm.p_par(p, b, inplace=True)
     assert out is p
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -130,6 +147,9 @@ class TestPPar:
     b = _b(1.0, 0.0, 0.0)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.p_par(d, b)
+    # end
+  # end
+# end
 
 
 class TestPPerp:
@@ -138,6 +158,7 @@ class TestPPerp:
     b = _b(1.0, 0.0, 0.0)
     out = tm.p_perp(p, b)
     np.testing.assert_allclose(out.values.flat[0], 0.5, rtol=1e-12)
+  # end
 
   def test_isotropic_pressure_perp_equals_par(self):
     p = _diagonal_pressure(1.5, 1.5, 1.5)
@@ -146,6 +167,7 @@ class TestPPerp:
     perp_out = tm.p_perp(p, b)
     np.testing.assert_allclose(perp_out.values.flat[0], par_out.values.flat[0],
         rtol=1e-10)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -153,6 +175,9 @@ class TestPPerp:
     b = _b(1.0, 0.0, 0.0)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.p_perp(d, b)
+    # end
+  # end
+# end
 
 
 class TestAgyro:
@@ -162,6 +187,7 @@ class TestAgyro:
     b = _b(0.0, 0.0, 1.0)
     out = tm.agyro(p, b, measure=measure)
     np.testing.assert_allclose(out.values, 0.0, atol=1e-10)
+  # end
 
   def test_swisdak_case_insensitive(self):
     p = _make(_G1D, np.array([[2.0, 0.5, 0.0, 1.0, 0.0, 1.0]]))
@@ -169,6 +195,7 @@ class TestAgyro:
     out1 = tm.agyro(p, b, measure="swisdak")
     out2 = tm.agyro(p, b, measure="Swisdak")
     np.testing.assert_allclose(out1.values, out2.values)
+  # end
 
   def test_frobenius_case_insensitive(self):
     p = _make(_G1D, np.array([[2.0, 0.5, 0.0, 1.0, 0.0, 1.0]]))
@@ -176,24 +203,29 @@ class TestAgyro:
     out1 = tm.agyro(p, b, measure="frobenius")
     out2 = tm.agyro(p, b, measure="Frobenius")
     np.testing.assert_allclose(out1.values, out2.values)
+  # end
 
   def test_invalid_measure_raises(self):
     p = _diagonal_pressure(1.0, 1.0, 1.0)
     b = _b(1.0, 0.0, 0.0)
     with pytest.raises(ValueError, match="swisdak.*frobenius"):
       tm.agyro(p, b, measure="invalid")
+    # end
+  # end
 
   def test_agyrotropic_swisdak_nonzero(self):
     p = _make(_G1D, np.array([[2.0, 0.5, 0.0, 1.0, 0.0, 1.0]]))
     b = _b(1.0, 0.0, 0.0)
     out = tm.agyro(p, b, measure="swisdak")
     assert out.values.flat[0] > 0.0
+  # end
 
   def test_agyrotropic_frobenius_nonzero(self):
     p = _make(_G1D, np.array([[2.0, 0.5, 0.0, 1.0, 0.0, 1.0]]))
     b = _b(1.0, 0.0, 0.0)
     out = tm.agyro(p, b, measure="frobenius")
     assert out.values.flat[0] > 0.0
+  # end
 
   def test_default_measure_is_frobenius(self):
     p = _make(_G1D, np.array([[2.0, 0.5, 0.0, 1.0, 0.0, 1.0]]))
@@ -201,12 +233,14 @@ class TestAgyro:
     default_out = tm.agyro(p, b)
     explicit_out = tm.agyro(p, b, measure="frobenius")
     np.testing.assert_allclose(default_out.values, explicit_out.values)
+  # end
 
   def test_inplace_mutates_ptensor(self):
     p = _diagonal_pressure(2.0, 2.0, 2.0)
     b = _b(0.0, 0.0, 1.0)
     out = tm.agyro(p, b, inplace=True)
     assert out is p
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -214,6 +248,9 @@ class TestAgyro:
     b = _b(0.0, 0.0, 1.0)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.agyro(d, b)
+    # end
+  # end
+# end
 
 
 class TestMomAgyro:
@@ -222,11 +259,13 @@ class TestMomAgyro:
         np.array([[1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 0.0, 2.0]]))
     field = _make(_G1D, np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 1.0]]))
     return species, field
+  # end
 
   def test_isotropic_species_is_gyrotropic(self):
     species, field = self._species_and_field()
     out = tm.mom_agyro(species, field)
     np.testing.assert_allclose(out.values, 0.0, atol=1e-12)
+  # end
 
   def test_matches_private_helper(self):
     species, field = self._species_and_field()
@@ -234,6 +273,7 @@ class TestMomAgyro:
     _, expected = tm._get_gkyl_10m_agyro(species.grid, species.values,
         field.grid, field.values, measure="swisdak")
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -241,6 +281,9 @@ class TestMomAgyro:
     field = _make(_G1D, np.array([[0.0, 0.0, 0.0, 0.0, 0.0, 1.0]]))
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.mom_agyro(d, field)
+    # end
+  # end
+# end
 
 
 class TestGkyl10mPrivateWrappers:
@@ -259,28 +302,34 @@ class TestGkyl10mPrivateWrappers:
     field_vals = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]])
     g = [np.array([0.0, 1.0])]
     return g, mom10, g, field_vals
+  # end
 
   def test_p_par_wrapper(self):
     sg, sv, fg, fv = self._species_and_field()
     _, p_par = tm._get_gkyl_10m_p_par(sg, sv, fg, fv)
     np.testing.assert_allclose(p_par.flat[0], 2.0, rtol=1e-10)
+  # end
 
   def test_p_perp_wrapper(self):
     sg, sv, fg, fv = self._species_and_field()
     _, p_perp = tm._get_gkyl_10m_p_perp(sg, sv, fg, fv)
     np.testing.assert_allclose(p_perp.flat[0], 1.0, rtol=1e-10)
+  # end
+# end
 
 
 class TestFiveMomentSetFixedAtTenMoments:
   def _tenmoment_state(self):
     vals = np.array([[1.0, 2.0, 0.0, 0.0, 6.0, 0.0, 0.0, 3.0, 0.0, 3.0]])
     return _make([np.array([0.0, 1.0])], vals)
+  # end
 
   def test_density_reused_from_five_moment(self):
     from postgkyl.diagnostics import five_moment as fm
     assert tm.density is fm.density
     assert tm.xvel is fm.xvel
     assert tm.vel is fm.vel
+  # end
 
   def test_pressure_uses_num_moms_10(self):
     d = self._tenmoment_state()
@@ -288,6 +337,7 @@ class TestFiveMomentSetFixedAtTenMoments:
     from postgkyl.diagnostics.five_moment import _get_p
     _, expected = _get_p(d.grid, d.values, gas_gamma=5.0 / 3, num_moms=10)
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   def test_ke_uses_num_moms_10(self):
     d = self._tenmoment_state()
@@ -295,6 +345,7 @@ class TestFiveMomentSetFixedAtTenMoments:
     from postgkyl.diagnostics.five_moment import _get_ke
     _, expected = _get_ke(d.grid, d.values, gas_gamma=5.0 / 3, num_moms=10)
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   def test_temp_uses_num_moms_10(self):
     d = self._tenmoment_state()
@@ -302,6 +353,7 @@ class TestFiveMomentSetFixedAtTenMoments:
     from postgkyl.diagnostics.five_moment import _get_temp
     _, expected = _get_temp(d.grid, d.values, gas_gamma=5.0 / 3, num_moms=10)
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   def test_sound_uses_num_moms_10(self):
     d = self._tenmoment_state()
@@ -309,6 +361,7 @@ class TestFiveMomentSetFixedAtTenMoments:
     from postgkyl.diagnostics.five_moment import _get_sound
     _, expected = _get_sound(d.grid, d.values, gas_gamma=5.0 / 3, num_moms=10)
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   def test_mach_uses_num_moms_10(self):
     d = self._tenmoment_state()
@@ -316,12 +369,15 @@ class TestFiveMomentSetFixedAtTenMoments:
     from postgkyl.diagnostics.five_moment import _get_mach
     _, expected = _get_mach(d.grid, d.values, gas_gamma=5.0 / 3, num_moms=10)
     np.testing.assert_allclose(out.values, expected)
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       tm.density(d)
+    # end
+  # end
 
   @needs_gkeyll
   @pytest.mark.parametrize("fn_name", ["ke", "temp", "sound", "mach"])
@@ -330,6 +386,9 @@ class TestFiveMomentSetFixedAtTenMoments:
     fn = getattr(tm, fn_name)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       fn(d)
+    # end
+  # end
+# end
 
 
 class TestVariables:
@@ -338,8 +397,11 @@ class TestVariables:
         "density", "xvel", "yvel", "zvel", "vel", "pressure", "ke", "temp",
         "sound", "mach", "pressureTensor",
         "pxx", "pxy", "pxz", "pyy", "pyz", "pzz"}
+  # end
 
   def test_variables_table_maps_to_public_functions(self):
     assert tm.VARIABLES["pressureTensor"] is tm.pressure_tensor
     assert tm.VARIABLES["pxx"] is tm.pxx
     assert tm.VARIABLES["density"] is tm.density
+  # end
+# end

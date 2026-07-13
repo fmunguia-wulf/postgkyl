@@ -27,12 +27,16 @@ def flatten_datasets(items) -> list:
   for it in items:
     if isinstance(it, GDataState):
       out.append(it)
+    # end
     elif isinstance(it, (str, bytes)):
       out.append(it)
+    # end
     elif hasattr(it, "__iter__"):
       out.extend(flatten_datasets(it))
+    # end
     else:
       out.append(it)
     # end
   # end
   return out
+# end

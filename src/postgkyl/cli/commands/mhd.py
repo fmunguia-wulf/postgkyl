@@ -29,3 +29,4 @@ def command(ctx, variable_name, mu_0, gas_gamma, use, tag, label) -> None:
   fn = pg.diagnostics.mhd.VARIABLES[variable_name]
   apply(ctx, lambda d: call_variable(fn, d, tag=tag, label=label,
       gas_gamma=gas_gamma, mu_0=mu_0), use=use)
+# end

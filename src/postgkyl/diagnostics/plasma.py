@@ -52,6 +52,7 @@ def _get_magB(field_grid: list[np.ndarray],
   b_values = field_values[..., 3:6]
   _, mag_B_sq = numerics.mag_sq(field_grid, b_values)
   return list(field_grid), np.sqrt(mag_B_sq)
+# end
 
 
 def _get_vt(species_grid: list[np.ndarray], species_values: np.ndarray, *,
@@ -80,15 +81,19 @@ def _get_vt(species_grid: list[np.ndarray], species_values: np.ndarray, *,
   if mhd:
     out_grid, temp = _get_mhd_temp(species_grid, species_values,
         gas_gamma=gas_gamma, mu_0=mu_0)
+  # end
   else:
     out_grid, temp = _get_temp(species_grid, species_values,
         gas_gamma=gas_gamma, num_moms=num_moms)
+  # end
 
   out_values = np.sqrt(temp / mass)
   if sqrt2:
     out_values = out_values * np.sqrt(2.0)
+  # end
 
   return out_grid, out_values
+# end
 
 
 def _get_vA(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -101,6 +106,7 @@ def _get_vA(species_grid: list[np.ndarray], species_values: np.ndarray,
   _, magB = _get_magB(field_grid, field_values)
   out_grid, rho = _get_density(species_grid, species_values)
   return out_grid, magB / np.sqrt(mu_0 * rho)
+# end
 
 
 def _get_omegaC(field_grid: list[np.ndarray], field_values: np.ndarray, *,
@@ -109,6 +115,7 @@ def _get_omegaC(field_grid: list[np.ndarray], field_values: np.ndarray, *,
   """Compute the cyclotron (gyro) frequency ``omega_c = |q| * |B| / m``."""
   out_grid, magB = _get_magB(field_grid, field_values)
   return out_grid, abs(charge) * magB / mass
+# end
 
 
 def _get_omegaP(species_grid: list[np.ndarray], species_values: np.ndarray, *,
@@ -122,6 +129,7 @@ def _get_omegaP(species_grid: list[np.ndarray], species_values: np.ndarray, *,
   out_grid, rho = _get_density(species_grid, species_values)
   qbym2 = charge**2 / mass**2
   return out_grid, np.sqrt(qbym2 * rho / epsilon_0)
+# end
 
 
 def _get_d(species_grid: list[np.ndarray], species_values: np.ndarray, *,
@@ -133,6 +141,7 @@ def _get_d(species_grid: list[np.ndarray], species_values: np.ndarray, *,
       charge=charge, epsilon_0=epsilon_0)
   light_speed = 1.0 / np.sqrt(epsilon_0 * mu_0)
   return out_grid, light_speed / omegaP
+# end
 
 
 def _get_lambdaD(species_grid: list[np.ndarray], species_values: np.ndarray, *,
@@ -153,8 +162,10 @@ def _get_lambdaD(species_grid: list[np.ndarray], species_values: np.ndarray, *,
   out_values = vt / omegaP
   if sqrt2:
     out_values = out_values / np.sqrt(2.0)
+  # end
 
   return out_grid, out_values
+# end
 
 
 def _get_rho(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -174,8 +185,10 @@ def _get_rho(species_grid: list[np.ndarray], species_values: np.ndarray,
   out_values = vt / omegaC
   if not sqrt2:
     out_values = out_values * np.sqrt(2.0)
+  # end
 
   return out_grid, out_values
+# end
 
 
 def _get_beta(species_grid: list[np.ndarray], species_values: np.ndarray,
@@ -195,8 +208,10 @@ def _get_beta(species_grid: list[np.ndarray], species_values: np.ndarray,
   out_values = vt**2 / v_A**2
   if not sqrt2:
     out_values = out_values * 2.0
+  # end
 
   return out_grid, out_values
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -220,6 +235,7 @@ def magB(field: "GDataState", *, inplace: bool = False,
   _require_field_domain(field, "magB", _REASON)
   grid, values = _get_magB(field.grid, field.values)
   return field._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def vt(species: "GDataState", *, gas_gamma: float = 5.0 / 3.0,
@@ -253,6 +269,7 @@ def vt(species: "GDataState", *, gas_gamma: float = 5.0 / 3.0,
   grid, values = _get_vt(species.grid, species.values, gas_gamma=gas_gamma,
       num_moms=num_moms, mass=mass, mu_0=mu_0, sqrt2=sqrt2, mhd=mhd)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def vA(species: "GDataState", field: "GDataState", *, mu_0: float = 1.0,
@@ -280,6 +297,7 @@ def vA(species: "GDataState", field: "GDataState", *, mu_0: float = 1.0,
   grid, values = _get_vA(species.grid, species.values, field.grid,
       field.values, mu_0=mu_0)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def omegaC(field: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
@@ -293,6 +311,7 @@ def omegaC(field: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
   _require_field_domain(field, "omegaC", _REASON)
   grid, values = _get_omegaC(field.grid, field.values, mass=mass, charge=charge)
   return field._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def omegaP(species: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
@@ -307,6 +326,7 @@ def omegaP(species: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
   grid, values = _get_omegaP(species.grid, species.values, mass=mass,
       charge=charge, epsilon_0=epsilon_0)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def d(species: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
@@ -321,6 +341,7 @@ def d(species: "GDataState", *, mass: float = 1.0, charge: float = 1.0,
   grid, values = _get_d(species.grid, species.values, mass=mass,
       charge=charge, epsilon_0=epsilon_0, mu_0=mu_0)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def lambdaD(species: "GDataState", *, gas_gamma: float = 5.0 / 3.0,
@@ -338,6 +359,7 @@ def lambdaD(species: "GDataState", *, gas_gamma: float = 5.0 / 3.0,
       gas_gamma=gas_gamma, num_moms=num_moms, mass=mass, charge=charge,
       epsilon_0=epsilon_0, mu_0=mu_0, sqrt2=sqrt2)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def rho(species: "GDataState", field: "GDataState", *,
@@ -356,6 +378,7 @@ def rho(species: "GDataState", field: "GDataState", *,
       field.values, gas_gamma=gas_gamma, num_moms=num_moms, mass=mass,
       charge=charge, mu_0=mu_0, sqrt2=sqrt2)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def beta(species: "GDataState", field: "GDataState", *,
@@ -374,3 +397,4 @@ def beta(species: "GDataState", field: "GDataState", *,
       field.values, gas_gamma=gas_gamma, num_moms=num_moms, mass=mass,
       mu_0=mu_0, sqrt2=sqrt2)
   return species._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end

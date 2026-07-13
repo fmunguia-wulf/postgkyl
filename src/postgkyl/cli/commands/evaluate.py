@@ -35,8 +35,10 @@ def command(ctx, chain, tag, label) -> None:
   pool = active_datasets(ctx)
   if not pool:
     raise click.UsageError("evaluate: no datasets to evaluate")
+  # end
   try:
     result = pg.evaluate(chain, *pool, tag=tag, label=label)
+  # end
   except ValueError as err:
     raise click.UsageError(str(err))
   # end
@@ -44,3 +46,4 @@ def command(ctx, chain, tag, label) -> None:
     set_active(d, False)
   # end
   ctx.obj.datasets.append(result)
+# end

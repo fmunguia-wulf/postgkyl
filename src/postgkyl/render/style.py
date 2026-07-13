@@ -42,6 +42,7 @@ def apply_style(path_or_name: str | None = None) -> None:
   name = path_or_name or DEFAULT_STYLE
   target = _PACKAGED_STYLES.get(name, name)
   plt.style.use(target)
+# end
 
 
 __all__ = ["apply_style", "DEFAULT_STYLE"]

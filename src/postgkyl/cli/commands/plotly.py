@@ -42,8 +42,10 @@ def command(ctx, use, squeeze, scatter, style, background, diverging, cmap,
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("plotly: no datasets to plot")
+  # end
   ds = ctx.obj
   for i, d in enumerate(pool):
     fig = pg.render.plotly(d, squeeze=squeeze, scatter=scatter,
@@ -58,10 +60,13 @@ def command(ctx, use, squeeze, scatter, style, background, diverging, cmap,
       path = save_path if len(pool) == 1 else f"{i}_{save_path}"
       if path.lower().endswith(".html"):
         fig.write_html(path)
+      # end
       else:
         fig.write_image(path)
+    # end
       # end
     elif not ds.batch:
       fig.show()
+# end
     # end
   # end

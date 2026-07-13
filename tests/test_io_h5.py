@@ -40,6 +40,7 @@ def _write_gkyl_h5_frame(path, lower, upper, cells, data, time=None):
     tgrp._v_attrs.vsTime = time
   # end
   fh.close()
+# end
 
 
 def _write_gkyl_h5_diagnostic(path, time_mesh, data):
@@ -48,6 +49,7 @@ def _write_gkyl_h5_diagnostic(path, time_mesh, data):
   fh.create_array(grp, "timeMesh", time_mesh)
   fh.create_array(grp, "data", data)
   fh.close()
+# end
 
 
 def test_gkyl_h5_frame_roundtrip(tmp_path):
@@ -61,6 +63,7 @@ def test_gkyl_h5_frame_roundtrip(tmp_path):
   assert grid[1].shape == (3,)
   np.testing.assert_allclose(grid[0], np.linspace(0.0, 2.0, 5))
   np.testing.assert_allclose(grid[1], np.linspace(-1.0, 1.0, 3))
+# end
 
 
 def test_gkyl_h5_frame_ctx_and_time(tmp_path):
@@ -77,6 +80,7 @@ def test_gkyl_h5_frame_ctx_and_time(tmp_path):
   assert r.ctx["num_comps"] == 1
   assert r.ctx["grid_type"] == "uniform"
   assert out.shape == (4, 2, 1)
+# end
 
 
 def test_gkyl_h5_diagnostic(tmp_path):
@@ -93,6 +97,7 @@ def test_gkyl_h5_diagnostic(tmp_path):
   np.testing.assert_allclose(out, data)
   assert r.ctx["num_comps"] == 3
   assert grid[0].shape == (6,)  # uniform pseudo-grid over [time[0], time[-1]]
+# end
 
 
 def test_gkyl_h5_is_compatible_false_for_unrelated_file(tmp_path):
@@ -101,6 +106,7 @@ def test_gkyl_h5_is_compatible_false_for_unrelated_file(tmp_path):
   fh.create_array("/", "SomethingElse", np.zeros(3))
   fh.close()
   assert GkylH5Reader(path, ctx={}).is_compatible() is False
+# end
 
 
 def test_gkyl_h5_is_compatible_false_for_a_non_hdf5_file(tmp_path):
@@ -108,6 +114,7 @@ def test_gkyl_h5_is_compatible_false_for_a_non_hdf5_file(tmp_path):
   path.write_bytes(b"definitely not an hdf5 file")
   assert GkylH5Reader(str(path), ctx={}).is_compatible() is False
   assert GkylH5Reader("/no/such/file.h5", ctx={}).is_compatible() is False
+# end
 
 
 # ------------------------------------------------------------------- flash h5
@@ -126,6 +133,7 @@ def _write_flash_h5(path, *, num_blocks=2, nxb=4, nyb=4, var_name="dens", seed=0
   fh.create_array("/", "node type", ntype)
   fh.create_array("/", var_name, bdata)
   fh.close()
+# end
 
 
 @pytest.mark.filterwarnings(
@@ -145,6 +153,7 @@ def test_flash_h5_frame_roundtrip(tmp_path):
   assert len(grid) == 2
   assert grid[0].shape == (out.shape[0] + 1,)
   assert grid[1].shape == (out.shape[1] + 1,)
+# end
 
 
 @pytest.mark.filterwarnings(
@@ -157,6 +166,8 @@ def test_flash_h5_load_requires_var_name(tmp_path):
   r.preload()
   with pytest.raises(ValueError, match="requires 'var_name'"):
     r.load()
+  # end
+# end
 
 
 def test_flash_h5_is_compatible_false_without_coordinates(tmp_path):
@@ -165,9 +176,11 @@ def test_flash_h5_is_compatible_false_without_coordinates(tmp_path):
   fh.create_array("/", "SomethingElse", np.zeros(3))
   fh.close()
   assert FlashH5Reader(path, ctx={}).is_compatible() is False
+# end
 
 
 def test_flash_h5_is_compatible_false_for_a_non_hdf5_file(tmp_path):
   path = tmp_path / "not_hdf5.h5"
   path.write_bytes(b"definitely not an hdf5 file")
   assert FlashH5Reader(str(path), ctx={}).is_compatible() is False
+# end

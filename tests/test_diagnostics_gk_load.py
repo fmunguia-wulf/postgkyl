@@ -46,6 +46,7 @@ def _field(values, grid=None, **ctx):
   # end
   d.push(grid, values)
   return d
+# end
 
 
 class TestResolveFrames:
@@ -53,15 +54,19 @@ class TestResolveFrames:
 
   def test_single_int(self):
     assert distf.resolve_frames(5, name="n", species="ion") == [5]
+  # end
 
   def test_list(self):
     assert distf.resolve_frames([1, 2, 3], name="n", species="ion") == [1, 2, 3]
+  # end
 
   def test_csv_string(self):
     assert distf.resolve_frames("0,2,4", name="n", species="ion") == [0, 2, 4]
+  # end
 
   def test_single_element_list(self):
     assert distf.resolve_frames([7], name="n", species="ion") == [7]
+  # end
 
   def test_range_discovers_files(self, tmp_path, monkeypatch):
     for f in (0, 1, 2, 3):
@@ -71,9 +76,12 @@ class TestResolveFrames:
     assert distf.resolve_frames("1:3", name="sim", species="ion") == [1, 2]
     assert distf.resolve_frames(":", name="sim", species="ion") == [0, 1, 2, 3]
     assert distf.resolve_frames("0:4:2", name="sim", species="ion") == [0, 2]
+  # end
 
   def test_numeric_string(self):
     assert distf.resolve_frames("7", name="n", species="ion") == [7]
+  # end
+# end
 
 
 class TestLoadGkDistfKeywordOnly:
@@ -84,6 +92,9 @@ class TestLoadGkDistfKeywordOnly:
   def test_tag_cannot_be_passed_positionally(self):
     with pytest.raises(TypeError):
       distf.load_gk_distf("sim", "ion", 0, "f")
+    # end
+  # end
+# end
 
 
 @needs_gkeyll
@@ -106,11 +117,14 @@ class TestLoadGkDistfReal:
     assert out.num_comps == 1
     assert out.values.shape[:3] == tuple(int(c) for c in out.num_cells)
     assert np.all(np.isfinite(out.values))
+  # end
 
   def test_missing_default_jacobtot_inv_file_raises(self):
     with pytest.raises(Exception):
       distf.load_gk_distf(name=os.path.join(DATA, GK_NAME), species="elc",
           frame=250)
+  # end
+# end
     # end
 
 
@@ -122,23 +136,28 @@ class TestFetchCombinators:
     d = _field(np.array([[1.0, 2.0, 3.0]] * 3))
     out = ff._component(d, 1)
     np.testing.assert_allclose(out.values[..., 0], 2.0)
+  # end
 
   def test_component_all(self):
     d = _field(np.array([[1.0, 2.0, 3.0]] * 3))
     out = ff._component(d, None)
     assert out.values.shape[-1] == 3
+  # end
 
   def test_binop_add(self):
     a = _field(np.array([[1.0, 10.0]] * 2))
     fetch = ff._make_fetch_binop(0, 0, 0, 1, lambda x, y: x + y)
     out = fetch([a])
     np.testing.assert_allclose(out.values[..., 0], 11.0)
+  # end
 
   def test_fetch_s1c0_div_s0c0(self):
     m0 = _field(np.full((3, 1), 2.0))
     m1 = _field(np.full((3, 1), 6.0))
     out = ff.fetch_s1c0_div_s0c0([m0, m1])
     np.testing.assert_allclose(out.values, 3.0)
+  # end
+# end
 
 
 class TestFetchPhysics:
@@ -152,12 +171,14 @@ class TestFetchPhysics:
     hmom.values[..., 1] = 3.0
     out = ff.fetch_M1_from_H([hmom])
     np.testing.assert_allclose(out.values[..., 0], 4.0 * 3.0 / 2.0)
+  # end
 
   def test_Tpar_from_BiMax(self):
     bimax = _field(np.zeros((2, 4)), mass=3.0)
     bimax.values[..., 2] = 5.0
     out = ff.fetch_Tpar_from_BiMax([bimax])
     np.testing.assert_allclose(out.values[..., 0], 15.0)
+  # end
 
   def test_Tpar_from_M0_M1_M2par(self):
     m0 = _field(np.full((2, 1), 2.0), mass=4.0)
@@ -166,18 +187,21 @@ class TestFetchPhysics:
     out = ff.fetch_Tpar_from_M0_M1_M2par([m0, m1, m2par])
     # Tpar = mass*(M2par - M1**2/M0)/M0 = 4*(10 - 36/2)/2 = 4*(-8)/2 = -16
     np.testing.assert_allclose(out.values[..., 0], -16.0)
+  # end
 
   def test_temp_from_Tpar_Tperp(self):
     Tpar = _field(np.full((2, 1), 3.0))
     Tperp = _field(np.full((2, 1), 6.0))
     out = ff.fetch_temp_from_Tpar_Tperp([Tpar, Tperp])
     np.testing.assert_allclose(out.values[..., 0], (3.0 + 2 * 6.0) / 3.0)
+  # end
 
   def test_press_p(self):
     m0 = _field(np.full((2, 1), 2.0))
     Tp = _field(np.full((2, 1), 5.0))
     out = ff.fetch_press_p([m0, Tp])
     np.testing.assert_allclose(out.values[..., 0], 10.0)
+  # end
 
   def test_beta_from_bmag_press(self):
     from scipy import constants
@@ -185,11 +209,13 @@ class TestFetchPhysics:
     press = _field(np.full((2, 1), 5.0))
     out = ff.fetch_beta_from_bmag_press([bmag, press])
     np.testing.assert_allclose(out.values[..., 0], 2.0 * constants.mu_0 * 5.0 / 4.0)
+  # end
 
   def test_missing_ctx_key_raises(self):
     m0 = _field(np.full((2, 1), 2.0))
     with pytest.raises(KeyError):
       ff.fetch_M1_from_H([m0])
+  # end
     # end
 
   def test_missing_ctx_key_uses_extra(self):
@@ -198,6 +224,7 @@ class TestFetchPhysics:
     hmom.values[..., 1] = 3.0
     out = ff.fetch_M1_from_H([hmom], mass=2.0)
     np.testing.assert_allclose(out.values[..., 0], 6.0)
+  # end
 
   def test_Tperp_from_M0_M2perp(self):
     m0 = _field(np.full((2, 1), 2.0), mass=3.0)
@@ -205,12 +232,14 @@ class TestFetchPhysics:
     out = ff.fetch_Tperp_from_M0_M2perp([m0, m2perp])
     # Tperp = 0.5*mass*(M2perp/M0) = 0.5*3*(8/2) = 6
     np.testing.assert_allclose(out.values[..., 0], 6.0)
+  # end
 
   def test_temp_from_Max(self):
     maxmom = _field(np.zeros((2, 3)), mass=2.0)
     maxmom.values[..., 2] = 5.0
     out = ff.fetch_temp_from_Max([maxmom])
     np.testing.assert_allclose(out.values[..., 0], 10.0)
+  # end
 
   def test_press_from_Max(self):
     maxmom = _field(np.zeros((2, 3)), mass=2.0)
@@ -218,6 +247,7 @@ class TestFetchPhysics:
     maxmom.values[..., 2] = 5.0
     out = ff.fetch_press_from_Max([maxmom])
     np.testing.assert_allclose(out.values[..., 0], 2.0 * 3.0 * 5.0)
+  # end
 
   def test_press_from_BiMax(self):
     bimax = _field(np.zeros((2, 4)), mass=2.0)
@@ -227,6 +257,8 @@ class TestFetchPhysics:
     out = ff.fetch_press_from_BiMax([bimax])
     # press = M0 * mass*(Tpar + 2*Tperp)/3 = 3 * 2*(4 + 10)/3 = 3*28/3 = 28
     np.testing.assert_allclose(out.values[..., 0], 28.0)
+  # end
+# end
 
 
 class TestDriftVelocities:
@@ -242,6 +274,7 @@ class TestDriftVelocities:
     b_i = _field(np.stack([np.full(mesh[0].shape, float(k))
         for k in range(3)], axis=-1), grid=grid)
     return scalar, jacobtot_inv, b_i
+  # end
 
   @pytest.mark.parametrize("cdim,comp", [(1, 0), (1, 1), (1, 2),
       (2, 0), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)])
@@ -250,12 +283,14 @@ class TestDriftVelocities:
     out = ff._b_cross_grad_div_b_component(scalar, jacobtot_inv, b_i, comp)
     assert out.values.shape == scalar.values.shape
     assert np.all(np.isfinite(out.values))
+  # end
 
   def test_gradB_vel(self):
     scalar, jacobtot_inv, b_i = self._synthetic(1, 0)
     Tperp = _field(np.full(scalar.values.shape, 3.0), grid=scalar.grid, charge=2.0)
     out = ff.fetch_gradB_vel([jacobtot_inv, scalar, b_i, Tperp], dir=0)
     assert np.all(np.isfinite(out.values))
+  # end
 
   def test_diamag_vel(self):
     scalar, jacobtot_inv, b_i = self._synthetic(1, 0)
@@ -263,15 +298,19 @@ class TestDriftVelocities:
     pressperp = _field(np.full(scalar.values.shape, 3.0), grid=scalar.grid, charge=2.0)
     out = ff.fetch_diamag_vel([jacobtot_inv, scalar, b_i, m0, pressperp], dir=0)
     assert np.all(np.isfinite(out.values))
+  # end
 
   def test_gradB_vel_requires_dir(self):
     with pytest.raises(KeyError):
       ff.fetch_gradB_vel([None, None, None, None])
+  # end
     # end
 
   def test_diamag_vel_requires_dir(self):
     with pytest.raises(KeyError):
       ff.fetch_diamag_vel([None, None, None, None, None])
+  # end
+# end
     # end
 
 
@@ -305,6 +344,7 @@ class TestLoadDistf:
     assert calls["use_mapc2p"] is False
     assert calls["block_idx"] == 2
     assert calls["num_interp"] == 0
+  # end
 
   def test_defaults(self, monkeypatch):
     calls = {}
@@ -320,6 +360,8 @@ class TestLoadDistf:
     ff.load_distf([], path="p", name="n", species="ion", frame=0)
     # c2p_vel defaults True when not given as an extra.
     assert calls["use_c2p_vel"] is True
+  # end
+# end
 
 
 class TestCrossGradDivB:
@@ -335,6 +377,7 @@ class TestCrossGradDivB:
     b_i = _field(np.tile([0.0, 1.0, 0.0], (4, 1)), grid=[x])
     out = ff._b_cross_grad_div_b_component(phi, jacobtot_inv, b_i, 0)
     np.testing.assert_allclose(out.values[..., 0], 2.0, rtol=1e-6)
+  # end
 
   def test_invalid_component_raises(self):
     x = np.linspace(0.0, 1.0, 3)
@@ -343,11 +386,14 @@ class TestCrossGradDivB:
     b_i = _field(np.zeros((2, 3)), grid=[x])
     with pytest.raises(KeyError):
       ff._b_cross_grad_div_b_component(phi, jacobtot_inv, b_i, 3)
+  # end
     # end
 
   def test_ExB_vel_requires_dir(self):
     with pytest.raises(KeyError):
       ff.fetch_ExB_vel([None, None, None, None])
+  # end
+# end
     # end
 
 
@@ -358,10 +404,12 @@ class TestLoadQuantity:
     assert names == sorted(names)
     assert "M0" in names
     assert "distf" in names
+  # end
 
   def test_unknown_quantity_raises(self):
     with pytest.raises(ValueError, match="Unknown quantity"):
       load_gk_quantity("not_a_quantity", None, "sim", path=DATA)
+  # end
     # end
 
   @needs_gkeyll
@@ -370,23 +418,27 @@ class TestLoadQuantity:
     assert len(out) == 1
     assert out[0].get_label() == r"$M_{0i}$ (m$^{-3}$)"
     assert out[0].values.shape[-1] == 1
+  # end
 
   @needs_gkeyll
   def test_M1_from_hamiltonian_moments_real(self):
     out = load_gk_quantity("M1", "ion", HMOM_NAME, "250", path=DATA, mass=2.0)
     assert len(out) == 1
     assert np.all(np.isfinite(out[0].values))
+  # end
 
   @needs_gkeyll
   def test_geo_quantity_real(self):
     out = load_gk_quantity("geo_int_jacobtot_inv", None, GK_NAME, path=DATA)
     assert len(out) == 1
     assert out[0].get_label() == r"$(J B)^{-1}$"
+  # end
 
   @needs_gkeyll
   def test_geo_quantity_missing_file_raises(self):
     with pytest.raises(FileNotFoundError):
       load_gk_quantity("geo_int_bmag", None, GK_NAME, path=DATA)
+  # end
     # end
 
   def test_label_and_tag_override(self, tmp_path, monkeypatch):
@@ -397,6 +449,8 @@ class TestLoadQuantity:
         tag="mytag", label="custom")
     assert out[0].get_tag() == "mytag"
     assert out[0].get_label() == "custom"
+  # end
+# end
 
 
 class _SyntheticSource:
@@ -421,6 +475,8 @@ class _SyntheticSource:
         "mass": 1.0, "charge": 1.0})
     d.push(grid, values)
     return d
+  # end
+# end
 
 
 def _collect_source_files(quant, path, name, species, frame) -> set:
@@ -429,12 +485,14 @@ def _collect_source_files(quant, path, name, species, frame) -> set:
     for src in combo:
       if isinstance(src, str):
         files.add(quant._src_file_name(path, name, species, src, frame))
+      # end
       else:
         files |= _collect_source_files(src, path, name, species, frame)
       # end
     # end
   # end
   return files
+# end
 
 
 def _extra_for(quant) -> dict:
@@ -443,6 +501,7 @@ def _extra_for(quant) -> dict:
     extra["dir"] = 0
   # end
   return extra
+# end
 
 
 @needs_gkeyll
@@ -473,6 +532,7 @@ def test_every_registered_quantity_produces_a_dataset(quantity, tmp_path, monkey
       **_extra_for(quant))
   assert len(out) >= 1
   assert isinstance(out[0], GDataState)
+# end
 
 
 class TestGkQuantityGetAvailSource:
@@ -483,6 +543,7 @@ class TestGkQuantityGetAvailSource:
   def _touch_frames(self, tmp_path, stem, frames):
     for f in frames:
       (tmp_path / f"{stem}{f}.gkyl").touch()
+  # end
     # end
 
   def test_comma_separated_frame_list(self, tmp_path):
@@ -492,6 +553,7 @@ class TestGkQuantityGetAvailSource:
     combo_idx, frames = quant.get_avail_source(str(tmp_path), "sim", "ion", "0,2")
     assert combo_idx == 0
     assert frames == [0, 2]
+  # end
 
   def test_none_frame_selects_every_available(self, tmp_path):
     quant = qmod.GkQuantity(name="q", source=[["a"]], fetch_func=[None],
@@ -499,6 +561,7 @@ class TestGkQuantityGetAvailSource:
     self._touch_frames(tmp_path, "sim-ion_a_", [0, 1, 3])
     combo_idx, frames = quant.get_avail_source(str(tmp_path), "sim", "ion", None)
     assert frames == [0, 1, 3]
+  # end
 
   def test_partial_range_frame(self, tmp_path):
     quant = qmod.GkQuantity(name="q", source=[["a"]], fetch_func=[None],
@@ -506,6 +569,7 @@ class TestGkQuantityGetAvailSource:
     self._touch_frames(tmp_path, "sim-ion_a_", [0, 1, 2, 3])
     combo_idx, frames = quant.get_avail_source(str(tmp_path), "sim", "ion", "1:")
     assert frames == [1, 2, 3]
+  # end
 
   def test_mismatched_frame_sets_falls_back_to_next_combo(self, tmp_path):
     # combo 0 ("a","b") has mismatched frame sets -> rejected; combo 1 ("c")
@@ -518,12 +582,15 @@ class TestGkQuantityGetAvailSource:
     combo_idx, frames = quant.get_avail_source(str(tmp_path), "sim", "ion", None)
     assert combo_idx == 1
     assert frames == [5]
+  # end
 
   def test_no_files_found_raises(self, tmp_path):
     quant = qmod.GkQuantity(name="q", source=[["a"]], fetch_func=[None],
         label="q", is_species_dep=True)
     with pytest.raises(FileNotFoundError):
       quant.get_avail_source(str(tmp_path), "sim", "ion", None)
+  # end
+# end
     # end
 
 
@@ -549,6 +616,7 @@ class TestLoadQuantityMultiSpeciesMultiFrame:
     assert len(out) == 2
     assert {d.get_tag() for d in out} == {"t_ion", "t_elc"}
     assert {d.get_label() for d in out} == {"custom ion", "custom elc"}
+  # end
 
   def test_multiple_frames_suffixes_label(self, tmp_path, monkeypatch):
     quant = gk_quant_registry.get("M0")
@@ -564,6 +632,8 @@ class TestLoadQuantityMultiSpeciesMultiFrame:
     out = load_gk_quantity("M0", "ion", name, None, path=path)
     assert len(out) == 3
     assert all(" f" in d.get_label() for d in out)
+  # end
+# end
 
 
 class TestUtils:
@@ -574,33 +644,40 @@ class TestUtils:
   def test_dict_get_bool_default(self):
     assert utils.dict_get_bool({}, "k", True) is True
     assert utils.dict_get_bool({}, "k", False) is False
+  # end
 
   def test_dict_get_bool_string_true_variants(self):
     assert utils.dict_get_bool({"k": "1"}, "k", False) is True
     assert utils.dict_get_bool({"k": "True"}, "k", False) is True
     assert utils.dict_get_bool({"k": " true "}, "k", False) is True
+  # end
 
   def test_dict_get_bool_string_false(self):
     assert utils.dict_get_bool({"k": "0"}, "k", True) is False
     assert utils.dict_get_bool({"k": "no"}, "k", True) is False
+  # end
 
   def test_dict_get_bool_non_string(self):
     assert utils.dict_get_bool({"k": 1}, "k", False) is True
     assert utils.dict_get_bool({"k": 0}, "k", True) is False
+  # end
 
   def test_parse_slice_string(self):
     assert utils.parse_slice_string("1:5") == slice(1, 5)
     assert utils.parse_slice_string(":5") == slice(None, 5)
     assert utils.parse_slice_string("1:") == slice(1, None)
     assert utils.parse_slice_string("1:5:2") == slice(1, 5, 2)
+  # end
 
   def test_parse_slice_string_invalid_raises(self):
     with pytest.raises(ValueError):
       utils.parse_slice_string("a:5")
+  # end
     # end
 
   def test_get_block_indices_single(self):
     assert utils.get_block_indices("-10", "unused") == [0]
+  # end
 
   def test_get_block_indices_all(self, tmp_path):
     for i in range(3):
@@ -608,19 +685,24 @@ class TestUtils:
     # end
     pattern = str(tmp_path / "sim_b*-ion_field_0.gkyl")
     assert utils.get_block_indices("-1", pattern) == [0, 1, 2]
+  # end
 
   def test_get_block_indices_comma_list(self):
     assert utils.get_block_indices("0,2,4", "unused") == [0, 2, 4]
+  # end
 
   def test_get_block_indices_slice(self):
     assert utils.get_block_indices("1:4", "unused") == [1, 2, 3]
+  # end
 
   def test_get_block_indices_single_int(self):
     assert utils.get_block_indices("2", "unused") == [2]
+  # end
 
   def test_get_block_indices_invalid_raises(self):
     with pytest.raises(NameError):
       utils.get_block_indices("not-a-spec", "unused")
+  # end
     # end
 
   @needs_gkeyll
@@ -628,12 +710,14 @@ class TestUtils:
     grid, values, gdata = utils.read_gfile(
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"))
     assert values.shape[0] == gdata.num_cells[0]
+  # end
 
   def test_read_gfile_if_present_missing(self, tmp_path):
     found, grid, values, gdata = utils.read_gfile_if_present(
         str(tmp_path / "does_not_exist.gkyl"))
     assert found is False
     assert grid is None and values is None and gdata is None
+  # end
 
   @needs_gkeyll
   def test_read_gfile_if_present_found(self):
@@ -641,6 +725,7 @@ class TestUtils:
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"))
     assert found is True
     assert values is not None
+  # end
 
   @needs_gkeyll
   def test_read_interpolated_gfile(self):
@@ -648,6 +733,7 @@ class TestUtils:
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
         poly_order=1, basis_type="ms")
     assert gdata.is_interpolated
+  # end
 
   @needs_gkeyll
   def test_read_interpolated_gfile_with_comp(self):
@@ -655,3 +741,5 @@ class TestUtils:
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
         poly_order=1, basis_type="ms", comp=0)
     assert gdata.num_comps == 1
+  # end
+# end

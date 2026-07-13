@@ -59,6 +59,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
     raise ValueError(
         f"eval_at_points: coeffs cell shape {coeffs.shape[:-1]} does not "
         f"match cells {tuple(cells)}")
+  # end
   points = np.asarray(points, dtype=np.float64)
   if points.shape[-1] != m:
     raise ValueError(
@@ -95,6 +96,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
 
   # Step 4: reshape to the point-set shape.
   return out.reshape(shape)
+# end
 
 
 def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
@@ -127,6 +129,7 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
 
   if m == 1:
     points = np.asarray(target_axes[0], dtype=np.float64)[:, np.newaxis]
+  # end
   else:
     points = np.stack(
         np.meshgrid(*target_axes, indexing="ij"), axis=-1)
@@ -139,3 +142,4 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
           modal=modal)
       for d in range(m)
   ]
+# end

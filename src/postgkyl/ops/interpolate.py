@@ -32,11 +32,14 @@ def interpolate(data: "GDataState", *, basis: str | None = None,
   if basis is not None:
     if basis not in BASIS_MAP:
       raise ValueError(f"Unknown basis '{basis}'. Choices: {sorted(BASIS_MAP)}")
+    # end
     basis_type, modal = BASIS_MAP[basis]
+  # end
   else:
     basis_type = data.ctx.get("basis_type")
     if not basis_type:
       raise ValueError("No 'basis' given and the dataset has no stored 'basis_type'.")
+    # end
     modal = data.ctx.get("is_modal", True)
   # end
 
@@ -55,3 +58,4 @@ def interpolate(data: "GDataState", *, basis: str | None = None,
       basis_type=basis_type, modal=modal, num_interp=num_interp)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
       interpolated=True)
+# end

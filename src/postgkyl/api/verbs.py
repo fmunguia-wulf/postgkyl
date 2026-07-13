@@ -31,6 +31,7 @@ def collect(*datasets: "GDataState", sumdata: bool = False,
   """
   return ops.collect(*datasets, sumdata=sumdata, period=period, offset=offset,
       tag=tag, label=label)
+# end
 
 
 def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
@@ -40,6 +41,7 @@ def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
   See ``ops.evaluate``. ``f``/``fN`` tokens in ``chain`` refer to ``datasets[N]``.
   """
   return ops.evaluate(chain, *datasets, tag=tag, label=label)
+# end
 
 
 def relchange(data0: "GDataState", data: "GDataState", *,
@@ -52,6 +54,7 @@ def relchange(data0: "GDataState", data: "GDataState", *,
   """
   return ops.relchange(data0, data, comp=comp, inplace=inplace, tag=tag,
       label=label)
+# end
 
 
 def animate(*datasets, **kwargs):
@@ -62,3 +65,4 @@ def animate(*datasets, **kwargs):
   "flat iterable, or iterable of frames" contract).
   """
   return ops.animate(datasets, **kwargs)
+# end

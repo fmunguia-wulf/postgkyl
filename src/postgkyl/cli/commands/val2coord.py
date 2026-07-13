@@ -29,8 +29,10 @@ def command(ctx, x, y, periodic, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("val2coord: no datasets to convert")
+  # end
   out = []
   for d in pool:
     out.extend(list(d.val2coord(x=x, y=y, periodic=periodic, tag=tag,
@@ -38,3 +40,4 @@ def command(ctx, x, y, periodic, use, tag, label) -> None:
     set_active(d, False)
   # end
   ctx.obj.datasets.extend(out)
+# end

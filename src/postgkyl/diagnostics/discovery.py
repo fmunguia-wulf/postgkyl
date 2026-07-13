@@ -47,6 +47,7 @@ def find_output_stems(extensions: str = "bp,gkyl", path: str = ".") -> dict:
     result[ext] = sorted(unique)
   # end
   return result
+# end
 
 
 def available_frames(stem: str, *, frames: list[int] | None = None) -> set[int]:
@@ -66,6 +67,7 @@ def available_frames(stem: str, *, frames: list[int] | None = None) -> set[int]:
   if frames:
     candidates = (f"{stem}{f}.gkyl" for f in frames
         if os.path.isfile(f"{stem}{f}.gkyl"))
+  # end
   else:
     candidates = glob.glob(f"{glob.escape(stem)}*.gkyl")
   # end
@@ -76,3 +78,4 @@ def available_frames(stem: str, *, frames: list[int] | None = None) -> set[int]:
     # end
   # end
   return found
+# end

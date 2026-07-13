@@ -25,3 +25,4 @@ def command(ctx, mapping_file, space, use, tag, label) -> None:
   """
   apply(ctx, lambda d: d.map(mapping_file, space=space, tag=tag, label=label),
       use=use)
+# end

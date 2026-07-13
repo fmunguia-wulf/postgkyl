@@ -13,11 +13,13 @@ import scipy.optimize as opt
 def linear(x: np.ndarray, a: float, b: float) -> np.ndarray:
   """Linear model ``a*x + b``."""
   return a * x + b
+# end
 
 
 def quadratic(x: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
   """Quadratic model ``a*x**2 + b*x + c``."""
   return a * x**2 + b * x + c
+# end
 
 
 def plane(XY: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
@@ -25,6 +27,7 @@ def plane(XY: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
   as ``(x, y)`` (e.g. shape ``(2, N)``)."""
   x, y = XY
   return a*x + b*y + c
+# end
 
 
 def quadratic2d(XY: np.ndarray, a: float, b: float, c: float,
@@ -32,32 +35,38 @@ def quadratic2d(XY: np.ndarray, a: float, b: float, c: float,
   """``a*x^2 + b*y^2 + c*x*y + d*x + e*y + f``."""
   x, y = XY
   return a*x**2 + b*y**2 + c*x*y + d*x + e*y + f
+# end
 
 
 def exp_plateau(x: np.ndarray, A: float, b: float, C: float) -> np.ndarray:
   """``A*exp(b*x) + C`` (plateaus at ``C`` as ``b*x -> -inf``, or at
   ``A+C`` as ``b*x -> +inf``)."""
   return A * np.exp(b * x) + C
+# end
 
 
 def gaussian(x: np.ndarray, A: float, mu: float, sigma: float) -> np.ndarray:
   """``A * exp(-0.5 * ((x - mu) / sigma)**2)``."""
   return A * np.exp(-0.5 * ((x - mu) / sigma)**2)
+# end
 
 
 def power(x: np.ndarray, a: float, n: float, b: float) -> np.ndarray:
   """``a * x^n + b``."""
   return a * x**n + b
+# end
 
 
 def sinusoid(x: np.ndarray, A: float, omega: float, phi: float, C: float) -> np.ndarray:
   """``A * sin(omega * x + phi) + C``."""
   return A * np.sin(omega * x + phi) + C
+# end
 
 
 def tanh_transition(x: np.ndarray, A: float, x0: float, w: float, C: float) -> np.ndarray:
   """``A * tanh((x - x0) / w) + C``."""
   return A * np.tanh((x - x0) / w) + C
+# end
 
 
 def exp2(x: np.ndarray, a: float, b: float) -> np.ndarray:
@@ -67,6 +76,7 @@ def exp2(x: np.ndarray, a: float, b: float) -> np.ndarray:
   hence the factor of 2 in the exponent.
   """
   return a * np.exp(2 * b * x)
+# end
 
 
 RPN_OPERATORS: frozenset = frozenset({'+', '-', '*', '/', '**', '^'})
@@ -97,6 +107,7 @@ def rpn_param_names(expression: str) -> list[str]:
     # end
     try:
       float(tok)
+    # end
     except ValueError:
       if tok not in names:
         names.append(tok)
@@ -104,11 +115,13 @@ def rpn_param_names(expression: str) -> list[str]:
     # end
   # end
   return names
+# end
 
 
 def rpn_ndim(expression: str) -> int:
   """Return 1 or 2 depending on whether ``y`` appears as a spatial variable."""
   return 2 if 'y' in expression.split() else 1
+# end
 
 
 def _rpn_make_func(expression: str) -> Callable:
@@ -121,6 +134,7 @@ def _rpn_make_func(expression: str) -> Callable:
     ns: dict = dict(zip(param_names, param_values))
     if ndim == 1:
       ns['x'] = np.asarray(xdata, dtype=float)
+    # end
     else:
       ns['x'] = np.asarray(xdata[0], dtype=float)
       ns['y'] = np.asarray(xdata[1], dtype=float)
@@ -132,19 +146,26 @@ def _rpn_make_func(expression: str) -> Callable:
         b, a = stack.pop(), stack.pop()
         if tok == '+':
           stack.append(a + b)
+        # end
         elif tok == '-':
           stack.append(a - b)
+        # end
         elif tok == '*':
           stack.append(a * b)
+        # end
         elif tok == '/':
           stack.append(a / b)
+        # end
         else:
           stack.append(a ** b)  # ** or ^
+      # end
         # end
       elif tok in RPN_FUNCTIONS:
         stack.append(RPN_FUNCTIONS[tok](stack.pop()))
+      # end
       elif tok in ns:
         stack.append(ns[tok])
+      # end
       else:
         stack.append(float(tok))
       # end
@@ -156,8 +177,10 @@ def _rpn_make_func(expression: str) -> Callable:
       result = np.full_like(ref, float(result))
     # end
     return np.asarray(result, dtype=float)
+  # end
 
   return _func
+# end
 
 
 FIT_FUNCTIONS: dict[str, Callable] = {
@@ -194,6 +217,7 @@ def fit_evaluate(xdata: np.ndarray, fit_type: str, params: np.ndarray) -> np.nda
     return FIT_FUNCTIONS[fit_type](xdata, *params)
   # end
   return _rpn_make_func(fit_type)(xdata, *params)
+# end
 
 
 def fit(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "linear",
@@ -218,6 +242,7 @@ def fit(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "linear",
   if fit_type in FIT_FUNCTIONS:
     func = FIT_FUNCTIONS[fit_type]
     n_params = func.__code__.co_argcount - 1
+  # end
   else:
     toks = set(fit_type.split())
     if not (toks & (RPN_OPERATORS | set(RPN_FUNCTIONS))):
@@ -239,6 +264,7 @@ def fit(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "linear",
   R2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 1.0
 
   return params, cov, R2
+# end
 
 
 def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | None:
@@ -276,13 +302,16 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     a = y_range / dx if dx != 0 else 1.0
     b = y_mean - a * x.mean()
     return [a, b]
+  # end
 
   if fit_type == "quadratic":
     x = np.asarray(xdata)
     try:
       return list(np.polyfit(x, y, 2))
+    # end
     except Exception:
       return [0.0, 1.0, y_mean]
+  # end
     # end
 
   if fit_type == "plane":
@@ -290,12 +319,14 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     A = np.column_stack([x, yc, np.ones_like(x)])
     result, *_ = np.linalg.lstsq(A, y, rcond=None)
     return list(result)
+  # end
 
   if fit_type == "quadratic2d":
     x, yc = xdata[0], xdata[1]
     A = np.column_stack([x**2, yc**2, x * yc, x, yc, np.ones_like(x)])
     result, *_ = np.linalg.lstsq(A, y, rcond=None)
     return list(result)
+  # end
 
   if fit_type == "exp_plateau":
     x = np.asarray(xdata)
@@ -305,6 +336,7 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     x_span = x.max() - x.min()
     b = -1.0 / x_span if x_span > 0 else -1.0
     return [A, b, C]
+  # end
 
   if fit_type == "gaussian":
     x = np.asarray(xdata)
@@ -313,15 +345,18 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     above = x[y >= A / 2] if A != 0 else x
     if len(above) >= 2:
       sigma = float((above[-1] - above[0]) / (2 * np.sqrt(2 * np.log(2))))
+    # end
     else:
       sigma = float((x.max() - x.min()) / 4)
     # end
     return [A, mu, max(abs(sigma), 1e-10)]
+  # end
 
   if fit_type == "power":
     b_off = float(y_min)
     a = float(y_max - b_off) or 1.0
     return [a, 1.0, b_off]
+  # end
 
   if fit_type == "sinusoid":
     x = np.asarray(xdata)
@@ -335,10 +370,12 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
       fft_amp = np.abs(np.fft.rfft(y_s - C))
       i_peak = np.argmax(fft_amp[1:]) + 1 if len(fft_amp) > 1 else 1
       omega = float(2 * np.pi * freqs[i_peak])
+    # end
     else:
       omega = 1.0
     # end
     return [A, omega, 0.0, C]
+  # end
 
   if fit_type == "tanh_transition":
     x = np.asarray(xdata)
@@ -347,6 +384,7 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     x0 = float(x[np.argmax(np.abs(np.gradient(y)))])
     w = float((x.max() - x.min()) / 4) or 1.0
     return [A, x0, w, C]
+  # end
 
   if fit_type == "exp2":
     # log(y) = log(a) + 2*b*x is linear -- a log-linear regression gives a
@@ -355,8 +393,10 @@ def auto_guess(fit_type: str, xdata: np.ndarray, ydata: np.ndarray) -> list | No
     y_pos = np.clip(y, 1e-300, None)
     slope, intercept = np.polyfit(x, np.log(y_pos), 1)
     return [float(np.exp(intercept)), float(slope / 2)]
+  # end
 
   return None
+# end
 
 
 def fit_best_window(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "exp2",
@@ -401,6 +441,7 @@ def fit_best_window(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "exp2"
     try:
       params, cov, R2 = fit(xn, yn, fit_type,
           p0=guess if guess is not None else auto_guess(fit_type, xn, yn))
+    # end
     except RuntimeError:
       continue
     # end
@@ -415,3 +456,4 @@ def fit_best_window(xdata: np.ndarray, ydata: np.ndarray, fit_type: str = "exp2"
         f"[{min_n:d}, {len(xdata):d}]")
   # end
   return best
+# end

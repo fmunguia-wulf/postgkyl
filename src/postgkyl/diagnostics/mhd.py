@@ -30,24 +30,28 @@ def _get_mhd_Bx(grid: list[np.ndarray],
     values: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
   """Extract the x magnetic-field component (component 5 of MHD data)."""
   return list(grid), values[..., 5, np.newaxis]
+# end
 
 
 def _get_mhd_By(grid: list[np.ndarray],
     values: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
   """Extract the y magnetic-field component (component 6 of MHD data)."""
   return list(grid), values[..., 6, np.newaxis]
+# end
 
 
 def _get_mhd_Bz(grid: list[np.ndarray],
     values: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
   """Extract the z magnetic-field component (component 7 of MHD data)."""
   return list(grid), values[..., 7, np.newaxis]
+# end
 
 
 def _get_mhd_Bi(grid: list[np.ndarray],
     values: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
   """Extract the magnetic-field vector ``(Bx, By, Bz)`` (components 5:8)."""
   return list(grid), values[..., 5:8]
+# end
 
 
 def _get_mhd_mag_p(grid: list[np.ndarray], values: np.ndarray, *,
@@ -58,6 +62,7 @@ def _get_mhd_mag_p(grid: list[np.ndarray], values: np.ndarray, *,
   _, By = _get_mhd_By(grid, values)
   _, Bz = _get_mhd_Bz(grid, values)
   return list(grid), 0.5 * (Bx**2 + By**2 + Bz**2) / mu_0
+# end
 
 
 def _get_mhd_p(grid: list[np.ndarray], values: np.ndarray, *,
@@ -76,6 +81,7 @@ def _get_mhd_p(grid: list[np.ndarray], values: np.ndarray, *,
   out_values = (gas_gamma - 1) * (
       values[..., 4, np.newaxis] - 0.5 * rho * (vx**2 + vy**2 + vz**2) - mag_p)
   return list(grid), out_values
+# end
 
 
 def _get_mhd_temp(grid: list[np.ndarray], values: np.ndarray, *,
@@ -85,6 +91,7 @@ def _get_mhd_temp(grid: list[np.ndarray], values: np.ndarray, *,
   _, rho = _get_density(grid, values)
   _, pr = _get_mhd_p(grid, values, gas_gamma=gas_gamma, mu_0=mu_0)
   return list(grid), pr / rho
+# end
 
 
 def _get_mhd_sound(grid: list[np.ndarray], values: np.ndarray, *,
@@ -94,6 +101,7 @@ def _get_mhd_sound(grid: list[np.ndarray], values: np.ndarray, *,
   _, rho = _get_density(grid, values)
   _, pr = _get_mhd_p(grid, values, gas_gamma=gas_gamma, mu_0=mu_0)
   return list(grid), np.sqrt(gas_gamma * pr / rho)
+# end
 
 
 def _get_mhd_mach(grid: list[np.ndarray], values: np.ndarray, *,
@@ -105,6 +113,7 @@ def _get_mhd_mach(grid: list[np.ndarray], values: np.ndarray, *,
   _, vz = _get_vz(grid, values)
   _, cs = _get_mhd_sound(grid, values, gas_gamma=gas_gamma, mu_0=mu_0)
   return list(grid), np.sqrt(vx**2 + vy**2 + vz**2) / cs
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -118,6 +127,7 @@ def bx(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "bx", _REASON)
   grid, values = _get_mhd_Bx(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def by(data: "GDataState", *, inplace: bool = False,
@@ -130,6 +140,7 @@ def by(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "by", _REASON)
   grid, values = _get_mhd_By(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def bz(data: "GDataState", *, inplace: bool = False,
@@ -142,6 +153,7 @@ def bz(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "bz", _REASON)
   grid, values = _get_mhd_Bz(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def bi(data: "GDataState", *, inplace: bool = False,
@@ -154,6 +166,7 @@ def bi(data: "GDataState", *, inplace: bool = False,
   _require_field_domain(data, "bi", _REASON)
   grid, values = _get_mhd_Bi(data.grid, data.values)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def mag_pressure(data: "GDataState", *, mu_0: float = 1.0,
@@ -167,6 +180,7 @@ def mag_pressure(data: "GDataState", *, mu_0: float = 1.0,
   _require_field_domain(data, "mag_pressure", _REASON)
   grid, values = _get_mhd_mag_p(data.grid, data.values, mu_0=mu_0)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def pressure(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -182,6 +196,7 @@ def pressure(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mhd_p(data.grid, data.values, gas_gamma=gas_gamma,
       mu_0=mu_0)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -196,6 +211,7 @@ def temp(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mhd_temp(data.grid, data.values, gas_gamma=gas_gamma,
       mu_0=mu_0)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -210,6 +226,7 @@ def sound(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mhd_sound(data.grid, data.values, gas_gamma=gas_gamma,
       mu_0=mu_0)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
@@ -224,6 +241,7 @@ def mach(data: "GDataState", *, gas_gamma: float = 5.0 / 3,
   grid, values = _get_mhd_mach(data.grid, data.values, gas_gamma=gas_gamma,
       mu_0=mu_0)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 VARIABLES = {

@@ -67,6 +67,7 @@ def _energetics(elc_grid: list[np.ndarray], elc_values: np.ndarray,
   out[..., 6] = np.squeeze(pre + kee + pri + kei + esq / 2.0 + bsq / 2.0)
 
   return list(field_grid), out
+# end
 
 
 def _accumulate_current(grid: list[np.ndarray], values: np.ndarray, *,
@@ -89,10 +90,13 @@ def _accumulate_current(grid: list[np.ndarray], values: np.ndarray, *,
   """
   if qbym and mass and charge is not None:
     factor = charge / mass
+  # end
   else:
     factor = -1.0
+  # end
 
   return list(grid), factor * values
+# end
 
 
 # ---------------------------------------------------------------- GData verbs
@@ -142,6 +146,7 @@ def energetics(elc: "GDataState", ion: "GDataState", field: "GDataState", *,
   grid, values = _energetics(elc.grid, elc.values, ion.grid, ion.values,
       field.grid, field.values, gas_gamma=gas_gamma, num_moms=num_moms)
   return field._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end
 
 
 def accumulate_current(data: "GDataState", *, qbym: bool = False,
@@ -189,3 +194,4 @@ def accumulate_current(data: "GDataState", *, qbym: bool = False,
   grid, values = _accumulate_current(data.grid, data.values, qbym=qbym,
       charge=charge, mass=mass)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end

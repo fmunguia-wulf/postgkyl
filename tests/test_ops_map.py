@@ -54,6 +54,7 @@ def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
   centers = lower + (np.arange(cells) + 0.5) * dz
   nodal_z = centers[:, None] + 0.5 * dz * node_eta[None, :]
   return fn(nodal_z) @ n2m.T
+# end
 
 
 def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
@@ -68,6 +69,7 @@ def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
       + 0.5 * np.array(dz)[None, None, None, :] * node_eta[None, None, :, :])
   nodal_vals = fn(node_phys[..., 0], node_phys[..., 1])
   return np.einsum("ij,...j->...i", n2m, nodal_vals)
+# end
 
 
 def _synthetic_map(coeffs, lower, upper, cells, *, basis_type="serendipity",
@@ -83,6 +85,7 @@ def _synthetic_map(coeffs, lower, upper, cells, *, basis_type="serendipity",
       for i in range(len(cells))]
   d.push(grid, gpython.GkylArray.from_numpy(coeffs))
   return d
+# end
 
 
 def _numpy_target(grid, values):
@@ -90,6 +93,7 @@ def _numpy_target(grid, values):
   d = GDataState()
   d.push(list(grid), values)
   return d
+# end
 
 
 # ----------------------------------------------------------------- identity
@@ -105,6 +109,7 @@ class TestIdentityMap:
 
     np.testing.assert_allclose(out.grid[0], target_axis, atol=1e-12)
     assert out.ctx["grid_type"] == "mapped"
+  # end
 
   def test_values_are_untouched(self):
     lower, upper, cells = 0.0, 2.0, 2
@@ -114,6 +119,7 @@ class TestIdentityMap:
     target = _numpy_target([np.linspace(lower, upper, 5)], values)
     out = ops.map(target, mapping, space="conf")
     np.testing.assert_array_equal(out.values, values)
+  # end
 
   def test_new_dataset_by_default_source_grid_untouched(self):
     lower, upper, cells = 0.0, 2.0, 2
@@ -123,6 +129,7 @@ class TestIdentityMap:
     out = ops.map(target, mapping, space="conf")
     assert out is not target
     assert "grid_type" not in target.ctx
+  # end
 
   def test_inplace_mutates(self):
     lower, upper, cells = 0.0, 2.0, 2
@@ -131,6 +138,8 @@ class TestIdentityMap:
     target = _numpy_target([np.linspace(lower, upper, 5)], np.zeros((4, 1)))
     out = ops.map(target, mapping, space="conf", inplace=True)
     assert out is target
+  # end
+# end
 
 
 # ------------------------------------------------------------ conf, 2-D real
@@ -143,6 +152,7 @@ class TestConfMapRealFixture:
     # scope; see the report).
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     return ops.map(data, os.path.join(GEN, mapfile), space="conf")
+  # end
 
   def test_grid_becomes_curvilinear_with_shape_of_the_axes_it_replaces(self):
     before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
@@ -151,16 +161,20 @@ class TestConfMapRealFixture:
     assert mapped.grid[0].shape == expected_shape
     assert mapped.grid[1].shape == expected_shape
     assert mapped.grid[0].ndim == 2  # curvilinear: full N-D nodal array
+  # end
 
   def test_values_untouched_by_stretch_map(self):
     before = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     mapped = self._mapped("2d_c2p_stretch_ms_p1.gkyl")
     np.testing.assert_array_equal(mapped.values, before.values)
+  # end
 
   def test_rotation_is_non_separable(self):
     """A rotation map produces coordinates that vary along both axes."""
     mapped = self._mapped("2d_c2p_rot45_ms_p1.gkyl")
     assert np.std(mapped.grid[0], axis=1).max() > 1e-6
+  # end
+# end
 
 
 # --------------------------------------------------------------------- vel
@@ -183,6 +197,7 @@ class TestVelMap:
     np.testing.assert_allclose(out.grid[0], x_edges)   # untouched
     np.testing.assert_allclose(out.grid[1], v0_edges)  # untouched
     np.testing.assert_allclose(out.grid[2], scale * v1_edges, atol=1e-12)
+  # end
 
   def test_2d_vel_can_be_genuinely_non_separable(self):
     """Unlike the superseded ``src_bak`` algorithm (which always treats
@@ -212,6 +227,8 @@ class TestVelMap:
     np.testing.assert_allclose(out.grid[1], fn0(v0, v1), atol=1e-12)
     np.testing.assert_allclose(out.grid[2], fn1(v0, v1), atol=1e-12)
     np.testing.assert_allclose(out.grid[0], x_edges)  # conf axis untouched
+  # end
+# end
 
 
 # --------------------------------------------------------------------- errors
@@ -221,18 +238,24 @@ class TestMapErrors:
     mapping_path = os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl")
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       ops.map(target, mapping_path, space="conf")
+    # end
+  # end
 
   def test_bad_space_raises(self):
     target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     with pytest.raises(ValueError, match="'space'"):
       ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="bogus")
+    # end
+  # end
 
   def test_map_too_large_for_dataset(self):
     target = pg.load(os.path.join(GEN, "1d_ms_p1.gkyl")).interpolate()  # 1-D
     with pytest.raises(ValueError, match="does not fit"):
       ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="conf")  # a 2-D map does not fit 1-D data
+    # end
+  # end
 
   def test_num_comps_validation_error(self):
     lower, upper, cells = 0.0, 1.0, 2
@@ -241,6 +264,8 @@ class TestMapErrors:
     target = _numpy_target([np.linspace(lower, upper, 5)], np.zeros((4, 1)))
     with pytest.raises(ValueError, match="component"):
       ops.map(target, mapping, space="conf")
+    # end
+  # end
 
   def test_missing_basis_metadata_raises(self):
     d = GDataState()
@@ -249,6 +274,8 @@ class TestMapErrors:
     target = _numpy_target([np.linspace(0.0, 1.0, 5)], np.zeros((4, 1)))
     with pytest.raises(ValueError, match="basis_type"):
       ops.map(target, d, space="conf")
+    # end
+  # end
 
   def test_vel_map_legacy_fixture_has_no_basis_metadata_and_cannot_fit(self):
     """See the module docstring: this real fixture predates MAPPING.md's
@@ -261,11 +288,16 @@ class TestMapErrors:
     for basis_type in ("serendipity", "tensor"):
       for poly_order in (0, 1, 2):
         assert gpython.basis.num_basis(basis_type, 2, poly_order) != 2
+      # end
+    # end
 
     target = pg.load(F_ELC).interpolate()
     mapping.ctx.update(basis_type="serendipity", poly_order=1)
     with pytest.raises(ValueError, match="component"):
       ops.map(target, mapping, space="vel")
+    # end
+  # end
+# end
 
 
 # --------------------------------------------- select's curvilinear guard
@@ -274,16 +306,21 @@ class TestSelectCurvilinearGuard:
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     return ops.map(data, os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl"),
         space="conf")
+  # end
 
   def test_coordinate_selector_on_curvilinear_axis_refuses(self):
     mapped = self._mapped()
     with pytest.raises(ValueError, match="curvilinear"):
       mapped.select(z0=0.0)
+    # end
+  # end
 
   def test_slice_selector_on_curvilinear_axis_refuses(self):
     mapped = self._mapped()
     with pytest.raises(ValueError, match="curvilinear"):
       mapped.select(z0="1:3")
+    # end
+  # end
 
   def test_integer_index_selector_still_works(self):
     mapped = self._mapped()
@@ -291,6 +328,7 @@ class TestSelectCurvilinearGuard:
     assert out.values.shape[0] == 1
     # grid holds edges (2 bound one cell) even along a curvilinear axis
     assert out.grid[0].shape[0] == 2
+  # end
 
   def test_separable_1d_mapped_axis_keeps_coordinate_selection(self):
     """A vel (m=1) mapped axis stays 1-D, so the ordinary coordinate-lookup
@@ -304,6 +342,7 @@ class TestSelectCurvilinearGuard:
     assert mapped.grid[1].ndim == 1
     out = ops.select(mapped, z1=0.0)
     assert out.values.shape[1] == 1
+  # end
 
   def test_select_on_2d_vel_map_uses_relative_axis_behind_a_nonzero_offset(self):
     """Regression: an m > 1 ``space="vel"`` map sits behind a nonzero
@@ -346,3 +385,5 @@ class TestSelectCurvilinearGuard:
     assert sel1.values.shape == (2, 1, 3, 1)
     assert sel1.grid[1].shape == (2, 4)  # v0's own axis sliced 6 -> 2
     assert sel1.grid[2].shape == (6, 4)  # untouched by this call
+  # end
+# end

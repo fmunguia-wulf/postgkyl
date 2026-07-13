@@ -43,14 +43,17 @@ def integrate(data: "GDataState", *, op: str = "none"):
     raise ValueError(
         "integrate wraps gkyl_array_integrate and needs native modal data; "
         "it is not available after .interpolate() or without the Gkeyll library.")
+  # end
   if data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
         f"integrate expects the modal representation, not "
         f"'{data.ctx['representation']}'; call .to_modal() first.")
+  # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
   if basis_type is None or poly_order is None:
     raise ValueError("dataset has no basis_type/poly_order metadata")
+  # end
   grid = {
       "ndim": data.num_dims,
       "lower": np.asarray(data.ctx["lower"]),
@@ -60,6 +63,7 @@ def integrate(data: "GDataState", *, op: str = "none"):
   result = dg.modal.integrate(grid, str(basis_type), int(poly_order),
       data.native, op=op)
   return float(result[0]) if result.size == 1 else result
+# end
 
 
 def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
@@ -87,3 +91,4 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
   grid, values = numerics.integrate(shadow.grid, shadow.values, axis)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
       interpolated=True, representation=None)
+# end

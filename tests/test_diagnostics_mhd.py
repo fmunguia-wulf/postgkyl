@@ -27,6 +27,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 _G1D = [np.array([0.0, 1.0])]
@@ -45,31 +46,39 @@ class TestFieldExtraction:
   def test_bx(self):
     d = _make(_G1D, _MHD8)
     np.testing.assert_allclose(mhd.bx(d).values[0, 0], _BX)
+  # end
 
   def test_by(self):
     d = _make(_G1D, _MHD8)
     np.testing.assert_allclose(mhd.by(d).values[0, 0], _BY)
+  # end
 
   def test_bz(self):
     d = _make(_G1D, _MHD8)
     np.testing.assert_allclose(mhd.bz(d).values[0, 0], _BZ)
+  # end
 
   def test_bi_shape_and_values(self):
     d = _make(_G1D, _MHD8)
     out = mhd.bi(d)
     assert out.values.shape[-1] == 3
     np.testing.assert_allclose(out.values[0], [_BX, _BY, _BZ])
+  # end
 
   def test_mag_pressure(self):
     d = _make(_G1D, _MHD8)
     out = mhd.mag_pressure(d)
     np.testing.assert_allclose(out.values[0, 0], _MAG_P)
+  # end
 
   @needs_gkeyll
   def test_bx_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       mhd.bx(d)
+    # end
+  # end
+# end
 
 
 class TestThermo:
@@ -77,23 +86,27 @@ class TestThermo:
     d = _make(_G1D, _MHD8)
     out = mhd.pressure(d)
     np.testing.assert_allclose(out.values[0, 0], _P_THERMAL, rtol=1e-10)
+  # end
 
   def test_temp(self):
     d = _make(_G1D, _MHD8)
     out = mhd.temp(d)
     np.testing.assert_allclose(out.values[0, 0], _P_THERMAL / _RHO, rtol=1e-10)
+  # end
 
   def test_sound(self):
     d = _make(_G1D, _MHD8)
     out = mhd.sound(d)
     expected = np.sqrt(_GAMMA * _P_THERMAL / _RHO)
     np.testing.assert_allclose(out.values[0, 0], expected, rtol=1e-10)
+  # end
 
   def test_mach(self):
     d = _make(_G1D, _MHD8)
     out = mhd.mach(d)
     cs = np.sqrt(_GAMMA * _P_THERMAL / _RHO)
     np.testing.assert_allclose(out.values[0, 0], _VX / cs, rtol=1e-10)
+  # end
 
   def test_mag_p_zero_field_gives_pure_gas_pressure(self):
     e = _P_THERMAL / (_GAMMA - 1) + 0.5 * _RHO * _VX**2
@@ -101,17 +114,22 @@ class TestThermo:
     d = _make(_G1D, values)
     out = mhd.pressure(d)
     np.testing.assert_allclose(out.values[0, 0], _P_THERMAL, rtol=1e-10)
+  # end
 
   def test_mu_0_is_forwarded_to_mag_pressure(self):
     d = _make(_G1D, _MHD8)
     out = mhd.mag_pressure(d, mu_0=2.0)
     np.testing.assert_allclose(out.values[0, 0], _MAG_P / 2.0)
+  # end
 
   @needs_gkeyll
   def test_pressure_rejects_modal_data(self):
     d = pg.load(F1)
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       mhd.pressure(d)
+    # end
+  # end
+# end
 
 
 class TestFiveMomentSetReused:
@@ -122,6 +140,8 @@ class TestFiveMomentSetReused:
     assert mhd.yvel is fm.yvel
     assert mhd.zvel is fm.zvel
     assert mhd.vel is fm.vel
+  # end
+# end
 
 
 class TestVariables:
@@ -129,9 +149,12 @@ class TestVariables:
     assert set(mhd.VARIABLES) == {
         "density", "xvel", "yvel", "zvel", "vel", "Bx", "By", "Bz", "Bi",
         "magpressure", "pressure", "temp", "sound", "mach"}
+  # end
 
   def test_variables_table_maps_to_public_functions(self):
     assert mhd.VARIABLES["Bx"] is mhd.bx
     assert mhd.VARIABLES["Bi"] is mhd.bi
     assert mhd.VARIABLES["magpressure"] is mhd.mag_pressure
     assert mhd.VARIABLES["density"] is mhd.density
+  # end
+# end

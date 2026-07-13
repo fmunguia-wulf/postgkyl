@@ -29,5 +29,6 @@ def command(ctx, file, set_params, print_flag) -> None:
   if print_flag:
     for key, value in mpl.rcParams.items():
       click.echo(f"{key} : {value}")
+# end
     # end
   # end

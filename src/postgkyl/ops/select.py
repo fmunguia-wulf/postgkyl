@@ -36,6 +36,7 @@ def select(data: "GDataState", *, comp=None,
     raise ValueError(
         "select operates on interpolated (NumPy) values; call .interpolate() "
         "first — slicing raw DG coefficients would mix basis functions.")
+  # end
   zs = (z0, z1, z2, z3, z4, z5)
   grid = list(data.grid)
   values = data.values
@@ -67,17 +68,21 @@ def select(data: "GDataState", *, comp=None,
     if isinstance(idx, int):
       if idx < 0:
         idx = values.shape[d] + idx
+      # end
       v_idx = slice(idx, idx + 1)
       g_idx = slice(idx, idx + 1) if is_matching else slice(idx, idx + 2)
+    # end
     elif isinstance(idx, slice):
       v_idx = idx
       g_idx = idx if is_matching else slice(idx.start, idx.stop + 1)
+    # end
     else:
       raise TypeError("Coordinate selector must be a single index or a slice.")
     # end
     if curvilinear:  # slice only the N-D grid array's own relative axis
       grid[d] = grid_arr[tuple(g_idx if k == rel else slice(None)
           for k in range(grid_arr.ndim))]
+    # end
     else:
       grid[d] = grid_arr[g_idx]
     # end
@@ -94,3 +99,4 @@ def select(data: "GDataState", *, comp=None,
   # end
 
   return data._result(grid, values_out, inplace=inplace, tag=tag, label=label)
+# end

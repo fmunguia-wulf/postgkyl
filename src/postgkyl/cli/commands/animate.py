@@ -28,6 +28,7 @@ def command(ctx, interval, saveas, fps, dpi, saveframes, notitle) -> None:
   datasets = active_datasets(ctx)
   if not datasets:
     raise click.UsageError("animate: no datasets to animate; load files first")
+  # end
   save_path = saveas
   show = not ds.batch
   if ds.batch and not save_path and not saveframes:
@@ -35,3 +36,4 @@ def command(ctx, interval, saveas, fps, dpi, saveframes, notitle) -> None:
   # end
   pg.animate(*datasets, interval=interval, show=show, saveas=save_path,
       fps=fps, dpi=dpi, saveframes=saveframes, notitle=notitle)
+# end

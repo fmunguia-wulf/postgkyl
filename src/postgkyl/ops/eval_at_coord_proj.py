@@ -26,16 +26,20 @@ def _native_basis(data: "GDataState"):
         "eval_at_coord_proj wraps gkyl_dg_eval_at_coord_proj and needs "
         "native modal data; it is not available after .interpolate() or "
         "without the Gkeyll library.")
+  # end
   if data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
         f"eval_at_coord_proj expects the modal representation, not "
         f"'{data.ctx['representation']}'; call .to_modal() first.")
+  # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
   if basis_type is None or poly_order is None:
     raise ValueError("eval_at_coord_proj: data has no basis_type/poly_order "
                      "metadata")
+  # end
   return str(basis_type), int(poly_order)
+# end
 
 
 def eval_at_coord_proj(data: "GDataState", eval_dirs, eval_coords, *,
@@ -83,6 +87,7 @@ def eval_at_coord_proj(data: "GDataState", eval_dirs, eval_coords, *,
 
   if keep_dirs:
     new_grid = [np.asarray(data.grid[d]) for d in keep_dirs]
+  # end
   else:
     new_grid = [np.array([0.0, 1.0])]
   # end
@@ -90,3 +95,4 @@ def eval_at_coord_proj(data: "GDataState", eval_dirs, eval_coords, *,
   return data._result(new_grid, out_native, inplace=inplace, tag=tag,
       label=label, cells=np.asarray(cells_tar), basis_type=btype_tar,
       poly_order=poly_order_tar, num_cdim=cdim_tar, num_vdim=vdim_tar)
+# end

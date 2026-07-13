@@ -24,17 +24,22 @@ if TYPE_CHECKING:
 def default_axis_labels(num_dims: int) -> list[str]:
   """Default per-axis labels ``$z_0$``, ``$z_1$``, ... (mathtext)."""
   return [rf"$z_{i}$" for i in range(num_dims)]
+# end
 
 
 def format_axis_label(label: str, shift: float, scale: float) -> str:
   """Annotate an axis label with its shift/scale, matching the old style."""
   if shift != 0.0 and scale != 1.0:
     return rf"({label:s} + {shift:.2e}) $\times$ {scale:.2e}"
+  # end
   if shift != 0.0:
     return rf"{label:s} + {shift:.2e}"
+  # end
   if scale != 1.0:
     return rf"{label:s} $\times$ {scale:.2e}"
+  # end
   return label
+# end
 
 
 def squeeze_collapsed_axes(grid: list[np.ndarray], values: np.ndarray
@@ -74,6 +79,7 @@ def squeeze_collapsed_axes(grid: list[np.ndarray], values: np.ndarray
   # end
   values = np.squeeze(values, tuple(drop))
   return grid, values
+# end
 
 
 def subplot_grid(num_comps: int, num_rows: int | None = None,
@@ -81,16 +87,19 @@ def subplot_grid(num_comps: int, num_rows: int | None = None,
   """Choose a near-square ``(rows, cols)`` layout for ``num_comps`` panels."""
   if num_rows is not None:
     return num_rows, int(np.ceil(num_comps / num_rows))
+  # end
   if num_cols is not None:
     return int(np.ceil(num_comps / num_cols)), num_cols
   # end
   sr = np.sqrt(num_comps)
   if sr == np.ceil(sr):
     return int(sr), int(sr)
+  # end
   if np.ceil(sr) * np.floor(sr) >= num_comps:
     return int(np.floor(sr)), int(np.ceil(sr))
   # end
   return int(np.ceil(sr)), int(np.ceil(sr))
+# end
 
 
 @dataclass(frozen=True)
@@ -103,6 +112,7 @@ class PlotPanel:
   xlabel: str
   ylabel: str
   clabel: str
+# end
 
 
 def resolve_axis_labels(*, xlabel: str | None, ylabel: str | None,
@@ -135,6 +145,7 @@ def resolve_axis_labels(*, xlabel: str | None, ylabel: str | None,
               else rf"$\times$ {zscale:.3e}")
   # end
   return xlabel, ylabel, zlabel, clabel
+# end
 
 
 def prep_plot_data(data: "GDataState", *, xlabel: str | None = None,
@@ -168,3 +179,4 @@ def prep_plot_data(data: "GDataState", *, xlabel: str | None = None,
 
   return PlotPanel(grid=grid, values=values, num_dims=num_dims,
       num_comps=values.shape[-1], xlabel=xlabel, ylabel=ylabel, clabel=clabel)
+# end

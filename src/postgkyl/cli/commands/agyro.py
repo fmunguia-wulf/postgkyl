@@ -29,3 +29,4 @@ def command(ctx, measure, pressure_tag, bfield_tag, tag, label) -> None:
   set_active(ptensor, False)
   set_active(bfield, False)
   ctx.obj.datasets.append(result)
+# end

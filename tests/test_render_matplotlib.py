@@ -33,6 +33,7 @@ def _line(n=8, offset=0.0) -> GDataState:
   d = GDataState()
   d.push([np.linspace(0.0, 1.0, n + 1)], (np.arange(n, dtype=float) + offset)[:, None])
   return d
+# end
 
 
 def _field_2d(n=8, ncomp=1) -> GDataState:
@@ -42,6 +43,7 @@ def _field_2d(n=8, ncomp=1) -> GDataState:
       for c in range(ncomp)], axis=-1)
   d.push(grid, values)
   return d
+# end
 
 
 @pytest.fixture(autouse=True)
@@ -49,6 +51,7 @@ def _close_figs():
   plt.close("all")
   yield
   plt.close("all")
+# end
 
 
 # --------------------------------------------------------------------------
@@ -59,20 +62,25 @@ class TestMultiPanel:
   def test_two_components_get_two_axes(self):
     fig = backend.plot(_field_2d(ncomp=2), show=False)
     assert len(fig.axes) >= 2
+  # end
 
   def test_four_components_use_a_square_grid(self):
     fig = backend.plot(_field_2d(ncomp=4), show=False)
     # 4 components -> 2x2 grid -> 4 panel axes, each with its own colorbar axes.
     assert len(fig.axes) == 8
+  # end
 
   def test_five_components_hides_the_leftover_axis(self):
     fig = backend.plot(_field_2d(ncomp=5), show=False)
     off_axes = [ax for ax in fig.axes if not ax.axison]
     assert len(off_axes) == 1
+  # end
 
   def test_single_component_has_no_per_panel_title(self):
     fig = backend.plot(_field_2d(ncomp=1), show=False)
     assert fig.axes[0].get_title() == ""
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -83,15 +91,19 @@ class TestColorbar:
   def test_colorbar_true_adds_an_axes(self):
     fig = backend.plot(_field_2d(), show=False, colorbar=True)
     assert len(fig.axes) == 2  # the panel + the appended colorbar axes
+  # end
 
   def test_colorbar_false_omits_it(self):
     fig = backend.plot(_field_2d(), show=False, colorbar=False)
     assert len(fig.axes) == 1
+  # end
 
   def test_clabel_reaches_the_colorbar(self):
     fig = backend.plot(_field_2d(), show=False, colorbar=True, clabel="density")
     cbar_ax = fig.axes[1]
     assert cbar_ax.get_ylabel() == "density"
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -102,10 +114,12 @@ class TestLogAxes:
   def test_logx_1d(self):
     fig = backend.plot(_line(), show=False, logx=True)
     assert fig.axes[0].get_xscale() == "log"
+  # end
 
   def test_logy_1d(self):
     fig = backend.plot(_line(), show=False, logy=True)
     assert fig.axes[0].get_yscale() == "log"
+  # end
 
   def test_logz_uses_lognorm_on_2d_colormap(self):
     d = _field_2d()
@@ -114,6 +128,8 @@ class TestLogAxes:
     im = fig.axes[0].collections[0]
     from matplotlib.colors import LogNorm
     assert isinstance(im.norm, LogNorm)
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -124,11 +140,14 @@ class TestValueRange:
   def test_ymin_ymax_set_1d_ylim(self):
     fig = backend.plot(_line(), show=False, ymin=-5.0, ymax=50.0)
     assert fig.axes[0].get_ylim() == (-5.0, 50.0)
+  # end
 
   def test_zmin_zmax_set_2d_colormap_range(self):
     fig = backend.plot(_field_2d(), show=False, zmin=0.0, zmax=1.0)
     im = fig.axes[0].collections[0]
     assert im.get_clim() == (0.0, 1.0)
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -142,10 +161,13 @@ class TestAspect:
     # itself keeps the two independent, exactly as main's output.plot did.
     fig = backend.plot(_field_2d(), show=False, fixaspect=True, aspect=1.0)
     assert fig.axes[0].get_aspect() == 1.0
+  # end
 
   def test_aspect_none_leaves_default(self):
     fig = backend.plot(_field_2d(), show=False)
     assert fig.axes[0].get_aspect() == "auto"
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -157,11 +179,14 @@ class TestColormap:
     fig = backend.plot(_field_2d(), show=False, cmap="plasma")
     im = fig.axes[0].collections[0]
     assert im.get_cmap().name == "plasma"
+  # end
 
   def test_diverging_uses_rdbu(self):
     fig = backend.plot(_field_2d(), show=False, diverging=True)
     im = fig.axes[0].collections[0]
     assert im.get_cmap().name == "RdBu_r"
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -173,11 +198,14 @@ class TestStyleAndRcParams:
     backend.plot(_line(), show=False, style="default")
     import matplotlib as mpl
     assert mpl.rcParams["image.cmap"] == "viridis"
+  # end
 
   def test_rcparams_dict_overrides(self):
     backend.plot(_line(), show=False, rcParams={"lines.linewidth": 5.0})
     import matplotlib as mpl
     assert mpl.rcParams["lines.linewidth"] == 5.0
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -192,6 +220,8 @@ class TestFigureReuse:
     backend.plot(_line(offset=5.0), show=False, fig=fig)
     assert len(fig.axes) == 1
     assert id(fig.axes[0]) != first_axes_id
+  # end
+# end
 
 
 # --------------------------------------------------------------------------
@@ -209,6 +239,7 @@ class TestMappedGrids:
     assert fig is not None
     im = fig.axes[0].collections[0]
     assert im.get_array().size > 0
+  # end
 
   def test_1d_non_uniform_mapped_axis_uses_true_centers(self):
     """A 1-D vel map produces non-uniform edges; _centers must handle them
@@ -220,3 +251,5 @@ class TestMappedGrids:
     line = fig.axes[0].lines[0]
     x_plotted = line.get_xdata()
     np.testing.assert_allclose(x_plotted, 0.5 * (edges[:-1] + edges[1:]))
+  # end
+# end

@@ -20,3 +20,4 @@ from .._options import label_option, tag_option, use_option
 def command(ctx, psd, iso, use, tag, label) -> None:
   """Fourier transform (or PSD) of 1D interpolated data."""
   apply(ctx, lambda d: d.fft(psd=psd, iso=iso, tag=tag, label=label), use=use)
+# end

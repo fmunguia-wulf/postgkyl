@@ -32,3 +32,4 @@ def call_variable(fn: Callable, data, *, tag: str | None, label: str | None,
   accepted = inspect.signature(fn).parameters
   kwargs = {k: v for k, v in extra.items() if k in accepted}
   return fn(data, tag=tag, label=label, **kwargs)
+# end

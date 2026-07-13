@@ -18,3 +18,4 @@ from .._options import label_option, tag_option, use_option
 def command(ctx, coords, use, tag, label) -> None:
   """Magnitude squared of a vector field."""
   apply(ctx, lambda d: d.magsq(coords=coords, tag=tag, label=label), use=use)
+# end

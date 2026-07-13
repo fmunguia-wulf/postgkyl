@@ -28,6 +28,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 def _quadratic_1d(n=40):
@@ -35,6 +36,7 @@ def _quadratic_1d(n=40):
   centers = 0.5 * (edges[:-1] + edges[1:])
   y = centers ** 2  # d/dx = 2x
   return _make([edges], y[:, np.newaxis]), centers
+# end
 
 
 def test_full_gradient_matches_analytic_derivative_1d():
@@ -43,6 +45,7 @@ def test_full_gradient_matches_analytic_derivative_1d():
   np.testing.assert_allclose(out.get_values().flatten(), 2.0 * centers,
       atol=1e-2)
   assert out.get_num_comps() == 1  # 1 comp * 1 dim = 1
+# end
 
 
 def test_direction_matches_full_gradient_in_1d():
@@ -50,12 +53,14 @@ def test_direction_matches_full_gradient_in_1d():
   full = ops.differentiate(d)
   by_dir = ops.differentiate(d, direction=0)
   np.testing.assert_allclose(full.get_values(), by_dir.get_values())
+# end
 
 
 def test_grid_unchanged():
   d, _ = _quadratic_1d()
   out = ops.differentiate(d)
   np.testing.assert_allclose(out.get_grid()[0], d.get_grid()[0])
+# end
 
 
 def test_2d_full_gradient_stacks_components():
@@ -73,6 +78,7 @@ def test_2d_full_gradient_stacks_components():
 
   single = ops.differentiate(d, direction=1)
   np.testing.assert_allclose(single.get_values()[..., 0], np.ones_like(Y), atol=1e-2)
+# end
 
 
 def test_inplace_and_tag_label():
@@ -81,6 +87,7 @@ def test_inplace_and_tag_label():
   assert out is d
   assert d.get_tag() == "grad"
   assert d.get_label() == "dq/dx"
+# end
 
 
 def test_mismatched_grid_length_raises():
@@ -90,6 +97,8 @@ def test_mismatched_grid_length_raises():
   d = _make([x], (x ** 2)[:, np.newaxis])
   with pytest.raises(ValueError):
     ops.differentiate(d)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -97,3 +106,5 @@ def test_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
     ops.differentiate(d)
+  # end
+# end

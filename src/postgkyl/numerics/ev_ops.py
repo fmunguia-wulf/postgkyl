@@ -22,23 +22,29 @@ from .idx_parser import idx_parser
 def _get_grid(grid0, grid1):
   if grid0 is not None and grid1 is not None:
     return grid0 if len(grid0) > len(grid1) else grid1
+  # end
   if grid0 is not None:
     return grid0
+  # end
   if grid1 is not None:
     return grid1
+  # end
   return None
+# end
 
 
 def add(in_grid, in_values):
   out_grid = _get_grid(in_grid[0], in_grid[1])
   out_values = in_values[0] + in_values[1]
   return [out_grid], [out_values]
+# end
 
 
 def subtract(in_grid, in_values):
   out_grid = _get_grid(in_grid[0], in_grid[1])
   out_values = in_values[1] - in_values[0]
   return [out_grid], [out_values]
+# end
 
 
 def mult(in_grid, in_values):
@@ -46,6 +52,7 @@ def mult(in_grid, in_values):
   a, b = in_values[1], in_values[0]
   if np.array_equal(a.shape, b.shape) or len(a.shape) == 0 or len(b.shape) == 0:
     out_values = a * b
+  # end
   else:
     # When multiplying a phase-space and a conf-space field, the
     # dimensions do not match. NumPy broadcasting requires the *trailing*
@@ -54,12 +61,14 @@ def mult(in_grid, in_values):
     out_values = (a.transpose() * b.transpose()).transpose()
   # end
   return [out_grid], [out_values]
+# end
 
 
 def dot(in_grid, in_values):
   out_grid = _get_grid(in_grid[0], in_grid[1])
   out_values = np.sum(in_values[1] * in_values[0], axis=-1)[..., np.newaxis]
   return [out_grid], [out_values]
+# end
 
 
 def divide(in_grid, in_values):
@@ -67,80 +76,97 @@ def divide(in_grid, in_values):
   a, b = in_values[1], in_values[0]
   if np.array_equal(a.shape, b.shape) or len(a.shape) == 0 or len(b.shape) == 0:
     out_values = a/b
+  # end
   else:
     # See the 'mult' comment above.
     out_values = (a.transpose()/b.transpose()).transpose()
   # end
   return [out_grid], [out_values]
+# end
 
 
 def sqrt(in_grid, in_values):
   return [in_grid[0]], [np.sqrt(in_values[0])]
+# end
 
 
 def psin(in_grid, in_values):
   return [in_grid[0]], [np.sin(in_values[0])]
+# end
 
 
 def pcos(in_grid, in_values):
   return [in_grid[0]], [np.cos(in_values[0])]
+# end
 
 
 def ptan(in_grid, in_values):
   return [in_grid[0]], [np.tan(in_values[0])]
+# end
 
 
 def absolute(in_grid, in_values):
   return [in_grid[0]], [np.abs(in_values[0])]
+# end
 
 
 def log(in_grid, in_values):
   return [in_grid[0]], [np.log(in_values[0])]
+# end
 
 
 def log10(in_grid, in_values):
   return [in_grid[0]], [np.log10(in_values[0])]
+# end
 
 
 def minimum(in_grid, in_values):
   out_values = np.atleast_1d(np.nanmin(in_values[0]))
   return [[]], [out_values]
+# end
 
 
 def minimum2(in_grid, in_values):
   out_grid = _get_grid(in_grid[0], in_grid[1])
   out_values = np.fmin(in_values[0], in_values[1])
   return [out_grid], [out_values]
+# end
 
 
 def maximum(in_grid, in_values):
   out_values = np.atleast_1d(np.nanmax(in_values[0]))
   return [[]], [out_values]
+# end
 
 
 def maximum2(in_grid, in_values):
   out_grid = _get_grid(in_grid[0], in_grid[1])
   out_values = np.fmax(in_values[0], in_values[1])
   return [out_grid], [out_values]
+# end
 
 
 def mean(in_grid, in_values):
   out_values = np.atleast_1d(np.mean(in_values[0]))
   return [[]], [out_values]
+# end
 
 
 def power(in_grid, in_values):
   out_grid = in_grid[1]
   out_values = np.power(in_values[1], in_values[0])
   return [out_grid], [out_values]
+# end
 
 
 def sq(in_grid, in_values):
   return [in_grid[0]], [in_values[0]**2]
+# end
 
 
 def exp(in_grid, in_values):
   return [in_grid[0]], [np.exp(in_values[0])]
+# end
 
 
 def length(in_grid, in_values):
@@ -150,6 +176,7 @@ def length(in_grid, in_values):
     ln += in_grid[1][ax][1] - in_grid[1][ax][0]
   # end
   return [[]], [ln]
+# end
 
 
 def grad(in_grid, in_values):
@@ -166,6 +193,7 @@ def grad(in_grid, in_values):
         in_values[0], zc, edge_order=2, axis=d)
   # end
   return [out_grid], [out_values]
+# end
 
 
 def grad2(in_grid, in_values):
@@ -174,8 +202,10 @@ def grad2(in_grid, in_values):
   if isinstance(ax, str) and ":" in ax:
     lo, up = ax.split(":")
     rng = range(int(lo), int(up))
+  # end
   elif isinstance(ax, str):
     rng = tuple(int(i) for i in ax.split(","))
+  # end
   else:
     rng = range(int(ax), int(ax + 1))
   # end
@@ -192,22 +222,29 @@ def grad2(in_grid, in_values):
         in_values[1], zc, edge_order=2, axis=d)
   # end
   return [out_grid], [out_values]
+# end
 
 
 def _parse_axis(axis) -> tuple:
   if isinstance(axis, float):
     return (int(axis),)
+  # end
   if isinstance(axis, tuple):
     return axis
+  # end
   if isinstance(axis, np.ndarray):
     return (int(axis),)
+  # end
   if isinstance(axis, str):
     if axis == "all":
       return None  # resolved against num_dims by the caller
+    # end
     return _split_axis_string(axis)
+  # end
   raise TypeError(
       "'axis' needs to be integer, tuple, string of comma separated "
       "integers, or a slice ('int:int')")
+# end
 
 
 def integrate(in_grid, in_values, avg=False):
@@ -245,10 +282,12 @@ def integrate(in_grid, in_values, avg=False):
     # end
   # end
   return [grid], [values]
+# end
 
 
 def average(in_grid, in_values):
   return integrate(in_grid, in_values, True)
+# end
 
 
 def divergence(in_grid, in_values):
@@ -271,6 +310,7 @@ def divergence(in_grid, in_values):
         in_values[0][..., d], zc, edge_order=2, axis=d)
   # end
   return [out_grid], [out_values]
+# end
 
 
 def curl(in_grid, in_values):
@@ -290,6 +330,7 @@ def curl(in_grid, in_values):
     out_values = np.zeros(out_shape)
     out_values[..., 1] = -np.gradient(in_values[0][..., 2], zc0, edge_order=2, axis=0)
     out_values[..., 2] = np.gradient(in_values[0][..., 1], zc0, edge_order=2, axis=0)
+  # end
   elif num_dims == 2:
     zc0 = 0.5 * (in_grid[0][0][1:] + in_grid[0][0][:-1])
     zc1 = 0.5 * (in_grid[0][1][1:] + in_grid[0][1][:-1])
@@ -298,6 +339,7 @@ def curl(in_grid, in_values):
           f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
           f"is smaller than number of dimensions ({num_dims:d}). Curl can't "
           f"be calculated.")
+    # end
     elif num_comps == 2:
       # A 2D vector field: curl reduces to the single in-plane (z) component.
       # This is the normal, expected input for 2D curl -- not an anomaly.
@@ -306,6 +348,7 @@ def curl(in_grid, in_values):
       out_values[..., 0] = np.gradient(
           in_values[0][..., 1], zc0, edge_order=2, axis=0
       ) - np.gradient(in_values[0][..., 0], zc1, edge_order=2, axis=1)
+    # end
     else:
       if num_comps > 3:
         # src_bak warned and computed a partial result (using only the
@@ -320,6 +363,7 @@ def curl(in_grid, in_values):
       out_values[..., 0] = np.gradient(in_values[0][..., 2], zc1, edge_order=2, axis=1)
       out_values[..., 1] = -np.gradient(in_values[0][..., 2], zc0, edge_order=2, axis=0)
       out_values[..., 2] = np.gradient(in_values[0][..., 1], zc0, edge_order=2, axis=0) - np.gradient(in_values[0][..., 0], zc1, edge_order=2, axis=1)
+  # end
     # end
   else:  # 3D
     if num_comps > 3:
@@ -329,6 +373,7 @@ def curl(in_grid, in_values):
       raise ValueError(
           f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
           f"is longer than number of dimensions ({num_dims:d}).")
+    # end
     elif num_comps < 3:
       raise ValueError(
           f"ERROR in 'evaluate curl': Length of the provided vector ({num_comps:d}) "
@@ -344,6 +389,7 @@ def curl(in_grid, in_values):
     out_values[..., 2] = np.gradient(in_values[0][..., 1], zc0, edge_order=2, axis=0) - np.gradient(in_values[0][..., 0], zc1, edge_order=2, axis=1)
   # end
   return [out_grid], [out_values]
+# end
 
 
 def scale_comp(in_grid, in_values):
@@ -366,23 +412,28 @@ def scale_comp(in_grid, in_values):
   scale_factor = scale_factor.item()
   if isinstance(comp_spec, str):
     comp_idx = idx_parser(comp_spec)
+  # end
   elif isinstance(comp_spec, np.ndarray) and comp_spec.size == 1:
     comp_idx = int(comp_spec.item())
+  # end
   else:
     comp_idx = int(comp_spec)
   # end
 
   if isinstance(comp_idx, slice):
     original_data[..., comp_idx] *= scale_factor
+  # end
   elif isinstance(comp_idx, tuple):
     for idx in comp_idx:
       original_data[..., idx] *= scale_factor
+  # end
     # end
   else:
     original_data[..., comp_idx] *= scale_factor
   # end
 
   return [out_grid], [original_data]
+# end
 
 
 def scale_zi_axis(in_grid, in_values):
@@ -406,6 +457,7 @@ def scale_zi_axis(in_grid, in_values):
   out_grid[int(idx_scale)] *= scale_factor
 
   return [out_grid], [original_data]
+# end
 
 
 cmds = {

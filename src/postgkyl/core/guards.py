@@ -34,4 +34,5 @@ def require_field_domain(data: "GDataState", who: str, reason: str) -> None:
     raise ValueError(
         f"{who} operates on interpolated (NumPy) values; call .interpolate() "
         f"first -- {reason}.")
+# end
   # end

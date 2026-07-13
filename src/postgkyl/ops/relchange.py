@@ -16,6 +16,7 @@ def _require_field_domain(data: "GDataState", who: str) -> None:
     raise ValueError(
         f"relchange operates on interpolated (NumPy) values; call .interpolate() "
         f"first on {who} -- dividing raw DG coefficients would mix basis functions.")
+# end
   # end
 
 
@@ -48,3 +49,4 @@ def relchange(data0: "GDataState", data: "GDataState", *, comp: int | str | None
   _require_field_domain(data, "'data'")
   grid, values = numerics.rel_change(data.grid, data0.values, data.values, comp)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label)
+# end

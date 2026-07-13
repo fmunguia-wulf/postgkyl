@@ -31,6 +31,7 @@ class GData(GDataState):
     """Interpolate DG coefficients onto a uniform mesh (see ``ops.interpolate``)."""
     return ops.interpolate(self, basis=basis, p=p, num_interp=num_interp,
         inplace=inplace, tag=tag, label=label)
+  # end
 
   def local_poly(self, *, basis: str | None = None, p: int | None = None,
       npoints: int = 2, inplace: bool = False, tag: str | None = None,
@@ -39,6 +40,7 @@ class GData(GDataState):
     plotting mesh (see ``ops.local_poly``)."""
     return ops.local_poly(self, basis=basis, p=p, npoints=npoints,
         inplace=inplace, tag=tag, label=label)
+  # end
 
   def select(self, *, comp=None, z0=None, z1=None, z2=None, z3=None, z4=None,
       z5=None, inplace: bool = False, tag: str | None = None,
@@ -46,14 +48,17 @@ class GData(GDataState):
     """Subselect coordinates/components (see ``ops.select``)."""
     return ops.select(self, comp=comp, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4,
         z5=z5, inplace=inplace, tag=tag, label=label)
+  # end
 
   def plot(self, **kwargs):
     """Render this dataset (terminal verb). Returns the matplotlib figure."""
     return ops.plot(self, **kwargs)
+  # end
 
   def save(self, out_name: str = "", extension: str = "gkyl") -> str:
     """Write this dataset to disk (see ``io.save``)."""
     return io.save(self, out_name=out_name, extension=extension)
+  # end
 
   # ``info`` is inherited from GDataState (a pure state reader).
 
@@ -63,10 +68,12 @@ class GData(GDataState):
   def mul(self, other) -> "GData":
     """Weak (DG) multiply — runs inside Gkeyll on modal data."""
     return ops.arithmetic.binary(operator.mul, self, other)
+  # end
 
   def div(self, other) -> "GData":
     """Weak (DG) divide — runs inside Gkeyll on modal data."""
     return ops.arithmetic.binary(operator.truediv, self, other)
+  # end
 
   def integrate(self, *, op: str = "none"):
     """Grid integral of modal data via ``gkyl_array_integrate`` (terminal).
@@ -74,6 +81,7 @@ class GData(GDataState):
     ``op`` is ``"none"``, ``"abs"``, or ``"sq"``; returns a float (one field)
     or a NumPy array (one value per field)."""
     return ops.integrate(self, op=op)
+  # end
 
   def integrate_axis(self, axis: int | tuple | str | None = None, *,
       inplace: bool = False, tag: str | None = None,
@@ -86,6 +94,7 @@ class GData(GDataState):
     first (``.interpolate()``/``.to_nodal()``/``.to_quad()``).
     """
     return ops.integrate_axis(self, axis, inplace=inplace, tag=tag, label=label)
+  # end
 
   def average(self, dims, *, weight: "GData | None" = None,
       inplace: bool = False, tag: str | None = None,
@@ -101,6 +110,7 @@ class GData(GDataState):
     """
     return ops.average(self, dims, weight=weight, inplace=inplace, tag=tag,
         label=label)
+  # end
 
   def eval_at_coord_proj(self, eval_dirs, eval_coords, *,
       inplace: bool = False, tag: str | None = None,
@@ -115,6 +125,7 @@ class GData(GDataState):
     """
     return ops.eval_at_coord_proj(self, eval_dirs, eval_coords,
         inplace=inplace, tag=tag, label=label)
+  # end
 
   # --------------------------------------- representation changes (explicit)
   # Conversions never happen implicitly — these verbs are the only doorway
@@ -122,20 +133,24 @@ class GData(GDataState):
   def to_modal(self, **kwargs) -> "GData":
     """Convert to modal coefficients (exact from nodal; projection from quad)."""
     return ops.represent(self, to="modal", **kwargs)
+  # end
 
   def to_nodal(self, **kwargs) -> "GData":
     """Convert to values at the basis nodes (exact, invertible)."""
     return ops.represent(self, to="nodal", **kwargs)
+  # end
 
   def to_quad(self, num_quad: int | None = None, **kwargs) -> "GData":
     """Convert to values at Gauss–Legendre points (default ``p+1`` per dim)."""
     return ops.represent(self, to="quad", num_quad=num_quad, **kwargs)
+  # end
 
   def apply(self, fn, *, num_quad: int | None = None, **kwargs) -> "GData":
     """Pointwise ``fn`` via quadrature (modal -> quad -> fn -> modal), e.g.
     ``d.apply(np.sqrt)``. The explicit spelling of nonlinear pointwise math
     on DG data; raise ``num_quad`` to de-alias."""
     return ops.apply(self, fn, num_quad=num_quad, **kwargs)
+  # end
 
   # ------------------------------------------------- field-domain analysis
   # Equation-blind core verbs from layers 07-09 (``ops/__init__.py``), each a
@@ -144,11 +159,13 @@ class GData(GDataState):
       tag: str | None = None, label: str | None = None) -> "GData":
     """Fourier transform / power spectral density (see ``ops.fft``)."""
     return ops.fft(self, psd=psd, iso=iso, inplace=inplace, tag=tag, label=label)
+  # end
 
   def magsq(self, *, coords: str = "0:3", inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
     """Magnitude squared of a vector field (see ``ops.magsq``)."""
     return ops.magsq(self, coords=coords, inplace=inplace, tag=tag, label=label)
+  # end
 
   def mask(self, mask_data: "GData | None" = None, *, lower: float | None = None,
       upper: float | None = None, inplace: bool = False, tag: str | None = None,
@@ -156,6 +173,7 @@ class GData(GDataState):
     """Mask values by a mask dataset or numeric thresholds (see ``ops.mask``)."""
     return ops.mask(self, mask_data, lower=lower, upper=upper, inplace=inplace,
         tag=tag, label=label)
+  # end
 
   def val2coord(self, *, x: str, y: str, periodic: bool = False,
       tag: str | None = None, label: str | None = None) -> "DatasetGroup":
@@ -167,11 +185,13 @@ class GData(GDataState):
     """
     return DatasetGroup(ops.val2coord(self, x=x, y=y, periodic=periodic,
         tag=tag, label=label))
+  # end
 
   def extract_input(self) -> str:
     """Decode the input file embedded in ``ctx`` (see ``ops.extract_input``);
     a terminal verb returning a plain ``str`` (``""`` if none is embedded)."""
     return ops.extract_input(self)
+  # end
 
   def fit(self, fit_type: str, *, guess=None, window: bool = False,
       min_n: int | None = None, inplace: bool = False, tag: str | None = None,
@@ -183,12 +203,14 @@ class GData(GDataState):
     """
     return ops.fit(self, fit_type, guess=guess, window=window, min_n=min_n,
         inplace=inplace, tag=tag, label=label)
+  # end
 
   def differentiate(self, *, direction: int | None = None, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
     """Numerical gradient of field-domain data (see ``ops.differentiate``)."""
     return ops.differentiate(self, direction=direction, inplace=inplace, tag=tag,
         label=label)
+  # end
 
   def map(self, mapping: "str | GData", *, space: str = "conf",
       inplace: bool = False, tag: str | None = None,
@@ -196,6 +218,7 @@ class GData(GDataState):
     """Deform this dataset's grid by evaluating a coordinate map (see ``ops.map``)."""
     return ops.map(self, mapping, space=space, inplace=inplace, tag=tag,
         label=label)
+  # end
 
   # Note: no fluent ``grid`` method. ``GData.grid`` (inherited from
   # GDataState) is the axis-edge-array property that most of ``ops`` reads
@@ -230,3 +253,5 @@ class GData(GDataState):
   def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
     """Make ``np.sqrt``/``np.add``/... return a GData carrying the grid/ctx."""
     return ops.arithmetic.apply_ufunc(ufunc, method, *inputs, **kwargs)
+  # end
+# end

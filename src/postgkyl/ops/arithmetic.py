@@ -33,7 +33,9 @@ def _unpack(x):
   """(values, grid, dataset|None) for a dataset; (array, None, None) otherwise."""
   if isinstance(x, GDataState):
     return x.values, x.grid, x
+  # end
   return np.asarray(x), None, None
+# end
 
 
 def binary(op, a, b):
@@ -43,7 +45,9 @@ def binary(op, a, b):
   if (pa is not None and pa.backend == "gkyl") or (
       pb is not None and pb.backend == "gkyl"):
     return _modal_binary(op, a, b, pa, pb)
+  # end
   return _numpy_binary(op, a, b, pa, pb)
+# end
 
 
 # --------------------------------------------------------------- numpy domain
@@ -56,10 +60,13 @@ def _numpy_binary(op, a, b, pa, pb):
     pb._require_operable()
     if not numerics.grids_compatible(ga, gb):
       raise ValueError("operands live on different grids")
+    # end
     if va.shape != vb.shape:
       raise ValueError(f"incompatible shapes {va.shape} vs {vb.shape}")
+    # end
   # end
   return primary._result(primary.grid, op(va, vb))
+# end
 
 
 # --------------------------------------------------------------- modal domain
@@ -69,23 +76,29 @@ def _basis_of(data: GDataState):
   poly_order = data.ctx.get("poly_order")
   if basis_type is None or poly_order is None:
     raise ValueError("modal operand has no basis_type/poly_order metadata")
+  # end
   return str(basis_type), data.num_dims, int(poly_order)
+# end
 
 
 def _modal_binary(op, a, b, pa, pb):
   if pa is not None and pb is not None:
     return _modal_dataset_pair(op, pa, pb)
+  # end
   primary = pa if pa is not None else pb
   other = b if pa is not None else a
   if not isinstance(other, (int, float, np.integer, np.floating)):
     raise ValueError(
         "cannot mix native modal data with arrays; call .interpolate() on the "
         "modal operand first (or use scalars / another modal dataset).")
+  # end
   return _modal_scalar(op, primary, float(other), scalar_first=pa is None)
+# end
 
 
 def _rep_of(data: GDataState) -> str:
   return data.ctx.get("representation", "modal")
+# end
 
 
 def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
@@ -93,35 +106,46 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
     raise ValueError(
         "one operand is modal (gkyl-native) and the other is interpolated; "
         "call .interpolate() on the modal operand to combine them.")
+  # end
   if pa.num_dims != pb.num_dims:
     return _modal_conf_phase_mul(op, pa, pb)
+  # end
   if not numerics.grids_compatible(pa.grid, pb.grid):
     raise ValueError("operands live on different grids")
+  # end
   basis = _basis_of(pa)
   if _basis_of(pb) != basis:
     raise ValueError("operands have different DG bases")
+  # end
   rep = _rep_of(pa)
   if rep != _rep_of(pb):
     raise ValueError(
         f"operands are in different representations ({rep} vs {_rep_of(pb)}); "
         "convert one explicitly (.to_modal()/.to_nodal()/.to_quad()).")
+  # end
   A, B = pa.native, pb.native
   if op is operator.add:                       # linear: valid in any rep
     out = dg.modal.lincomb(1.0, A, 1.0, B)
+  # end
   elif op is operator.sub:
     out = dg.modal.lincomb(1.0, A, -1.0, B)
+  # end
   elif rep != "modal":
     # Point values (nodal/quad): every pointwise operation is exact — compute
     # with NumPy on the views, wrap back native, stay in-representation.
     out = dg.rep.wrap(op(np.asarray(pa.values), np.asarray(pb.values)))
+  # end
   elif op in (operator.mul, operator.truediv):
     out = (dg.modal.weak_mul if op is operator.mul
            else dg.modal.weak_div)(*basis, A, B)
+  # end
   else:
     raise ValueError(
         f"operation {getattr(op, '__name__', op)} is not defined between two "
         "modal datasets; .to_nodal()/.to_quad() for pointwise math.")
+  # end
   return pa._result(pa.grid, out)
+# end
 
 
 def _modal_conf_phase_mul(op, pa: GDataState, pb: GDataState):
@@ -139,23 +163,28 @@ def _modal_conf_phase_mul(op, pa: GDataState, pb: GDataState):
         f"{pb.num_dims}D); only '*' is defined between a lower-dimensional "
         "conf-space field and a higher-dimensional phase-space field "
         "(Gkeyll has no cross-basis weak divide/add).")
+  # end
   conf, phase = (pa, pb) if pa.num_dims < pb.num_dims else (pb, pa)
   for d in (conf, phase):
     if _rep_of(d) != "modal":
       raise ValueError(
           "conf-space x phase-space multiplication is defined for modal DG "
           "coefficients only; .to_modal() first.")
+    # end
+  # end
   if not numerics.grid_is_prefix(conf.grid, phase.grid):
     raise ValueError(
         "the lower-dimensional operand's grid is not the leading dimensions "
         "of the higher-dimensional operand's grid; they are not the same "
         "simulation's conf-space and phase-space grids.")
+  # end
   conf_type, conf_ndim, conf_p = _basis_of(conf)
   phase_type, phase_ndim, _ = _basis_of(phase)
   out = dg.modal.weak_mul_conf_phase(conf_type, conf_ndim, phase_type,
       phase_ndim, conf_p, conf.num_cells, phase.num_cells, conf.native,
       phase.native)
   return phase._result(phase.grid, out)
+# end
 
 
 def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
@@ -168,29 +197,40 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
            else lambda a, v: dg.modal.shift_mean(*basis, a, v))
   if op is operator.mul:                       # linear: valid in any rep
     out = dg.modal.scale(A, s)
+  # end
   elif op is operator.truediv and not scalar_first:
     out = dg.modal.scale(A, 1.0 / s)           # f / s: linear, any rep
+  # end
   elif op is operator.add:
     out = shift(A, s)
+  # end
   elif op is operator.sub:
     if scalar_first:  # s - f
       out = shift(dg.modal.scale(A, -1.0), s)
+    # end
     else:             # f - s
       out = shift(A, -s)
+    # end
+  # end
   elif rep != "modal":
     # Point values: any remaining scalar operation is exact pointwise.
     args = (s, np.asarray(data.values)) if scalar_first else (
         np.asarray(data.values), s)
     out = dg.rep.wrap(op(*args))
+  # end
   elif op is operator.truediv:                 # s / f — weak reciprocal
     out = dg.modal.scale(dg.modal.weak_inv(*basis, A), s)
+  # end
   elif op is operator.pow and not scalar_first:
     out = dg.modal.power(*basis, A, s if not float(s).is_integer() else int(s))
+  # end
   else:
     raise ValueError(
         f"operation {getattr(op, '__name__', op)} is not defined for modal "
         "data and a scalar; .to_nodal()/.to_quad() for pointwise math.")
+  # end
   return data._result(data.grid, out)
+# end
 
 
 # ------------------------------------------------------------------- ufuncs
@@ -204,6 +244,7 @@ def apply_ufunc(ufunc, method, *inputs, **kwargs):
   """
   if method != "__call__" or "out" in kwargs:
     return NotImplemented
+  # end
   primary = next(x for x in inputs if isinstance(x, GDataState))
   primary._require_operable()
   rep = (_rep_of(primary) if primary.backend == "gkyl" else None)
@@ -216,12 +257,16 @@ def apply_ufunc(ufunc, method, *inputs, **kwargs):
         raise ValueError(
             "operands are in different representations; convert one "
             "explicitly (.to_modal()/.to_nodal()/.to_quad()).")
+      # end
       if x.values.shape != primary.values.shape:
         raise ValueError(
             f"incompatible shapes {x.values.shape} vs {primary.values.shape}")
+      # end
       raw.append(np.asarray(x.values))
+    # end
     elif isinstance(x, GDataState._HANDLED_TYPES):
       raw.append(x)
+    # end
     else:
       return NotImplemented
     # end
@@ -229,4 +274,6 @@ def apply_ufunc(ufunc, method, *inputs, **kwargs):
   result = ufunc(*raw, **kwargs)
   if rep is not None:
     return primary._result(primary.grid, dg.rep.wrap(result))
+  # end
   return primary._result(primary.grid, result)
+# end

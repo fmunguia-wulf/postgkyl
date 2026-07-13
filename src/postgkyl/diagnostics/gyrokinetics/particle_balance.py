@@ -49,6 +49,7 @@ class ParticleBalanceTraces:
   bflux_tot: np.ndarray | None
   mom_err: np.ndarray | None
   mom_err_norm: np.ndarray | None = None
+# end
 
 
 def _accumulate(target: np.ndarray | None, addend) -> np.ndarray:
@@ -56,16 +57,19 @@ def _accumulate(target: np.ndarray | None, addend) -> np.ndarray:
   the caller's array is never mutated in place."""
   addend = np.asarray(addend)
   return addend.copy() if target is None else target + addend
+# end
 
 
 def particle_balance_error(fdot: np.ndarray, src: np.ndarray,
     bflux_tot: np.ndarray) -> np.ndarray:
   """The particle-balance residual: ``S - bflux - df/dt``."""
   return src - bflux_tot - fdot
+# end
 
 
 def _block_prefix(file_prefix: str, block_idx: int) -> str:
   return file_prefix.replace("*", str(block_idx))
+# end
 
 
 def _resolve(path: str, override: str | None, default: str,
@@ -77,6 +81,7 @@ def _resolve(path: str, override: str | None, default: str,
     return default
   # end
   return (path + override).replace("*", str(block_idx))
+# end
 
 
 def gk_particle_balance(
@@ -225,6 +230,7 @@ def gk_particle_balance(
     ylabel_string = ylabel or ""
     title_string = title or r"Particle balance"
     mom_err_norm = None
+  # end
   else:
     dt_name = _resolve(path, dt_file, file_prefix.replace("_b*", "") + "dt.gkyl", 0)
     _, time_dt, dt, _ = utils.read_time_trace_if_present(dt_name)
@@ -274,3 +280,4 @@ def gk_particle_balance(
       bflux_tot=bflux_tot if has_bflux else None,
       mom_err=mom_err, mom_err_norm=mom_err_norm)
   return fig, traces
+# end

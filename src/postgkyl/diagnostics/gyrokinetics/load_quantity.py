@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 def available_quantities() -> list[str]:
   """Return the sorted list of registered quantity names."""
   return gk_quant_registry.list()
+# end
 
 
 def load_gk_quantity(quantity: str, species: str | None, name: str,
@@ -68,6 +69,7 @@ def load_gk_quantity(quantity: str, species: str | None, name: str,
       default_label = gkquant.get_label(species=sp, direction=extra.get("dir"))
       if label is not None:
         out_label = label + (f" {sp}" if len(species_list) > 1 else "")
+      # end
       else:
         out_label = default_label
       # end
@@ -84,3 +86,4 @@ def load_gk_quantity(quantity: str, species: str | None, name: str,
   # end
 
   return datasets
+# end

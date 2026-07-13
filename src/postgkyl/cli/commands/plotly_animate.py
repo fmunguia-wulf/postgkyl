@@ -27,6 +27,7 @@ def command(ctx, frame_duration, style, background, diverging, title,
   datasets = active_datasets(ctx)
   if not datasets:
     raise click.UsageError("plotly_animate: no datasets to animate")
+  # end
   fig = pg.render.plotly_animate(datasets, frame_duration=frame_duration,
       style=style, background=background, diverging=diverging, title=title)
   save_path = save
@@ -35,6 +36,8 @@ def command(ctx, frame_duration, style, background, diverging, title,
   # end
   if save_path:
     fig.write_html(save_path)
+  # end
   elif not ds.batch:
     fig.show()
+# end
   # end

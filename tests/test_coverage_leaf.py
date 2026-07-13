@@ -42,28 +42,36 @@ F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMomen
 def test_find_nearest_index_raises_without_a_coordinate_array():
   with pytest.raises(TypeError, match="no coordinate array"):
     ip._find_nearest_index(None, 1.0)
+  # end
+# end
 
 
 def test_find_nearest_index_edge_cases():
   arr = np.array([0.0, 1.0, 2.0, 3.0])
   assert ip._find_nearest_index(arr, 10.0) == 2   # beyond the end -> idx-2
   assert ip._find_nearest_index(arr, -10.0) == 0  # before the start -> idx==0
+# end
 
 
 def test_find_cell_index_raises_without_a_coordinate_array():
   with pytest.raises(TypeError, match="no coordinate array"):
     ip._find_cell_index(None, 1.0)
+  # end
+# end
 
 
 def test_string_to_index_rejects_non_strings():
   with pytest.raises(TypeError, match="not a string"):
     ip._string_to_index(1.5, np.array([0.0, 1.0]))
+  # end
+# end
 
 
 def test_string_to_index_parses_a_float_string():
   arr = np.array([0.0, 1.0, 2.0, 3.0])
   assert ip._string_to_index("1.4", arr) == 1
   assert ip._string_to_index("1.4", arr, nodal=True) == 2
+# end
 
 
 def test_idx_parser_slice_with_empty_start_and_stop():
@@ -72,11 +80,13 @@ def test_idx_parser_slice_with_empty_start_and_stop():
   assert s == slice(2, 4)
   s2 = ip.idx_parser(":2", arr)     # empty start -> 0
   assert s2 == slice(0, 2)
+# end
 
 
 def test_idx_parser_slice_negative_stop():
   arr = np.array([0.0, 1.0, 2.0, 3.0])
   assert ip.idx_parser("0:-1", arr) == slice(0, 4)
+# end
 
 
 def test_idx_parser_slice_with_non_integer_stop_falls_back_to_float_lookup():
@@ -86,11 +96,14 @@ def test_idx_parser_slice_with_non_integer_stop_falls_back_to_float_lookup():
   arr = np.array([0.0, 1.0, 2.0, 3.0])
   s = ip.idx_parser("0:1.4", arr)
   assert s == slice(0, 1)
+# end
 
 
 def test_idx_parser_rejects_unsupported_types():
   with pytest.raises(TypeError, match="Unsupported selector type"):
     ip.idx_parser(3.0 + 4.0j)
+  # end
+# end
 
 
 # ============================================================ numerics/elementwise
@@ -98,12 +111,14 @@ def test_grids_compatible_rejects_different_ndims():
   a = [np.linspace(0.0, 1.0, 4)]
   b = [np.linspace(0.0, 1.0, 4), np.linspace(0.0, 1.0, 4)]
   assert elementwise.grids_compatible(a, b) is False
+# end
 
 
 def test_grid_is_prefix_rejects_out_of_range_lengths():
   same_len = [np.linspace(0.0, 1.0, 4)]
   assert elementwise.grid_is_prefix(same_len, same_len) is False  # not strictly smaller
   assert elementwise.grid_is_prefix([], same_len) is False        # empty
+# end
 
 
 # ===================================================================== dg/interpolate
@@ -114,6 +129,7 @@ def test_interpolate_degenerates_1d_hybrid_to_serendipity():
   grid = [np.linspace(0.0, 1.0, 6)]
   grid_out, out = dg.interpolate(values, grid, poly_order=1, basis_type="hybrid")
   assert out.shape[-1] == 1
+# end
 
 
 @needs_gkeyll
@@ -126,6 +142,7 @@ def test_interpolate_converts_nodal_basis_data_through_nodal_to_modal():
   assert d.is_interpolated
   assert d.values.shape[0] == d.num_cells[0] if False else True  # smoke: no crash
   assert d.values.ndim == 2
+# end
 
 
 # ======================================================================= dg/modal
@@ -134,6 +151,8 @@ def test_modal_power_rejects_non_positive_integer_exponents():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="positive integer exponents"):
     a ** 1.5
+  # end
+# end
 
 
 def _const_gkyl_array(basis_type, ndim, p, cells, value):
@@ -142,6 +161,7 @@ def _const_gkyl_array(basis_type, ndim, p, cells, value):
   coeffs = np.zeros((int(np.prod(cells)), nb))
   coeffs[:, 0] = value / b0
   return gpython.GkylArray.from_numpy(coeffs)
+# end
 
 
 @needs_gkeyll
@@ -161,6 +181,7 @@ def test_modal_average_full_reduction_corrects_the_raw_kernel_value():
   assert cells_avg == [1]
   b0 = 2.0 ** (-1 / 2.0)
   np.testing.assert_allclose(out.view()[0, 0] * b0, 3.0, atol=1e-10)
+# end
 
 
 @needs_gkeyll
@@ -183,6 +204,7 @@ def test_modal_average_multi_field_loops_and_reassembles_per_field():
   b0 = 2.0 ** (-1 / 2.0)
   np.testing.assert_allclose(out.view()[0, 0] * b0, values[0], atol=1e-10)
   np.testing.assert_allclose(out.view()[0, nb] * b0, values[1], atol=1e-10)
+# end
 
 
 @needs_gkeyll
@@ -193,6 +215,8 @@ def test_modal_average_rejects_dirs_out_of_range():
           "cells": np.array(cells)}
   with pytest.raises(ValueError, match="out of range"):
     dg.modal.average(grid, basis_type, 1, p, a, [1])
+  # end
+# end
 
 
 @needs_gkeyll
@@ -202,6 +226,8 @@ def test_modal_average_rejects_ncomp_not_a_multiple_of_num_basis():
           "cells": np.array([4])}
   with pytest.raises(ValueError, match="not a multiple"):
     dg.modal.average(grid, "serendipity", 1, 1, a, [0])
+  # end
+# end
 
 
 @needs_gkeyll
@@ -213,6 +239,8 @@ def test_modal_average_rejects_weight_ncomp_mismatch():
           "cells": np.array(cells)}
   with pytest.raises(ValueError, match="weight ncomp"):
     dg.modal.average(grid, basis_type, 1, p, a, [0], weight=w)
+  # end
+# end
 
 
 # ==================================================================== gpython/array
@@ -227,6 +255,8 @@ def test_gkylarray_from_numpy_rejects_scalar_input(monkeypatch):
       lambda values, dtype=None: np.array(5.0, dtype=dtype))
   with pytest.raises(ValueError, match="at least a 1-D"):
     gpython.GkylArray.from_numpy(np.array(5.0))
+  # end
+# end
 
 
 # ==================================================================== gpython/kernels
@@ -238,6 +268,8 @@ def test_weak_mul_conf_phase_rejects_unsupported_phase_basis():
   with pytest.raises(NotImplementedError, match="cross-mul supports"):
     k.weak_mul_conf_phase("serendipity", 1, "bogus-basis", 2, 1,
         [3], [3, 4], cop, pop)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -250,6 +282,8 @@ def test_weak_mul_conf_phase_rejects_pop_ncomp_mismatch():
   with pytest.raises(ValueError, match="pop.ncomp"):
     k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 1,
         [3], [3, 4], cop, pop)
+  # end
+# end
 
 
 # ======================================================================= dg/rep
@@ -258,6 +292,8 @@ def test_apply_per_field_rejects_ncomp_not_a_multiple():
   arr = gpython.GkylArray.alloc(3, 4)  # ncomp=3, not a multiple of num_basis=2
   with pytest.raises(ValueError, match="not a multiple"):
     dg.rep.modal_to_nodal("serendipity", 1, 1, arr)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -266,6 +302,8 @@ def test_materialize_rejects_ncomp_not_a_multiple_of_points_per_cell():
   arr = gpython.GkylArray.alloc(a.native.ncomp + 1, a.native.size)  # off by one
   with pytest.raises(ValueError, match="points/cell"):
     dg.rep.materialize("serendipity", 1, 1, arr, a.grid, "nodal")
+  # end
+# end
 
 
 @needs_gkeyll
@@ -282,6 +320,8 @@ def test_tensor_point_layout_rejects_a_non_tensor_lin_index_collision(monkeypatc
   monkeypatch.setattr(rep.gpython_basis, "node_coords", lambda *a, **k: duplicate_coords)
   with pytest.raises(ValueError, match="not a tensor product"):
     rep._tensor_point_layout("serendipity", 2, 1, "nodal", None)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -292,6 +332,8 @@ def test_tensor_point_layout_rejects_misaligned_node_coordinates(monkeypatch):
   monkeypatch.setattr(rep.gpython_basis, "node_coords", lambda *a, **k: nan_coords)
   with pytest.raises(ValueError, match="do not align on a tensor grid"):
     rep._tensor_point_layout("serendipity", 1, 1, "nodal", None)
+  # end
+# end
 
 
 # =================================================================== render
@@ -300,10 +342,13 @@ def test_plot_rejects_empty_and_valueless_datasets():
   from postgkyl import render
   with pytest.raises(ValueError, match="nothing to plot"):
     render.plot()
+  # end
 
   empty = GDataState()
   with pytest.raises(ValueError, match="no values to plot"):
     render.plot(empty)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -315,6 +360,7 @@ def test_plot_multi_dataset_1d_with_labels_shows_legend_and_title():
   assert fig is not None
   assert fig._suptitle is not None
   assert fig._suptitle.get_text() == "my title"
+# end
 
 
 @needs_gkeyll
@@ -325,6 +371,8 @@ def test_plot_rejects_more_than_two_dimensions():
       np.zeros((2, 2, 2, 1)))
   with pytest.raises(ValueError, match="Only 1D and 2D plots are currently supported"):
     render.plot(d)
+  # end
+# end
 
 
 @needs_gkeyll
@@ -332,4 +380,6 @@ def test_plot_show_true_does_not_error_with_agg_backend():
   a = pg.load(F1).interpolate().select(comp=0)
   with pytest.warns(UserWarning, match="non-interactive"):
     fig = a.plot(show=True)
+  # end
   assert fig is not None
+# end

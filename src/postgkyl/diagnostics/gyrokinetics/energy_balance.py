@@ -63,6 +63,7 @@ class EnergyBalanceTraces:
   apar_dot: np.ndarray | None
   mom_err: np.ndarray | None
   mom_err_norm: np.ndarray | None = None
+# end
 
 
 def _accumulate(target: np.ndarray | None, addend) -> np.ndarray:
@@ -70,6 +71,7 @@ def _accumulate(target: np.ndarray | None, addend) -> np.ndarray:
   use so the caller's array is never mutated in place."""
   addend = np.asarray(addend)
   return addend.copy() if target is None else target + addend
+# end
 
 
 def energy_balance_error(fdot: np.ndarray, src: np.ndarray, bflux_tot: np.ndarray,
@@ -85,10 +87,12 @@ def energy_balance_error(fdot: np.ndarray, src: np.ndarray, bflux_tot: np.ndarra
     fdot_terms = fdot_terms - apar_dot
   # end
   return src - bflux_tot - fdot_terms
+# end
 
 
 def _block_prefix(file_prefix: str, block_idx: int) -> str:
   return file_prefix.replace("*", str(block_idx))
+# end
 
 
 def _resolve(path: str, override: str | None, default: str,
@@ -104,6 +108,7 @@ def _resolve(path: str, override: str | None, default: str,
     resolved = resolved.replace("*", species)
   # end
   return resolved
+# end
 
 
 def gk_energy_balance(
@@ -227,6 +232,7 @@ def gk_energy_balance(
       has_src, t, v, _ = utils.read_time_trace_if_present(src_name)
       if has_src:
         src_sp = v[:, _ENERGY_MOMENT]
+      # end
       else:
         src_sp = 0.0 * fdot_sp
       # end
@@ -304,6 +310,7 @@ def gk_energy_balance(
     ylabel_string = ylabel or ""
     title_string = title or r"Energy balance"
     mom_err_norm = None
+  # end
   else:
     dt_name = _resolve(path, dt_file, file_prefix.replace("_b*", "") + "dt.gkyl", 0)
     _, time_dt, dt, _ = utils.read_time_trace_if_present(dt_name)
@@ -379,3 +386,4 @@ def gk_energy_balance(
       apar_dot=apar_dot if has_apar_dot else None,
       mom_err=mom_err, mom_err_norm=mom_err_norm)
   return fig, traces
+# end

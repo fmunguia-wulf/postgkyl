@@ -17,4 +17,5 @@ def command(ctx, out, fmt) -> None:
   for d in active_datasets(ctx):
     path = d.save(out_name=out, extension=fmt)
     click.echo(f"wrote {path}")
+# end
   # end

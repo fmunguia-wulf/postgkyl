@@ -49,6 +49,7 @@ class KineticEnergyTraces:
 
   ke: np.ndarray
   dke: np.ndarray
+# end
 
 
 def _kinetic_energy(rho: np.ndarray, px: np.ndarray, py: np.ndarray,
@@ -59,12 +60,14 @@ def _kinetic_energy(rho: np.ndarray, px: np.ndarray, py: np.ndarray,
   w = pz / rho
   e = rho * (u ** 2 + v ** 2 + w ** 2)
   return np.sum(e, axis=(0, 1, 2)) * dx * dy * dz * vol
+# end
 
 
 def _dissipation_rate(ke: np.ndarray, dt: float) -> np.ndarray:
   """Backward-difference dissipation rate between every consecutive pair:
   ``dke[i] = -(ke[i + 1] - ke[i]) / dt``."""
   return -(ke[1:] - ke[:-1]) / dt
+# end
 
 
 def ke_dke(
@@ -116,3 +119,4 @@ def ke_dke(
 
   dke = _dissipation_rate(ke, dt)
   return KineticEnergyTraces(ke=ke, dke=dke)
+# end

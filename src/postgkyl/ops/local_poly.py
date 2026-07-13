@@ -30,17 +30,21 @@ def local_poly(data: "GDataState", *, basis: str | None = None,
   if basis is not None:
     if basis not in BASIS_MAP:
       raise ValueError(f"Unknown basis '{basis}'. Choices: {sorted(BASIS_MAP)}")
+    # end
     basis_type, modal = BASIS_MAP[basis]
+  # end
   else:
     basis_type = data.ctx.get("basis_type")
     if not basis_type:
       raise ValueError("No 'basis' given and the dataset has no stored 'basis_type'.")
+    # end
     modal = data.ctx.get("is_modal", True)
   # end
 
   poly_order = p if p is not None else data.ctx.get("poly_order")
   if poly_order is None:
     raise ValueError("No polynomial order given and none stored in the dataset.")
+  # end
 
   if data.backend == "gkyl" and data.ctx.get("representation", "modal") != "modal":
     raise ValueError(
@@ -52,3 +56,4 @@ def local_poly(data: "GDataState", *, basis: str | None = None,
       basis_type=basis_type, modal=modal, npoints=npoints)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
       interpolated=True)
+# end

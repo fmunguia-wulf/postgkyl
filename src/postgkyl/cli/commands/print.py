@@ -21,12 +21,15 @@ def command(ctx, use, show_grid) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   for d in pool:
     if show_grid:
       for axis in d.grid:
         click.echo(axis)
+    # end
       # end
     else:
       click.echo(np.asarray(d.values).squeeze())
+# end
     # end
   # end

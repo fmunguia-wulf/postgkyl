@@ -21,5 +21,6 @@ def command(ctx, extensions, path) -> None:
     # end
     for stem in stems:
       click.echo(f"- {stem}")
+# end
     # end
   # end

@@ -46,17 +46,20 @@ class FlashH5Reader:
     self.var_name = var_name
 
     self.ctx = ctx if ctx is not None else {}
+  # end
 
   def is_compatible(self) -> bool:
     """Checks if the file can be read with the FLASH reader."""
     try:
       fh = tables.open_file(self._file_name, "r")
+    # end
     except (tables.exceptions.HDF5ExtError, OSError):
       return False
     # end
     out = "coordinates" in fh.root
     fh.close()
     return out
+  # end
 
   def _read_frame(self) -> tuple:
     fh = tables.open_file(self._file_name, "r")
@@ -90,11 +93,13 @@ class FlashH5Reader:
       # end
     # end
     return data.shape, lower[:2], upper[:2], data[..., np.newaxis]
+  # end
 
   # ---- Exposed functions -----
   def preload(self) -> None:
     """Loads metadata. FLASH block reassembly needs the full field, so there
     is nothing cheaper to precompute here."""
+  # end
 
   def load(self) -> Tuple[list, np.ndarray]:
     """Loads data.
@@ -124,3 +129,5 @@ class FlashH5Reader:
     grid = mapping.uniform_grid(np.asarray(lower, dtype=float),
         np.asarray(upper, dtype=float), np.asarray(cells))
     return grid, data
+  # end
+# end

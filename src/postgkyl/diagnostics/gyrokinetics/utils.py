@@ -45,6 +45,7 @@ def read_gfile(file_name: str) -> tuple[list[np.ndarray], np.ndarray, GData]:
   values = gdata.get_values()
   grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
   return grid_out, np.squeeze(values), gdata
+# end
 
 
 def read_gfile_if_present(
@@ -64,6 +65,7 @@ def read_gfile_if_present(
   # end
   grid, values, gdata = read_gfile(file_name)
   return True, grid, values, gdata
+# end
 
 
 def read_time_trace_if_present(
@@ -82,6 +84,7 @@ def read_time_trace_if_present(
   found, grid, values, gdata = read_gfile_if_present(file_name)
   time = grid[0] if found else None
   return found, time, values, gdata
+# end
 
 
 def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
@@ -111,6 +114,7 @@ def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
   values = interpolated.get_values()
   grid_out = [np.squeeze(grid[d]) for d in range(len(grid))]
   return grid_out, np.squeeze(values), interpolated
+# end
 
 
 def set_tick_font_size(ax, size: float) -> None:
@@ -118,6 +122,7 @@ def set_tick_font_size(ax, size: float) -> None:
   ax.tick_params(axis="both", labelsize=size)
   ax.yaxis.get_offset_text().set_size(size)
   ax.xaxis.get_offset_text().set_size(size)
+# end
 
 
 def dict_get_bool(dict_in: dict, key: str, default: bool) -> bool:
@@ -134,6 +139,7 @@ def dict_get_bool(dict_in: dict, key: str, default: bool) -> bool:
     return val.strip().lower() in ("1", "true")
   # end
   return bool(val)
+# end
 
 
 def parse_slice_string(value: str) -> slice:
@@ -147,11 +153,13 @@ def parse_slice_string(value: str) -> slice:
   for p in parts:
     try:
       parsed_parts.append(int(p) if p else None)
+    # end
     except ValueError:
       raise ValueError(f"Invalid slice part: {p}")
     # end
   # end
   return slice(*parsed_parts)
+# end
 
 
 def get_block_indices(multib: str, file_path_name: str) -> list[int]:
@@ -177,6 +185,7 @@ def get_block_indices(multib: str, file_path_name: str) -> list[int]:
     try:
       int(s)
       return True
+    # end
     except ValueError:
       return False
     # end
@@ -200,3 +209,4 @@ def get_block_indices(multib: str, file_path_name: str) -> list[int]:
   # end
   raise NameError(
       "Blocks given to --multib -m must be a comma separated list or slice.")
+# end

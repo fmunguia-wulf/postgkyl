@@ -29,3 +29,4 @@ def command(ctx, variable_name, gas_gamma, num_moms, use, tag, label) -> None:
   fn = pg.diagnostics.five_moment.VARIABLES[variable_name]
   apply(ctx, lambda d: call_variable(fn, d, tag=tag, label=label,
       gas_gamma=gas_gamma, num_moms=num_moms), use=use)
+# end

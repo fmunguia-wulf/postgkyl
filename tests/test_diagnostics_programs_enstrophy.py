@@ -26,6 +26,8 @@ class _FakeGData:
   def __init__(self, grid, values):
     self.grid = grid
     self.values = values
+  # end
+# end
 
 
 class TestEnstrophyTermsAnalytic:
@@ -41,11 +43,13 @@ class TestEnstrophyTermsAnalytic:
     u, v, w = x, y, -2.0 * z
     px, py, pz = u * rho, v * rho, w * rho
     return rho, px, py, pz, dx, dy, dz
+  # end
 
   def test_curl_is_zero_for_irrotational_field(self):
     rho, px, py, pz, dx, dy, dz = self._field()
     enstrophy_val, _ = ens._enstrophy_terms(rho, px, py, pz, dx, dy, dz)
     np.testing.assert_allclose(enstrophy_val, 0.0, atol=1e-10)
+  # end
 
   def test_incompressible_term_matches_hand_derivation(self):
     n = 4
@@ -57,6 +61,7 @@ class TestEnstrophyTermsAnalytic:
     # from src_bak -- see the module docstring), times dx*dy*dz = 1.
     expected = 6.0 * 2.0 * (n - 1) ** 3
     np.testing.assert_allclose(incompressible, expected)
+  # end
 
   def test_zero_velocity_gives_zero_both_terms(self):
     n = 3
@@ -66,6 +71,8 @@ class TestEnstrophyTermsAnalytic:
         rho, zero, zero, zero, 1.0, 1.0, 1.0)
     np.testing.assert_allclose(enstrophy_val, 0.0)
     np.testing.assert_allclose(incompressible, 0.0)
+  # end
+# end
 
 
 class TestEnstrophySweep:
@@ -85,6 +92,7 @@ class TestEnstrophySweep:
       calls.append(file_name)
       values = np.stack([rho, rho, rho, rho], axis=-1)  # rho, px=py=pz=rho
       return _FakeGData([edges, edges, edges], values)
+    # end
 
     monkeypatch.setattr(ens, "GData", fake_gdata)
 
@@ -98,6 +106,7 @@ class TestEnstrophySweep:
     # u = v = w = px/rho = 1 (constant) -> zero curl and zero gradient.
     np.testing.assert_allclose(out.enstrophy, 0.0)
     np.testing.assert_allclose(out.incompressible_enstrophy, 0.0)
+  # end
 
   def test_single_frame_range(self, monkeypatch):
     n = 3
@@ -107,10 +116,13 @@ class TestEnstrophySweep:
     def fake_gdata(file_name):
       values = np.stack([rho, rho, rho, rho], axis=-1)
       return _FakeGData([edges, edges, edges], values)
+    # end
 
     monkeypatch.setattr(ens, "GData", fake_gdata)
     out = ens.enstrophy("sim-fluid_", 0, 0)
     assert out.enstrophy.shape == (1,)
+  # end
+# end
 
 
 class TestEnstrophyTracesIsFrozen:
@@ -120,4 +132,6 @@ class TestEnstrophyTracesIsFrozen:
         incompressible_enstrophy=np.array([2.0]))
     with pytest.raises(Exception):
       t.enstrophy = np.array([3.0])
+  # end
+# end
     # end

@@ -45,6 +45,7 @@ F2D = os.path.join(DATA, "generated", "2d_ms_p1.gkyl")
 def test_read_defaults_ctx_to_a_fresh_dict():
   grid, values = io.read(F1)  # ctx omitted entirely
   assert values is not None
+# end
 
 
 def test_read_raises_when_no_reader_is_compatible(tmp_path):
@@ -52,6 +53,8 @@ def test_read_raises_when_no_reader_is_compatible(tmp_path):
   bogus.write_bytes(b"nope, not a gkyl file")
   with pytest.raises(NameError, match="cannot be read"):
     io.read(str(bogus))
+  # end
+# end
 
 
 # --------------------------------------------------------------- gkyl_c_reader
@@ -59,15 +62,18 @@ def test_read_raises_when_no_reader_is_compatible(tmp_path):
 def test_gkyl_c_reader_is_compatible_swallows_backend_errors(monkeypatch):
   def _raise(*a, **k):
     raise RuntimeError("simulated backend failure")
+  # end
   monkeypatch.setattr(gpython.rio, "file_type", _raise)
   r = GkylCReader(F1, ctx={})
   assert r.is_compatible() is False
+# end
 
 
 @needs_gkeyll
 def test_gkyl_c_reader_declines_a_partial_load_request():
   r = GkylCReader(F1, ctx={}, axes=("0", None, None, None, None, None))
   assert r.is_compatible() is False
+# end
 
 
 @needs_gkeyll
@@ -77,11 +83,14 @@ def test_gkyl_c_reader_rejects_cell_array_mismatch(monkeypatch):
   def _fake_read_field(path):
     return {"cells": np.array([10]), "lower": np.array([0.0]),
             "upper": np.array([1.0])}, GkylArray.alloc(1, 5)  # 5 != 10
+  # end
 
   monkeypatch.setattr(gpython.rio, "read_field", _fake_read_field)
   r = GkylCReader(F1, ctx={})
   with pytest.raises(IOError, match="ghost-cell layout"):
     r.load()
+  # end
+# end
 
 
 # ------------------------------------------------------------------- mapping
@@ -94,6 +103,7 @@ def test_adjust_for_ghost_cells_shrinks_and_extends_bounds():
   dz = 1.0  # (10-0)/10
   assert lo[0] == pytest.approx(-1.0 * dz)
   assert up[0] == pytest.approx(10.0 + 1.0 * dz)
+# end
 
 
 # -------------------------------------------------------------------- writer
@@ -104,6 +114,7 @@ def test_write_derives_out_name_from_source_file(tmp_path, monkeypatch):
   out = a.save()  # out_name empty -> derived from _file_name
   assert out == "source_mod.gkyl" or out.endswith("_mod.gkyl")
   assert os.path.exists(out)
+# end
 
 
 def test_write_appends_extension_when_missing(tmp_path):
@@ -111,6 +122,7 @@ def test_write_appends_extension_when_missing(tmp_path):
   out = a.save(str(tmp_path / "no_ext"), extension="gkyl")
   assert out.endswith("no_ext.gkyl")
   assert os.path.exists(out)
+# end
 
 
 def test_write_npy_and_txt_and_rejects_unknown_extension(tmp_path):
@@ -124,10 +136,13 @@ def test_write_npy_and_txt_and_rejects_unknown_extension(tmp_path):
   assert os.path.exists(txt_path)
   with open(txt_path) as fh:
     lines = fh.readlines()
+  # end
   assert len(lines) == int(np.prod(a.num_cells))
 
   with pytest.raises(ValueError, match="Unsupported"):
     writer.save(a, out_name=str(tmp_path / "out.bad"), extension="bad")
+  # end
+# end
 
 
 def test_write_txt_multidim_computes_row_major_strides(tmp_path):
@@ -137,7 +152,9 @@ def test_write_txt_multidim_computes_row_major_strides(tmp_path):
   txt_path = writer.save(b, out_name=str(tmp_path / "out2d.txt"), extension="txt")
   with open(txt_path) as fh:
     lines = fh.readlines()
+  # end
   assert len(lines) == int(np.prod(b.num_cells))
+# end
 
 
 # --------------------------------------------------------- writer / metadata
@@ -155,6 +172,7 @@ def test_write_gkyl_roundtrips_metadata_through_meta_blob(tmp_path):
       "changeset", "builddate", "geometry_type", "Description"):
     assert key in reloaded.ctx, f"{key!r} missing after round trip"
     assert reloaded.ctx[key] == a.ctx[key]
+# end
   # end
 
 
@@ -170,6 +188,7 @@ def test_write_gkyl_roundtrips_custom_ctx_keys(tmp_path):
   reloaded.preload()
   assert reloaded.ctx["charge"] == -1.0
   assert reloaded.ctx["mass"] == 1837.0
+# end
 
 
 def test_write_gkyl_with_no_extra_ctx_writes_zero_meta_size(tmp_path):
@@ -188,6 +207,7 @@ def test_write_gkyl_with_no_extra_ctx_writes_zero_meta_size(tmp_path):
   reloaded = GkylReader(out_name, ctx={})
   reloaded.preload()
   np.testing.assert_allclose(reloaded.cells, [4])
+# end
 
 
 def test_build_meta_excludes_internal_keys_and_renames_dg_fields():
@@ -201,6 +221,7 @@ def test_build_meta_excludes_internal_keys_and_renames_dg_fields():
   meta = writer._build_meta(ctx)
   assert meta == {"polyOrder": 2, "basisType": "serendipity",
       "time": 0.5, "frame": 3}
+# end
 
 
 def test_to_msgpack_safe_converts_numpy_scalars_and_arrays():
@@ -210,6 +231,7 @@ def test_to_msgpack_safe_converts_numpy_scalars_and_arrays():
   assert isinstance(writer._to_msgpack_safe(np.int64(3)), int)
   assert writer._to_msgpack_safe(np.array([1.0, 2.0])) == [1.0, 2.0]
   assert writer._to_msgpack_safe("serendipity") == "serendipity"
+# end
 
 
 # --------------------------------------------------------------- gkyl_reader
@@ -218,6 +240,7 @@ def test_is_compatible_false_for_wrong_magic_and_missing_file(tmp_path):
   bogus.write_bytes(b"definitely-not-gkyl-magic-bytes")
   assert GkylReader(str(bogus), ctx={}).is_compatible() is False
   assert GkylReader("/no/such/file.gkyl", ctx={}).is_compatible() is False
+# end
 
 
 def test_defaults_ctx_to_a_fresh_dict_when_omitted():
@@ -225,6 +248,7 @@ def test_defaults_ctx_to_a_fresh_dict_when_omitted():
   assert r.ctx == {"grid_type": "uniform"}
   r.preload()
   r.load()
+# end
 
 
 def test_partial_load_negative_stop_component():
@@ -232,6 +256,7 @@ def test_partial_load_negative_stop_component():
   r.preload()
   grid, data = r.load()
   assert data.shape[-1] == 5
+# end
 
 
 def test_partial_load_on_a_single_range_file_defaults_lo_up_idx():
@@ -246,6 +271,7 @@ def test_partial_load_on_a_single_range_file_defaults_lo_up_idx():
   r.preload()
   grid, data = r.load()
   np.testing.assert_allclose(data, full_data[:2])
+# end
 
 
 @needs_gkeyll
@@ -264,6 +290,7 @@ def test_partial_load_excludes_a_whole_multirange_and_slices_axis(tmp_path):
   assert data.shape == (6, 6)
   assert grid[0].shape == (7,)
   np.testing.assert_allclose(data, full_data[:6])
+# end
 
 
 def test_partial_load_digit_axis_and_digit_component(tmp_path):
@@ -271,6 +298,7 @@ def test_partial_load_digit_axis_and_digit_component(tmp_path):
   r.preload()
   grid, data = r.load()
   assert data.shape == (1, 1)  # one cell, one component
+# end
 
 
 def test_partial_load_negative_stop_and_colon_component():
@@ -279,6 +307,7 @@ def test_partial_load_negative_stop_and_colon_component():
   grid, data = r.load()
   assert data.shape[0] == 24 - 2
   assert data.shape[-1] == 3
+# end
 
 
 @needs_gkeyll
@@ -294,6 +323,7 @@ def test_dynvec_single_chunk_round_trip_via_pure_python_reader(tmp_path):
   grid, data = r.load()
   np.testing.assert_allclose(grid[0], time)
   np.testing.assert_allclose(data, values)
+# end
 
 
 @needs_gkeyll
@@ -314,6 +344,7 @@ def test_dynvec_multi_chunk_continuation(tmp_path):
   grid, data = r.load()
   np.testing.assert_allclose(grid[0], [0.0, 0.1, 0.2, 0.3, 0.4])
   assert data.shape == (5, 2)
+# end
 
 
 @needs_gkeyll
@@ -332,6 +363,8 @@ def test_dynvec_continuation_rejects_a_non_dynvec_second_chunk(tmp_path):
   r.preload()
   with pytest.raises(TypeError, match="Inconsitent data"):
     r.load()
+  # end
+# end
 
 
 def _write_legacy_v0_field(path, cells, lower, upper, data, real_type=2):
@@ -352,6 +385,8 @@ def _write_legacy_v0_field(path, cells, lower, upper, data, real_type=2):
     np.array([num_comps * doffset], dtype=dti).tofile(fh)
     np.array([int(np.prod(cells))], dtype=dti).tofile(fh)
     np.array(data, dtype=dtf).tofile(fh)
+  # end
+# end
 
 
 def test_legacy_version0_file_is_read_via_default_version_and_type(tmp_path):
@@ -366,6 +401,7 @@ def test_legacy_version0_file_is_read_via_default_version_and_type(tmp_path):
   assert r.version == 0
   np.testing.assert_allclose(grid[0], np.linspace(0.0, 4.0, 5))
   np.testing.assert_allclose(out, data)
+# end
 
 
 def _write_v1_field(path, cells, lower, upper, data, real_type=2, meta=b""):
@@ -388,6 +424,8 @@ def _write_v1_field(path, cells, lower, upper, data, real_type=2, meta=b""):
     np.array([num_comps * doffset], dtype=dti).tofile(fh)
     np.array([int(np.prod(cells))], dtype=dti).tofile(fh)
     np.array(data, dtype=dtf).tofile(fh)
+  # end
+# end
 
 
 def test_single_precision_real_type_is_read_as_float32(tmp_path):
@@ -401,6 +439,7 @@ def test_single_precision_real_type_is_read_as_float32(tmp_path):
   grid, out = r.load()
   assert r.dtf == np.dtype("f4")
   np.testing.assert_allclose(out, data)
+# end
 
 
 def test_load_raises_for_an_unsupported_file_type(tmp_path):
@@ -412,3 +451,5 @@ def test_load_raises_for_an_unsupported_file_type(tmp_path):
                      # doesn't rescue it either
   with pytest.raises(TypeError, match="not presently supported"):
     r.load()
+  # end
+# end

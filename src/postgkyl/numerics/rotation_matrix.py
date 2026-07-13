@@ -31,3 +31,4 @@ def rotation_matrix(vector: np.ndarray) -> np.ndarray:
   rot[2, 2] = -k[0]*k[2]/norm3
 
   return rot
+# end

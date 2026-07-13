@@ -44,25 +44,30 @@ def _make(grid, values, tag="default", **ctx):
   d = GData(tag=tag, ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 def _invoke(cmd, ds, **kwargs):
   """Invoke a ``@click.pass_context`` command directly against ``ds``."""
   with click.Context(cmd, obj=ds) as ctx:
     ctx.invoke(cmd, **kwargs)
+# end
   # end
 
 
 def _euler_data():
   return _make(GRID1D, _MOM5)
+# end
 
 
 def _10m_data():
   return _make(GRID1D, _MOM10)
+# end
 
 
 def _mhd_data():
   return _make(GRID1D, _MHD8)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -78,12 +83,14 @@ class TestEuler:
     _invoke(euler.command, ds, variable_name=var, gas_gamma=_GAMMA,
         num_moms=None, use=None, tag=None, label=None)
     assert ds.datasets[0].values is not None
+  # end
 
   def test_euler_density_value(self):
     ds = DataSpace(datasets=[_euler_data()])
     _invoke(euler.command, ds, variable_name="density", gas_gamma=_GAMMA,
         num_moms=None, use=None, tag=None, label=None)
     np.testing.assert_allclose(ds.datasets[0].values.flat[0], _RHO, rtol=1e-10)
+  # end
 
   def test_euler_with_tag_appends(self):
     ds = DataSpace(datasets=[_euler_data()])
@@ -92,6 +99,7 @@ class TestEuler:
     # apply() replaces the (single) working-set entry regardless of tag.
     assert ds.datasets[0].tag == "den"
     np.testing.assert_allclose(ds.datasets[0].values.flat[0], _RHO, rtol=1e-10)
+  # end
 
   def test_euler_rejects_unknown_variable(self):
     from click.testing import CliRunner
@@ -101,6 +109,8 @@ class TestEuler:
     result = CliRunner().invoke(cli, [
         "tests/test_data/twostream-field-energy.bp", "euler", "-v", "bogus"])
     assert result.exit_code != 0
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -117,12 +127,15 @@ class TestTenmoment:
     _invoke(tenmoment.command, ds, variable_name=var, gas_gamma=_GAMMA,
         use=None, tag=None, label=None)
     assert ds.datasets[0].values is not None
+  # end
 
   def test_tenmoment_with_tag(self):
     ds = DataSpace(datasets=[_10m_data()])
     _invoke(tenmoment.command, ds, variable_name="density", gas_gamma=_GAMMA,
         use=None, tag="den", label=None)
     np.testing.assert_allclose(ds.datasets[0].values.flat[0], _RHO, rtol=1e-10)
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -138,12 +151,15 @@ class TestMhd:
     _invoke(mhd.command, ds, variable_name=var, mu_0=1.0, gas_gamma=_GAMMA,
         use=None, tag=None, label=None)
     assert ds.datasets[0].values is not None
+  # end
 
   def test_mhd_density_value(self):
     ds = DataSpace(datasets=[_mhd_data()])
     _invoke(mhd.command, ds, variable_name="density", mu_0=1.0, gas_gamma=_GAMMA,
         use=None, tag=None, label=None)
     np.testing.assert_allclose(ds.datasets[0].values.flat[0], _RHO, rtol=1e-10)
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +178,8 @@ class TestVelocity:
     np.testing.assert_allclose(result.values.flat[0], 0.5, atol=1e-10)
     assert not is_active(density)
     assert not is_active(momentum)
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -171,9 +189,11 @@ class TestVelocity:
 class TestAgyro:
   def _pij(self, pxx=1.0, pyy=1.0, pzz=1.0, pxy=0.5, pxz=0.0, pyz=0.0):
     return _make(GRID1D, np.array([[pxx, pxy, pxz, pyy, pyz, pzz]]), tag="pressure")
+  # end
 
   def _bfield(self, bx=0.0, by=0.0, bz=1.0):
     return _make(GRID1D, np.array([[bx, by, bz]]), tag="field")
+  # end
 
   def test_agyro_frobenius(self):
     pij, bfield = self._pij(pxy=0.5), self._bfield()
@@ -187,6 +207,7 @@ class TestAgyro:
     # perprotate, bparrotate, bperprotate) already follows.
     assert not is_active(pij)
     assert not is_active(bfield)
+  # end
 
   def test_agyro_swisdak(self):
     ds = DataSpace(datasets=[self._pij(pxx=2.0, pyy=1.0, pzz=1.0, pxy=0.5),
@@ -194,6 +215,8 @@ class TestAgyro:
     _invoke(agyro.command, ds, measure="swisdak", pressure_tag="pressure",
         bfield_tag="field", tag="agyro", label=None)
     assert ds.datasets[-1].values is not None
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -209,12 +232,16 @@ class TestCurrent:
     assert ds.datasets[-1].tag == "current"
     assert ds.datasets[-1].values is not None
     assert not is_active(source)
+  # end
 
   def test_current_no_datasets_fails_closed(self):
     ds = DataSpace(datasets=[])
     with pytest.raises(click.UsageError):
       _invoke(current.command, ds, qbym=False, charge=None, mass=None,
           use=None, tag="current", label="J")
+    # end
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -227,11 +254,13 @@ class TestEnergetics:
     d = _make(GRID1D, np.array([[rho, rho * vx, 0.0, 0.0, E]]), tag=tag)
     d.ctx.update({"charge": -1.0, "mass": 1.0, "epsilon_0": 1.0, "mu_0": 1.0})
     return d
+  # end
 
   def _field(self):
     d = _make(GRID1D, np.array([[0.0, 0.0, 0.0, 3.0, 4.0, 0.0]]), tag="field")
     d.ctx.update({"epsilon_0": 1.0, "mu_0": 1.0})
     return d
+  # end
 
   def test_energetics_seven_components(self):
     elc, ion, field = self._species(tag="elc"), self._species(
@@ -247,6 +276,8 @@ class TestEnergetics:
     # too (src_bak's energetics deactivated all three inputs); the CLI port
     # dropped the field deactivation.
     assert not is_active(field)
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +292,7 @@ class TestRotations:
     _invoke(parrotate.command, ds, array_tag="array", rotator_tag="rotator",
         coords="0:3", tag="rotarraypar", label="rotarraypar")
     np.testing.assert_allclose(ds.datasets[-1].values, [[1.0, 0.0, 0.0]])
+  # end
 
   def test_perprotate(self):
     u = _make(GRID1D, np.array([[0.0, 1.0, 0.0]]), tag="array")
@@ -269,6 +301,7 @@ class TestRotations:
     _invoke(perprotate.command, ds, array_tag="array", rotator_tag="rotator",
         coords="0:3", tag="rotarrayperp", label="rotarrayperp")
     np.testing.assert_allclose(ds.datasets[-1].values, [[0.0, 1.0, 0.0]])
+  # end
 
   def test_bparrotate(self):
     u = _make(GRID1D, np.array([[1.0, 0.0, 0.0]]), tag="array")
@@ -277,6 +310,7 @@ class TestRotations:
     _invoke(bparrotate.command, ds, array_tag="array", field_tag="field",
         tag="arrayBpar", label="arrayBpar")
     assert ds.datasets[-1].tag == "arrayBpar"
+  # end
 
   def test_bperprotate(self):
     u = _make(GRID1D, np.array([[0.0, 1.0, 0.0]]), tag="array")
@@ -285,6 +319,8 @@ class TestRotations:
     _invoke(bperprotate.command, ds, array_tag="array", field_tag="field",
         tag="arrayBperp", label="arrayBperp")
     assert ds.datasets[-1].tag == "arrayBperp"
+  # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +334,7 @@ class TestTransformFrame:
     dat_f = _make(grid_f, np.ones((nx, nv, 1)), tag="dist")
     dat_u = _make([np.linspace(0.0, 1.0, nx + 1)], np.zeros((nx, 1)), tag="bulk")
     return dat_f, dat_u
+  # end
 
   def test_transform_frame_inplace_when_no_tag(self):
     dat_f, dat_u = self._pair()
@@ -306,6 +343,7 @@ class TestTransformFrame:
         cdim=1, tag=None, label=None)
     assert len(ds.datasets) == 2
     assert ds.datasets[0] is dat_f
+  # end
 
   def test_transform_frame_with_tag_appends(self):
     dat_f, dat_u = self._pair()
@@ -315,6 +353,8 @@ class TestTransformFrame:
     assert len(ds.datasets) == 3
     assert ds.datasets[-1].tag == "shifted"
     assert ds.datasets[-1].label == "f_shifted"
+  # end
+# end
 
 
 class TestLaguerreCompose:
@@ -324,6 +364,7 @@ class TestLaguerreCompose:
     dat_f = _make(grid_f, np.ones((n, n, 2)), tag="dist")
     dat_tm = _make([np.linspace(0.0, 1.0, n + 1)], np.ones((n, 1)) * 0.5, tag="tm")
     return dat_f, dat_tm
+  # end
 
   def test_laguerre_compose_inplace_when_no_tag(self):
     dat_f, dat_tm = self._pair()
@@ -331,6 +372,7 @@ class TestLaguerreCompose:
     _invoke(laguerre_compose.command, ds, distribution_tag="dist", tm_tag="tm",
         tag=None, label=None)
     assert len(ds.datasets) == 2
+  # end
 
   def test_laguerre_compose_with_tag_appends(self):
     dat_f, dat_tm = self._pair()
@@ -339,3 +381,5 @@ class TestLaguerreCompose:
         tag="out_f", label=None)
     assert len(ds.datasets) == 3
     assert ds.datasets[-1].tag == "out_f"
+  # end
+# end

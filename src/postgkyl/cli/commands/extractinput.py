@@ -16,7 +16,9 @@ def command(ctx, use) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   for d in pool:
     text = d.extract_input()
     click.echo(text if text else "No embedded input file!")
+# end
   # end

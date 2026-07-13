@@ -43,6 +43,7 @@ def _compare(a, b) -> bool:
     return np.array_equal(a, b)
   # end
   return a == b
+# end
 
 
 def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
@@ -95,6 +96,7 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
     # end
     try:
       out_grid, out_values = func(tmp_grid, tmp_values)
+    # end
     except Exception as err:
       raise ValueError(str(err)) from err
     # end
@@ -106,8 +108,10 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
       for key in tmp_ctx[i]:
         if key in out_ctx and _compare(tmp_ctx[i][key], out_ctx[key]):
           pass  # already copied and matches; nothing to do
+        # end
         elif key in out_ctx:
           remove_list.append(key)  # discrepancy; mark for removal
+        # end
         else:
           out_ctx[key] = tmp_ctx[i][key]
         # end
@@ -124,6 +128,7 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
     # end
   # end
   return True
+# end
 
 
 def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> bool:
@@ -142,6 +147,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
         raise ValueError(f"evaluate: unknown ctx key '{ctx_key}' on dataset f{idx}")
       # end
       grid, values = None, np.array(dat.ctx[ctx_key])
+    # end
     else:
       # select() carries the field-domain guard (".interpolate() first") for
       # every data token, comp-sliced or not.
@@ -157,11 +163,14 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
   # Numeric / axis literal fallback (mirrors the CLI token parser).
   if "(" in token or "[" in token:
     value_stack.append([eval(token)])  # noqa: S307 -- trusted expression source
+  # end
   elif ":" in token or "," in token:
     value_stack.append([str(token)])
+  # end
   else:
     try:
       value_stack.append([np.array(float(token))])
+    # end
     except ValueError:
       return False
     # end
@@ -169,11 +178,13 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
   grid_stack.append([None])
   ctx_stack.append([{}])
   return True
+# end
 
 
 def available_operators() -> list[str]:
   """The RPN operator tokens ``evaluate`` recognizes (e.g. ``'+'``, ``'sqrt'``)."""
   return sorted(ev_cmds)
+# end
 
 
 def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
@@ -234,3 +245,4 @@ def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
   result.ctx = final_ctx
   result.ctx.update(kept)
   return result
+# end

@@ -37,13 +37,16 @@ def command(ctx, guess, min_n, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("growth: no datasets to fit")
+  # end
   results = []
   for d in pool:
     try:
       res = d.fit("exp2", guess=guess, window=True, min_n=min_n, tag=tag,
           label=label)
+    # end
     except ValueError as err:
       raise click.UsageError(str(err))
     # end
@@ -56,3 +59,4 @@ def command(ctx, guess, min_n, use, tag, label) -> None:
     results.append(res)
   # end
   ctx.obj.datasets = ctx.obj.datasets + results
+# end

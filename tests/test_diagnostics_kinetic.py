@@ -27,6 +27,7 @@ def _make(grid, values, **ctx):
   d = GDataState(ctx=ctx or None)
   d.push(list(grid), values)
   return d
+# end
 
 
 class TestTransformFrameCdim1:
@@ -35,6 +36,7 @@ class TestTransformFrameCdim1:
     v_edges = np.linspace(-2.0, 2.0, nv + 1)
     values = np.ones((nx, nv, 1))
     return _make([x_edges, v_edges], values)
+  # end
 
   def test_basic_returns_unchanged_values(self):
     f = _make([np.linspace(0.0, 1.0, 4), np.linspace(-3.0, 3.0, 5)],
@@ -43,6 +45,7 @@ class TestTransformFrameCdim1:
     out = kinetic.transform_frame(f, bulk, cdim=1)
     np.testing.assert_array_equal(out.values, f.values)
     assert len(out.grid) == 2
+  # end
 
   def test_zero_velocity_leaves_grid_unshifted(self):
     v_grid = np.linspace(-2.0, 2.0, 4)
@@ -52,6 +55,7 @@ class TestTransformFrameCdim1:
     out = kinetic.transform_frame(f, bulk, cdim=1)
     np.testing.assert_array_equal(out.values, f.values)
     np.testing.assert_allclose(out.grid[1], np.tile(v_grid, (3, 1)))
+  # end
 
   def test_shifts_velocity_grid_by_bulk_velocity(self):
     v_grid = np.linspace(-2.0, 2.0, 4)
@@ -62,6 +66,7 @@ class TestTransformFrameCdim1:
     # (both 0.5 here); edge nodes see the single adjacent cell's shift.
     np.testing.assert_allclose(out.grid[1][0], v_grid + 0.5)
     np.testing.assert_allclose(out.grid[1][-1], v_grid + 0.5)
+  # end
 
   def test_matches_private_helper(self):
     f = self._distribution()
@@ -70,13 +75,16 @@ class TestTransformFrameCdim1:
     grid, values = kinetic._transform_frame(f.grid, f.values, bulk.values, 1)
     for d in range(2):
       np.testing.assert_allclose(out.grid[d], grid[d])
+    # end
     np.testing.assert_allclose(out.values, values)
+  # end
 
   def test_inplace_mutates_distribution(self):
     f = self._distribution()
     bulk = _make([f.grid[0]], np.array([[0.1], [0.2]]))
     out = kinetic.transform_frame(f, bulk, cdim=1, inplace=True)
     assert out is f
+  # end
 
   @needs_gkeyll
   def test_rejects_modal_data(self):
@@ -84,6 +92,9 @@ class TestTransformFrameCdim1:
     bulk = _make([np.array([0.0, 1.0])], np.array([[0.1]]))
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
       kinetic.transform_frame(d, bulk, cdim=1)
+    # end
+  # end
+# end
 
 
 class TestTransformFrameCdim2:
@@ -100,6 +111,7 @@ class TestTransformFrameCdim2:
     assert len(out.grid) == 3
     np.testing.assert_allclose(
         out.grid[2], np.tile(grid_f[2], (nx + 1, ny + 1, 1)))
+  # end
 
   def test_shifts_velocity_grid_by_bulk_velocity(self):
     nx, ny, nv = 2, 2, 3
@@ -115,6 +127,8 @@ class TestTransformFrameCdim2:
     # uniform.
     np.testing.assert_allclose(out.grid[2][0, 0], v_grid + 0.5)
     np.testing.assert_allclose(out.grid[2][-1, -1], v_grid + 0.5)
+  # end
+# end
 
 
 class TestTransformFrameCdim3:
@@ -130,6 +144,7 @@ class TestTransformFrameCdim3:
     assert len(out.grid) == 4
     np.testing.assert_allclose(
         out.grid[3], np.tile(grid_f[3], (nx + 1, ny + 1, nz + 1, 1)))
+  # end
 
   def test_shifts_velocity_grid_by_bulk_velocity(self):
     nx, ny, nz, nv = 2, 2, 2, 2
@@ -144,3 +159,5 @@ class TestTransformFrameCdim3:
     np.testing.assert_array_equal(out.values, values_f)
     np.testing.assert_allclose(out.grid[3][0, 0, 0], v_grid + 0.5)
     np.testing.assert_allclose(out.grid[3][-1, -1, -1], v_grid + 0.5)
+  # end
+# end

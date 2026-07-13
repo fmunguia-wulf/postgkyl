@@ -24,8 +24,11 @@ def command(ctx, index, comp, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("relchange: no datasets to compare")
+  # end
   reference = pool[index]
   apply(ctx, lambda d: pg.relchange(reference, d, comp=comp, tag=tag,
       label=label), use=use)
+# end

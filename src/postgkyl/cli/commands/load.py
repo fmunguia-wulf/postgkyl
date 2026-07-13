@@ -18,5 +18,6 @@ def command(ctx) -> None:
   for pattern in patterns:
     for fn in sorted(glob(pattern)):
       ds.datasets.append(pg.load(fn))
+# end
     # end
   # end

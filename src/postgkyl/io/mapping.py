@@ -39,6 +39,7 @@ def adjust_for_ghost_cells(lower: np.ndarray, upper: np.ndarray,
     # end
   # end
   return lower, upper, cells
+# end
 
 
 def uniform_grid(lower: np.ndarray, upper: np.ndarray,
@@ -46,6 +47,7 @@ def uniform_grid(lower: np.ndarray, upper: np.ndarray,
   """A uniform nodal grid: ``cells[d] + 1`` edges per dimension."""
   return [np.linspace(lower[d], upper[d], cells[d] + 1)
       for d in range(len(cells))]
+# end
 
 
 def c2p_grid(nodes: np.ndarray, num_dims: int) -> list:
@@ -58,3 +60,4 @@ def c2p_grid(nodes: np.ndarray, num_dims: int) -> list:
   num_coeff = num_comps / num_dims
   return [nodes[..., int(d * num_coeff):int((d + 1) * num_coeff)]
       for d in range(num_dims)]
+# end

@@ -26,15 +26,19 @@ def _analytic_num_basis(basis_type: str, ndim: int, poly_order: int) -> int:
   """Independent (from-scratch) count, NOT derived from the shim's table."""
   if basis_type == "tensor":
     return (poly_order + 1) ** ndim
+  # end
   # Serendipity: the standard tensor-product-hypercube serendipity finite
   # element counts (Arnold & Awanou 2011); 1D collapses to the full
   # polynomial space p+1, and 2D matches the textbook 4/8/12-node quad
   # elements (bilinear / quadratic-without-center / cubic serendipity).
   if ndim == 1:
     return poly_order + 1
+  # end
   if ndim == 2:
     return {0: 1, 1: 4, 2: 8, 3: 12}[poly_order]
+  # end
   raise NotImplementedError("no independent closed form wired up for this case")
+# end
 
 
 @pytest.mark.parametrize("basis_type,ndim,poly_order", [
@@ -46,6 +50,7 @@ def _analytic_num_basis(basis_type: str, ndim: int, poly_order: int) -> int:
 def test_num_basis_matches_independent_formula(basis_type, ndim, poly_order):
   got = fb.num_basis(basis_type, ndim, poly_order)
   assert got == _analytic_num_basis(basis_type, ndim, poly_order)
+# end
 
 
 def test_analytic_num_basis_helper_rejects_serendipity_3d():
@@ -54,6 +59,8 @@ def test_analytic_num_basis_helper_rejects_serendipity_3d():
   the helper's own guard directly."""
   with pytest.raises(NotImplementedError, match="no independent closed form"):
     _analytic_num_basis("serendipity", 3, 1)
+  # end
+# end
 
 
 def test_get_basis_caches_the_same_object():
@@ -63,12 +70,14 @@ def test_get_basis_caches_the_same_object():
   # Case-insensitivity shares the same cache entry.
   c = fb.get_basis("SERENDIPITY", 2, 1)
   assert a is c
+# end
 
 
 def test_basis_repr():
   b = fb.get_basis("serendipity", 1, 1)
   r = repr(b)
   assert "serendipity" in r and "ndim=1" in r and "p=1" in r and "N=2" in r
+# end
 
 
 # --------------------------------------------------------- boundary guards
@@ -89,6 +98,8 @@ def test_unsupported_combinations_raise_cleanly(basis_type, ndim, poly_order):
   a clean ValueError, not a crash, is exactly what is being tested here."""
   with pytest.raises(ValueError):
     fb.get_basis(basis_type, ndim, poly_order)
+  # end
+# end
 
 
 @pytest.mark.parametrize("basis_type,ndim,poly_order", [
@@ -97,6 +108,7 @@ def test_unsupported_combinations_raise_cleanly(basis_type, ndim, poly_order):
 def test_boundary_combinations_that_ARE_supported(basis_type, ndim, poly_order):
   b = fb.get_basis(basis_type, ndim, poly_order)
   assert (b.ndim, b.poly_order) == (ndim, poly_order)
+# end
 
 
 # --------------------------------------------------------------- eval_matrix
@@ -106,6 +118,8 @@ def test_eval_matrix_at_cell_center_is_the_constant_mode():
   for ndim in (1, 2, 3):
     m = fb.eval_matrix("serendipity", ndim, 1, np.zeros((1, ndim)))
     assert np.isclose(m[0, 0], (1.0 / np.sqrt(2.0)) ** ndim)
+  # end
+# end
 
 
 def test_eval_matrix_reproduces_an_in_basis_polynomial():
@@ -117,6 +131,7 @@ def test_eval_matrix_reproduces_an_in_basis_polynomial():
 
   def f(z):
     return 1.0 + 2.0 * z + 3.0 * z ** 2
+  # end
 
   fnodal = f(nodes)
   n2m = fb.nodal_to_modal_matrix(basis_type, ndim, p)
@@ -126,6 +141,7 @@ def test_eval_matrix_reproduces_an_in_basis_polynomial():
   m = fb.eval_matrix(basis_type, ndim, p, probe)
   got = m @ coeffs
   np.testing.assert_allclose(got, f(probe[:, 0]), atol=1e-12)
+# end
 
 
 def test_nodal_to_modal_and_modal_to_nodal_are_exact_inverses():
@@ -136,6 +152,8 @@ def test_nodal_to_modal_and_modal_to_nodal_are_exact_inverses():
     nb = fb.num_basis(basis_type, ndim, p)
     np.testing.assert_allclose(n2m @ m2n, np.eye(nb), atol=1e-12)
     np.testing.assert_allclose(m2n @ n2m, np.eye(nb), atol=1e-12)
+  # end
+# end
 
 
 def test_modal_quad_round_trip_exact_for_in_degree_polynomials():
@@ -153,6 +171,7 @@ def test_modal_quad_round_trip_exact_for_in_degree_polynomials():
   q2m = fb.quad_to_modal_matrix(basis_type, ndim, p, num_quad)
   back = q2m @ (m2q @ coeffs)
   np.testing.assert_allclose(back, coeffs, atol=1e-12)
+# end
 
 
 def test_interpolation_matrix_layout_matches_fortran_tensor_order():
@@ -165,6 +184,8 @@ def test_interpolation_matrix_layout_matches_fortran_tensor_order():
     idx = np.unravel_index(i, (n, n), order="F")
     expected = [pts_1d[idx[0]], pts_1d[idx[1]]]
     np.testing.assert_allclose(pts_2d[i], expected)
+  # end
+# end
 
 
 def test_interpolation_matrix_is_cached_and_read_only():
@@ -173,18 +194,23 @@ def test_interpolation_matrix_is_cached_and_read_only():
   assert m1 is m2
   with pytest.raises(ValueError):
     m1[0, 0] = 5.0
+  # end
+# end
 
 
 def test_gauss_quad_weights_sum_to_domain_volume():
   for ndim in (1, 2, 3):
     _, w = fb.gauss_quad(ndim, 3)
     assert np.isclose(w.sum(), 2.0 ** ndim)
+  # end
+# end
 
 
 def test_node_coords_shape():
   coords = fb.node_coords("serendipity", 2, 1)
   nb = fb.num_basis("serendipity", 2, 1)
   assert coords.shape == (nb, 2)
+# end
 
 
 # --------------------------------------------------------------- hybrid/gkhybrid
@@ -201,6 +227,7 @@ def test_hybrid_num_basis_matches_gkeyll_kernel_tables(
   b = fb.get_basis(basis_type, ndim, 1)
   assert (b.ndim, b.poly_order, b.num_basis, b.id) == (
       ndim, 1, expected_num_basis, basis_type)
+# end
 
 
 @pytest.mark.parametrize("basis_type,ndim,poly_order", [
@@ -215,6 +242,8 @@ def test_hybrid_unsupported_combinations_raise_cleanly(
     basis_type, ndim, poly_order):
   with pytest.raises(ValueError):
     fb.get_basis(basis_type, ndim, poly_order)
+  # end
+# end
 
 
 def test_hybrid_and_gkhybrid_are_distinct_bases_at_the_same_ndim():
@@ -224,6 +253,7 @@ def test_hybrid_and_gkhybrid_are_distinct_bases_at_the_same_ndim():
   gkhyb = fb.get_basis("gkhybrid", 2, 1)
   assert hyb.id == "hybrid" and gkhyb.id == "gkhybrid"
   assert hyb is not gkhyb
+# end
 
 
 @pytest.mark.parametrize("basis_type,ndim", [
@@ -237,3 +267,4 @@ def test_hybrid_nodal_to_modal_and_modal_to_nodal_are_exact_inverses(
   nb = fb.num_basis(basis_type, ndim, 1)
   np.testing.assert_allclose(n2m @ m2n, np.eye(nb), atol=1e-12)
   np.testing.assert_allclose(m2n @ n2m, np.eye(nb), atol=1e-12)
+# end

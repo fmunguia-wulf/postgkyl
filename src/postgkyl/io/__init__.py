@@ -63,6 +63,7 @@ def read(file_name: str, ctx: dict | None = None, **kwargs):
   # end
   raise NameError(
       f"'{file_name}' cannot be read with any known reader: {list(_READERS)}")
+# end
 
 
 __all__ = ["read", "save", "mapping", "GkylCReader", "GkylReader",

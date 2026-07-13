@@ -23,3 +23,4 @@ def command(ctx, name, species, idx, poly_order, tag, label) -> None:
   out = pg.diagnostics.pkpm.load_pkpm(name, species, idx, poly_order, tag=tag,
       label=label)
   ctx.obj.datasets.append(out)
+# end

@@ -28,4 +28,5 @@ def command(ctx, distribution_tag, bulk_tag, cdim, tag, label) -> None:
       cdim=cdim, inplace=(tag is None), tag=tag, label=label)
   if tag is not None:
     ctx.obj.datasets.append(result)
+# end
   # end

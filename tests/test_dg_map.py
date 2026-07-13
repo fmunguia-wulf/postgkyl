@@ -44,6 +44,7 @@ def _project_1d(fn, lower, upper, cells, basis_type, poly_order):
   nodal_z = centers[:, None] + 0.5 * dz * node_eta[None, :]  # (cells, nb)
   nodal_vals = fn(nodal_z)
   return nodal_vals @ n2m.T, nodal_vals  # (modal, nodal) both (cells, nb)
+# end
 
 
 def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
@@ -61,6 +62,7 @@ def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
   nodal_vals = fn(node_phys[..., 0], node_phys[..., 1])  # (*cells, nb)
   modal = np.einsum("ij,...j->...i", n2m, nodal_vals)
   return modal, nodal_vals
+# end
 
 
 # --------------------------------------------------------------------- 1-D
@@ -71,6 +73,7 @@ def test_eval_at_points_identity_map_1d_is_exact_to_machine_precision():
   got = dg.map.eval_at_points(modal, [lower], [upper], [cells],
       targets[:, None], basis_type="serendipity", poly_order=1)
   np.testing.assert_allclose(got, targets, atol=1e-12)
+# end
 
 
 def test_map_grid_identity_1d_matches_target_axis():
@@ -84,6 +87,7 @@ def test_map_grid_identity_1d_matches_target_axis():
   assert len(out) == 1
   assert out[0].shape == target_axes[0].shape  # m == 1 stays 1-D
   np.testing.assert_allclose(out[0], target_axes[0], atol=1e-12)
+# end
 
 
 def test_eval_at_points_in_basis_quadratic_is_exact_at_edges():
@@ -96,6 +100,7 @@ def test_eval_at_points_in_basis_quadratic_is_exact_at_edges():
   got = dg.map.eval_at_points(modal, [lower], [upper], [cells],
       targets[:, None], basis_type="serendipity", poly_order=2)
   np.testing.assert_allclose(got, fn(targets), atol=1e-12)
+# end
 
 
 def test_eval_at_points_rejects_cells_mismatch():
@@ -103,6 +108,8 @@ def test_eval_at_points_rejects_cells_mismatch():
   with pytest.raises(ValueError, match="does not match cells"):
     dg.map.eval_at_points(modal, [0.0], [1.0], [3],  # wrong cell count
         np.array([[0.5]]), basis_type="serendipity", poly_order=1)
+  # end
+# end
 
 
 def test_eval_at_points_rejects_points_dim_mismatch():
@@ -111,6 +118,8 @@ def test_eval_at_points_rejects_points_dim_mismatch():
     dg.map.eval_at_points(modal, [0.0], [1.0], [2],
         np.array([[0.5, 0.5]]),  # last axis length 2, expected 1
         basis_type="serendipity", poly_order=1)
+  # end
+# end
 
 
 def test_eval_at_points_nodal_basis_path_matches_modal():
@@ -126,6 +135,7 @@ def test_eval_at_points_nodal_basis_path_matches_modal():
       targets[:, None], basis_type="serendipity", poly_order=1, modal=False)
   np.testing.assert_allclose(got_nodal, got_modal, atol=1e-12)
   np.testing.assert_allclose(got_nodal, targets, atol=1e-12)
+# end
 
 
 def test_map_grid_nodal_basis_map_file():
@@ -137,6 +147,7 @@ def test_map_grid_nodal_basis_map_file():
       is_modal=False)
   out = dg.map_grid(nodal, map_ctx, target_axes)
   np.testing.assert_allclose(out[0], target_axes[0], atol=1e-12)
+# end
 
 
 # --------------------------------------------------------------------- 2-D
@@ -159,6 +170,8 @@ def test_map_grid_identity_2d_curvilinear_matches_meshgrid():
   for d in range(2):
     assert out[d].shape == (5, 7)  # shape of the axes it replaces
     np.testing.assert_allclose(out[d], expected[d], atol=1e-12)
+  # end
+# end
 
 
 def test_map_grid_2d_rotation_is_exact_non_separable():
@@ -182,3 +195,4 @@ def test_map_grid_2d_rotation_is_exact_non_separable():
   z0, z1 = np.meshgrid(*target_axes, indexing="ij")
   np.testing.assert_allclose(out[0], fn0(z0, z1), atol=1e-12)
   np.testing.assert_allclose(out[1], fn1(z0, z1), atol=1e-12)
+# end

@@ -53,6 +53,7 @@ def save(data, out_name: str = "",
     src = getattr(data, "_file_name", "") or ""
     stem = src.split(".", maxsplit=1)[0].strip("_") if src else "gdata"
     out_name = f"{stem}_mod.{extension}"
+  # end
   elif out_name.split(".")[-1] != extension:
     out_name += "." + extension
   # end
@@ -66,16 +67,21 @@ def save(data, out_name: str = "",
   if extension == "gkyl":
     ctx = getattr(data, "ctx", {}) or {}
     _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx)
+  # end
   elif extension == "npy":
     np.save(out_name, np.asarray(values).squeeze())
+  # end
   elif extension == "txt":
     _write_txt(out_name, data, num_dims, num_comps, num_cells, values)
+  # end
   elif extension == "vtk":
     _write_vtk(out_name, data, num_dims, num_cells, values)
+  # end
   else:
     raise ValueError(f"Unsupported write extension '{extension}'")
   # end
   return out_name
+# end
 
 
 def _build_meta(ctx: dict) -> dict:
@@ -91,6 +97,7 @@ def _build_meta(ctx: dict) -> dict:
     meta[_CTX_TO_META_KEY.get(key, key)] = _to_msgpack_safe(val)
   # end
   return meta
+# end
 
 
 def _to_msgpack_safe(val):
@@ -101,6 +108,7 @@ def _to_msgpack_safe(val):
     return val.tolist()
   # end
   return val
+# end
 
 
 def _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx) -> None:
@@ -124,6 +132,8 @@ def _write_gkyl(out_name, num_dims, num_comps, num_cells, lo, up, values, ctx) -
     np.array([num_comps * 8], dtype=dti).tofile(fh, sep="")  # elem_sz
     np.array([int(np.prod(num_cells))], dtype=dti).tofile(fh, sep="")  # asize
     np.array(values, dtype=dtf).tofile(fh, sep="")
+  # end
+# end
 
 
 def _write_txt(out_name, data, num_dims, num_comps, num_cells, values) -> None:
@@ -144,6 +154,8 @@ def _write_txt(out_name, data, num_dims, num_comps, num_cells, values) -> None:
       cells = [f"{grid[d][idxs[d]]:.15e}" for d in range(num_dims)]
       comps = [f"{values[tuple(idxs)][c]:.15e}" for c in range(num_comps)]
       fh.write(", ".join(cells + comps) + "\n")
+  # end
+# end
     # end
 
 
@@ -164,9 +176,11 @@ def _write_vtk(out_name, data, num_dims, num_cells, values) -> None:
     x = n_grid[0]
     y = np.zeros_like(x)
     z = fval
+  # end
   elif num_dims == 2:
     x, y = n_grid
     z = fval
+  # end
   else:
     x, y, z = n_grid
   # end
@@ -175,6 +189,7 @@ def _write_vtk(out_name, data, num_dims, num_cells, values) -> None:
   grid3d["f_raw"] = fval.ravel(order="F")
   grid3d.save(out_name)
   _update_vtk_series_file(data, out_name)
+# end
 
 
 def _update_vtk_series_file(data, out_name: str) -> None:
@@ -187,6 +202,7 @@ def _update_vtk_series_file(data, out_name: str) -> None:
   match = re.match(r"^(.*?)(?:[_-]?(\d+))$", stem)
   if match and match.group(1):
     series_stem = match.group(1).rstrip("_-") or stem
+  # end
   else:
     series_stem = stem
   # end
@@ -200,9 +216,11 @@ def _update_vtk_series_file(data, out_name: str) -> None:
     try:
       with open(series_path, "r", encoding="utf-8") as fh:
         loaded = json.load(fh)
+      # end
       if isinstance(loaded, dict) and isinstance(loaded.get("files"), list):
         series_data = loaded
         series_data.setdefault("file-series-version", "1.0")
+    # end
       # end
     except (OSError, json.JSONDecodeError):
       pass
@@ -225,3 +243,5 @@ def _update_vtk_series_file(data, out_name: str) -> None:
   with open(series_path, "w", encoding="utf-8") as fh:
     json.dump(series_data, fh, indent=2)
     fh.write("\n")
+  # end
+# end

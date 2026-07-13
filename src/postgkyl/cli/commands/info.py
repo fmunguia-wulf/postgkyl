@@ -13,4 +13,5 @@ def command(ctx) -> None:
   """Print a summary of each active dataset."""
   for i, d in enumerate(active_datasets(ctx)):
     d.info(index=i)
+# end
   # end

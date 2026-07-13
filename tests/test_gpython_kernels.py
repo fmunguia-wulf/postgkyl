@@ -31,6 +31,7 @@ def _smooth_field(basis_type, ndim, p, cells, rng, shift=0.0):
   coeffs = rng.normal(scale=0.05, size=(cells, nb))
   coeffs[:, 0] += shift
   return GkylArray.from_numpy(coeffs)
+# end
 
 
 # --------------------------------------------------------------- weak algebra
@@ -44,6 +45,7 @@ def test_weak_mul_div_are_inverses_on_smooth_fields(ndim, p):
   ab = k.weak_mul(basis_type, ndim, p, a, b)
   back = k.weak_div(basis_type, ndim, p, ab, b)
   np.testing.assert_allclose(back.view(), a.view(), atol=1e-10)
+# end
 
 
 def test_weak_inv_matches_weak_div_by_one():
@@ -60,6 +62,7 @@ def test_weak_inv_matches_weak_div_by_one():
   expect = np.zeros_like(back.view())
   expect[:, 0] = np.sqrt(2.0)
   np.testing.assert_allclose(back.view(), expect, atol=1e-10)
+# end
 
 
 def test_weak_mul_rejects_ncomp_not_a_multiple_of_num_basis():
@@ -68,6 +71,8 @@ def test_weak_mul_rejects_ncomp_not_a_multiple_of_num_basis():
   b = GkylArray.alloc(3, 4)
   with pytest.raises(ValueError, match="not a multiple"):
     k.weak_mul(basis_type, ndim, p, a, b)
+  # end
+# end
 
 
 def test_weak_mul_rejects_shape_mismatch():
@@ -76,6 +81,8 @@ def test_weak_mul_rejects_shape_mismatch():
   b = GkylArray.alloc(2, 5)  # different size
   with pytest.raises(ValueError, match="shape mismatch"):
     k.weak_mul(basis_type, ndim, p, a, b)
+  # end
+# end
 
 
 def test_weak_ops_reject_unknown_basis_type():
@@ -83,6 +90,8 @@ def test_weak_ops_reject_unknown_basis_type():
   b = GkylArray.alloc(2, 4)
   with pytest.raises(NotImplementedError, match="serendipity"):
     k.weak_mul("bogus", 1, 1, a, b)
+  # end
+# end
 
 
 @pytest.mark.parametrize("ndim", [4, 5, 6])
@@ -94,8 +103,11 @@ def test_weak_mul_div_refuse_ndim_above_3(ndim):
   b = GkylArray.alloc(basis.num_basis, 3)
   with pytest.raises(NotImplementedError, match="ndim 1..3"):
     k.weak_mul("serendipity", ndim, 1, a, b)
+  # end
   with pytest.raises(NotImplementedError, match="ndim 1..3"):
     k.weak_div("serendipity", ndim, 1, a, b)
+  # end
+# end
 
 
 def test_weak_mul_div_refuse_tensor_poly_order_above_table():
@@ -104,12 +116,16 @@ def test_weak_mul_div_refuse_tensor_poly_order_above_table():
   b = GkylArray.alloc(16, 3)
   with pytest.raises(NotImplementedError, match="poly_order 0..2"):
     k.weak_mul("tensor", 2, 3, a, b)
+  # end
+# end
 
 
 def test_weak_inv_rejects_non_p1():
   a = GkylArray.alloc(2, 3)
   with pytest.raises(NotImplementedError, match="p=1 only"):
     k.weak_inv("serendipity", 1, 2, a)
+  # end
+# end
 
 
 @pytest.mark.parametrize("ndim", [4, 5, 6])
@@ -120,6 +136,8 @@ def test_weak_inv_refuses_ndim_above_3(ndim):
   a = GkylArray.alloc(basis.num_basis, 3)
   with pytest.raises(NotImplementedError, match="ndim"):
     k.weak_inv("serendipity", ndim, 1, a)
+  # end
+# end
 
 
 # --------------------------------------------------- conf-space x phase-space
@@ -140,6 +158,7 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_hybrid():
   out = k.weak_mul_conf_phase("serendipity", 1, "hybrid", 2, 1, conf_cells,
       phase_cells, cop, pop)
   np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+# end
 
 
 def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_gkhybrid():
@@ -157,6 +176,7 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_gkhybrid():
   out = k.weak_mul_conf_phase("serendipity", 1, "gkhybrid", 3, 1, conf_cells,
       phase_cells, cop, pop)
   np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+# end
 
 
 def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_serendipity():
@@ -175,6 +195,7 @@ def test_mul_conf_phase_by_a_unit_constant_conf_field_is_identity_serendipity():
   out = k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 2,
       conf_cells, phase_cells, cop, pop)
   np.testing.assert_allclose(out.view(), pop_coeffs, atol=1e-10)
+# end
 
 
 def test_mul_conf_phase_rejects_ncomp_mismatch():
@@ -183,6 +204,8 @@ def test_mul_conf_phase_rejects_ncomp_mismatch():
   with pytest.raises(ValueError, match="single-field only"):
     k.weak_mul_conf_phase("serendipity", 1, "hybrid", 2, 1, [3], [3, 4],
         cop, pop)
+  # end
+# end
 
 
 def test_mul_conf_phase_rejects_non_serendipity_conf_for_hybrid():
@@ -190,6 +213,8 @@ def test_mul_conf_phase_rejects_non_serendipity_conf_for_hybrid():
   pop = GkylArray.alloc(6, 12)
   with pytest.raises(NotImplementedError, match="serendipity conf basis"):
     k.weak_mul_conf_phase("tensor", 1, "hybrid", 2, 1, [3], [3, 4], cop, pop)
+  # end
+# end
 
 
 def test_mul_conf_phase_rejects_mismatched_ser_ten_families():
@@ -198,6 +223,8 @@ def test_mul_conf_phase_rejects_mismatched_ser_ten_families():
   with pytest.raises(NotImplementedError, match="phase basis type alone"):
     k.weak_mul_conf_phase("tensor", 1, "serendipity", 2, 1, [3], [3, 5],
         cop, pop)
+  # end
+# end
 
 
 def test_mul_conf_phase_rejects_kernel_table_gap():
@@ -209,6 +236,8 @@ def test_mul_conf_phase_rejects_kernel_table_gap():
   with pytest.raises(NotImplementedError, match="no serendipity conf\\*phase"):
     k.weak_mul_conf_phase("serendipity", 1, "serendipity", 5, 1,
         [2], [2, 2, 2, 2, 2], cop, pop)
+  # end
+# end
 
 
 def test_mul_conf_phase_rejects_cells_array_size_mismatch():
@@ -217,6 +246,8 @@ def test_mul_conf_phase_rejects_cells_array_size_mismatch():
   with pytest.raises(ValueError, match="incompatible"):
     k.weak_mul_conf_phase("serendipity", 1, "serendipity", 2, 1, [3], [3, 5],
         cop, pop)
+  # end
+# end
 
 
 def test_mul_conf_phase_rejects_phase_ndim_not_exceeding_conf_ndim():
@@ -225,6 +256,8 @@ def test_mul_conf_phase_rejects_phase_ndim_not_exceeding_conf_ndim():
   with pytest.raises(ValueError, match="must exceed"):
     k.weak_mul_conf_phase("serendipity", 2, "serendipity", 2, 1, [2, 2],
         [2, 2], cop, pop)
+  # end
+# end
 
 
 # ---------------------------------------------------------- coefficient ops
@@ -234,6 +267,7 @@ def test_lincomb_matches_numpy():
   b = GkylArray.from_numpy(rng.normal(size=(5, 3)))
   out = k.lincomb(2.0, a, -1.5, b)
   np.testing.assert_allclose(out.view(), 2.0 * a.view() - 1.5 * b.view())
+# end
 
 
 def test_lincomb_rejects_shape_mismatch():
@@ -241,6 +275,8 @@ def test_lincomb_rejects_shape_mismatch():
   b = GkylArray.alloc(3, 4)
   with pytest.raises(ValueError, match="shape mismatch"):
     k.lincomb(1.0, a, 1.0, b)
+  # end
+# end
 
 
 def test_scale_matches_numpy_and_does_not_mutate_input():
@@ -249,6 +285,7 @@ def test_scale_matches_numpy_and_does_not_mutate_input():
   out = k.scale(a, -2.0)
   np.testing.assert_allclose(out.view(), -2.0 * original)
   np.testing.assert_allclose(a.view(), original)
+# end
 
 
 def test_shiftc_matches_numpy_and_does_not_mutate_input():
@@ -258,6 +295,7 @@ def test_shiftc_matches_numpy_and_does_not_mutate_input():
   expect[:, 1] = 7.0
   np.testing.assert_allclose(out.view(), expect)
   np.testing.assert_allclose(a.view(), np.zeros((3, 2)))
+# end
 
 
 # ---------------------------------------------------------------- reductions
@@ -266,6 +304,7 @@ def test_reduce_of_constant_coefficients():
   np.testing.assert_allclose(k.reduce(a, k.GKYL_SUM), [12.0, 12.0])
   np.testing.assert_allclose(k.reduce(a, k.GKYL_MIN), [3.0, 3.0])
   np.testing.assert_allclose(k.reduce(a, k.GKYL_MAX), [3.0, 3.0])
+# end
 
 
 def test_dg_reduce_of_constant_field_min_max_match_the_constant():
@@ -278,6 +317,7 @@ def test_dg_reduce_of_constant_field_min_max_match_the_constant():
   a = GkylArray.from_numpy(coeffs)
   assert np.isclose(k.dg_reduce(basis_type, ndim, p, a, 0, "min"), 3.0)
   assert np.isclose(k.dg_reduce(basis_type, ndim, p, a, 0, "max"), 3.0)
+# end
 
 
 def test_dg_reduce_sum_scales_with_cell_count():
@@ -292,11 +332,13 @@ def test_dg_reduce_sum_scales_with_cell_count():
     coeffs = np.zeros((ncells, nb))
     coeffs[:, 0] = value * np.sqrt(2.0)
     return GkylArray.from_numpy(coeffs)
+  # end
 
   small = k.dg_reduce(basis_type, ndim, p, const_field(3, 3.0), 0, "sum")
   big = k.dg_reduce(basis_type, ndim, p, const_field(6, 3.0), 0, "sum")
   assert small > 0
   assert np.isclose(big, 2.0 * small)
+# end
 
 
 def test_dg_reduce_min_max_at_the_gauss_legendre_nodes_for_a_linear_field():
@@ -313,14 +355,18 @@ def test_dg_reduce_min_max_at_the_gauss_legendre_nodes_for_a_linear_field():
   node = 1.0 / np.sqrt(3.0)
   assert np.isclose(k.dg_reduce(basis_type, ndim, p, a, 0, "min"), 3.0 - 2.0 * node)
   assert np.isclose(k.dg_reduce(basis_type, ndim, p, a, 0, "max"), 3.0 + 2.0 * node)
+# end
 
 
 def test_dg_reduce_rejects_bad_op_and_bad_comp():
   a = GkylArray.alloc(2, 3)
   with pytest.raises(ValueError, match="op"):
     k.dg_reduce("serendipity", 1, 1, a, 0, "bogus")
+  # end
   with pytest.raises(ValueError, match="comp"):
     k.dg_reduce("serendipity", 1, 1, a, 5, "sum")
+  # end
+# end
 
 
 # ----------------------------------------------------------------- integrate
@@ -335,6 +381,7 @@ def test_integrate_constant_field_equals_constant_times_volume():
           "cells": np.array([cells])}
   result = k.integrate(grid, basis_type, p, a)
   np.testing.assert_allclose(result, [2.0 * 2.0])  # value * volume
+# end
 
 
 def test_integrate_abs_and_sq_ops():
@@ -351,6 +398,7 @@ def test_integrate_abs_and_sq_ops():
   np.testing.assert_allclose(none, [-6.0])
   np.testing.assert_allclose(absr, [6.0])
   np.testing.assert_allclose(sq, [12.0])  # (-2)^2 * volume(3) = 12
+# end
 
 
 def test_integrate_factor_scales_the_result():
@@ -363,6 +411,7 @@ def test_integrate_factor_scales_the_result():
           "cells": np.array([2])}
   result = k.integrate(grid, basis_type, p, a, factor=10.0)
   np.testing.assert_allclose(result, [20.0])
+# end
 
 
 def test_integrate_rejects_bad_op():
@@ -370,6 +419,8 @@ def test_integrate_rejects_bad_op():
   grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [2]}
   with pytest.raises(ValueError, match="op"):
     k.integrate(grid, "serendipity", 1, a, op="bogus")
+  # end
+# end
 
 
 def test_integrate_rejects_unsupported_basis_or_poly_order():
@@ -377,8 +428,11 @@ def test_integrate_rejects_unsupported_basis_or_poly_order():
   grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [2]}
   with pytest.raises(NotImplementedError):
     k.integrate(grid, "tensor", 1, a)
+  # end
   with pytest.raises(NotImplementedError):
     k.integrate(grid, "serendipity", 3, a)  # p3 unsupported by the kernel set
+  # end
+# end
 
 
 def test_integrate_rejects_ndim_above_3():
@@ -388,6 +442,8 @@ def test_integrate_rejects_ndim_above_3():
           "cells": np.array([1, 1, 1, 6])}
   with pytest.raises(NotImplementedError, match="ndim 1-3"):
     k.integrate(grid, "serendipity", 1, a)
+  # end
+# end
 
 
 def test_integrate_rejects_grid_array_mismatch():
@@ -397,6 +453,8 @@ def test_integrate_rejects_grid_array_mismatch():
           "cells": np.array([5])}  # 5 != a.size (4)
   with pytest.raises(ValueError, match="do not cover"):
     k.integrate(grid, basis_type, p, a)
+  # end
+# end
 
 
 # ------------------------------------------------------------------ average
@@ -406,6 +464,7 @@ def _const_field(basis_type, ndim, p, cells, value):
   coeffs = np.zeros((int(np.prod(cells)), nb))
   coeffs[:, 0] = value / b0
   return GkylArray.from_numpy(coeffs)
+# end
 
 
 def test_array_average_partial_reduction_of_constant_field_is_exact():
@@ -423,6 +482,7 @@ def test_array_average_partial_reduction_of_constant_field_is_exact():
   expect = np.zeros((cells[0], gpython.basis.num_basis(basis_type, 1, p)))
   expect[:, 0] = 3.0 / (2.0 ** (-1 / 2.0))
   np.testing.assert_allclose(out.view(), expect, atol=1e-10)
+# end
 
 
 def test_array_average_full_reduction_unweighted_writes_a_raw_value():
@@ -441,6 +501,7 @@ def test_array_average_full_reduction_unweighted_writes_a_raw_value():
       avg_dim=[1], a=a)
   np.testing.assert_allclose(out.view()[0, 0], 3.0, atol=1e-10)
   np.testing.assert_allclose(out.view()[0, 1:], 0.0, atol=1e-10)
+# end
 
 
 def test_array_average_full_reduction_weighted_by_a_uniform_weight_matches_integrate():
@@ -458,6 +519,7 @@ def test_array_average_full_reduction_weighted_by_a_uniform_weight_matches_integ
       avg_dim=[1], a=a, weight=w)
   b0 = 2.0 ** (-1 / 2.0)
   np.testing.assert_allclose(out.view()[0, 0] * b0, value, atol=1e-10)
+# end
 
 
 def test_array_average_rejects_unsupported_basis_or_poly_order():
@@ -465,8 +527,11 @@ def test_array_average_rejects_unsupported_basis_or_poly_order():
   grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [4]}
   with pytest.raises(NotImplementedError, match="serendipity p1-p2"):
     k.array_average(grid, "tensor", 1, 1, [1], [1], a)
+  # end
   with pytest.raises(NotImplementedError, match="serendipity p1-p2"):
     k.array_average(grid, "serendipity", 3, 1, [1], [1], a)
+  # end
+# end
 
 
 def test_array_average_rejects_ndim_above_3():
@@ -476,6 +541,8 @@ def test_array_average_rejects_ndim_above_3():
           "cells": np.array([1, 1, 1, 6])}
   with pytest.raises(NotImplementedError, match="ndim 1-3"):
     k.array_average(grid, "serendipity", 1, 1, [1, 1, 1, 6], [1, 0, 0, 0], a)
+  # end
+# end
 
 
 def test_array_average_rejects_ncomp_not_single_field():
@@ -484,6 +551,8 @@ def test_array_average_rejects_ncomp_not_single_field():
   grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [4]}
   with pytest.raises(ValueError, match="single-field only"):
     k.array_average(grid, basis_type, p, 1, [1], [1], a)
+  # end
+# end
 
 
 def test_array_average_rejects_weight_shape_mismatch():
@@ -494,6 +563,8 @@ def test_array_average_rejects_weight_shape_mismatch():
   grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": np.array(cells)}
   with pytest.raises(ValueError, match="weight"):
     k.array_average(grid, basis_type, p, 1, [1], [1], a, weight=w)
+  # end
+# end
 
 
 def test_array_average_rejects_grid_array_mismatch():
@@ -503,3 +574,5 @@ def test_array_average_rejects_grid_array_mismatch():
           "cells": np.array([5])}  # 5 != a.size (4)
   with pytest.raises(ValueError, match="do not cover"):
     k.array_average(grid, basis_type, p, 1, [1], [1], a)
+  # end
+# end

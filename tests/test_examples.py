@@ -47,6 +47,7 @@ def _extract_cli_commands(markdown_path):
       line = line.rstrip()
       if not line:
         continue
+      # end
       if line.endswith("\\"):
         pending.append(line[:-1])
         continue
@@ -60,6 +61,7 @@ def _extract_cli_commands(markdown_path):
     # end
   # end
   return commands
+# end
 
 
 CLI_COMMANDS = _extract_cli_commands(TUTORIAL)
@@ -75,6 +77,8 @@ class TestTutorialScripts:
   def test_script_runs_clean(self, script, tmp_path, monkeypatch):
     monkeypatch.setenv("PGKYL_EXAMPLE_OUTPUT", str(tmp_path))
     runpy.run_path(script, run_name="__main__")
+  # end
+# end
 
 
 class TestCliTutorial:
@@ -87,6 +91,7 @@ class TestCliTutorial:
     # leave the parametrized test below with zero cases -- a green suite
     # that covers nothing.
     assert len(CLI_COMMANDS) >= 8
+  # end
 
   @needs_gkeyll
   @pytest.mark.parametrize("command", CLI_COMMANDS)
@@ -100,3 +105,5 @@ class TestCliTutorial:
     result = CliRunner().invoke(cli, shlex.split(command))
     assert result.exit_code == 0, (
         f"`pgkyl {command}` failed:\n{result.output}\n{result.exception}")
+  # end
+# end

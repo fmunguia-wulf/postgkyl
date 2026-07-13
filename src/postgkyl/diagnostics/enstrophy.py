@@ -42,6 +42,7 @@ class EnstrophyTraces:
 
   enstrophy: np.ndarray
   incompressible_enstrophy: np.ndarray
+# end
 
 
 def _enstrophy_terms(rho: np.ndarray, px: np.ndarray, py: np.ndarray,
@@ -86,6 +87,7 @@ def _enstrophy_terms(rho: np.ndarray, px: np.ndarray, py: np.ndarray,
   incompressible_enstrophy = np.sum(incom_mag, axis=(0, 1, 2)) * dx * dy * dz
 
   return enstrophy, incompressible_enstrophy
+# end
 
 
 def enstrophy(
@@ -128,3 +130,4 @@ def enstrophy(
 
   return EnstrophyTraces(enstrophy=enstrophy_trace,
       incompressible_enstrophy=incompressible_trace)
+# end

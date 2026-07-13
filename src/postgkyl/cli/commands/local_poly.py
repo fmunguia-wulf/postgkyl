@@ -32,3 +32,4 @@ def command(ctx, basis, poly_order, npoints, use, tag, label) -> None:
   """
   apply(ctx, lambda d: d.local_poly(basis=basis, p=poly_order, npoints=npoints,
       tag=tag, label=label), use=use)
+# end

@@ -47,13 +47,16 @@ class DatasetGroup:
       # end
     # end
     self._datasets: list = members
+  # end
 
   # ------------------------------------------------------------ sequence
   def __iter__(self):
     return iter(self._datasets)
+  # end
 
   def __len__(self) -> int:
     return len(self._datasets)
+  # end
 
   def __getitem__(self, index):
     """Index or slice the group.
@@ -70,6 +73,7 @@ class DatasetGroup:
     """
     result = self._datasets[index]
     return DatasetGroup(result) if isinstance(index, slice) else result
+  # end
 
   @property
   def datasets(self) -> list:
@@ -82,6 +86,7 @@ class DatasetGroup:
       list: A new ``list`` of the members, in order.
     """
     return list(self._datasets)
+  # end
 
   # ------------------------------------------------------------ combining
   def with_(self, *others) -> "DatasetGroup":
@@ -101,9 +106,12 @@ class DatasetGroup:
       the flattened ``others``.
     """
     return DatasetGroup(self._datasets + list(others))
+  # end
 
   __and__ = with_
 
   # ---------------------------------------------------------------- repr
   def __repr__(self) -> str:
     return f"<DatasetGroup [{len(self._datasets):d} datasets]>"
+  # end
+# end

@@ -79,7 +79,9 @@ class DatasetGroup(_CoreDatasetGroup):
         return type(self)(results)
       # end
       return results
+    # end
     return broadcast
+  # end
 
   # ------------------------------------------------------- combining (typed)
   # Overridden (not inherited) so the result stays the caller's concrete
@@ -87,6 +89,7 @@ class DatasetGroup(_CoreDatasetGroup):
   def with_(self, *others) -> "DatasetGroup":
     """Return a new group (same concrete class) with ``others`` appended."""
     return type(self)(self._datasets + list(others))
+  # end
 
   __and__ = with_
 
@@ -94,11 +97,13 @@ class DatasetGroup(_CoreDatasetGroup):
     """Index or slice; a slice returns a group of the same concrete class."""
     result = self._datasets[index]
     return type(self)(result) if isinstance(index, slice) else result
+  # end
 
   # ------------------------------------------------------- terminal (typed)
   def info(self, *, header: bool = True) -> list:
     """Summarize every member (see ``ops.info``); returns a list of strings."""
     return ops.info(*self._datasets, header=header)
+  # end
 
   def collect(self, *, sumdata: bool = False, period: float | None = None,
       offset: float = 0.0, tag: str | None = None, label: str | None = None):
@@ -106,11 +111,15 @@ class DatasetGroup(_CoreDatasetGroup):
     ``api.verbs.collect``)."""
     return verbs.collect(*self._datasets, sumdata=sumdata, period=period,
         offset=offset, tag=tag, label=label)
+  # end
 
   def evaluate(self, chain: str, *, tag: str | None = None, label: str | None = None):
     """Evaluate an RPN expression over the members (see ``api.verbs.evaluate``)."""
     return verbs.evaluate(chain, *self._datasets, tag=tag, label=label)
+  # end
 
   def animate(self, **kwargs):
     """Animate the members, one frame each (see ``api.verbs.animate``)."""
     return verbs.animate(*self._datasets, **kwargs)
+  # end
+# end

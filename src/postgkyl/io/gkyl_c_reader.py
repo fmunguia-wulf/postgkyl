@@ -31,14 +31,19 @@ class GkylCReader:
     self._partial = any(v is not None for v in kwargs.get("axes") or ()) or \
         kwargs.get("comp") is not None or \
         bool({k for k in kwargs if k not in ("axes", "comp")})
+  # end
 
   def is_compatible(self) -> bool:
     if self._partial or not gpython.available():
       return False
+    # end
     try:
       return gpython.rio.file_type(self.file_name) in gpython.rio.FIELD_FILE_TYPES
+    # end
     except (OSError, RuntimeError):
       return False
+    # end
+  # end
 
   def preload(self) -> None:
     grid, _, meta, esznc, _ = gpython.rio.read_header(self.file_name)
@@ -46,18 +51,22 @@ class GkylCReader:
       for key, val in msgpack.unpackb(meta).items():
         if key in ("polyOrder", "poly_order"):
           self.ctx["poly_order"] = val
+        # end
         elif key in ("basisType", "basis_type"):
           self.ctx["basis_type"] = val
           self.ctx["is_modal"] = True
           self.ctx["representation"] = "modal"
+        # end
         else:
           self.ctx[key] = val
+        # end
       # end
     # end
     self.ctx["cells"] = grid["cells"]
     self.ctx["lower"] = grid["lower"]
     self.ctx["upper"] = grid["upper"]
     self.ctx["num_comps"] = esznc // 8  # payload is float64
+  # end
 
   def load(self):
     grid, arr = gpython.rio.read_field(self.file_name)
@@ -67,6 +76,9 @@ class GkylCReader:
           f"'{self.file_name}': stored cells {arr.size} do not match the "
           f"domain {tuple(cells)} (ghost-cell layout?) — not supported by "
           "the Gkeyll read path yet")
+    # end
     edges = mapping.uniform_grid(grid["lower"], grid["upper"], cells)
     self.ctx["grid_type"] = "uniform"
     return edges, arr
+  # end
+# end

@@ -207,6 +207,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     # end
     if zmin is None:
       zmin = vmin
+    # end
     if zmax is None:
       zmax = vmax
     # end
@@ -241,6 +242,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     # end
     try:
       parsed_figsize = (float(parts[0]), float(parts[1]))
+    # end
     except ValueError:
       raise click.UsageError(
           f"--figsize expects 'w,h' (e.g. '8,6'), got '{figsize}'")
@@ -259,8 +261,10 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
 
     if legend_labels is not None and i < len(legend_labels):
       label = legend_labels[i]
+    # end
     elif len(all_active) > 1 or forcelegend:
       label = d.get_label()
+    # end
     else:
       label = ""
     # end
@@ -291,6 +295,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     if save or saveas:
       if saveas:
         file_name = saveas
+      # end
       else:
         if file_name != "":
           file_name = file_name + "_"
@@ -298,6 +303,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
         src = getattr(d, "_file_name", "") or ""
         if src:
           file_name = file_name + src.split(".")[0]
+        # end
         else:
           file_name = file_name + "ev_" + (d.get_label() or f"dataset_{i}").replace(" ", "_")
         # end
@@ -323,4 +329,5 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
 
   if show and not (saveframes or ds.batch):
     plt.show()
+# end
   # end

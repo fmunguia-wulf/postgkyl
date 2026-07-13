@@ -19,3 +19,4 @@ from .._apply import apply
 def command(ctx, comp, z0, z1, z2, z3, z4, z5) -> None:
   """Subselect coordinates and/or components."""
   apply(ctx, lambda d: d.select(comp=comp, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5))
+# end

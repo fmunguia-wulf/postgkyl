@@ -19,3 +19,4 @@ def command(ctx, direction, use, tag, label) -> None:
   """Numerical gradient of already-interpolated (NumPy) data."""
   apply(ctx, lambda d: d.differentiate(direction=direction, tag=tag,
       label=label), use=use)
+# end

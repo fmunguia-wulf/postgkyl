@@ -62,8 +62,10 @@ def differentiate(data: "GDataState", *, direction: int | None = None,
   values = data.values
   if direction is None:
     out_grid, out_values = ev_ops.grad([grid], [values])
+  # end
   else:
     out_grid, out_values = ev_ops.grad2([None, grid], [int(direction), values])
   # end
   return data._result(out_grid[0], out_values[0], inplace=inplace, tag=tag,
       label=label)
+# end

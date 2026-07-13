@@ -31,11 +31,14 @@ def command(ctx, sumdata, period, offset, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   if not pool:
     raise click.UsageError("collect: no datasets to collect")
+  # end
   result = pg.collect(*pool, sumdata=sumdata, period=period, offset=offset,
       tag=tag, label=label)
   for d in pool:
     set_active(d, False)
   # end
   ctx.obj.datasets.append(result)
+# end

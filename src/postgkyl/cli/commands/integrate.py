@@ -46,12 +46,15 @@ def command(ctx, axis, op, use, tag, label) -> None:
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]
+  # end
   for i, d in enumerate(pool):
     try:
       result = d.integrate(op=op)
+    # end
     except ValueError as err:
       raise click.UsageError(str(err))
     # end
     lbl = d.label or d.tag
     click.echo(f"[{i}] {lbl}: {result}")
+# end
   # end

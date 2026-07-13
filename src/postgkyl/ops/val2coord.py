@@ -22,6 +22,7 @@ def _get_range(str_in: str, length: int) -> np.ndarray:
   """
   if len(str_in.split(",")) > 1:
     return np.array(str_in.split(","), dtype=int)
+  # end
   elif str_in.find(":") >= 0:
     parts = str_in.split(":")
     s_idx = 0 if parts[0] == "" else int(parts[0])
@@ -34,8 +35,10 @@ def _get_range(str_in: str, length: int) -> np.ndarray:
     # end
     inc = int(parts[2]) if len(parts) > 2 and parts[2] != "" else 1
     return np.arange(s_idx, e_idx, inc)
+  # end
   else:
     return np.array([int(str_in)])
+# end
   # end
 
 
@@ -100,3 +103,4 @@ def val2coord(data: "GDataState", *, x: str, y: str, periodic: bool = False,
     out.append(res)
   # end
   return DatasetGroup(out)
+# end

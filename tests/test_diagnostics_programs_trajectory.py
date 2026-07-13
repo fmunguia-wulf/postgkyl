@@ -39,6 +39,7 @@ def _make_trajectory(num_pos=10, *, velocity=False, seed=0):
   d = GDataState()
   d.push([time], values)
   return d
+# end
 
 
 class TestMasked:
@@ -47,18 +48,21 @@ class TestMasked:
     coord = np.array([1.0, 2.0, 3.0])
     out = traj._masked(coord, None, None)
     np.testing.assert_allclose(out, coord)
+  # end
 
   def test_lower_bound_masks_below(self):
     coord = np.array([1.0, 2.0, 3.0])
     out = traj._masked(coord, 1.5, None)
     assert np.isnan(out[0])
     np.testing.assert_allclose(out[1:], [2.0, 3.0])
+  # end
 
   def test_upper_bound_masks_above(self):
     coord = np.array([1.0, 2.0, 3.0])
     out = traj._masked(coord, None, 2.5)
     np.testing.assert_allclose(out[:2], [1.0, 2.0])
     assert np.isnan(out[2])
+  # end
 
   def test_both_bounds(self):
     coord = np.array([1.0, 2.0, 3.0])
@@ -66,6 +70,8 @@ class TestMasked:
     assert np.isnan(out[0])
     np.testing.assert_allclose(out[1], 2.0)
     assert np.isnan(out[2])
+  # end
+# end
 
 
 class TestTrajectoryRaises:
@@ -73,6 +79,8 @@ class TestTrajectoryRaises:
   def test_no_datasets_raises(self):
     with pytest.raises(ValueError, match="at least one dataset"):
       traj.trajectory()
+  # end
+# end
     # end
 
 
@@ -83,8 +91,10 @@ class TestTrajectorySynthetic:
     anim = traj.trajectory(d)
     try:
       assert anim._save_count == 8
+    # end
     finally:
       plt.close(anim._fig)
+  # end
     # end
 
   def test_numframes_subsamples(self):
@@ -92,8 +102,10 @@ class TestTrajectorySynthetic:
     anim = traj.trajectory(d, numframes=5)
     try:
       assert anim._save_count == 5
+    # end
     finally:
       plt.close(anim._fig)
+  # end
     # end
 
   def test_first_frame_renders_without_error(self):
@@ -104,8 +116,10 @@ class TestTrajectorySynthetic:
       ax = fig.axes[0]
       traj._update(0, ax, (d,), 1, True, None, None, None, None, None, None)
       assert ax.get_title().startswith("T:")
+    # end
     finally:
       plt.close(anim._fig)
+  # end
     # end
 
   def test_last_frame_uses_final_dt_branch(self):
@@ -117,8 +131,10 @@ class TestTrajectorySynthetic:
     ax = fig.add_subplot(111, projection="3d")
     try:
       traj._update(3, ax, (d,), 1, True, None, None, None, None, None, None)
+    # end
     finally:
       plt.close(fig)
+  # end
     # end
 
   def test_multiple_datasets_overlaid(self):
@@ -127,8 +143,10 @@ class TestTrajectorySynthetic:
     anim = traj.trajectory(d1, d2)
     try:
       assert anim._save_count == 6
+    # end
     finally:
       plt.close(anim._fig)
+  # end
     # end
 
   def test_axis_bounds_mask_points(self):
@@ -137,8 +155,10 @@ class TestTrajectorySynthetic:
         zmin=-0.5, zmax=0.5)
     try:
       assert anim._save_count == 6
+    # end
     finally:
       plt.close(anim._fig)
+  # end
     # end
 
   def test_fixaspect_and_view_angles(self):
@@ -146,8 +166,11 @@ class TestTrajectorySynthetic:
     anim = traj.trajectory(d, fixaspect=True, elevation=30.0, azimuth=45.0)
     try:
       assert anim._save_count == 5
+    # end
     finally:
       plt.close(anim._fig)
+  # end
+# end
     # end
 
 
@@ -184,3 +207,5 @@ class TestTrajectoryViaIoWriter:
     reloaded = GData(out)
     assert reloaded.grid[0].shape[0] == num_pos + 1  # field convention: N+1 edges
     assert reloaded.values.shape[0] == num_pos
+  # end
+# end

@@ -44,6 +44,7 @@ def is_geo_mapc2p(ctx: dict) -> bool:
     return True
   # end
   return ctx["geometry_type"] == _MAPC2P_IDX
+# end
 
 
 def nodes_to_RZ(nodes: np.ndarray, is_mapc2p: bool) -> tuple[np.ndarray, np.ndarray]:
@@ -84,18 +85,21 @@ def nodes_to_RZ(nodes: np.ndarray, is_mapc2p: bool) -> tuple[np.ndarray, np.ndar
     cart_x = [np.squeeze(nodes[tuple(slices[d])]) for d in range(cart_dim)]
     major_r = np.sqrt(np.power(cart_x[0], 2) + np.power(cart_x[1], 2))
     vert_z = cart_x[2]
+  # end
   else:
     major_r = np.squeeze(nodes[tuple(slices[0])])
     vert_z = np.squeeze(nodes[tuple(slices[1])])
   # end
 
   return major_r, vert_z
+# end
 
 
 def multib_tag(base: str, block_idx: int, num_blocks: int) -> str:
   """Tag a per-block artifact, adding a ``_b<idx>`` suffix only when there
   is more than one block."""
   return f"{base}_b{block_idx}" if num_blocks > 1 else base
+# end
 
 
 def _parse_levels(clevels: str | None, cnlevels: int) -> np.ndarray | int:
@@ -107,6 +111,7 @@ def _parse_levels(clevels: str | None, cnlevels: int) -> np.ndarray | int:
     return np.linspace(float(s[0]), float(s[1]), int(s[2]))
   # end
   return np.array([float(v) for v in clevels.split(",") if v])
+# end
 
 
 def gk_nodes(
@@ -170,6 +175,7 @@ def gk_nodes(
 
   if nodes_file:
     resolved_nodes_file = nodes_file if nodes_file[0] == "/" else path + nodes_file
+  # end
   else:
     resolved_nodes_file = file_prefix + "nodes.gkyl"
   # end
@@ -208,6 +214,7 @@ def gk_nodes(
     cell_color = next(block_colors)
     if major_r.ndim <= 1:
       ax.plot(major_r, vert_z, color=cell_color, linestyle="-")
+    # end
     else:
       segs_constx = np.stack((major_r, vert_z), axis=2)
       segs_consty = segs_constx.transpose(1, 0, 2)
@@ -230,6 +237,7 @@ def gk_nodes(
 
     if contour:
       im = ax.contour(psi_grid_cc[0], psi_grid_cc[1], psi_values.transpose(), levels)
+    # end
     else:
       im = ax.pcolormesh(psi_grid[0], psi_grid[1], psi_values.transpose(), cmap="inferno")
     # end
@@ -267,3 +275,4 @@ def gk_nodes(
   # end
 
   return fig
+# end
