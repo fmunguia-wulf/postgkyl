@@ -1,7 +1,7 @@
 """Helpers for collections of datasets (shared by the multi-dataset verbs).
 
 Lives in ``core`` because it is generic plumbing over the container type and is
-needed by both ``render`` (``pg.plot(a, b)``) and ``ops`` (``pg.info(a, b)``) —
+needed by both ``render`` (``pg.plot(a, b)``) and ``operations`` (``pg.info(a, b)``) —
 both of which already depend on ``core``. Keeping it here avoids duplicating the
 flatten in two layers or stranding it in the facade.
 """

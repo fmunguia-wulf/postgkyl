@@ -1,7 +1,7 @@
 """The ``animate`` verb — terminal; hands a sequence of datasets to the
 render backend's animation engine.
 
-Mirrors ``ops/plot.py``: each modal dataset in the sequence is bridged
+Mirrors ``operations/plot.py``: each modal dataset in the sequence is bridged
 through its NumPy shadow (point-value representations plot directly; modal
 coefficients refuse) via the shared ``_materialize.materialize_for_render``
 before the frames reach :func:`postgkyl.render.animate.animate`.

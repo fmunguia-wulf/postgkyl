@@ -18,6 +18,6 @@ from .._options import label_option, tag_option, use_option
 def command(ctx, use, tag, label) -> None:
   """Turn each dataset's grid into a dataset of coordinate values."""
   # ``grid`` has no fluent GData method (see api/gdata.py) -- reachable only
-  # as ``postgkyl.ops.grid``, via attribute access on the facade.
-  apply(ctx, lambda d: pg.ops.grid(d, tag=tag, label=label), use=use)
+  # as ``postgkyl.operations.grid``, via attribute access on the facade.
+  apply(ctx, lambda d: pg.operations.grid(d, tag=tag, label=label), use=use)
 # end

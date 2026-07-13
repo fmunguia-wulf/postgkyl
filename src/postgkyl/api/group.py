@@ -23,7 +23,7 @@ every member, in order (**broadcasting**):
   ``.extract_input()`` -> one string per member, ...) -- a plain ``list`` of
   the per-member results is returned, in member order. Note this means
   ``group.plot()`` renders one figure *per member* (broadcast), not one
-  shared overlaid figure: there is no multi-dataset plot verb at the ``ops``
+  shared overlaid figure: there is no multi-dataset plot verb at the ``operations``
   layer to delegate to, and ``api`` does not import ``render`` directly (see
   ``tests/test_postgkyl.py``'s ``_ALLOWED`` map).
 - If the attribute is a *non-callable* value on every member (a property such
@@ -38,23 +38,23 @@ every member, in order (**broadcasting**):
 Four verbs are **not** broadcast because they combine the members into a
 single result rather than acting on each independently; these are defined
 explicitly below, delegating to the matching multi-dataset function in
-``ops``/``api.verbs``: ``info`` (one combined summary), ``collect`` (stack
+``operations``/``api.verbs``: ``info`` (one combined summary), ``collect`` (stack
 into one dataset), ``evaluate`` (evaluate an RPN expression over the members),
 ``animate`` (one animation, one frame per member) -- matching the deferred
 worklist from layer 05's report (the old ``src_bak`` class's non-broadcast
 methods were exactly ``__getattr__`` broadcasting, ``plot``, ``info``,
 ``animate``, ``plotly_animate``, ``collect``, ``evaluate``; ``plot`` and
-``plotly_animate`` are not in the new ``ops`` verb inventory as multi-dataset
+``plotly_animate`` are not in the new ``operations`` verb inventory as multi-dataset
 verbs, so only ``info``/``collect``/``evaluate``/``animate`` need the explicit
 treatment here).
 
-``ops.grid`` has no fluent spelling anywhere (not on ``GData``, so not
+``operations.grid`` has no fluent spelling anywhere (not on ``GData``, so not
 broadcast here either) -- see ``api/gdata.py`` for why.
 """
 
 from __future__ import annotations
 
-from postgkyl import ops
+from postgkyl import operations
 from postgkyl.core.group import DatasetGroup as _CoreDatasetGroup
 from postgkyl.core.state import GDataState
 
@@ -101,8 +101,8 @@ class DatasetGroup(_CoreDatasetGroup):
 
   # ------------------------------------------------------- terminal (typed)
   def info(self, *, header: bool = True) -> list:
-    """Summarize every member (see ``ops.info``); returns a list of strings."""
-    return ops.info(*self._datasets, header=header)
+    """Summarize every member (see ``operations.info``); returns a list of strings."""
+    return operations.info(*self._datasets, header=header)
   # end
 
   def collect(self, *, sumdata: bool = False, period: float | None = None,

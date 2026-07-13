@@ -1,12 +1,12 @@
 """Equation-specific physics — the COMPOSITION tier, one module per equation
 model.
 
-Folds together the old ``models`` (array math) and ``ops`` physics-verb
+Folds together the old ``models`` (array math) and ``operations`` physics-verb
 (GData wrapping) layers into a single home per equation system: functions
 here take loaded ``GData``/``GDataState`` (one or several) plus physical
 scalars as keyword-only options, and return a ``GDataState`` (via
 ``_result``) or, in later layers, a ``Figure``. Equation-blind core verbs
-stay in ``ops``; this is the layer that knows what the numbers mean.
+stay in ``operations``; this is the layer that knows what the numbers mean.
 
 Layer 12 added the equation-internal loaders: ``gyrokinetics/`` (distribution
 functions + the derived-quantity registry), the shared ``discovery.py``

@@ -30,7 +30,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -105,7 +105,7 @@ class TestIdentityMap:
 
     target_axis = np.linspace(lower, upper, 17)  # finer than the map's grid
     target = _numpy_target([target_axis], np.zeros((16, 1)))
-    out = ops.map(target, mapping, space="conf")
+    out = operations.map(target, mapping, space="conf")
 
     np.testing.assert_allclose(out.grid[0], target_axis, atol=1e-12)
     assert out.ctx["grid_type"] == "mapped"
@@ -117,7 +117,7 @@ class TestIdentityMap:
     mapping = _synthetic_map(modal, [lower], [upper], [cells])
     values = np.arange(8.0).reshape(4, 2)
     target = _numpy_target([np.linspace(lower, upper, 5)], values)
-    out = ops.map(target, mapping, space="conf")
+    out = operations.map(target, mapping, space="conf")
     np.testing.assert_array_equal(out.values, values)
   # end
 
@@ -126,7 +126,7 @@ class TestIdentityMap:
     modal = _project_1d(lambda z: z, lower, upper, cells, "serendipity", 1)
     mapping = _synthetic_map(modal, [lower], [upper], [cells])
     target = _numpy_target([np.linspace(lower, upper, 5)], np.zeros((4, 1)))
-    out = ops.map(target, mapping, space="conf")
+    out = operations.map(target, mapping, space="conf")
     assert out is not target
     assert "grid_type" not in target.ctx
   # end
@@ -136,7 +136,7 @@ class TestIdentityMap:
     modal = _project_1d(lambda z: z, lower, upper, cells, "serendipity", 1)
     mapping = _synthetic_map(modal, [lower], [upper], [cells])
     target = _numpy_target([np.linspace(lower, upper, 5)], np.zeros((4, 1)))
-    out = ops.map(target, mapping, space="conf", inplace=True)
+    out = operations.map(target, mapping, space="conf", inplace=True)
     assert out is target
   # end
 # end
@@ -147,11 +147,11 @@ class TestConfMapRealFixture:
   """The real generated ``2d_c2p_*`` fixtures for conf-space."""
 
   def _mapped(self, mapfile):
-    # ops.map, not the fluent .map() -- api/gdata.py's fluent wiring for the
+    # operations.map, not the fluent .map() -- api/gdata.py's fluent wiring for the
     # new physics/map verbs is a different layer's job (out of this layer's
     # scope; see the report).
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
-    return ops.map(data, os.path.join(GEN, mapfile), space="conf")
+    return operations.map(data, os.path.join(GEN, mapfile), space="conf")
   # end
 
   def test_grid_becomes_curvilinear_with_shape_of_the_axes_it_replaces(self):
@@ -192,7 +192,7 @@ class TestVelMap:
     v1_edges = np.linspace(lower, upper, 9)
     target = _numpy_target([x_edges, v0_edges, v1_edges],
         np.zeros((4, 4, 8, 1)))
-    out = ops.map(target, mapping, space="vel")
+    out = operations.map(target, mapping, space="vel")
 
     np.testing.assert_allclose(out.grid[0], x_edges)   # untouched
     np.testing.assert_allclose(out.grid[1], v0_edges)  # untouched
@@ -221,7 +221,7 @@ class TestVelMap:
     v1_edges = np.linspace(lower[1], upper[1], 4)
     target = _numpy_target([x_edges, v0_edges, v1_edges],
         np.zeros((2, 5, 3, 1)))
-    out = ops.map(target, mapping, space="vel")
+    out = operations.map(target, mapping, space="vel")
 
     v0, v1 = np.meshgrid(v0_edges, v1_edges, indexing="ij")
     np.testing.assert_allclose(out.grid[1], fn0(v0, v1), atol=1e-12)
@@ -237,14 +237,14 @@ class TestMapErrors:
     target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl"))  # not interpolated
     mapping_path = os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl")
     with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
-      ops.map(target, mapping_path, space="conf")
+      operations.map(target, mapping_path, space="conf")
     # end
   # end
 
   def test_bad_space_raises(self):
     target = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
     with pytest.raises(ValueError, match="'space'"):
-      ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
+      operations.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="bogus")
     # end
   # end
@@ -252,7 +252,7 @@ class TestMapErrors:
   def test_map_too_large_for_dataset(self):
     target = pg.load(os.path.join(GEN, "1d_ms_p1.gkyl")).interpolate()  # 1-D
     with pytest.raises(ValueError, match="does not fit"):
-      ops.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
+      operations.map(target, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
           space="conf")  # a 2-D map does not fit 1-D data
     # end
   # end
@@ -263,7 +263,7 @@ class TestMapErrors:
     mapping = _synthetic_map(bad, [lower], [upper], [cells])
     target = _numpy_target([np.linspace(lower, upper, 5)], np.zeros((4, 1)))
     with pytest.raises(ValueError, match="component"):
-      ops.map(target, mapping, space="conf")
+      operations.map(target, mapping, space="conf")
     # end
   # end
 
@@ -273,7 +273,7 @@ class TestMapErrors:
     d.push([np.linspace(0.0, 1.0, 3)], gpython.GkylArray.from_numpy(np.zeros((2, 2))))
     target = _numpy_target([np.linspace(0.0, 1.0, 5)], np.zeros((4, 1)))
     with pytest.raises(ValueError, match="basis_type"):
-      ops.map(target, d, space="conf")
+      operations.map(target, d, space="conf")
     # end
   # end
 
@@ -294,7 +294,7 @@ class TestMapErrors:
     target = pg.load(F_ELC).interpolate()
     mapping.ctx.update(basis_type="serendipity", poly_order=1)
     with pytest.raises(ValueError, match="component"):
-      ops.map(target, mapping, space="vel")
+      operations.map(target, mapping, space="vel")
     # end
   # end
 # end
@@ -304,7 +304,7 @@ class TestMapErrors:
 class TestSelectCurvilinearGuard:
   def _mapped(self):
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
-    return ops.map(data, os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl"),
+    return operations.map(data, os.path.join(GEN, "2d_c2p_rot45_ms_p1.gkyl"),
         space="conf")
   # end
 
@@ -338,9 +338,9 @@ class TestSelectCurvilinearGuard:
     mapping = _synthetic_map(modal, [lower], [upper], [cells])
     target = _numpy_target([np.linspace(0.0, 1.0, 5), np.linspace(lower, upper, 9)],
         np.zeros((4, 8, 1)))
-    mapped = ops.map(target, mapping, space="vel")
+    mapped = operations.map(target, mapping, space="vel")
     assert mapped.grid[1].ndim == 1
-    out = ops.select(mapped, z1=0.0)
+    out = operations.select(mapped, z1=0.0)
     assert out.values.shape[1] == 1
   # end
 
@@ -369,19 +369,19 @@ class TestSelectCurvilinearGuard:
     v1_edges = np.linspace(lower[1], upper[1], 4)
     target = _numpy_target([x_edges, v0_edges, v1_edges],
         np.arange(2 * 5 * 3).reshape(2, 5, 3, 1).astype(float))
-    out = ops.map(target, mapping, space="vel")  # offset = 3 - 2 = 1
+    out = operations.map(target, mapping, space="vel")  # offset = 3 - 2 = 1
     assert out.ctx["mapped_axes"] == {1: 1, 2: 1}
 
     # z2 (v1, the *last* mapped dimension) used to raise IndexError: its
     # own relative axis is 1, but the old code indexed by absolute d == 2
     # into a 2-D (ndim == 2) array.
-    sel2 = ops.select(out, z2=2)
+    sel2 = operations.select(out, z2=2)
     assert sel2.values.shape == (2, 5, 1, 1)
     assert sel2.grid[2].shape == (6, 2)  # v1's own axis sliced 4 -> 2
     assert sel2.grid[1].shape == (6, 4)  # untouched by this call
 
     # z1 (v0) used to silently slice the *other* (v1) axis instead of v0's.
-    sel1 = ops.select(out, z1=1)
+    sel1 = operations.select(out, z1=1)
     assert sel1.values.shape == (2, 1, 3, 1)
     assert sel1.grid[1].shape == (2, 4)  # v0's own axis sliced 6 -> 2
     assert sel1.grid[2].shape == (6, 4)  # untouched by this call

@@ -4,7 +4,7 @@ This is the numeric core behind the ``ev`` expression evaluator. Each
 operator is a pure function ``f(in_grid, in_values) -> ([out_grid], [out_values])``
 over plain Python lists / NumPy arrays — no ``GData`` dependency. The
 ``cmds`` table maps each RPN token to its arity (``num_in``/``num_out``)
-and function; the stack machine that drives them lives in the ``ops``
+and function; the stack machine that drives them lives in the ``operations``
 layer's ``ev`` verb (layer 07), which can consume this table unchanged.
 
 Every operator here is expressible over plain arrays; none needed a

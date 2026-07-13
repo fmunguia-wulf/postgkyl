@@ -22,7 +22,7 @@ def mask(data: "GDataState", mask_data: "GDataState | None" = None, *,
   - ``mask_data``: mask cells where the mask dataset's field is negative,
     repeated across ``data``'s components. Load the mask field yourself
     (e.g. ``pg.load(mask_path)``) -- this verb takes data, never a file path
-    (``ops`` never touches ``io``).
+    (``operations`` never touches ``io``).
   - ``lower`` and ``upper``: mask values outside the closed range
     ``[lower, upper]``.
   - ``lower`` only: mask values below ``lower``.

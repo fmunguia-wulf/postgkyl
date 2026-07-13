@@ -95,7 +95,7 @@ def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
   Args:
     file_name: Path to the file.
     poly_order: Polynomial order of the DG basis.
-    basis_type: Long basis name (see ``ops.interpolate.BASIS_MAP`` for the
+    basis_type: Long basis name (see ``operations.interpolate.BASIS_MAP`` for the
       short-code equivalents), e.g. ``"serendipity"``.
     comp: Optional component selector applied *after* interpolation
       (an int index or a ``"start:stop"`` slice string); ``None`` keeps

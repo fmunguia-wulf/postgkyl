@@ -13,7 +13,7 @@ divergence from a literal "stay modal and call the weak kernels" port:
 extracting one physical field's coefficients out of a *packed* multi-field
 source file (``M0M1M2``, ``BiMaxwellianMoments``, ``HamiltonianMoments``, ...)
 has no primitive reachable from this layer's allowed imports (``core``,
-``ops``, ``numerics``, ``api`` -- not ``dg``/``gpython``; only ``ops.select``
+``operations``, ``numerics``, ``api`` -- not ``dg``/``gpython``; only ``operations.select``
 could slice a component, and it unconditionally refuses gkyl-backed data).
 Interpolating first sidesteps that gap entirely and matches the one
 established working pattern in this codebase; see the layer-12 report for
@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from scipy import constants
 
-from postgkyl import ops
+from postgkyl import operations
 
 if TYPE_CHECKING:
   from postgkyl.core.state import GDataState
@@ -58,7 +58,7 @@ def _get_ctx_val(gdata: "GDataState", key: str, **kwargs):
 def _ensure_interpolated(d: "GDataState") -> "GDataState":
   """Interpolate ``d`` onto the field domain unless it already is.
 
-  Uses the ``ops.interpolate`` verb directly (rather than the fluent
+  Uses the ``operations.interpolate`` verb directly (rather than the fluent
   ``GData.interpolate()``) so this works on any ``GDataState``, not just the
   fluent subclass -- these functions receive whatever
   ``GkQuantity.get_src_gdata`` hands them.
@@ -66,14 +66,14 @@ def _ensure_interpolated(d: "GDataState") -> "GDataState":
   if d.ctx.get("interpolated"):
     return d
   # end
-  return ops.interpolate(d)
+  return operations.interpolate(d)
 # end
 
 
 def _component(d: "GDataState", comp: int | None) -> "GDataState":
   """Interpolate ``d`` and select physical component ``comp`` (all if None)."""
   interpolated = _ensure_interpolated(d)
-  return interpolated if comp is None else ops.select(interpolated, comp=comp)
+  return interpolated if comp is None else operations.select(interpolated, comp=comp)
 # end
 
 
@@ -221,7 +221,7 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
   ``(b x grad f)_k / B = epsilon_{ijk} * b_i * d(f)/dx^j / (J B)``, where
   ``epsilon_{ijk}`` is the Levi-Civita tensor, ``f`` a scalar field, ``b_i``
   the covariant components of a vector field. The gradient is the numerical
-  (post-``interpolate()``) one (``ops.differentiate``); see
+  (post-``interpolate()``) one (``operations.differentiate``); see
   ``differentiate-decision.md`` -- an exact modal derivative needs a shim
   addition out of scope for this layer.
 
@@ -274,11 +274,11 @@ def _b_cross_grad_div_b_component(scalar: "GDataState", jacobtot_inv: "GDataStat
   pos_term = np.zeros_like(f.values)
   neg_term = np.zeros_like(f.values)
   if calc_term[0]:
-    d_pos = ops.differentiate(f, direction=diff_dir_pos)
+    d_pos = operations.differentiate(f, direction=diff_dir_pos)
     pos_term = d_pos.values * b_i_i.values[..., bi_c_pos, np.newaxis]
   # end
   if calc_term[1]:
-    d_neg = ops.differentiate(f, direction=diff_dir_neg)
+    d_neg = operations.differentiate(f, direction=diff_dir_neg)
     neg_term = -d_neg.values * b_i_i.values[..., bi_c_neg, np.newaxis]
   # end
 

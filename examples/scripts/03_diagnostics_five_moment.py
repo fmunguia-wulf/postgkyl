@@ -1,7 +1,7 @@
 """The diagnostics layer: equation-specific physics on top of the same
 ``GData`` you get from ``pg.load``.
 
-``diagnostics`` sits *above* the fluent API (``ops``/``api``) and is
+``diagnostics`` sits *above* the fluent API (``operations``/``api``) and is
 equation-blind-free by design: ``postgkyl.diagnostics.five_moment`` knows the
 Euler fluid moment layout (``[rho, rho*vx, rho*vy, rho*vz, E]``) and turns raw
 conserved moments into primitive variables (density, velocity, pressure,
@@ -52,7 +52,7 @@ d = pg.GData()
 d.push(grid, moments)               # diagnostics require field-domain data
 
 # Diagnostics are free functions of a GData(State), returning a new one --
-# the same ``inplace``/``tag``/``label`` contract as every ``ops`` verb.
+# the same ``inplace``/``tag``/``label`` contract as every ``operations`` verb.
 density = fm.density(d)
 pressure = fm.pressure(d, gas_gamma=GAS_GAMMA)
 mach = fm.mach(d, gas_gamma=GAS_GAMMA)
@@ -62,7 +62,7 @@ print("pressure matches the input p profile: ", np.allclose(pressure.values.rave
 print("Mach number at rest:                  ", mach.values.ravel()[0])
 
 # Raw modal DG coefficients have no "density"/"pressure" until interpolated
-# -- the diagnostics layer refuses the same way ``ops`` verbs do.
+# -- the diagnostics layer refuses the same way ``operations`` verbs do.
 ROOT = os.path.dirname(os.path.dirname(HERE))
 modal = pg.load(os.path.join(ROOT, "tests", "test_data", "generated", "1d_ms_p1.gkyl"))
 try:

@@ -1,4 +1,4 @@
-"""Tests for the fluent surface (layer 11 -- api): every ``ops`` verb from
+"""Tests for the fluent surface (layer 11 -- api): every ``operations`` verb from
 layers 07-09 as a ``GData`` method (or, for the multi-dataset verbs with no
 single ``self``, a module-level function in ``api.verbs``), the fluent
 ``api.group.DatasetGroup`` that broadcasts verbs over its members, and the
@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.api.group import DatasetGroup as ApiDatasetGroup
 from postgkyl.api import verbs as api_verbs
 from postgkyl.core.group import DatasetGroup as CoreDatasetGroup
@@ -65,7 +65,7 @@ def _line(cls=MyData, tag: str = "default", value: float = 1.0, n: int = 5):
 
 
 # ============================================================ method roster
-# The full equation-blind verb inventory from ops/__init__.py, keyed by its
+# The full equation-blind verb inventory from operations/__init__.py, keyed by its
 # fluent spelling: either a GData instance method, or a module-level function
 # in api.verbs for the verbs that combine several datasets (see the group
 # contract and api/gdata.py's ``grid`` note for the two exceptions).
@@ -93,14 +93,14 @@ class TestMethodInventory:
   # end
 
   def test_grid_is_deliberately_not_a_fluent_method(self):
-    """``ops.grid`` has no fluent spelling: ``GData.grid`` must stay the
+    """``operations.grid`` has no fluent spelling: ``GData.grid`` must stay the
     inherited axis-edge-array *property* (see api/gdata.py's note), not a
     verb method -- otherwise every other verb reading ``data.grid`` would
     silently break."""
     d = _line()
     assert isinstance(d.grid, list)
     assert not callable(d.grid)
-    assert hasattr(ops, "grid") and callable(ops.grid)
+    assert hasattr(operations, "grid") and callable(operations.grid)
   # end
 # end
 

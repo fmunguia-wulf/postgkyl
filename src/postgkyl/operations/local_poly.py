@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from postgkyl import dg
-from postgkyl.ops.interpolate import BASIS_MAP
+from postgkyl.operations.interpolate import BASIS_MAP
 
 if TYPE_CHECKING:
   from postgkyl.core.state import GDataState

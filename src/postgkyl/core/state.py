@@ -11,7 +11,7 @@ in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.m
   ``np.ndarray`` — the field domain, where all NumPy math applies.
 
 It constructs itself by delegating to the :mod:`postgkyl.io` leaf and exposes
-only *state*. Crucially it imports **nothing upward** (no ``ops``/``render``/
+only *state*. Crucially it imports **nothing upward** (no ``operations``/``render``/
 ``api``). The fluent verb methods and the computing operators live on the
 :class:`postgkyl.api.gdata.GData` subclass, one layer up. That is what keeps
 the dependency graph a strict, cycle-free DAG — see HIERARCHY_2.md / HIERARCHY_3.md.
@@ -225,7 +225,7 @@ class GDataState:
 
     Every verb funnels its computed ``(grid, values)`` through here. Because
     ``copy`` uses ``type(self)``, the result is the *same* (sub)class as the
-    input — so ``ops`` can be typed on ``GDataState`` yet return a fluent
+    input — so ``operations`` can be typed on ``GDataState`` yet return a fluent
     ``GData`` at runtime.
     """
     target = self if inplace else self.clone(data=False)
@@ -276,7 +276,7 @@ class GDataState:
   def __array__(self, dtype=None):
     """Expose values so ``np.asarray(data)`` / matplotlib accept the dataset.
 
-    This is a pure *reader* (no ``ops``), so it lives on the container; the
+    This is a pure *reader* (no ``operations``), so it lives on the container; the
     computing operators (``__add__``, ``__array_ufunc__``) live on the fluent
     subclass — see HIERARCHY_3.md. Nodal/quad data expose their point values;
     native *modal* data refuses: silently handing out DG coefficients as if

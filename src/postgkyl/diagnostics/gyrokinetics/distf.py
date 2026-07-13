@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl import ops
+from postgkyl import operations
 from postgkyl.api import GData
 
 from .. import discovery
@@ -164,15 +164,15 @@ def load_gk_distf(
   # space (mc2nu / mapc2p) deforms the leading ones.
   grid_type = []
   if use_c2p_vel:
-    out = ops.map(out, mapc2p_vel_file, space="vel")
+    out = operations.map(out, mapc2p_vel_file, space="vel")
     grid_type.append("c2p_vel")
   # end
   if use_mc2nu:
-    out = ops.map(out, mc2nu_file, space="conf")
+    out = operations.map(out, mc2nu_file, space="conf")
     grid_type.append("mc2nu")
   # end
   elif use_mapc2p:
-    out = ops.map(out, mapc2p_file, space="conf")
+    out = operations.map(out, mapc2p_file, space="conf")
     grid_type.append("mapc2p")
   # end
   if grid_type:

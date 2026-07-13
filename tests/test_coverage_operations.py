@@ -1,4 +1,4 @@
-"""Coverage-completing tests for the ``ops`` verb layer.
+"""Coverage-completing tests for the ``operations`` verb layer.
 
 The golden-path tests exercise ``comp=`` selection, the happy arithmetic
 paths, and the default basis/poly_order. This file targets the error edges
@@ -23,7 +23,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import gpython, ops  # noqa: E402
+from postgkyl import gpython, operations  # noqa: E402
 from postgkyl.core.state import GDataState  # noqa: E402
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -41,7 +41,7 @@ def _dynvec_dataset(tmp_path, time, values):
 # end
 
 
-# ============================================================== ops.select
+# ============================================================== operations.select
 @needs_gkeyll
 def test_select_by_coordinate_on_a_nodal_grid(tmp_path):
   """A dynvector's grid length equals its value count exactly, so
@@ -85,7 +85,7 @@ def test_select_by_coordinate_on_a_non_matching_edge_grid():
 # end
 
 
-# ========================================================== ops.arithmetic
+# ========================================================== operations.arithmetic
 @needs_gkeyll
 def test_numpy_domain_rejects_incompatible_grids_and_shapes():
   a = pg.load(F1).interpolate()
@@ -223,7 +223,7 @@ def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
 # end
 
 
-# ========================================================== ops.interpolate
+# ========================================================== operations.interpolate
 def test_interpolate_rejects_unknown_short_basis_code():
   d = pg.load(F1)
   with pytest.raises(ValueError, match="Unknown basis"):
@@ -258,7 +258,7 @@ def test_interpolate_requires_poly_order_when_none_given():
 # end
 
 
-# =========================================================== ops.represent
+# =========================================================== operations.represent
 @needs_gkeyll
 def test_represent_rejects_numpy_backed_and_missing_metadata():
   interpolated = pg.load(F1).interpolate()
@@ -278,7 +278,7 @@ def test_represent_rejects_numpy_backed_and_missing_metadata():
 def test_represent_rejects_unknown_target():
   a = pg.load(F1)
   with pytest.raises(ValueError, match="unknown representation"):
-    ops.represent(a, to="bogus")
+    operations.represent(a, to="bogus")
   # end
 # end
 
@@ -311,7 +311,7 @@ def test_apply_rejects_non_modal_data():
 # end
 
 
-# =============================================================== ops.info
+# =============================================================== operations.info
 @needs_gkeyll
 def test_info_verb_handles_multiple_datasets():
   a, b = pg.load(F1), pg.load(F1)
@@ -321,7 +321,7 @@ def test_info_verb_handles_multiple_datasets():
 # end
 
 
-# ============================================================ ops.integrate
+# ============================================================ operations.integrate
 @needs_gkeyll
 def test_integrate_requires_basis_metadata():
   a = pg.load(F1)
@@ -332,7 +332,7 @@ def test_integrate_requires_basis_metadata():
 # end
 
 
-# ============================================================== ops.average
+# ============================================================== operations.average
 @needs_gkeyll
 def test_average_full_reduction_matches_integrate_over_volume():
   a = pg.load(F1)
@@ -439,7 +439,7 @@ def test_average_tag_and_label_and_inplace():
 # end
 
 
-# ======================================================= ops.integrate_axis
+# ======================================================= operations.integrate_axis
 @needs_gkeyll
 def test_integrate_axis_rejects_raw_modal_data():
   a = pg.load(F1)

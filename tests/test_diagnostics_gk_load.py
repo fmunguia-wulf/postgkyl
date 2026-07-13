@@ -103,7 +103,7 @@ class TestLoadGkDistfReal:
 
   ``mapc2p_vel``/``jacobvel`` in the fixture set carry no DG (basis_type/
   poly_order) metadata, so the coordinate-mapping options (``use_c2p_vel``
-  etc., which need ``ops.map`` to read that metadata off the mapping file)
+  etc., which need ``operations.map`` to read that metadata off the mapping file)
   cannot be exercised against these particular files; only the default
   (no-mapping) path is covered here.
   """

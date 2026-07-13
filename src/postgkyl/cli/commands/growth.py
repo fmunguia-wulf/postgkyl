@@ -1,7 +1,7 @@
 """``growth`` — fit an exponential growth/decay rate to time-series data.
 
 A thin convenience wrapper over ``fit('exp2', window=True)`` -- the
-growth-rate use case documented on ``ops.fit``/``GData.fit``.
+growth-rate use case documented on ``operations.fit``/``GData.fit``.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def command(ctx, guess, min_n, use, tag, label) -> None:
 
   Dropped from the old ``pgkyl growth`` command, deliberately, not silently:
   ``--dir`` (pick which axis of 2D DynVector data to fit a per-mode growth
-  rate along) has no equivalent in ``ops.fit``/``GData.fit`` (layer 08,
+  rate along) has no equivalent in ``operations.fit``/``GData.fit`` (layer 08,
   already implemented/reviewed), which only supports 1D window fits --
   adding it would mean extending that verb's contract, out of this CLI
   layer's scope. ``--instantaneous`` (an interactive matplotlib plot of the

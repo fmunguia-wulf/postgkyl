@@ -5,7 +5,7 @@
 datasets into one result (or, for ``animate``, into one animation), so they
 cannot be one dataset's method the way ``interpolate``/``select``/``fft``/... are on
 :class:`~postgkyl.api.gdata.GData`. Each is a one-line delegation to the
-matching :mod:`postgkyl.ops` verb, so the functional spelling
+matching :mod:`postgkyl.operations` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
 drift apart. :class:`~postgkyl.api.group.DatasetGroup` re-uses these same
 functions for its own ``collect``/``evaluate``/``animate`` terminal methods.
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from postgkyl import ops
+from postgkyl import operations
 
 if TYPE_CHECKING:
   from postgkyl.core.state import GDataState
@@ -27,9 +27,9 @@ def collect(*datasets: "GDataState", sumdata: bool = False,
     label: str | None = None) -> "GDataState":
   """Combine many single-frame datasets into one with a new time axis.
 
-  See ``ops.collect``. Accepts ``collect(a, b)`` or ``collect([a, b])``.
+  See ``operations.collect``. Accepts ``collect(a, b)`` or ``collect([a, b])``.
   """
-  return ops.collect(*datasets, sumdata=sumdata, period=period, offset=offset,
+  return operations.collect(*datasets, sumdata=sumdata, period=period, offset=offset,
       tag=tag, label=label)
 # end
 
@@ -38,9 +38,9 @@ def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     label: str | None = None) -> "GDataState":
   """Evaluate an RPN math expression over an explicit list of datasets.
 
-  See ``ops.evaluate``. ``f``/``fN`` tokens in ``chain`` refer to ``datasets[N]``.
+  See ``operations.evaluate``. ``f``/``fN`` tokens in ``chain`` refer to ``datasets[N]``.
   """
-  return ops.evaluate(chain, *datasets, tag=tag, label=label)
+  return operations.evaluate(chain, *datasets, tag=tag, label=label)
 # end
 
 
@@ -49,10 +49,10 @@ def relchange(data0: "GDataState", data: "GDataState", *,
     tag: str | None = None, label: str | None = None) -> "GDataState":
   """Relative change of ``data`` with respect to the baseline ``data0``.
 
-  See ``ops.relchange``. Returned dataset is built from ``data`` (its
+  See ``operations.relchange``. Returned dataset is built from ``data`` (its
   class propagates, not ``data0``'s).
   """
-  return ops.relchange(data0, data, comp=comp, inplace=inplace, tag=tag,
+  return operations.relchange(data0, data, comp=comp, inplace=inplace, tag=tag,
       label=label)
 # end
 
@@ -60,9 +60,9 @@ def relchange(data0: "GDataState", data: "GDataState", *,
 def animate(*datasets, **kwargs):
   """Animate a sequence of datasets, one frame per dataset.
 
-  See ``ops.animate``. Each positional argument is a frame; a frame may
-  itself be a list of datasets drawn together (mirrors ``ops.animate``'s
+  See ``operations.animate``. Each positional argument is a frame; a frame may
+  itself be a list of datasets drawn together (mirrors ``operations.animate``'s
   "flat iterable, or iterable of frames" contract).
   """
-  return ops.animate(datasets, **kwargs)
+  return operations.animate(datasets, **kwargs)
 # end

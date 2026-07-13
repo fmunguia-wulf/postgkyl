@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -41,7 +41,7 @@ def _quadratic_1d(n=40):
 
 def test_full_gradient_matches_analytic_derivative_1d():
   d, centers = _quadratic_1d()
-  out = ops.differentiate(d)
+  out = operations.differentiate(d)
   np.testing.assert_allclose(out.get_values().flatten(), 2.0 * centers,
       atol=1e-2)
   assert out.get_num_comps() == 1  # 1 comp * 1 dim = 1
@@ -50,15 +50,15 @@ def test_full_gradient_matches_analytic_derivative_1d():
 
 def test_direction_matches_full_gradient_in_1d():
   d, _ = _quadratic_1d()
-  full = ops.differentiate(d)
-  by_dir = ops.differentiate(d, direction=0)
+  full = operations.differentiate(d)
+  by_dir = operations.differentiate(d, direction=0)
   np.testing.assert_allclose(full.get_values(), by_dir.get_values())
 # end
 
 
 def test_grid_unchanged():
   d, _ = _quadratic_1d()
-  out = ops.differentiate(d)
+  out = operations.differentiate(d)
   np.testing.assert_allclose(out.get_grid()[0], d.get_grid()[0])
 # end
 
@@ -71,19 +71,19 @@ def test_2d_full_gradient_stacks_components():
   X, Y = np.meshgrid(c0, c1, indexing="ij")
   values = (X ** 2 + Y)[..., np.newaxis]  # d/dx = 2x, d/dy = 1
   d = _make([e0, e1], values)
-  out = ops.differentiate(d)
+  out = operations.differentiate(d)
   assert out.get_num_comps() == 2
   np.testing.assert_allclose(out.get_values()[..., 0], 2 * X, atol=1e-2)
   np.testing.assert_allclose(out.get_values()[..., 1], np.ones_like(Y), atol=1e-2)
 
-  single = ops.differentiate(d, direction=1)
+  single = operations.differentiate(d, direction=1)
   np.testing.assert_allclose(single.get_values()[..., 0], np.ones_like(Y), atol=1e-2)
 # end
 
 
 def test_inplace_and_tag_label():
   d, _ = _quadratic_1d()
-  out = ops.differentiate(d, tag="grad", label="dq/dx", inplace=True)
+  out = operations.differentiate(d, tag="grad", label="dq/dx", inplace=True)
   assert out is d
   assert d.get_tag() == "grad"
   assert d.get_label() == "dq/dx"
@@ -96,7 +96,7 @@ def test_mismatched_grid_length_raises():
   x = np.linspace(0.0, 1.0, 10)
   d = _make([x], (x ** 2)[:, np.newaxis])
   with pytest.raises(ValueError):
-    ops.differentiate(d)
+    operations.differentiate(d)
   # end
 # end
 
@@ -105,6 +105,6 @@ def test_mismatched_grid_length_raises():
 def test_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
-    ops.differentiate(d)
+    operations.differentiate(d)
   # end
 # end

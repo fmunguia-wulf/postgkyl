@@ -1,6 +1,6 @@
 """Arithmetic / NumPy-ufunc backend for the fluent operators.
 
-Defined here (in ``ops``) — not on the container — so the computing operators
+Defined here (in ``operations``) — not on the container — so the computing operators
 follow the same one-way layering as every other verb (HIERARCHY_3.md).
 
 Dispatch is on the container's ``backend`` (the two-domain lifecycle of

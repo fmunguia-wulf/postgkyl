@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -38,21 +38,21 @@ def test_add_two_datasets_matches_direct_arithmetic():
   'fN[c]' is the *component* selector, per the module docstring); this is
   the byte-compatible spelling for combining two whole datasets."""
   a, b = _field(2.0), _field(3.0)
-  out = ops.evaluate("f0 f1 +", a, b)
+  out = operations.evaluate("f0 f1 +", a, b)
   np.testing.assert_allclose(out.get_values().flatten(), 5.0)
 # end
 
 
 def test_default_f_means_f0():
   a = _field(4.0)
-  out = ops.evaluate("f 2 *", a)
+  out = operations.evaluate("f 2 *", a)
   np.testing.assert_allclose(out.get_values().flatten(), 8.0)
 # end
 
 
 def test_component_bracket_selects_a_component():
   a = _make([np.linspace(0.0, 1.0, 5)], np.tile([1.0, 2.0, 3.0], (4, 1)))
-  out = ops.evaluate("f0[1] sq", a)
+  out = operations.evaluate("f0[1] sq", a)
   np.testing.assert_allclose(out.get_values().flatten(), 4.0)
 # end
 
@@ -60,7 +60,7 @@ def test_component_bracket_selects_a_component():
 def test_ctx_key_token():
   a = _field(1.0)
   a.ctx["scale"] = 3.0
-  out = ops.evaluate("f0 f0.scale *", a)
+  out = operations.evaluate("f0 f0.scale *", a)
   np.testing.assert_allclose(out.get_values().flatten(), 3.0)
 # end
 
@@ -68,7 +68,7 @@ def test_ctx_key_token():
 def test_unknown_ctx_key_raises():
   a = _field(1.0)
   with pytest.raises(ValueError, match="unknown ctx key"):
-    ops.evaluate("f0.nope", a)
+    operations.evaluate("f0.nope", a)
   # end
 # end
 
@@ -76,7 +76,7 @@ def test_unknown_ctx_key_raises():
 # -------------------------------------------------------------- operators
 def test_sqrt_and_abs():
   a = _field(-4.0)
-  out = ops.evaluate("f abs sqrt", a)
+  out = operations.evaluate("f abs sqrt", a)
   np.testing.assert_allclose(out.get_values().flatten(), 2.0)
 # end
 
@@ -84,15 +84,15 @@ def test_sqrt_and_abs():
 def test_min_max_mean():
   a = _make([np.linspace(0.0, 1.0, 5)],
       np.array([1.0, 2.0, 3.0, 4.0])[:, np.newaxis])
-  assert ops.evaluate("f min", a).get_values().flatten()[0] == pytest.approx(1.0)
-  assert ops.evaluate("f max", a).get_values().flatten()[0] == pytest.approx(4.0)
-  assert ops.evaluate("f mean", a).get_values().flatten()[0] == pytest.approx(2.5)
+  assert operations.evaluate("f min", a).get_values().flatten()[0] == pytest.approx(1.0)
+  assert operations.evaluate("f max", a).get_values().flatten()[0] == pytest.approx(4.0)
+  assert operations.evaluate("f mean", a).get_values().flatten()[0] == pytest.approx(2.5)
 # end
 
 
 def test_numeric_literal_and_axis_slice_literal():
   a = _field(2.0)
-  out = ops.evaluate("f 3.0 +", a)
+  out = operations.evaluate("f 3.0 +", a)
   np.testing.assert_allclose(out.get_values().flatten(), 5.0)
 # end
 
@@ -100,7 +100,7 @@ def test_numeric_literal_and_axis_slice_literal():
 # ------------------------------------------------------------------ result
 def test_result_class_and_defaults():
   a, b = _field(2.0), _field(3.0)
-  out = ops.evaluate("f0 f1 +", a, b)
+  out = operations.evaluate("f0 f1 +", a, b)
   assert isinstance(out, GDataState)
   assert out.get_tag() == "default"
   assert out.get_label() == "f0 f1 +"
@@ -109,7 +109,7 @@ def test_result_class_and_defaults():
 
 def test_tag_and_label_explicit():
   a, b = _field(2.0), _field(3.0)
-  out = ops.evaluate("f0 f1 +", a, b, tag="t", label="sum")
+  out = operations.evaluate("f0 f1 +", a, b, tag="t", label="sum")
   assert out.get_tag() == "t"
   assert out.get_label() == "sum"
 # end
@@ -121,7 +121,7 @@ def test_num_comps_reflects_the_actual_output_not_a_stale_operand_value():
   'num_comps'/'cells' merged in from the (differently-shaped) operands."""
   a = _make([np.linspace(0.0, 1.0, 5)], np.tile([1.0, 0.0, 0.0], (4, 1)))
   b = _make([np.linspace(0.0, 1.0, 5)], np.tile([1.0, 0.0, 0.0], (4, 1)))
-  out = ops.evaluate("f0 f1 dot", a, b)
+  out = operations.evaluate("f0 f1 dot", a, b)
   assert out.get_num_comps() == 1
   np.testing.assert_allclose(out.get_values().flatten(), 1.0)
 # end
@@ -132,7 +132,7 @@ def test_conflicting_ctx_keys_are_dropped_not_merged():
   b = _field(3.0)
   a.ctx["note"] = "A"
   b.ctx["note"] = "B"
-  out = ops.evaluate("f0 f1 +", a, b)
+  out = operations.evaluate("f0 f1 +", a, b)
   assert "note" not in out.ctx
 # end
 
@@ -141,10 +141,10 @@ def test_bracket_literal_and_colon_axis_literal():
   a = _make([np.linspace(0.0, 1.0, 5)],
       np.array([1.0, 2.0, 3.0, 4.0])[:, np.newaxis])
   # a bare bracket literal (no leading 'f') exercises the eval() fallback
-  out = ops.evaluate("[1,2,3] mean", a)
+  out = operations.evaluate("[1,2,3] mean", a)
   np.testing.assert_allclose(out.get_values().flatten(), 2.0)
   # a bare colon axis spec exercises the str-literal fallback + 'int'
-  out2 = ops.evaluate("f 0:1 int", a)
+  out2 = operations.evaluate("f 0:1 int", a)
   assert isinstance(out2, GDataState)
 # end
 
@@ -152,7 +152,7 @@ def test_bracket_literal_and_colon_axis_literal():
 # -------------------------------------------------------------------- errors
 def test_empty_datasets_raises():
   with pytest.raises(ValueError, match="at least one dataset"):
-    ops.evaluate("f 2 *")
+    operations.evaluate("f 2 *")
   # end
 # end
 
@@ -160,7 +160,7 @@ def test_empty_datasets_raises():
 def test_empty_expression_raises():
   a = _field(1.0)
   with pytest.raises(ValueError, match="produced no result"):
-    ops.evaluate("", a)
+    operations.evaluate("", a)
   # end
 # end
 
@@ -168,7 +168,7 @@ def test_empty_expression_raises():
 def test_unrecognized_token_raises():
   a = _field(1.0)
   with pytest.raises(ValueError, match="neither data nor an operator"):
-    ops.evaluate("f totally_bogus_token", a)
+    operations.evaluate("f totally_bogus_token", a)
   # end
 # end
 
@@ -178,7 +178,7 @@ def test_operator_failure_is_wrapped_in_value_error():
   # component count larger than the number of dimensions.
   a = _make([np.linspace(0.0, 1.0, 2)], np.tile([1.0, 2.0, 3.0, 4.0], (1, 1)))
   with pytest.raises(ValueError, match="ERROR in 'evaluate div'"):
-    ops.evaluate("f div", a)
+    operations.evaluate("f div", a)
   # end
 # end
 
@@ -187,6 +187,6 @@ def test_operator_failure_is_wrapped_in_value_error():
 def test_rejects_modal_data():
   d = pg.load(F1)
   with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
-    ops.evaluate("f sq", d)
+    operations.evaluate("f sq", d)
   # end
 # end

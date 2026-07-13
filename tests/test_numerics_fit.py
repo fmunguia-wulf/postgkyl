@@ -2,7 +2,7 @@
 
 Ports the array-only subset of ``tests_bak/test_fit.py``: the model
 functions, ``fit``/``fit_evaluate``, and the RPN expression machinery.
-``FitTypeParam`` and the ``fit`` CLI command belong to the CLI/ops layers
+``FitTypeParam`` and the ``fit`` CLI command belong to the CLI/operations layers
 and are not part of this leaf module -- they are not ported here.
 """
 

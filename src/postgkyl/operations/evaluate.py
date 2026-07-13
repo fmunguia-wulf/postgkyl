@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from postgkyl.numerics import ev_cmds
-from postgkyl.ops.select import select
+from postgkyl.operations.select import select
 
 if TYPE_CHECKING:
   from postgkyl.core.state import GDataState

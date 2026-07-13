@@ -1,7 +1,7 @@
 """Write a dataset back to disk.
 
 A leaf module: it consumes the read-only *surface* of a dataset (the same
-properties the readers fill) and never imports ``core``/``ops``. Supports the
+properties the readers fill) and never imports ``core``/``operations``. Supports the
 Gkeyll binary ``.gkyl`` format (round-trips with :class:`GkylReader`), plain
 ASCII ``.txt``, NumPy ``.npy``, and legacy VTK structured-grid ``.vtk``
 (for external 3-D/VR viewers such as ParaView).

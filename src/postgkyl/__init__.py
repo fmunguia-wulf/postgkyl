@@ -12,23 +12,23 @@ owns it and simply gathered here:
     collect, evaluate, relchange,      <- api/       (module-level multi-dataset
     animate                                          verbs -- no single ``self``)
     plot                             <- render/    (multi-dataset rendering)
-    info                             <- ops/       (the info verb, one-or-many)
-    integrate                        <- ops/       (grid integral, via Gkeyll)
-    interpolate, select              <- ops/       (functional verb spellings)
-    represent, apply                 <- ops/       (representation verbs)
-    available_evaluate_operators     <- ops/       (``evaluate``'s RPN token vocabulary)
+    info                             <- operations/ (the info verb, one-or-many)
+    integrate                        <- operations/ (grid integral, via Gkeyll)
+    interpolate, select              <- operations/ (functional verb spellings)
+    represent, apply                 <- operations/ (representation verbs)
+    available_evaluate_operators     <- operations/ (``evaluate``'s RPN token vocabulary)
     save                             <- io/        (file output)
     load_gk_quantity,                <- diagnostics/gyrokinetics/
     load_gk_distf, available_gk_quantities        (equation-internal loaders)
 
-Every fluent ``GData`` method delegates to one of these ``ops`` functions, so
+Every fluent ``GData`` method delegates to one of these ``operations`` functions, so
 ``pg.select(a, z0=0.0)`` and ``a.select(z0=0.0)`` are the same call — the
 functional and fluent spellings can never drift apart. The rest of the
-equation-blind ``ops`` verb inventory (``fft``, ``magsq``, ``mask``,
+equation-blind ``operations`` verb inventory (``fft``, ``magsq``, ``mask``,
 ``val2coord``, ``extract_input``, ``fit``, ``differentiate``, ``integrate_axis``,
 ``map``, plus ``grid`` -- see ``api/gdata.py`` for why ``grid`` has no fluent
 spelling) is reachable as a ``GData`` fluent method and via
-``postgkyl.ops.<verb>``; this facade does not additionally promote each one to
+``postgkyl.operations.<verb>``; this facade does not additionally promote each one to
 a bare top-level name (one home per verb-vocabulary fact, not three).
 
 Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
@@ -38,14 +38,14 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
     engine     dg/         interpolation bridge + modal ops -> gpython
     leaves     io/         readers (C-native first)    -> gpython
     container  core/       GDataState {gkyl|numpy} backend
-    seam       ops/        one verb each
+    seam       operations/ one verb each
     backend    render/     matplotlib
-    fluent     api/        GData(GDataState) + operators   <- above ops
+    fluent     api/        GData(GDataState) + operators   <- above operations
     facade     __init__    re-exports only
 """
 
 from postgkyl.api import GData, load, DatasetGroup, animate, collect, evaluate, relchange
-from postgkyl.ops import apply, available_evaluate_operators, info, integrate, interpolate, represent, select
+from postgkyl.operations import apply, available_evaluate_operators, info, integrate, interpolate, represent, select
 from postgkyl.render import plot
 from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (

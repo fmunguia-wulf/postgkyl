@@ -2,7 +2,7 @@
 compile.
 
 Builds frames directly as ``GDataState`` (no shim dependency needed for the
-render-layer tests; ``ops.animate``'s modal bridging is covered separately in
+render-layer tests; ``operations.animate``'s modal bridging is covered separately in
 ``tests/test_ops_animate.py``). ``ffmpeg``-dependent tests are skipped
 cleanly when it is not on ``PATH``.
 """

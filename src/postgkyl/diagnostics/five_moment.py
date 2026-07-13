@@ -10,7 +10,7 @@ components when ``num_moms`` is not given.
 Each public function takes a ``GDataState`` and returns one (funneling
 through ``_result``); the array-level math is kept in module-private
 ``_get_*`` helpers, copied verbatim from the pre-restructure ``models`` /
-``ops`` layers (06/08) so ``ten_moment``/``mhd``/``plasma``/``multispecies``
+``operations`` layers (06/08) so ``ten_moment``/``mhd``/``plasma``/``multispecies``
 can compose the same formulas without re-deriving them.
 """
 

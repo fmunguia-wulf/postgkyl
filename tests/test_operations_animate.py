@@ -1,6 +1,6 @@
 """Tests for the ``animate`` verb — modal-bridging + delegation to
 ``render.animate.animate`` (mirrors ``tests/test_coverage_leaf.py``'s
-treatment of ``ops.plot``)."""
+treatment of ``operations.plot``)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -42,18 +42,18 @@ def _three_interpolated_frames():
 class TestAnimateVerb:
   def test_already_interpolated_frames_pass_through(self):
     from matplotlib.animation import FuncAnimation
-    anim = ops.animate(_three_interpolated_frames(), show=False)
+    anim = operations.animate(_three_interpolated_frames(), show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 3
   # end
 
   def test_modal_frames_are_materialized_first(self):
     """A raw (non-interpolated) modal dataset is bridged through its NumPy
-    shadow (nodal representation), just like ``ops.plot``."""
+    shadow (nodal representation), just like ``operations.plot``."""
     from matplotlib.animation import FuncAnimation
     a = pg.load(F1D).to_nodal()
     b = pg.load(F1D).to_nodal()
-    anim = ops.animate([a, b], show=False)
+    anim = operations.animate([a, b], show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 2
   # end
@@ -61,7 +61,7 @@ class TestAnimateVerb:
   def test_raw_modal_frame_without_representation_raises(self):
     a = pg.load(F1D)  # still modal coefficients
     with pytest.raises(ValueError, match="not plottable"):
-      ops.animate([a], show=False)
+      operations.animate([a], show=False)
     # end
   # end
 
@@ -70,14 +70,14 @@ class TestAnimateVerb:
     a = pg.load(F1D).interpolate()
     b = pg.load(F1D).interpolate()
     c = pg.load(F1D).interpolate()
-    anim = ops.animate([[a, b], [c]], show=False)
+    anim = operations.animate([[a, b], [c]], show=False)
     assert isinstance(anim, FuncAnimation)
     assert anim._save_count == 2
   # end
 
   def test_saveframes_end_to_end(self, tmp_path):
     prefix = str(tmp_path / "frame")
-    paths = ops.animate(_three_interpolated_frames(), saveframes=prefix,
+    paths = operations.animate(_three_interpolated_frames(), saveframes=prefix,
         show=False)
     assert len(paths) == 3
     for p in paths:

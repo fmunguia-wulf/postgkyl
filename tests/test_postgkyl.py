@@ -445,27 +445,27 @@ _ALLOWED = {
                                                       # so this cannot create a cycle (layer 04-io)
     "core":   {"io", "gpython"},                        # container holds a GkylArray backend
     "render": {"core", "numerics"},
-    "ops":    {"core", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
+    "operations": {"core", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
                                                       # the physics verbs (moments/agyro/
                                                       # current/energetics/rotate/
                                                       # transform_frame/laguerre) moved up
                                                       # into diagnostics, folded with the
                                                       # models/ array math they delegated to;
-                                                      # ops is now the equation-blind
+                                                      # operations is now the equation-blind
                                                       # core-verb library only
-    "diagnostics": {"core", "ops", "numerics", "api", "render"}, # added by
+    "diagnostics": {"core", "operations", "numerics", "api", "render"}, # added by
                                                       # 10-diagnostics.md: equation-
                                                       # specific compositions (five_moment/
                                                       # ten_moment/mhd/plasma/multispecies/
                                                       # rotations/kinetic/pkpm) wrap core
-                                                      # verbs and state -- none of core/ops/
+                                                      # verbs and state -- none of core/operations/
                                                       # numerics imports upward, so this
                                                       # cannot create a cycle; "api" added by
                                                       # 12-diagnostics-loaders.md: the
                                                       # gyrokinetics/pkpm loaders build on
                                                       # pg.load/GData (modal arithmetic,
                                                       # .interpolate()) to read simulation output
-                                                      # -- api imports only core/ops/io, none
+                                                      # -- api imports only core/operations/io, none
                                                       # of which import diagnostics, so this
                                                       # still cannot create a cycle; "render"
                                                       # pre-authorized by 13-diagnostics-
@@ -482,8 +482,8 @@ _ALLOWED = {
                                                       # neither of which imports diagnostics,
                                                       # so this cannot create a cycle whether
                                                       # or not the edge is ever exercised
-    "api":    {"core", "ops", "io"},
-    "":       {"api", "ops", "render", "io", "diagnostics"}, # facade: pure re-export of
+    "api":    {"core", "operations", "io"},
+    "":       {"api", "operations", "render", "io", "diagnostics"}, # facade: pure re-export of
                                                       # public names; "diagnostics" added by
                                                       # 12-diagnostics-loaders.md, which
                                                       # explicitly authorizes the facade
@@ -666,9 +666,9 @@ def _write_module(pkg_root, layer, name, body):
 
 def test_build_edges_flags_a_disallowed_import(tmp_path):
   pkg_root = str(tmp_path / "postgkyl")
-  _write_module(pkg_root, "badlayer", "mod.py", "import postgkyl.ops\n")
+  _write_module(pkg_root, "badlayer", "mod.py", "import postgkyl.operations\n")
   _, violations = _build_edges(pkg_root)
-  assert any("badlayer" in v and "ops" in v for v in violations)
+  assert any("badlayer" in v and "operations" in v for v in violations)
 # end
 
 

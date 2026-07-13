@@ -3,7 +3,7 @@
 The container counterpart of :class:`~postgkyl.core.state.GDataState`: a group
 holds several datasets and offers only *state*-reading operations —
 construction/flattening, the sequence protocol, combining, and a summary
-``repr``. Like ``GDataState`` it knows nothing about verbs: no ``ops`` call,
+``repr``. Like ``GDataState`` it knows nothing about verbs: no ``operations`` call,
 no matplotlib, ever, and it imports only downward (``collection``/``state``,
 both in ``core``). The fluent group that *broadcasts* verbs over its members
 (``interpolate``, ``select``, ``plot``, ``info``, ...) is layer 10's job, one layer up

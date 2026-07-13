@@ -19,7 +19,7 @@ SRC = os.path.join(os.path.dirname(ROOT), "src")
 sys.path.insert(0, SRC)  # dedup harmless across the shared test session
 
 import postgkyl as pg  # noqa: E402
-from postgkyl import dg, gpython, ops  # noqa: E402
+from postgkyl import dg, gpython, operations  # noqa: E402
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
@@ -183,7 +183,7 @@ def test_eval_at_coord_proj_on_real_gkhybrid_data_matches_donor_reconstruction()
 # end
 
 
-# =================================================== ops.eval_at_coord_proj
+# =================================================== operations.eval_at_coord_proj
 @needs_gkeyll
 def test_ops_eval_at_coord_proj_rejects_numpy_backed_and_non_modal():
   interpolated = pg.load(GKHYB).interpolate()

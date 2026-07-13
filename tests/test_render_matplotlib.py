@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 import postgkyl as pg
-from postgkyl import gpython, ops
+from postgkyl import gpython, operations
 from postgkyl.core.state import GDataState
 from postgkyl.render import matplotlib as backend
 
@@ -232,7 +232,7 @@ class TestFigureReuse:
 class TestMappedGrids:
   def test_2d_curvilinear_grid_plots_via_pcolormesh(self):
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
-    mapped = ops.map(data, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
+    mapped = operations.map(data, os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl"),
         space="conf")
     assert mapped.grid[0].ndim == 2  # genuinely curvilinear
     fig = mapped.plot(show=False)
