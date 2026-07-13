@@ -12,6 +12,8 @@ concerns in main too.
 
 from __future__ import annotations
 
+import os
+
 import click
 import numpy as np
 
@@ -302,7 +304,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
         # end
         src = getattr(d, "_file_name", "") or ""
         if src:
-          file_name = file_name + src.split(".")[0]
+          file_name = file_name + os.path.basename(src).split(".")[0]
         # end
         else:
           file_name = file_name + "ev_" + (d.get_label() or f"dataset_{i}").replace(" ", "_")

@@ -271,3 +271,34 @@ def test_create_offset_count_raises_for_non_int_slice_comp_selector():
     r._create_offset_count(num_elems, (None, None), "0,1", None)
   # end
 # end
+
+
+@needs_adios2
+def test_is_compatible_false_for_h5_file_missing_grid_attrs(monkeypatch):
+  """ADIOS2 can also open a plain HDF5 file; without the grid attributes a
+  genuine Gkeyll ADIOS frame always carries, it must be rejected so a
+  different reader (GkylH5Reader/FlashH5Reader) gets a chance instead."""
+  import postgkyl.io.gkyl_adios_reader as adios_reader_mod
+
+  class _FakeFileReader:
+    def __init__(self, _path):
+      pass
+    # end
+
+    def available_variables(self):
+      return {"SomeVar": {}}
+    # end
+
+    def available_attributes(self):
+      return {"someOtherAttr": {}}
+    # end
+
+    def close(self):
+      pass
+    # end
+  # end
+
+  monkeypatch.setattr(adios_reader_mod.adios2, "FileReader", _FakeFileReader)
+  r = GkylAdiosReader(F_P1, ctx={})
+  assert r.is_compatible() is False
+# end

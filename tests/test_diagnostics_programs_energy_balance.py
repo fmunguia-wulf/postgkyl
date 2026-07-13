@@ -350,7 +350,7 @@ class TestGkEnergyBalanceSynthetic:
 
     fig, traces = eb.gk_energy_balance(
         "sim", ["ion"], path=path, bflux_files={"xlower": "custom_bflux.gkyl"},
-        absy=True, logy=True)
+        absy=True, logy=True, show=True)
     try:
       assert traces.bflux_tot is not None
       np.testing.assert_allclose(traces.bflux_tot, -0.05)

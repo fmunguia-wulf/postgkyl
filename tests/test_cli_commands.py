@@ -14,6 +14,7 @@ datasets the old suite built with ``conftest.make_gdata``.
 from __future__ import annotations
 
 import os
+import shutil
 
 import matplotlib
 import numpy as np
@@ -21,6 +22,9 @@ import pytest
 from click.testing import CliRunner
 
 matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 import postgkyl as pg
 from postgkyl import gpython
@@ -39,6 +43,9 @@ DISTF_P2_1 = os.path.join(DATA, "twostream-f-p2_1.bp")
 GK_NAME = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1")
 GK_JACOBTOT_INV = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-geo_int_jacobtot_inv.gkyl")
 F1D = os.path.join(DATA, "generated", "1d_ms_p1.gkyl")
+GEN = os.path.join(DATA, "generated")
+F2D = os.path.join(GEN, "2d_ms_p1.gkyl")
+F2D_MAPC2P = os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl")
 
 
 def _run(args):
@@ -81,6 +88,19 @@ class TestHelpWiring:
         assert name in registered
       # end
     # end
+  # end
+# end
+
+
+class TestFormatCommandsUnresolvedEntry:
+  def test_unresolvable_section_entry_is_skipped(self, monkeypatch):
+    # format_commands's "if cmd is None: continue" guards against a
+    # COMMAND_SECTIONS entry that get_command can't resolve; every real
+    # entry always resolves (test_sections_are_registered_commands), so
+    # force the branch directly rather than corrupting COMMAND_SECTIONS.
+    monkeypatch.setattr(cli, "get_command", lambda ctx, name: None)
+    result = _ok(["--help"])
+    assert result.exit_code == 0
   # end
 # end
 
@@ -315,6 +335,62 @@ class TestChainedPipelines:
   def test_print_grid(self):
     _ok([ENERGY, "print", "--grid"])
   # end
+
+  def test_print_use_filter(self):
+    result = _ok([ENERGY, "print", "--use", "default"])
+    assert result.exit_code == 0
+  # end
+
+  def test_interpolate_skips_inactive_dataset(self):
+    result = _ok([DISTF_P2_0, DISTF_P2_0, "status", "--deactivate", "0",
+        "interp", "info"])
+    assert result.output.count("interpolated") == 1
+  # end
+
+  def test_magsq_use_filter_skips_nonmatching_dataset(self):
+    result = _ok([DISTF_P2_0, "interp", "magsq", "--use", "nonexistent_tag",
+        "--tag", "sq", "status"])
+    assert "tag='default'" in result.output
+  # end
+
+  def test_evaluate_unknown_token_fails_closed(self):
+    result = _run([ENERGY, "evaluate", "f0 bogus_token"])
+    assert result.exit_code != 0
+  # end
+
+  def test_collect_use_filter(self):
+    result = _ok([DISTF_P2_0, DISTF_P2_1, "interp", "collect", "--use", "default"])
+    assert result.exit_code == 0
+  # end
+
+  def test_collect_no_datasets_fails_closed(self):
+    result = _run(["collect"])
+    assert result.exit_code != 0
+  # end
+
+  def test_extractinput_use_filter(self):
+    result = _ok([ENERGY, "extractinput", "--use", "default"])
+    assert result.exit_code == 0
+  # end
+
+  @needs_gkeyll
+  def test_map_conf_deforms_the_grid(self):
+    result = _ok([F2D, "interp", "map", "--file", F2D_MAPC2P, "info"])
+    assert "(mapped)" in result.output
+  # end
+
+  def test_relchange_no_datasets_fails_closed(self):
+    result = _run(["relchange"])
+    assert result.exit_code != 0
+  # end
+
+  def test_status_deactivate_comma_list(self):
+    result = _ok([ENERGY, ENERGY, ENERGY, "status", "--deactivate", "0,2", "status"])
+    lines = [l for l in result.output.splitlines() if l.startswith("[")][-3:]
+    assert "inactive" in lines[0]
+    assert "active" in lines[1]
+    assert "inactive" in lines[2]
+  # end
 # end
 
 
@@ -350,9 +426,38 @@ class TestFitAndGrowth:
     assert "R^2" in result.output
   # end
 
+  def test_fit_use_filter(self):
+    result = _ok([ENERGY, "fit", "--use", "default", "linear"])
+    assert "R^2" in result.output
+  # end
+
+  def test_fit_no_datasets_fails_closed(self):
+    result = _run(["fit", "linear"])
+    assert result.exit_code != 0
+  # end
+
   def test_growth_rate(self):
     result = _ok([ENERGY, "growth", "--min-n", "15700"])
     assert "growth rate" in result.output
+  # end
+
+  def test_growth_use_filters_by_matching_tag(self):
+    result = _ok([ENERGY, "growth", "--use", "default", "--min-n", "15700"])
+    assert "growth rate" in result.output
+  # end
+
+  def test_growth_use_no_matching_tag_fails_closed(self):
+    result = _run([ENERGY, "growth", "--use", "nope"])
+    assert result.exit_code != 0
+  # end
+
+  @needs_gkeyll
+  def test_growth_value_error_becomes_usage_error(self):
+    # F1: raw modal (gkyl-backed) data, not interpolated -- fit() raises
+    # ValueError ("call .interpolate() first"), which growth must turn into
+    # a click.UsageError rather than letting it propagate as a crash.
+    result = _run([F1, "growth"])
+    assert result.exit_code != 0
   # end
 
   def test_fit_unknown_type_fails_closed(self):
@@ -371,6 +476,12 @@ class TestIntegrate:
   @needs_gkeyll
   def test_integrate_prints_a_value(self):
     result = _ok([F1, "integrate"])
+    assert "[0]" in result.output
+  # end
+
+  @needs_gkeyll
+  def test_integrate_use_filter(self):
+    result = _ok([F1, "integrate", "--use", "default"])
     assert "[0]" in result.output
   # end
 
@@ -477,6 +588,13 @@ class TestAnimate:
     result = _run(["animate"])
     assert result.exit_code != 0
   # end
+
+  def test_animate_batch_mode_default_gif(self, tmp_path):
+    prefix = str(tmp_path / "anim")
+    _ok(["--batch-mode", "--saveframes-prefix", prefix, DISTF_P2_0, DISTF_P2_1,
+        "interp", "animate"])
+    assert os.path.exists(f"{prefix}.gif")
+  # end
 # end
 
 
@@ -513,6 +631,109 @@ class TestPlotOptionParity:
 # end
 
 
+class TestPlotOptionCoverage:
+  """Exercises the option-preprocessing/figure-targeting/save-naming branches
+  in ``cli/commands/plot.py`` that ``TestPlotOptionParity`` doesn't reach."""
+
+  def test_scatter_arg_and_jet_warning(self):
+    result = _ok([ENERGY, "plot", "--scatter", "--jet"])
+    assert "jet" in result.output.lower()
+    assert "WARNING" in result.output
+  # end
+
+  def test_aspect_implies_fixaspect(self):
+    _ok([DISTF_P2_0, "interp", "plot", "--aspect", "1.0"])
+  # end
+
+  def test_lineouts(self):
+    _ok([DISTF_P2_0, "interp", "plot", "--lineouts", "0"])
+  # end
+
+  def test_xlim_ylim_split(self):
+    _ok([F1, "interp", "sel", "--comp", "0", "plot", "--xlim", "0,1", "--ylim", "-1,1"])
+  # end
+
+  def test_zlim_split(self):
+    _ok([DISTF_P2_0, "interp", "plot", "--zlim", "-1,1"])
+  # end
+
+  def test_multiblock_defaults_globalrange_and_contour_clevels(self):
+    # multiblock with no --cutoffglobalrange forces --globalrange (computing
+    # zmin/zmax over the pool), and multiblock+contour with no --clevels
+    # derives one from that same zmin/zmax; multiblock also pins every
+    # dataset onto figure 0.
+    plt.close("all")
+    _ok([DISTF_P2_0, DISTF_P2_0, "interp", "plot", "--multiblock", "--contour"])
+  # end
+
+  def test_cutoffglobalrange_percentile_path(self):
+    _ok([ENERGY, ENERGY, "plot", "--cutoffglobalrange", "0.9"])
+  # end
+
+  def test_legend_list_and_per_dataset_label(self):
+    _ok([ENERGY, ENERGY, "plot", "--legend", "a,b"])
+  # end
+
+  def test_use_filters_pool_to_tagged_subset(self):
+    # Tags the ``evaluate`` result "g" and reactivates the original dataset,
+    # so the working set holds one "default"- and one "g"-tagged dataset;
+    # ``--use g`` must filter the plot pool down to just the latter.
+    result = _ok([ENERGY, "evaluate", "--tag", "g", "f 2 *",
+        "status", "--activate", "0", "plot", "--use", "g"])
+    assert result.exit_code == 0
+  # end
+
+  def test_subplots_multiple_datasets(self):
+    plt.close("all")
+    _ok([ENERGY, ENERGY, "plot", "--subplots"])
+  # end
+
+  def test_figure_dataset_targets_one_figure_per_dataset(self):
+    plt.close("all")
+    _ok([ENERGY, ENERGY, "plot", "--figure", "dataset"])
+  # end
+
+  def test_saveframes_writes_one_png_per_dataset(self, tmp_path):
+    prefix = tmp_path / "frame"
+    _ok([ENERGY, ENERGY, "plot", "--saveframes", str(prefix)])
+    assert (tmp_path / "frame_0.png").exists()
+    assert (tmp_path / "frame_1.png").exists()
+  # end
+
+  def test_show_without_batch_mode_or_saveframes_calls_plt_show(self):
+    # Every other plot test in this file passes --batch-mode or --saveframes,
+    # so ``plt.show()`` itself was never exercised.
+    _ok([ENERGY, "plot"])
+  # end
+
+  def test_default_save_naming_across_multiple_datasets(self, tmp_path, monkeypatch):
+    # With no --saveas, a fixed --figure defers the save to the end of the
+    # loop, so the file name accumulates one source-file stem per dataset
+    # (joined by "_"). Needs plain relative file names: the naming logic
+    # does ``src.split(".")[0]`` on the raw source path with no dirname
+    # handling, so an absolute-path source breaks it (see report).
+    shutil.copy(ENERGY, tmp_path / "energy.bp")
+    monkeypatch.chdir(tmp_path)
+    _ok(["energy.bp", "energy.bp", "plot", "--figure", "0", "--save"])
+    assert (tmp_path / "energy_energy.png").exists()
+  # end
+
+  def test_default_save_naming_uses_basename_for_absolute_paths(self, tmp_path,
+      monkeypatch):
+    # ENERGY is an absolute path; a fixed --figure with no --saveas
+    # concatenates each dataset's stem into one file name. Before the fix,
+    # concatenating raw absolute paths (rather than their basenames)
+    # produced a bogus nested path like "<dir>/energy_<dir>/energy" and
+    # crashed plt.savefig. Running from a distinct cwd (tmp_path) proves the
+    # save target is a plain relative basename-derived name, not the
+    # source's absolute directory.
+    monkeypatch.chdir(tmp_path)
+    _ok([ENERGY, ENERGY, "plot", "--figure", "0", "--save"])
+    assert (tmp_path / "twostream-field-energy_twostream-field-energy.png").exists()
+  # end
+# end
+
+
 class TestPlotly:
   def test_plotly_2d_html(self, tmp_path):
     out = tmp_path / "surf.html"
@@ -530,6 +751,50 @@ class TestPlotly:
     result = _run(["plotly"])
     assert result.exit_code != 0
   # end
+
+  def test_plotly_use_filter(self, tmp_path):
+    out = tmp_path / "surf.html"
+    _ok([DISTF_P2_0, "interp", "plotly", "--use", "default", "--save", str(out)])
+    assert out.exists()
+  # end
+
+  def test_plotly_batch_mode_default_html(self, tmp_path):
+    prefix = str(tmp_path / "surf")
+    _ok(["--batch-mode", "--saveframes-prefix", prefix, DISTF_P2_0, "interp", "plotly"])
+    assert os.path.exists(f"{prefix}_0.html")
+  # end
+
+  def test_plotly_non_html_save_writes_image(self, tmp_path):
+    out = tmp_path / "surf.png"
+    _ok([DISTF_P2_0, "interp", "plotly", "--save", str(out)])
+    assert out.exists()
+  # end
+
+  def test_plotly_no_save_no_batch_calls_show(self, monkeypatch):
+    calls = []
+    monkeypatch.setattr(go.Figure, "show", lambda self, *a, **k: calls.append(True))
+    _ok([DISTF_P2_0, "interp", "plotly"])
+    assert calls == [True]
+  # end
+
+  def test_plotly_animate_no_datasets_fails_closed(self):
+    result = _run(["plotly_animate"])
+    assert result.exit_code != 0
+  # end
+
+  def test_plotly_animate_batch_mode_default_html(self, tmp_path):
+    prefix = str(tmp_path / "anim")
+    _ok(["--batch-mode", "--saveframes-prefix", prefix, DISTF_P2_0, DISTF_P2_1,
+        "interp", "plotly_animate"])
+    assert os.path.exists(f"{prefix}.html")
+  # end
+
+  def test_plotly_animate_no_save_no_batch_calls_show(self, monkeypatch):
+    calls = []
+    monkeypatch.setattr(go.Figure, "show", lambda self, *a, **k: calls.append(True))
+    _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate"])
+    assert calls == [True]
+  # end
 # end
 
 
@@ -541,6 +806,25 @@ class TestPyvista:
     _ok(["--batch-mode", self.GK_3D, "interp", "pyvista", "--no-show",
         "--no-spin", "--saveas", str(out)])
     assert out.exists()
+  # end
+
+  def test_pyvista_no_datasets_fails_closed(self):
+    result = _run(["pyvista"])
+    assert result.exit_code != 0
+  # end
+
+  def test_pyvista_use_filter(self, tmp_path):
+    out = tmp_path / "pv.png"
+    _ok([self.GK_3D, "interp", "pyvista", "--use", "default", "--no-show",
+        "--no-spin", "--saveas", str(out)])
+    assert out.exists()
+  # end
+
+  def test_pyvista_batch_mode_default_png(self, tmp_path):
+    prefix = str(tmp_path / "pv")
+    _ok(["--batch-mode", "--saveframes-prefix", prefix, self.GK_3D, "interp",
+        "pyvista", "--no-show", "--no-spin"])
+    assert os.path.exists(f"{prefix}_0.png")
   # end
 # end
 
@@ -554,6 +838,11 @@ class TestStyle:
   def test_style_set_param(self):
     result = _ok(["style", "--set", "lines.linewidth:3", "--print"])
     assert "lines.linewidth : 3" in result.output
+  # end
+
+  def test_style_file_option_applies_named_style(self):
+    result = _ok(["style", "--file", "postgkyl", "--print"])
+    assert ":" in result.output
   # end
 # end
 

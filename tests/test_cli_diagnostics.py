@@ -179,6 +179,15 @@ class TestVelocity:
     assert not is_active(density)
     assert not is_active(momentum)
   # end
+
+  def test_velocity_missing_tag_fails_closed(self):
+    density = _make(GRID1D, np.array([[2.0]]), tag="density")
+    ds = DataSpace(datasets=[density])
+    with pytest.raises(click.UsageError, match="momentum"):
+      _invoke(velocity.command, ds, density_tag="density", momentum_tag="momentum",
+          tag="velocity", label="velocity")
+    # end
+  # end
 # end
 
 
@@ -238,6 +247,23 @@ class TestCurrent:
     ds = DataSpace(datasets=[])
     with pytest.raises(click.UsageError):
       _invoke(current.command, ds, qbym=False, charge=None, mass=None,
+          use=None, tag="current", label="J")
+    # end
+  # end
+
+  def test_current_use_filters_by_matching_tag(self):
+    source = _euler_data()
+    ds = DataSpace(datasets=[source])
+    _invoke(current.command, ds, qbym=False, charge=None, mass=None,
+        use="default", tag="current", label="J")
+    assert ds.datasets[-1].tag == "current"
+  # end
+
+  def test_current_qbym_missing_mass_raises_usage_error(self):
+    source = _euler_data()
+    ds = DataSpace(datasets=[source])
+    with pytest.raises(click.UsageError):
+      _invoke(current.command, ds, qbym=True, charge=1.0, mass=None,
           use=None, tag="current", label="J")
     # end
   # end

@@ -145,6 +145,24 @@ def test_interpolate_converts_nodal_basis_data_through_nodal_to_modal():
 # end
 
 
+@needs_gkeyll
+def test_local_poly_degenerates_1d_hybrid_to_serendipity():
+  nb = dg.num_basis(1, 1, "serendipity")
+  values = np.zeros((5, nb))
+  grid = [np.linspace(0.0, 1.0, 6)]
+  grid_out, out = dg.local_poly(values, grid, poly_order=1, basis_type="hybrid")
+  assert out.shape[-1] == 1
+# end
+
+
+@needs_gkeyll
+def test_local_poly_converts_nodal_basis_data_through_nodal_to_modal():
+  d = pg.load(F1).local_poly(basis="ns")
+  assert d.is_interpolated
+  assert d.values.ndim == 2
+# end
+
+
 # ======================================================================= dg/modal
 @needs_gkeyll
 def test_modal_power_rejects_non_positive_integer_exponents():

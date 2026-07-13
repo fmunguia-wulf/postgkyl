@@ -246,6 +246,13 @@ def test_hybrid_unsupported_combinations_raise_cleanly(
 # end
 
 
+def test_cdim_vdim_raises_for_unsupported_hybrid_ndim():
+  with pytest.raises(ValueError, match="Gkeyll's hybrid basis supports ndim"):
+    fb.cdim_vdim("hybrid", 5)
+  # end
+# end
+
+
 def test_hybrid_and_gkhybrid_are_distinct_bases_at_the_same_ndim():
   """ndim=2 exists for both; they must not collide in the cache or alias
   the same compiled basis."""

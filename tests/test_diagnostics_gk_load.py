@@ -128,6 +128,114 @@ class TestLoadGkDistfReal:
     # end
 
 
+class _FakeDistfGData:
+  """Stands in for ``postgkyl.api.GData`` so ``load_gk_distf``'s coordinate-
+  map branches (``use_c2p_vel``/``use_mc2nu``/``use_mapc2p``) can be
+  exercised without real mapc2p_vel/mc2nu/mapc2p DG fixtures (the staged
+  rt_gk_tcv_iwl* files carry no such metadata -- see TestLoadGkDistfReal)."""
+
+  _registry: dict = {}
+
+  def __init__(self, file_name="", *, ctx=None, tag="default", label=""):
+    self.ctx = dict(ctx) if ctx else {}
+    self._tag = tag
+    if file_name:
+      self._grid, self._values = self._registry[file_name]
+    else:
+      self._grid, self._values = None, None
+    # end
+  # end
+
+  def get_values(self):
+    return self._values
+  # end
+
+  def get_grid(self):
+    return self._grid
+  # end
+
+  def push(self, grid, values):
+    self._grid, self._values = grid, values
+  # end
+
+  def interpolate(self, basis, p, num_interp=None):
+    return self
+  # end
+# end
+
+
+class TestLoadGkDistfCoordinateMaps:
+  """Unit tests of ``load_gk_distf``'s ``use_c2p_vel``/``use_mc2nu``/
+  ``use_mapc2p`` branches, stubbed through ``distf.GData``/``operations.map``
+  since the compiled-Gkeyll fixtures have no mapping-file metadata to
+  exercise them against."""
+
+  def _stub(self, monkeypatch):
+    grid = [np.linspace(0.0, 1.0, 5)]
+    values = np.ones((4, 1))
+    registry = {
+        "sim-ion_0.gkyl": (grid, values),
+        "sim-ion_jacobvel.gkyl": (grid, values),
+        "sim-jacobtot_inv.gkyl": (grid, values),
+    }
+    monkeypatch.setattr(_FakeDistfGData, "_registry", registry)
+    monkeypatch.setattr(distf, "GData", _FakeDistfGData)
+    calls = []
+
+    def fake_map(data, mapping, *, space):
+      calls.append((mapping, space))
+      return data
+    # end
+
+    monkeypatch.setattr(distf.operations, "map", fake_map)
+    return calls
+  # end
+
+  def test_use_c2p_vel(self, monkeypatch):
+    calls = self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0, use_c2p_vel=True)
+    assert calls == [("sim-ion_mapc2p_vel.gkyl", "vel")]
+    assert out.ctx["grid_type"] == "c2p_vel"
+  # end
+
+  def test_use_mc2nu(self, monkeypatch):
+    calls = self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0, use_mc2nu=True)
+    assert calls == [("sim-mc2nu_pos_deflated.gkyl", "conf")]
+    assert out.ctx["grid_type"] == "mc2nu"
+  # end
+
+  def test_use_mapc2p(self, monkeypatch):
+    calls = self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0, use_mapc2p=True)
+    assert calls == [("sim-mapc2p_deflated.gkyl", "conf")]
+    assert out.ctx["grid_type"] == "mapc2p"
+  # end
+
+  def test_use_mc2nu_takes_precedence_over_mapc2p(self, monkeypatch):
+    calls = self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0, use_mc2nu=True, use_mapc2p=True)
+    assert calls == [("sim-mc2nu_pos_deflated.gkyl", "conf")]
+    assert out.ctx["grid_type"] == "mc2nu"
+  # end
+
+  def test_use_c2p_vel_and_mapc2p_both_applied(self, monkeypatch):
+    calls = self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0, use_c2p_vel=True, use_mapc2p=True)
+    assert calls == [("sim-ion_mapc2p_vel.gkyl", "vel"),
+        ("sim-mapc2p_deflated.gkyl", "conf")]
+    assert out.ctx["grid_type"] == "c2p_vel + mapc2p"
+  # end
+
+  def test_no_grid_type_key_when_no_maps_requested(self, monkeypatch):
+    self._stub(monkeypatch)
+    out = distf.load_gk_distf("sim", "ion", 0)
+    assert "grid_type" not in out.ctx
+  # end
+# end
+    # end
+
+
 class TestFetchCombinators:
   """Unit tests of the generic component-extraction/combinator factories --
   pure field-domain math, no compiled shim needed."""

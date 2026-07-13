@@ -576,3 +576,98 @@ def test_array_average_rejects_grid_array_mismatch():
     k.array_average(grid, basis_type, p, 1, [1], [1], a)
   # end
 # end
+
+
+# -------------------------------------------------------------- differentiate
+def test_weak_differentiate_rejects_poly_order_above_table():
+  a = GkylArray.alloc(2, 3)
+  with pytest.raises(NotImplementedError, match="poly_order 1..2"):
+    k.weak_differentiate("serendipity", 1, 3, dir=0, diff_order=1, dx=1.0, a=a)
+  # end
+# end
+
+
+def test_weak_differentiate_rejects_dir_out_of_range():
+  a = GkylArray.alloc(2, 3)
+  with pytest.raises(ValueError, match="out of range"):
+    k.weak_differentiate("serendipity", 1, 1, dir=5, diff_order=1, dx=1.0, a=a)
+  # end
+# end
+
+
+def test_weak_differentiate_rejects_bad_diff_order():
+  a = GkylArray.alloc(2, 3)
+  with pytest.raises(ValueError, match="order must be 1 or 2"):
+    k.weak_differentiate("serendipity", 1, 1, dir=0, diff_order=3, dx=1.0, a=a)
+  # end
+# end
+
+
+# ----------------------------------------------------------- eval_at_coord_proj
+def test_eval_at_coord_proj_rejects_gkhybrid_poly_order_above_1():
+  a = GkylArray.alloc(2, 2)
+  grid = {"ndim": 3, "lower": [0.0, 0.0, 0.0], "upper": [1.0, 1.0, 1.0],
+          "cells": [1, 1, 1]}
+  with pytest.raises(NotImplementedError, match="poly_order 1 only"):
+    k.eval_at_coord_proj("gkhybrid", 3, 2, 1, grid, [0], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_unknown_basis_type():
+  a = GkylArray.alloc(2, 2)
+  grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [1]}
+  with pytest.raises(NotImplementedError, match="serendipity/tensor/gkhybrid"):
+    k.eval_at_coord_proj("hybrid", 1, 1, 1, grid, [0], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_tensor_ndim_above_table():
+  a = GkylArray.alloc(2, 2)
+  grid = {"ndim": 4, "lower": [0.0] * 4, "upper": [1.0] * 4, "cells": [1] * 4}
+  with pytest.raises(NotImplementedError, match="ndim"):
+    k.eval_at_coord_proj("tensor", 4, 1, 4, grid, [0], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_poly_order_above_table():
+  a = GkylArray.alloc(2, 2)
+  grid = {"ndim": 1, "lower": [0.0], "upper": [1.0], "cells": [1]}
+  with pytest.raises(NotImplementedError, match="poly_order 1..2"):
+    k.eval_at_coord_proj("serendipity", 1, 3, 1, grid, [0], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_eval_dirs_out_of_range():
+  a = GkylArray.alloc(2, 2)
+  grid = {"ndim": 2, "lower": [0.0, 0.0], "upper": [1.0, 1.0], "cells": [1, 1]}
+  with pytest.raises(ValueError, match="out of range"):
+    k.eval_at_coord_proj("serendipity", 2, 1, 2, grid, [5], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_grid_array_mismatch():
+  basis_type, ndim, p = "serendipity", 1, 1
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  a = GkylArray.alloc(nb, 4)
+  grid = {"ndim": ndim, "lower": [0.0], "upper": [1.0], "cells": [5]}
+  with pytest.raises(ValueError, match="do not cover"):
+    k.eval_at_coord_proj(basis_type, ndim, p, ndim, grid, [0], [0.0], 1, [1], a)
+  # end
+# end
+
+
+def test_eval_at_coord_proj_rejects_eval_dirs_coords_length_mismatch():
+  basis_type, ndim, p = "serendipity", 1, 1
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  a = GkylArray.alloc(nb, 4)
+  grid = {"ndim": ndim, "lower": [0.0], "upper": [1.0], "cells": [4]}
+  with pytest.raises(ValueError, match="same length"):
+    k.eval_at_coord_proj(basis_type, ndim, p, ndim, grid, [0], [0.1, 0.2], 1,
+        [1], a)
+  # end
+# end

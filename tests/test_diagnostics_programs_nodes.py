@@ -151,6 +151,10 @@ class _FakeGData:
   def get_values(self):
     return self._values
   # end
+
+  def interpolate(self, basis, p, num_interp=None):
+    return self
+  # end
 # end
 
 
@@ -290,6 +294,85 @@ class TestGkNodesSynthetic:
     fig = nodes.gk_nodes("sim", path=path)
     try:
       assert fig is not None
+    # end
+    finally:
+      plt.close(fig)
+  # end
+
+  def test_show_calls_plt_show(self, stub, tmp_path, monkeypatch):
+    path = str(tmp_path) + "/"
+    stub.add(f"{path}sim-nodes.gkyl", [np.arange(3.0)] * 2, _square_nodes())
+    calls = []
+    monkeypatch.setattr(plt, "show", lambda: calls.append(True))
+    fig = nodes.gk_nodes("sim", path=path, show=True)
+    try:
+      assert calls == [True]
+    # end
+    finally:
+      plt.close(fig)
+  # end
+# end
+    # end
+
+
+class TestGkNodesPsiOverlay:
+  """The ``psi_file`` overlay path, stubbed through ``gk_utils.GData`` (its
+  ``.interpolate()`` returns itself, carrying the already pre-shaped
+  edge-grid/cell-centered-values pair a caller registered) so ``pcolormesh``/
+  ``contour`` receive consistently-shaped synthetic data without needing a
+  real p2 tensor-basis fixture (see TestGkNodesPsiOverlayRealFixtures)."""
+
+  def _add_psi(self, stub, path):
+    psi_grid = [np.linspace(0.0, 3.0, 4), np.linspace(-1.0, 1.0, 3)]
+    psi_values = np.ones((3, 2))
+    stub.add(f"{path}sim-psi.gkyl", psi_grid, psi_values)
+  # end
+
+  def test_pcolormesh_with_colorbar(self, stub, tmp_path):
+    path = str(tmp_path) + "/"
+    stub.add(f"{path}sim-nodes.gkyl", [np.arange(3.0)] * 2, _square_nodes())
+    self._add_psi(stub, path)
+    fig = nodes.gk_nodes("sim", path=path, psi_file="sim-psi.gkyl")
+    try:
+      assert len(fig.axes) == 2
+    # end
+    finally:
+      plt.close(fig)
+  # end
+
+  def test_contour(self, stub, tmp_path):
+    path = str(tmp_path) + "/"
+    stub.add(f"{path}sim-nodes.gkyl", [np.arange(3.0)] * 2, _square_nodes())
+    self._add_psi(stub, path)
+    fig = nodes.gk_nodes("sim", path=path, psi_file="sim-psi.gkyl", contour=True)
+    try:
+      assert len(fig.axes) == 2
+    # end
+    finally:
+      plt.close(fig)
+  # end
+
+  def test_single_level_clevels_suppresses_colorbar(self, stub, tmp_path):
+    path = str(tmp_path) + "/"
+    stub.add(f"{path}sim-nodes.gkyl", [np.arange(3.0)] * 2, _square_nodes())
+    self._add_psi(stub, path)
+    fig = nodes.gk_nodes("sim", path=path, psi_file="sim-psi.gkyl", clevels="0.5")
+    try:
+      assert len(fig.axes) == 1
+    # end
+    finally:
+      plt.close(fig)
+  # end
+
+  def test_absolute_psi_file_override(self, stub, tmp_path):
+    path = str(tmp_path) + "/"
+    stub.add(f"{path}sim-nodes.gkyl", [np.arange(3.0)] * 2, _square_nodes())
+    abs_psi = f"{path}custom_psi.gkyl"
+    psi_grid = [np.linspace(0.0, 3.0, 4), np.linspace(-1.0, 1.0, 3)]
+    stub.add(abs_psi, psi_grid, np.ones((3, 2)))
+    fig = nodes.gk_nodes("sim", path=path, psi_file=abs_psi)
+    try:
+      assert len(fig.axes) == 2
     # end
     finally:
       plt.close(fig)

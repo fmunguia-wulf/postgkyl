@@ -185,6 +185,33 @@ class TestGkParticleBalanceSynthetic:
   # end
     # end
 
+  def test_relative_error_absy_saveas_and_show(self, stub, tmp_path):
+    """Covers ``absy`` wrapping the relative-error ylabel in ``||`` together
+    with ``saveas``/``show`` (default ``ylabel_string`` is non-empty on this
+    branch, unlike the absolute-error branch's ``""`` default)."""
+    path = _build_sim(stub, tmp_path)
+    n = 5
+    time = np.linspace(0.0, 1.0, n)
+    f_vals = np.zeros((n, 2))
+    f_vals[:, 0] = 10.0
+    stub.add(f"{path}sim-ion_integrated_moms.gkyl", time, f_vals)
+    dt_time = np.linspace(0.0, 1.0, n - 1)
+    dt_vals = np.full((n - 1, 1), 0.2)
+    stub.add(f"{path}sim-dt.gkyl", dt_time, dt_vals)
+
+    out_path = str(tmp_path / "out.png")
+    fig, traces = pb.gk_particle_balance(
+        "sim", "ion", path=path, relative_error=True, absy=True, show=True,
+        saveas=out_path)
+    try:
+      assert traces.mom_err_norm is not None
+      assert os.path.exists(out_path)
+    # end
+    finally:
+      plt.close(fig)
+  # end
+    # end
+
   def test_missing_required_fdot_file_raises(self, stub, tmp_path):
     path = str(tmp_path) + "/"
     with pytest.raises(FileNotFoundError, match="fdot_integrated_moms"):
