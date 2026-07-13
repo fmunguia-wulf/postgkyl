@@ -419,9 +419,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         nodal_grid = _get_nodal_grid(grid, cells)
         x = (nodal_grid[0] + xshift)*xscale
         y = (values[..., comp] + yshift)*yscale
-      if transpose:  # put the coordinate on the vertical axis
-        x, y = y, x
-      # end
+        if transpose:  # put the coordinate on the vertical axis
+          x, y = y, x
+        # end
         # Color the line from the colormap when a 'cval' is given (1D only).
         line_color = color
         if bool(cmap) and cval is not None:
