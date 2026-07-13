@@ -23,9 +23,6 @@ import postgkyl.output.plot
     "multiple 2D datasets).")
 @click.option("--alpha", type=click.FLOAT, default=None,
     help="Surface transparency (0-1); useful when overlaying surfaces.")
-@click.option("--multi2d-mode", "multi2d_mode",
-    type=click.Choice(["surface", "contour"]), default="surface", show_default=True,
-    help="Mode to switch to when overlaying multiple 2D datasets for comparison.")
 @click.option("--no-multi2d", "no_multi2d", is_flag=True,
     help="Disable the automatic switch to surface/contour when overlaying "
     "multiple 2D datasets (keep overlapping pcolormesh).")
@@ -112,7 +109,7 @@ import postgkyl.output.plot
     help="Override default colormap with a valid matplotlib cmap.")
 @click.option("--cval", type=click.STRING, default=None,
     help="For 1D plots, comma-separated values mapping each curve onto the colormap "
-    "(e.g. '0,1'). Requires --cmap; defaults to the dataset index if omitted.")
+    "(e.g. '1e-6,2e-6'). Requires --cmap; defaults to the dataset index if omitted.")
 @click.option("-m", "--multiblock", is_flag=True, default=False)
 @click.pass_context
 def plot(ctx, **kwargs):
@@ -188,26 +185,19 @@ def plot(ctx, **kwargs):
   num_datasets = sum(1 for _ in ctx.obj["data"].iterator(kwargs["use"]))
   first_dat = next(ctx.obj["data"].iterator(kwargs["use"]), None)
   is_2d = first_dat is not None and first_dat.get_num_dims(squeeze=True) == 2
-  enable_multi2d = not kwargs["no_multi2d"]
   overlay_2d = (
-      is_2d and num_datasets > 1 and enable_multi2d and not dataset_fignum
+      is_2d and num_datasets > 1 and not dataset_fignum
       and not kwargs["subplots"] and kwargs["lineouts"] is None
       and not kwargs["quiver"] and not kwargs["streamline"]
   )
   if overlay_2d and not kwargs["surface"] and not kwargs["contour"]:
-    if kwargs["multi2d_mode"] == "contour":
-      kwargs["contour"] = True
-    else:
-      kwargs["surface"] = True
-    # end
+    kwargs["contour"] = True
   # end
   kwargs["comparison"] = overlay_2d and (kwargs["surface"] or kwargs["contour"])
   # Overlaying requires a shared figure; default to figure 0 when switching modes.
   if kwargs["comparison"] and kwargs["figure"] is None:
     kwargs["figure"] = 0
   # end
-  del kwargs["no_multi2d"]
-  del kwargs["multi2d_mode"]
 
   if kwargs["globalrange"] or kwargs["cutoffglobalrange"]:
     vmin = float("inf")
