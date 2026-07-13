@@ -197,20 +197,20 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   # end
 
-    # ---- Optional axis transpose ----
-    # Swap the horizontal and vertical axes.
-    if transpose and num_dims == 2:
-      values = np.swapaxes(values, 0, 1)
-      g0, g1 = grid[1], grid[0]
-      if g0.ndim > 1:
-        g0, g1 = g0.transpose(), g1.transpose()
-      # end
-      grid[0], grid[1] = g0, g1
-      lower[0], lower[1] = lower[1], lower[0]
-      upper[0], upper[1] = upper[1], upper[0]
-      cells[0], cells[1] = cells[1], cells[0]
-      axes_labels[0], axes_labels[1] = axes_labels[1], axes_labels[0]
+  # ---- Optional axis transpose ----
+  # Swap the horizontal and vertical axes.
+  if transpose and num_dims == 2:
+    values = np.swapaxes(values, 0, 1)
+    g0, g1 = grid[1], grid[0]
+    if g0.ndim > 1:
+      g0, g1 = g0.transpose(), g1.transpose()
     # end
+    grid[0], grid[1] = g0, g1
+    lower[0], lower[1] = lower[1], lower[0]
+    upper[0], upper[1] = upper[1], upper[0]
+    cells[0], cells[1] = cells[1], cells[0]
+    axes_labels[0], axes_labels[1] = axes_labels[1], axes_labels[0]
+  # end
 
   # Get the number of components and an indexer
   step = 2 if bool(streamline or quiver) else 1
@@ -251,9 +251,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   # end
 
-    if transpose and num_dims == 1:
-      xlabel, ylabel = ylabel, xlabel
-    # end
+  if transpose and num_dims == 1:
+    xlabel, ylabel = ylabel, xlabel
+  # end
 
   # ---- Prepare Figure and Axes ----------------------------------------
   if bool(figsize):
