@@ -184,11 +184,7 @@ def plot(ctx, **kwargs):
     kwargs["globalrange"] = True
   # end
 
-  # ---- Auto-switch when overlaying multiple 2D datasets ----
-  # Overlapping pcolormesh plots are unreadable, so when several 2D datasets are
-  # drawn into the same figure we switch to a 3D surface (default) or a
-  # multi-color contour plot. 'comparison' tells the backend to use distinct
-  # colors and a legend so the datasets can be told apart.
+  # When several 2D datasets are drawn into the same figure we switch to a 3D surface (default).
   num_datasets = sum(1 for _ in ctx.obj["data"].iterator(kwargs["use"]))
   first_dat = next(ctx.obj["data"].iterator(kwargs["use"]), None)
   is_2d = first_dat is not None and first_dat.get_num_dims(squeeze=True) == 2
@@ -212,8 +208,6 @@ def plot(ctx, **kwargs):
   # end
   del kwargs["no_multi2d"]
   del kwargs["multi2d_mode"]
-
-
 
   if kwargs["globalrange"] or kwargs["cutoffglobalrange"]:
     vmin = float("inf")
@@ -266,10 +260,7 @@ def plot(ctx, **kwargs):
   kwargs["legend"] = show_legend
   del kwargs["no_legend"]
 
-  # ---- Colormap-based line coloring (1D) ----
-  # Parse the per-curve colormap values. If a colormap is requested without
-  # explicit values, fall back to the dataset index so multiple 1D curves spread
-  # across the colormap.
+  # Colormap based line coloring for 1D plots.
   cval_list = None
   if kwargs["cval"]:
     cval_list = [float(v) for v in kwargs["cval"].split(",")]
@@ -307,7 +298,7 @@ def plot(ctx, **kwargs):
       label = ""
     # end
 
-    # Pick this curve's colormap value (1D coloring).
+    # 1D colouring.
     if cval_list is not None and i < len(cval_list):
       kwargs["cval"] = cval_list[i]
     else:
