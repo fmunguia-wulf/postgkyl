@@ -121,6 +121,8 @@ def _fft_poloidal_project(vals, zc, box, wind, phi0_zf, zf, phi_tor):
   Nx, Ny, Nz = vals.shape
   fk = np.fft.rfft(vals, axis=1, norm="forward")  # (Nx, K, Nz)
   K = fk.shape[1]
+   # The following sign must match the sign convention in the shift.
+  shift_sign = -1.0
 
   # Twist-and-shift reconnection: add a ghost z-cell at each domain edge (+/-pi)
   # whose value is the opposite end phase-shifted by exp(i k n0 wind).
@@ -130,7 +132,7 @@ def _fft_poloidal_project(vals, zc, box, wind, phi0_zf, zf, phi_tor):
   fk_ex[:, :, 1:-1] = fk
   psh = (2.0 * np.pi / box) * wind  # per-mode phase = n0 * wind(x)
   for k in range(K):
-    ph = np.exp(-1j * k * psh)
+    ph = np.exp(shift_sign * 1j * k * psh)
     fk_ex[:, k, -1] = 0.5 * (fk[:, k, -1] + ph * fk[:, k, 0])
     fk_ex[:, k, 0] = 0.5 * (fk[:, k, 0] + np.conj(ph) * fk[:, k, -1])
 
@@ -144,7 +146,7 @@ def _fft_poloidal_project(vals, zc, box, wind, phi0_zf, zf, phi_tor):
   for k in range(K):
     # rfft: modes 0 < k < Nyquist represent both +/-k; do not double k=0 or Nyquist.
     weight = 1.0 if (k == 0 or (Ny % 2 == 0 and k == K - 1)) else 2.0
-    out += weight * np.real(fk_zf[:, k, :] * np.exp(-1j * 2.0 * np.pi * k * frac))
+    out += weight * np.real(fk_zf[:, k, :] * np.exp(shift_sign * 1j * 2.0 * np.pi * k * frac))
   return out
 
 
