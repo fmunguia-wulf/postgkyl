@@ -98,7 +98,8 @@ class GkylAdiosReader:
       fh.close()
       return True
     # end
-    except (TypeError, AttributeError, RuntimeError, FileNotFoundError, OSError):
+    except (TypeError, AttributeError, RuntimeError, FileNotFoundError, OSError,
+        ValueError):
       return False
   # end
     # end
