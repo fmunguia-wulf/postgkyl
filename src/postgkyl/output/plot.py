@@ -92,7 +92,7 @@ def _get_nodal_grid(grid : list, cells: np.ndarray):
 
 def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     figure: int | matplotlib.figure.Figure | str | None = None,
-    squeeze: bool = False, num_axes: int = None, start_axes: int = 0,
+    squeeze: bool = False, transpose: bool = False, num_axes: int = None, start_axes: int = 0,
     num_subplot_row: int | None = None, num_subplot_col: int | None = None,
     streamline: bool = False, sdensity: int = 1,
     quiver: bool = False,
@@ -248,6 +248,21 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       # end
     # end
 
+    # ---- Optional axis transpose ----
+    # Swap the horizontal and vertical axes.
+    if transpose and num_dims == 2:
+      values = np.swapaxes(values, 0, 1)
+      g0, g1 = grid[1], grid[0]
+      if g0.ndim > 1:
+        g0, g1 = g0.transpose(), g1.transpose()
+      # end
+      grid[0], grid[1] = g0, g1
+      lower[0], lower[1] = lower[1], lower[0]
+      upper[0], upper[1] = upper[1], upper[0]
+      cells[0], cells[1] = cells[1], cells[0]
+      axes_labels[0], axes_labels[1] = axes_labels[1], axes_labels[0]
+    # end
+
     # Get the number of components and an indexer
     step = 2 if bool(streamline or quiver) else 1
     num_comps = values.shape[-1]
@@ -285,6 +300,10 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       else:
         clabel = rf"$\times$ {zscale:.3e}"
       # end
+    # end
+
+    if transpose and num_dims == 1:
+      xlabel, ylabel = ylabel, xlabel
     # end
 
     # ---- Prepare Figure and Axes ----------------------------------------
@@ -400,6 +419,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         nodal_grid = _get_nodal_grid(grid, cells)
         x = (nodal_grid[0] + xshift)*xscale
         y = (values[..., comp] + yshift)*yscale
+      if transpose:  # put the coordinate on the vertical axis
+        x, y = y, x
+      # end
         # Color the line from the colormap when a 'cval' is given (1D only).
         line_color = color
         if bool(cmap) and cval is not None:
