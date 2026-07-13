@@ -331,5 +331,12 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
 
   if show and not (saveframes or ds.batch):
     plt.show()
+  # end
+  else:
+    # Nothing will ever display this figure (saved-only/batch/saveframes
+    # runs) -- close it so headless pipelines that call `plot` repeatedly
+    # (e.g. a batch-mode loop over frames) don't accumulate open figures.
+    plt.close("all")
+  # end
 # end
   # end

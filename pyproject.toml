@@ -76,4 +76,10 @@ filterwarnings = [
     "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
     "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore::scipy.optimize.OptimizeWarning",
+    # vtkmodules' own numpy_support helper, not our code; fires on every
+    # pyvista array upload under NumPy >= 2.5.
+    "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning",
+    # plotly's kaleido wrapper, not our code; fires on every static image
+    # export against kaleido's server-based renderer.
+    "ignore:The kopts argument is ignored if using a server\\.:UserWarning",
 ]
