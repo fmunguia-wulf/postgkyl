@@ -146,7 +146,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     mpl.rcParams["lines.linestyle"] = linestyle
   # end
 
-  # ---- Data Loading ----
+  # Data Loading
   # Get the handles on the grid and values
   grid_in, values = input_parser(data)
   grid = grid_in.copy()
@@ -208,7 +208,6 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   # end
 
-  # ---- Optional axis transpose ----
   # Swap the horizontal and vertical axes.
   if transpose and num_dims == 2:
     values = np.swapaxes(values, 0, 1)
@@ -266,7 +265,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     xlabel, ylabel = ylabel, xlabel
   # end
 
-  # ---- Prepare Figure and Axes ----------------------------------------
+  # Prepare Figure and Axes
   # Surface plots need 3D axes; only meaningful for 2D data.
   use_3d = bool(surface) and num_dims == 2
   subplot_kw = {"projection": "3d"} if use_3d else {}
@@ -370,7 +369,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   # end
 
-  # ---- Main Plotting Loop ---------------------------------------------
+  # Main Plotting Loop
   for comp in idx_comps:
     cax = ax[0] if squeeze else ax[comp + start_axes]
     label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
@@ -446,7 +445,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         # end
         colorbar = False
 
-      elif contour:  # ----------------------------------------------------
+      elif contour:
         levels = 10
         if cnlevels:
           levels = int(cnlevels) - 1
@@ -485,7 +484,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
           cax.clabel(im, inline=1)
         # end
 
-      elif quiver:  # ----------------------------------------------------
+      elif quiver:
         skip = int(np.max((len(grid[0]), len(grid[1])))//15)
         skip2 = int(skip//2)
         nodal_grid = _get_nodal_grid(grid, cells)
@@ -500,7 +499,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         z2 = (values[skip2::skip, skip2::skip, 2 * comp + 1].transpose() + zshift)*zscale
         im = cax.quiver(x, y, z1, z2)
 
-      elif streamline:  # ------------------------------------------------
+      elif streamline:
         if bool(color):
           cl = color
         else:
@@ -517,7 +516,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         im = cax.streamplot(x, y, z1, z2, *args,
             density=sdensity, broken_streamlines=False, color=cl, linewidth=linewidth)
 
-      elif lineouts is not None:  # -------------------------------------
+      elif lineouts is not None:
         num_lines = values.shape[1] if lineouts == 0 else values.shape[0]
         nodal_grid = _get_nodal_grid(grid, cells)
 
@@ -551,7 +550,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         colorbar = False
         legend = False
 
-      else:  # -----------------------------------------------------------
+      else:
         if zmin is not None and zmax is not None:
           extend = "both"
         elif zmax is not None:
@@ -598,7 +597,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       raise ValueError(f"{num_dims:d}D data not supported")
     # end
 
-    # ---- Additional Formatting ----------------------------------------
+    # Additional Formatting
     cax.grid(showgrid)
     # Legend
     if legend:
