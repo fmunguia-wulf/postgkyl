@@ -23,6 +23,7 @@ import shlex
 import time
 
 import click
+import matplotlib.pyplot as plt
 
 import postgkyl.commands as cmd
 import postgkyl.output
@@ -75,20 +76,81 @@ class _Session:
         os.path.dirname(postgkyl.output.__file__), "postgkyl.mplstyle")
     load_style(self.ctx, style_file)
     self.cmd_stack = []
+    # Figures produced by plotting commands, in call order (see _run/get_fig).
+    self.figs = []
 
   def _run(self, command: click.Command, _files=None, **kwargs):
-    """Dispatch a click command against this session's stack.
-
-    ``ctx.invoke`` fills in defaults for any option that is not passed, so the
-    generated methods only need to forward their (already defaulted) arguments.
-
-    The equivalent CLI fragment is recorded on ``cmd_stack`` (see
-    :meth:`print_cmd`). ``_files`` carries the positional file name(s) for the
-    ``load`` command, which on the command line are named directly rather than
-    via a ``load`` keyword.
-    """
+    """Dispatch a click command against this session's stack."""
     self.cmd_stack.append(self._format_command(command, kwargs, files=_files))
-    return self.ctx.invoke(command, **kwargs)
+    return self._invoke_capturing_figure(command, kwargs)
+
+  def _invoke_capturing_figure(self, command: click.Command, kwargs: dict):
+    """Invoke a click command, recording any figure it produces on ``self.figs``."""
+    before = set(plt.get_fignums())
+    grabbed = []
+    real_show = plt.show
+
+    def _show_hook(*args, **kwargs_):
+      fig = plt.gcf()
+      if fig.get_axes() and fig not in grabbed:
+        grabbed.append(fig)
+      # end
+      return real_show(*args, **kwargs_)
+
+    plt.show = _show_hook
+    try:
+      result = self.ctx.invoke(command, **kwargs)
+    finally:
+      plt.show = real_show
+    # end
+
+    if not grabbed:
+      # show=False (or a backend where show() does not fire): the figure is left
+      # open, so grab any figure that was newly created during this command.
+      for num in plt.get_fignums():
+        if num not in before:
+          fig = plt.figure(num)
+          if fig.get_axes():
+            grabbed.append(fig)
+          # end
+        # end
+      # end
+    # end
+
+    if grabbed:
+      self.figs.append(grabbed[-1])
+      self.ctx.obj["fig"] = grabbed[-1]
+    # end
+    return result
+
+  def get_fig(self, index: int = -1):
+    """Return a figure produced by a previous plotting call.
+
+    Every plotting command appends the figure it creates to ``self.figs``;
+    ``get_fig`` returns one of them so it can be inspected or modified after the
+    fact, e.g.::
+
+        pg.plot(...)
+        fig = pg.get_fig()             # most recent figure
+        fig.axes[0].set_title("new")
+        fig                            # re-display in a notebook cell
+
+    Args:
+      index: Index into the captured figures. Defaults to ``-1`` (most recent);
+        any valid list index works (e.g. ``0`` for the first).
+
+    Returns:
+      The requested ``matplotlib.figure.Figure``.
+
+    Raises:
+      IndexError: If no figure has been captured yet, or ``index`` is out of
+        range.
+    """
+    if not self.figs:
+      raise IndexError("No figures have been captured yet; call a plotting "
+          "command (e.g. pg.plot(...)) first.")
+    # end
+    return self.figs[index]
 
   @staticmethod
   def _long_opt(opts) -> str:
