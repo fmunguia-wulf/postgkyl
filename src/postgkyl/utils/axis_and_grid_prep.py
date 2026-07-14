@@ -76,6 +76,7 @@ def axis_and_grid_prep(
     xscale: float,
     yscale: float,
     zscale: float,
+    transpose: bool = False,
 ) -> tuple[
     list[np.ndarray], np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
   int, range, str, str | None, str | None, str,
@@ -112,6 +113,20 @@ def axis_and_grid_prep(
     # end
   # end
 
+    # Swap the horizontal and vertical axes.
+  if transpose and num_dims == 2:
+    values = np.swapaxes(values, 0, 1)
+    g0, g1 = grid[1], grid[0]
+    if g0.ndim > 1:
+      g0, g1 = g0.transpose(), g1.transpose()
+    # end
+    grid[0], grid[1] = g0, g1
+    lower[0], lower[1] = lower[1], lower[0]
+    upper[0], upper[1] = upper[1], upper[0]
+    cells[0], cells[1] = cells[1], cells[0]
+    axes_labels[0], axes_labels[1] = axes_labels[1], axes_labels[0]
+  # end
+
   step = 2 if bool(streamline or quiver) else 1
   num_comps = values.shape[-1]
   idx_comps = range(int(np.floor(num_comps / step)))
@@ -134,5 +149,8 @@ def axis_and_grid_prep(
     xscale=xscale, yscale=yscale, zscale=zscale,
     num_dims=num_dims,
   )
+
+  if transpose and num_dims == 1:
+    xlabel, ylabel = ylabel, xlabel
 
   return grid, values, lower, upper, cells, axes_labels, num_comps, idx_comps, xlabel, ylabel, zlabel, clabel
