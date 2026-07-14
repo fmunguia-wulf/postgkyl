@@ -36,8 +36,8 @@ from .._options import use_option
 @click.option("--nsubplotcol", "num_subplot_col", type=int, default=None,
     help="Manually set the number of columns for subplots.")
 @click.option("--transpose", is_flag=True, default=False, help="Transpose axes.")
-# --transpose/--arrowstyle: accepted for CLI compatibility but unused -- main
-# never wired either into its render engine (dead options there too).
+# --arrowstyle: accepted for CLI compatibility but unused -- main never wired
+# it into its render engine (a dead option there too).
 @click.option("-c", "--contour", is_flag=True, default=False, help="Make contour plot.")
 @click.option("--clevels", default=None,
     help="Specify levels for contours: comma-separated level values or start:end:nlevels.")
@@ -272,7 +272,7 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     # end
 
     pg.plot(d, args=arg, figure=fig_target, squeeze=squeeze,
-        num_axes=num_axes, start_axes=start_axes,
+        transpose=transpose, num_axes=num_axes, start_axes=start_axes,
         num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col,
         streamline=streamline, sdensity=sdensity, quiver=quiver,
         contour=contour, clevels=clevels, cnlevels=cnlevels,

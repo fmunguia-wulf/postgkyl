@@ -225,6 +225,65 @@ class TestFigureReuse:
 
 
 # --------------------------------------------------------------------------
+# transpose -- swap the horizontal and vertical axes (upstream PR #225)
+# --------------------------------------------------------------------------
+
+def _field_2d_rect(n0=4, n1=8) -> GDataState:
+  d = GDataState()
+  grid = [np.linspace(0.0, 1.0, n0 + 1), np.linspace(0.0, 2.0, n1 + 1)]
+  values = np.arange(n0 * n1, dtype=float).reshape(n0, n1)[..., None]
+  d.push(grid, values)
+  return d
+# end
+
+
+class TestTranspose:
+  def test_1d_puts_the_coordinate_on_the_vertical_axis(self):
+    fig = backend.plot(_line(), show=False, transpose=True)
+    line = fig.axes[0].lines[0]
+    edges = np.linspace(0.0, 1.0, 9)
+    np.testing.assert_allclose(line.get_ydata(), 0.5 * (edges[:-1] + edges[1:]))
+    np.testing.assert_allclose(line.get_xdata(), np.arange(8, dtype=float))
+  # end
+
+  def test_1d_default_label_follows_the_coordinate(self):
+    fig = backend.plot(_line(), show=False, transpose=True)
+    assert fig.get_supylabel() == r"$z_0$"
+    assert fig.get_supxlabel() == ""
+  # end
+
+  def test_2d_swaps_the_mesh_axes(self):
+    n0, n1 = 4, 8
+    d = _field_2d_rect(n0, n1)
+    fig = backend.plot(d, show=False, transpose=True)
+    im = fig.axes[0].collections[0]
+    # The horizontal axis now carries dimension 1 (extent 0..2), the
+    # vertical dimension 0 (extent 0..1); the quads' value layout follows.
+    assert im.get_coordinates().shape == (n0 + 1, n1 + 1, 2)
+    np.testing.assert_allclose(fig.axes[0].get_xlim(), (0.0, 2.0))
+    np.testing.assert_allclose(fig.axes[0].get_ylim(), (0.0, 1.0))
+    np.testing.assert_allclose(
+        np.asarray(im.get_array()).reshape(n0, n1), d.values[..., 0])
+  # end
+
+  def test_2d_swaps_the_default_labels(self):
+    fig = backend.plot(_field_2d_rect(), show=False, transpose=True)
+    assert fig.get_supxlabel() == r"$z_1$"
+    assert fig.get_supylabel() == r"$z_0$"
+  # end
+
+  def test_2d_does_not_mutate_the_dataset(self):
+    d = _field_2d_rect()
+    cells_before = d.num_cells.copy()
+    values_before = d.values.copy()
+    backend.plot(d, show=False, transpose=True)
+    np.testing.assert_array_equal(d.num_cells, cells_before)
+    np.testing.assert_array_equal(d.values, values_before)
+  # end
+# end
+
+
+# --------------------------------------------------------------------------
 # Mapped (curvilinear) grids -- MAPPING.md's BACKEND row
 # --------------------------------------------------------------------------
 

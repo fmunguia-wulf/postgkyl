@@ -89,7 +89,7 @@ def _nodal_grid(grid: list, cells: np.ndarray) -> list:
 
 
 def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
-    num_axes: int | None = None, start_axes: int = 0,
+    transpose: bool = False, num_axes: int | None = None, start_axes: int = 0,
     num_subplot_row: int | None = None, num_subplot_col: int | None = None,
     streamline: bool = False, sdensity: int = 1, quiver: bool = False,
     contour: bool = False, clevels: str | None = None,
@@ -129,7 +129,10 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
 
   Most of the keyword arguments mirror main's ``output.plot``/CLI ``plot``
   1:1 (contour/quiver/streamline/lineouts, shifts/scales, limits, labels,
-  legend, colorbar, aspect, log axes, xkcd/hashtag/jet, style). ``show``
+  legend, colorbar, aspect, log axes, xkcd/hashtag/jet, style). ``transpose``
+  swaps the horizontal and vertical axes: in 1-D the coordinate moves to the
+  vertical axis; in 2-D the data, grid, and default labels are swapped before
+  drawing (shifts/scales keep their screen-axis meaning). ``show``
   and ``fig`` are new-era conveniences: ``fig`` lets ``render.animate``
   redraw onto a persistent (cleared) figure across frames; save/saveframes/
   batch file-naming remain a CLI-layer concern, matching main.
@@ -195,11 +198,18 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     raise ValueError("Only 1D and 2D plots are currently supported")
   # end
 
+  default_xlabel, default_ylabel = _AXES_LABELS[0], _AXES_LABELS[1]
+  if transpose and ref_num_dims == 2:
+    # The data axes are swapped before drawing, so the default label base
+    # names swap too; the shift/scale annotations below keep their
+    # screen-axis meaning (xshift still shifts the horizontal axis).
+    default_xlabel, default_ylabel = default_ylabel, default_xlabel
+  # end
   layout_xlabel = xlabel
   layout_ylabel = ylabel
   layout_clabel = clabel
   if layout_xlabel is None:
-    layout_xlabel = _AXES_LABELS[0] if lineouts != 1 else _AXES_LABELS[1]
+    layout_xlabel = default_xlabel if lineouts != 1 else _AXES_LABELS[1]
     if xshift != 0.0 and xscale != 1.0:
       layout_xlabel = rf"({layout_xlabel:s} + {xshift:.2e}) $\times$ {xscale:.2e}"
     # end
@@ -211,7 +221,7 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
     # end
   # end
   if layout_ylabel is None and ref_num_dims == 2 and lineouts is None:
-    layout_ylabel = _AXES_LABELS[1]
+    layout_ylabel = default_ylabel
     # NB: these elif conditions check xshift/xscale, not yshift/yscale --
     # a literal main bug (commands.plot's ylabel branch), kept for fidelity.
     if yshift != 0.0 and yscale != 1.0:
@@ -227,6 +237,12 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
   if zscale != 1.0:
     layout_clabel = (rf"{layout_clabel:s} $\times$ {zscale:.3e}" if layout_clabel
                       else rf"$\times$ {zscale:.3e}")
+  # end
+  if transpose and ref_num_dims == 1:
+    # The coordinate moves to the vertical axis, so the (resolved) labels
+    # follow it -- including the shift/scale annotation, which travels with
+    # the data it describes.
+    layout_xlabel, layout_ylabel = layout_ylabel, layout_xlabel
   # end
 
   if isinstance(figsize, str):
@@ -358,6 +374,17 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
       # end
     # end
 
+    if transpose and num_dims == 2:  # swap the horizontal and vertical axes
+      values = np.swapaxes(values, 0, 1)
+      g0, g1 = grid[1], grid[0]
+      if g0.ndim > 1:  # curvilinear coordinate arrays span both axes jointly
+        g0, g1 = g0.transpose(), g1.transpose()
+      # end
+      grid[0], grid[1] = g0, g1
+      cells = cells[[1, 0]]  # fancy indexing: num_cells may alias ctx["cells"]
+      axes_labels[0], axes_labels[1] = axes_labels[1], axes_labels[0]
+    # end
+
     num_comps = values.shape[-1]
     idx_comps = range(int(np.floor(num_comps / step)))
 
@@ -372,6 +399,9 @@ def plot(*datasets, args: str = "", figure=None, squeeze: bool = False,
         nodal_grid = _nodal_grid(grid, cells)
         x = (nodal_grid[0] + xshift) * xscale
         y = (values[..., comp] + yshift) * yscale
+        if transpose:  # put the coordinate on the vertical axis
+          x, y = y, x
+        # end
         im = cax.plot(x, y, *args, color=color, label=comp_label,
             markersize=markersize)
       # end
