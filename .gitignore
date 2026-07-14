@@ -6,11 +6,8 @@ src/postgkyl/version.py
 .DS_Store
 tests/test_data/generated/
 
-src_bak/
-tests_bak/
 # scratch files at the repo root only (unanchored patterns would silently
 # ignore package sources under src/ and fixtures under tests/)
-/CLAUDE.md
 /*.gkyl
 /*.md
 /*.py
