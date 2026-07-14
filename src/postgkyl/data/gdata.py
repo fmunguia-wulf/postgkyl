@@ -176,6 +176,10 @@ class GData(object):
 
   status = property(get_status)
 
+  # ---- File name ----
+  def get_file_name(self) -> str:
+    return self._file_name
+
   # ---- Input file ----
   def get_input_file(self) -> str:
     if not has_adios:
@@ -190,7 +194,7 @@ class GData(object):
   # ---- Number of Cells ----
   def get_num_cells(self) -> np.ndarray:
     if self.ctx.get("cells") is not None:
-      return self.ctx["cells"]
+      return np.array(self.ctx["cells"])
     elif self._values is not None:
       num_dims = len(self._values.shape) - 1
       cells = np.zeros(num_dims, np.int32)

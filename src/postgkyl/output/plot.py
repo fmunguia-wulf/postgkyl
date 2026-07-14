@@ -28,7 +28,7 @@ def pgkyl_colorbar(obj, fig : matplotlib.figure.Figure, cax : matplotlib.axes.Ax
 
 def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     figure: int | matplotlib.figure.Figure | str | None = None,
-    squeeze: bool = False, num_axes: int = None, start_axes: int = 0,
+    squeeze: bool = False, transpose: bool = False, num_axes: int = None, start_axes: int = 0,
     num_subplot_row: int | None = None, num_subplot_col: int | None = None,
     streamline: bool = False, sdensity: int = 1,
     quiver: bool = False,
@@ -119,9 +119,9 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     quiver=quiver, num_axes=num_axes, lineouts=lineouts,
     xlabel=xlabel, ylabel=ylabel, zlabel=None, clabel=clabel, xshift=xshift,
     yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale,
-    zscale=zscale,  )
+    zscale=zscale,  transpose=transpose)
 
-  # ---- Prepare Figure and Axes ----------------------------------------
+  # Prepare Figure and Axes
   if bool(figsize):
     figsize = (int(figsize.split(",")[0]), int(figsize.split(",")[1]))
   # end
@@ -219,7 +219,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     # end
   # end
 
-  # ---- Main Plotting Loop ---------------------------------------------
+  # Main Plotting Loop
   for comp in idx_comps:
     cax = ax[0] if squeeze else ax[comp + start_axes]
     label = f"{label_prefix:s}_c{comp:d}".strip("_") if len(idx_comps) > 1 else label_prefix
@@ -228,12 +228,15 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       nodal_grid = nodal_to_cell_centered_grid(grid, cells)
       x = (nodal_grid[0] + xshift)*xscale
       y = (values[..., comp] + yshift)*yscale
+      if transpose:  # put the coordinate on the vertical axis
+        x, y = y, x
+      # end
       im = cax.plot(x, y, *args, color=color, label=label, markersize=markersize)
 
     elif num_dims == 2:
       extend = None
 
-      if contour:  # ----------------------------------------------------
+      if contour:
         levels = 10
         if cnlevels:
           levels = int(cnlevels) - 1
@@ -259,7 +262,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
           cax.clabel(im, inline=1)
         # end
 
-      elif quiver:  # ----------------------------------------------------
+      elif quiver:
         skip = int(np.max((len(grid[0]), len(grid[1])))//15)
         skip2 = int(skip//2)
         nodal_grid = nodal_to_cell_centered_grid(grid, cells)
@@ -274,7 +277,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         z2 = (values[skip2::skip, skip2::skip, 2 * comp + 1].transpose() + zshift)*zscale
         im = cax.quiver(x, y, z1, z2)
 
-      elif streamline:  # ------------------------------------------------
+      elif streamline:
         if bool(color):
           cl = color
         else:
@@ -291,7 +294,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         im = cax.streamplot(x, y, z1, z2, *args,
             density=sdensity, broken_streamlines=False, color=cl, linewidth=linewidth)
 
-      elif lineouts is not None:  # -------------------------------------
+      elif lineouts is not None:
         num_lines = values.shape[1] if lineouts == 0 else values.shape[0]
         nodal_grid = nodal_to_cell_centered_grid(grid, cells)
 
@@ -325,7 +328,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
         colorbar = False
         legend = False
 
-      else:  # -----------------------------------------------------------
+      else:
         if zmin is not None and zmax is not None:
           extend = "both"
         elif zmax is not None:
@@ -372,7 +375,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
       raise ValueError(f"{num_dims:d}D data not supported")
     # end
 
-    # ---- Additional Formatting ----------------------------------------
+    # Additional Formatting
     cax.grid(showgrid)
     # Legend
     if legend:
