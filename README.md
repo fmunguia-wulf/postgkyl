@@ -13,15 +13,7 @@ Full documentation of the Gkeyll project is available at
 
 ## Dependencies and Installation
 
-Postgkyl requires the following packages:
-
-* [typer](https://pypi.org/project/typer/)
-* [matplotlib](https://pypi.org/project/matplotlib/)
-* [msgpack](https://pypi.org/project/msgpack/)
-* [numpy](https://pypi.org/project/numpy/)
-* [scipy](https://pypi.org/project/scipy/)
-* [sympy](https://pypi.org/project/sympy/)
-* [tables](https://pypi.org/project/tables/)
+Postgkyl requires the packages listed in pyproject.toml
 
 Postgkyl requires NumPy >= 2.2.6. In addition, there are two optional
 dependencies:
