@@ -75,7 +75,7 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
     subplot_titles: str | None = None, subplot_xlabels: str | None = None, subplot_ylabels: str | None = None,
     logx: bool = False, logy: bool = False, logz: bool = False,
     fixaspect: bool = False, aspect: float | None = None,
-    edgecolors: str | None = None, showgrid: bool = True, hashtag: bool = False, xkcd: bool = False,
+    edgecolors: str | None = None, showgrid: bool = True, hashtag: bool = False,
     color: str | None = None, markersize: float | None = None,
     linewidth: float | None = None, linestyle: float | None = None,
     figsize: tuple | None = None,
@@ -115,11 +115,6 @@ def plot(data: GData | Tuple[list, np.ndarray], args: list = (),
   # comparing results with literature
   if bool(jet):
     mpl.rcParams["image.cmap"] = "jet"
-  # end
-
-  # The most important thing
-  if xkcd:
-    plt.xkcd()
   # end
 
   if not bool(color) and not isinstance(data, tuple):
