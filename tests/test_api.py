@@ -3,6 +3,7 @@ import os
 
 import postgkyl as pg
 from postgkyl.clap import _clap_gen
+from postgkyl.clap import PgkylSession
 
 
 class TestApiGeneration:
@@ -21,7 +22,7 @@ class TestApiSession:
   dir_path = f"{os.path.dirname(__file__)}/test_data"
 
   def test_load_interp_chain(self):
-    session = pg.PgkylSession(batch_mode=True)
+    session = PgkylSession(batch_mode=True)
     session.load(f"{self.dir_path:s}/shock-f-ser-p1.gkyl")
     session.interpolate(basis_type="ms", poly_order=1)
     assert session.data.get_num_datasets() == 1
@@ -37,7 +38,7 @@ class TestApiSession:
     """
     from postgkyl.pgkyl import cli
 
-    session = pg.PgkylSession(batch_mode=True)
+    session = PgkylSession(batch_mode=True)
     fragment = session._format_command(
         cli.commands["ev"],
         {"chain": "f0 f1 +", "tag": "result", "label": None, "all": False},
@@ -52,7 +53,7 @@ class TestApiSession:
     set it on only one, and ``ev`` would drop the differing key). It must also
     reconstruct ahead of the data, matching ``pgkyl --c2p-vel map f1 f2 ...``.
     """
-    session = pg.PgkylSession(batch_mode=True)
+    session = PgkylSession(batch_mode=True)
     cmap = f"{self.dir_path:s}/bimaxwellian-mapc2p-vel.gkyl"
     session.set_globals(c2p_vel=cmap)
     session.load(f"{self.dir_path:s}/bimaxwellian-elc.gkyl", tag="jf")

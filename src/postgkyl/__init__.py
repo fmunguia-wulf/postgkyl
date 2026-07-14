@@ -20,7 +20,3 @@ from postgkyl.data.dg import GInterpModal
 
 # link the command line executable to the system
 from postgkyl import pgkyl
-
-# high-level scriptable interface (typed; mirrors the command chain)
-from postgkyl.clap.clap import PgkylSession
-

@@ -1141,7 +1141,6 @@ agyrotropic pressure tensor.
       dpi: int = 200,
       edgecolors: str | None = None,
       showgrid: bool = True,
-      xkcd: bool = False,
       hashtag: bool = False,
       show: bool = True,
       figsize: str | None = None,
@@ -1221,7 +1220,6 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       dpi: (--dpi) DPI (resolution) for output.
       edgecolors: (-e, --edgecolors) Set color for cell edges to show grid outline.
       showgrid: (--showgrid) Show grid-lines.
-      xkcd: (--xkcd) Turns on the xkcd style!
       hashtag: (--hashtag) Turns on the pgkyl hashtag!
       show: (--show) Turn showing of the plot ON and OFF.
       figsize: (--figsize) Comma-separated values for x and y size.
@@ -1231,7 +1229,7 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       cval: (--cval) For 1D plots, comma-separated values mapping each curve onto the colormap (e.g. '0,1'). Requires --cmap; defaults to the dataset index if omitted.
       multiblock: (-m, --multiblock)
     """
-    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, surface=surface, alpha=alpha, multi2d_mode=multi2d_mode, no_multi2d=no_multi2d, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, xkcd=xkcd, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
+    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, surface=surface, alpha=alpha, multi2d_mode=multi2d_mode, no_multi2d=no_multi2d, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
 
   def pr(self,
       use: str | None = None,
