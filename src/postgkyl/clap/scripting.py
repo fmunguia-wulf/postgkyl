@@ -24,6 +24,7 @@ import time
 
 import click
 import matplotlib.pyplot as plt
+import numpy as np
 
 import postgkyl.commands as cmd
 import postgkyl.output
@@ -76,7 +77,6 @@ class _Session:
         os.path.dirname(postgkyl.output.__file__), "postgkyl.mplstyle")
     load_style(self.ctx, style_file)
     self.cmd_stack = []
-    # Figures produced by plotting commands, in call order (see _run/get_fig).
     self.figs = []
 
   def _run(self, command: click.Command, _files=None, **kwargs):
@@ -94,7 +94,7 @@ class _Session:
       fig = plt.gcf()
       if fig.get_axes() and fig not in grabbed:
         grabbed.append(fig)
-      # end
+
       return real_show(*args, **kwargs_)
 
     plt.show = _show_hook
@@ -102,25 +102,18 @@ class _Session:
       result = self.ctx.invoke(command, **kwargs)
     finally:
       plt.show = real_show
-    # end
 
     if not grabbed:
-      # show=False (or a backend where show() does not fire): the figure is left
-      # open, so grab any figure that was newly created during this command.
       for num in plt.get_fignums():
         if num not in before:
           fig = plt.figure(num)
           if fig.get_axes():
             grabbed.append(fig)
-          # end
-        # end
-      # end
-    # end
 
     if grabbed:
       self.figs.append(grabbed[-1])
       self.ctx.obj["fig"] = grabbed[-1]
-    # end
+
     return result
 
   def get_fig(self, index: int = -1):
@@ -152,6 +145,60 @@ class _Session:
     # end
     return self.figs[index]
 
+  def get_data(self, idx: int = 0, tag: str | None = None):
+    """Return the grid and values of one dataset on the stack.
+
+    Handy for overlaying a dataset onto an existing figure (see :meth:`get_fig`)::
+
+        pg.plot(...)                       # 2D pcolormesh, say (t, v_par)
+        grid, values = pg.get_data(0)      # another 1D dataset on the stack
+        pg.get_fig().axes[0].plot(grid[0], values[..., 0], "k--")
+
+    The returned grid is cell-centered so its 1D coordinates line up with
+    ``values`` (``get_grid`` itself returns nodal edges of length ``cells+1``);
+    multi-dimensional (mapped) coordinate arrays are returned unchanged.
+
+    Args:
+      idx: Index into the active datasets, in the same order :meth:`plot` sees
+        them. Defaults to ``0`` (the first). Negative indices count from the end.
+      tag: Restrict to datasets carrying this tag (the ``use``/``tag`` label);
+        defaults to all active datasets.
+
+    Returns:
+      A ``(grid, values)`` tuple, where ``grid`` is a list with one coordinate
+      array per dimension and ``values`` is the ``numpy`` array of components
+      (its last axis indexes the components).
+
+    Raises:
+      IndexError: If the stack (optionally filtered by ``tag``) is empty, or
+        ``idx`` is out of range.
+    """
+    if tag is not None:
+      existing = set(self.data.tag_iterator(only_active=False))
+      missing = [t for t in tag.split(",") if t not in existing]
+      if missing:
+        raise IndexError(f"No datasets on the stack for tag(s) "
+            f"{', '.join(missing)}; available tags: {sorted(existing) or 'none'}.")
+
+    datasets = list(self.data.iterator(tag))
+    if not datasets:
+      raise IndexError("No datasets on the stack"
+          + (f" for tag '{tag}'" if tag else "") + "; load some data first.")
+
+    dat = datasets[idx]
+    values = dat.get_values()
+    cells = values.shape[:-1]
+    grid = []
+    for d, g in enumerate(dat.get_grid()):
+      g = np.asarray(g)
+      # Nodal edges -> cell centers so a 1D coordinate aligns with values.
+      if g.ndim == 1 and d < len(cells) and g.shape[0] == cells[d] + 1:
+        g = 0.5 * (g[:-1] + g[1:])
+
+      grid.append(g)
+
+    return grid, values
+
   @staticmethod
   def _long_opt(opts) -> str:
     """Pick the most readable CLI flag for a parameter (prefer the long form)."""
@@ -172,8 +219,6 @@ class _Session:
     ``ev --tag t '<chain>'`` (``ev '<chain>' --tag t`` would treat ``--tag`` as
     a new command), and positional values are emitted bare (no metavar name).
     """
-    # ``load`` is triggered on the CLI by naming the file(s) directly; there is
-    # no ``load`` token. Every other command is named explicitly.
     name_tokens = [shlex.quote(f) for f in files] if files is not None else [command.name]
     opt_tokens = []
     arg_tokens = []
@@ -183,8 +228,6 @@ class _Session:
         continue
       value = kwargs[param.name]
 
-      # Positional arguments: emit the value(s) only, deferred to the end so they
-      # never sit between the command name and its options.
       if isinstance(param, click.Argument):
         if value is None:
           continue
@@ -202,8 +245,6 @@ class _Session:
       if getattr(param, "is_flag", False):
         secondary = getattr(param, "secondary_opts", [])
         if default is True and secondary:
-          # Toggle flag that defaults on (e.g. --show/--no-show); only the
-          # off-switch is worth printing.
           if value is False:
             opt_tokens.append(self._long_opt(secondary))
         elif value:
@@ -315,9 +356,6 @@ class _Session:
           ``pg.load("file1.gkyl", "file2.gkyl")``
     """
     self.ctx.obj["in_data_strings"].extend(files)
-    # The ``load`` command loads a single file per invocation (it consumes one
-    # entry of ``in_data_strings`` and advances the counter), mirroring how each
-    # file on the CLI triggers its own ``load`` call. Invoke it once per file.
     result = None
     for f in files:
       result = self._run(cmd.load, _files=(f,), **kwargs)
