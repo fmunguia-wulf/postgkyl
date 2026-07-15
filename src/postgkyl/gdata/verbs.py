@@ -4,10 +4,10 @@
 ``collect``, ``evaluate``, ``relchange``, and ``animate`` each combine *several*
 datasets into one result (or, for ``animate``, into one animation), so they
 cannot be one dataset's method the way ``interpolate``/``select``/``fft``/... are on
-:class:`~postgkyl.api.gdata.GData`. Each is a one-line delegation to the
+:class:`~postgkyl.gdata.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.operations` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
-drift apart. :class:`~postgkyl.api.group.DatasetGroup` re-uses these same
+drift apart. :class:`~postgkyl.gdata.group.GDataGroup` re-uses these same
 functions for its own ``collect``/``evaluate``/``animate`` terminal methods.
 """
 

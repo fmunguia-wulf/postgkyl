@@ -129,7 +129,7 @@ class TestLoadGkDistfReal:
 
 
 class _FakeDistfGData:
-  """Stands in for ``postgkyl.api.GData`` so ``load_gk_distf``'s coordinate-
+  """Stands in for ``postgkyl.gdata.GData`` so ``load_gk_distf``'s coordinate-
   map branches (``use_c2p_vel``/``use_mc2nu``/``use_mapc2p``) can be
   exercised without real mapc2p_vel/mc2nu/mapc2p DG fixtures (the staged
   rt_gk_tcv_iwl* files carry no such metadata -- see TestLoadGkDistfReal)."""
@@ -747,7 +747,7 @@ class TestLoadQuantityMultiSpeciesMultiFrame:
 class TestUtils:
   """postgkyl.diagnostics.gyrokinetics.utils -- file/geometry helpers ported
   from src_bak's gk_utils.py (matplotlib bits dropped, read_g*file adapted
-  to postgkyl.api.load + .interpolate())."""
+  to postgkyl.gdata.load + .interpolate())."""
 
   def test_dict_get_bool_default(self):
     assert utils.dict_get_bool({}, "k", True) is True

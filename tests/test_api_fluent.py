@@ -1,7 +1,7 @@
 """Tests for the fluent surface (layer 11 -- api): every ``operations`` verb from
 layers 07-09 as a ``GData`` method (or, for the multi-dataset verbs with no
 single ``self``, a module-level function in ``api.verbs``), the fluent
-``api.group.DatasetGroup`` that broadcasts verbs over its members, and the
+``api.group.GDataGroup`` that broadcasts verbs over its members, and the
 facade re-exports.
 
 Diagnostics (layer 10: five_moment/ten_moment/mhd/plasma/multispecies/
@@ -22,9 +22,9 @@ import pytest
 
 import postgkyl as pg
 from postgkyl import gpython, operations
-from postgkyl.api.group import DatasetGroup as ApiDatasetGroup
-from postgkyl.api import verbs as api_verbs
-from postgkyl.core.group import DatasetGroup as CoreDatasetGroup
+from postgkyl.gdata.group import GDataGroup as ApiGDataGroup
+from postgkyl.gdata import verbs as api_verbs
+from postgkyl.core.group import GDataStateGroup as CoreGDataStateGroup
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -138,7 +138,7 @@ class TestSubclassPropagation:
   def test_val2coord_returns_fluent_group_of_the_subclass(self):
     d = _make(MyData, [np.arange(5.0)], np.arange(15.0).reshape(5, 3))
     group = d.val2coord(x="0", y="1,2")
-    assert isinstance(group, ApiDatasetGroup)
+    assert isinstance(group, ApiGDataGroup)
     assert len(group) == 2
     for member in group:
       assert isinstance(member, MyData)
@@ -297,7 +297,7 @@ class TestEndToEndChains:
 
 
 # ================================================================== group
-class TestDatasetGroup:
+class TestGDataGroup:
   def _frames(self, cls=MyData):
     grid = [np.linspace(0.0, 1.0, 5)]
     return [_make(cls, grid, np.full((4, 1), v), time=t)
@@ -305,9 +305,9 @@ class TestDatasetGroup:
   # end
 
   def test_broadcast_non_terminal_verb_returns_a_group_of_the_same_class(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     out = g.select(comp=0)
-    assert isinstance(out, ApiDatasetGroup)
+    assert isinstance(out, ApiGDataGroup)
     assert len(out) == 3
     for member in out:
       assert isinstance(member, MyData)
@@ -315,21 +315,21 @@ class TestDatasetGroup:
   # end
 
   def test_broadcast_chains(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     out = g.select(comp=0).mask(lower=-1e30)
-    assert isinstance(out, ApiDatasetGroup)
+    assert isinstance(out, ApiGDataGroup)
     assert len(out) == 3
   # end
 
   def test_broadcast_terminal_verb_returns_a_plain_list(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     figs = g.plot(show=False)
     assert isinstance(figs, list)
     assert len(figs) == 3
   # end
 
   def test_broadcast_write_returns_a_list_of_paths(self, tmp_path):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     paths = g.save(out_name=str(tmp_path / "frame"))
     assert isinstance(paths, list)
     assert len(paths) == 3
@@ -339,7 +339,7 @@ class TestDatasetGroup:
   # end
 
   def test_broadcast_non_callable_property_returns_a_plain_list(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     dims = g.num_dims
     assert isinstance(dims, list)
     assert len(dims) == 3
@@ -347,7 +347,7 @@ class TestDatasetGroup:
   # end
 
   def test_info_is_explicit_not_broadcast_and_enumerates_members(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     summaries = g.info()
     assert isinstance(summaries, list)
     assert len(summaries) == 3
@@ -355,14 +355,14 @@ class TestDatasetGroup:
   # end
 
   def test_collect_combines_members_into_one_dataset(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     out = g.collect()
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_grid()[0], [0.0, 1.0, 2.0])
   # end
 
   def test_evaluate_combines_named_members(self):
-    g = ApiDatasetGroup(self._frames()[:2])
+    g = ApiGDataGroup(self._frames()[:2])
     out = g.evaluate("f0 f1 +")
     assert isinstance(out, MyData)
     np.testing.assert_allclose(out.get_values(), 3.0)  # 1.0 + 2.0
@@ -372,31 +372,31 @@ class TestDatasetGroup:
   def test_animate_is_explicit_not_broadcast(self):
     from matplotlib.animation import FuncAnimation
     frames = [pg.load(F1D).interpolate().select(comp=0) for _ in range(3)]
-    g = ApiDatasetGroup(frames)
+    g = ApiGDataGroup(frames)
     anim = g.animate(show=False)
     assert isinstance(anim, FuncAnimation)
   # end
 
   def test_with_and_and_preserve_the_concrete_class(self):
     a, b, c = self._frames()
-    g = ApiDatasetGroup([a, b])
+    g = ApiGDataGroup([a, b])
     g2 = g.with_(c)
-    assert isinstance(g2, ApiDatasetGroup)
+    assert isinstance(g2, ApiGDataGroup)
     assert len(g2) == 3
     g3 = g & c
-    assert isinstance(g3, ApiDatasetGroup)
+    assert isinstance(g3, ApiGDataGroup)
   # end
 
   def test_slicing_preserves_the_concrete_class(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     sub = g[0:2]
-    assert isinstance(sub, ApiDatasetGroup)
+    assert isinstance(sub, ApiGDataGroup)
     assert len(sub) == 2
     assert isinstance(g[0], MyData)
   # end
 
   def test_private_and_unknown_attributes_are_not_broadcast(self):
-    g = ApiDatasetGroup(self._frames())
+    g = ApiGDataGroup(self._frames())
     with pytest.raises(AttributeError):
       g._not_a_real_attribute
     # end
@@ -408,9 +408,9 @@ class TestDatasetGroup:
   def test_is_a_core_dataset_group_too(self):
     """The fluent group is a genuine subclass of the verb-less container
     (mirrors GData/GDataState); every state-reading behavior still holds."""
-    g = ApiDatasetGroup(self._frames())
-    assert isinstance(g, CoreDatasetGroup)
-    assert repr(g) == "<DatasetGroup [3 datasets]>"
+    g = ApiGDataGroup(self._frames())
+    assert isinstance(g, CoreGDataStateGroup)
+    assert repr(g) == "<GDataGroup [3 datasets]>"
   # end
 # end
 
@@ -418,7 +418,7 @@ class TestDatasetGroup:
 # ================================================================== facade
 class TestFacade:
   def test_documented_names_resolve(self):
-    for name in ["GData", "load", "DatasetGroup", "plot", "info", "integrate",
+    for name in ["GData", "load", "GDataGroup", "plot", "info", "integrate",
         "interpolate", "select", "represent", "apply",
         "save", "collect", "evaluate", "relchange", "animate", "__version__"]:
       assert hasattr(pg, name), f"postgkyl has no {name!r}"
@@ -433,7 +433,7 @@ class TestFacade:
   # end
 
   def test_dataset_group_is_the_fluent_one(self):
-    assert pg.DatasetGroup is ApiDatasetGroup
+    assert pg.GDataGroup is ApiGDataGroup
   # end
 
   def test_module_verbs_are_the_api_ones(self):

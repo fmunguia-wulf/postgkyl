@@ -20,7 +20,7 @@ from __future__ import annotations
 import numpy as np
 
 from postgkyl import operations
-from postgkyl.api import GData
+from postgkyl.gdata import GData
 
 from .. import discovery
 
@@ -106,7 +106,7 @@ def load_gk_distf(
       ``block_idx`` when omitted.
 
   Returns:
-    A :class:`~postgkyl.api.gdata.GData` holding the interpolated
+    A :class:`~postgkyl.gdata.gdata.GData` holding the interpolated
     distribution function.
   """
   prefix = f"{name}_b{block_idx}" if block_idx is not None else name

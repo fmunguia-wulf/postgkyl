@@ -33,7 +33,7 @@ DATA = os.path.join(ROOT, "tests", "test_data")
 
 
 class _FakeGData:
-  """Stands in for ``postgkyl.api.GData`` -- just enough surface for
+  """Stands in for ``postgkyl.gdata.GData`` -- just enough surface for
   ``utils.read_gfile``/``read_gfile_if_present`` (``get_grid``/``get_values``/
   ``ctx``)."""
 

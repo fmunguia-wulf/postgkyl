@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..api.gdata import GData
+from ..gdata.gdata import GData
 from ..core.guards import require_field_domain as _require_field_domain
 from .kinetic import transform_frame
 
@@ -140,7 +140,7 @@ def load_pkpm(name: str, species: str, idx: "str | int", poly_order: int, *,
 
   Returns:
     A populated, interpolated, frame-transformed
-    :class:`~postgkyl.api.gdata.GData`.
+    :class:`~postgkyl.gdata.gdata.GData`.
   """
   gf = GData(f"{name!s}-{species!s}_{idx!s}.gkyl")
   gvars = GData(f"{name!s}-{species!s}_pkpm_vars_{idx!s}.gkyl")

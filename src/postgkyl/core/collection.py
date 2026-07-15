@@ -15,9 +15,9 @@ def flatten_datasets(items) -> list:
   """Flatten nested lists/tuples/groups of datasets into a single flat list.
 
   Lets the multi-dataset entry points accept either ``f(a, b)`` or ``f([a, b])``
-  (and nested combinations, including a ``DatasetGroup`` wherever a dataset is
+  (and nested combinations, including a ``GDataStateGroup`` wherever a dataset is
   expected). Recursion is on any iterable, not just ``list``/``tuple`` — this is
-  what lets a nested ``core.group.DatasetGroup`` flatten correctly without this
+  what lets a nested ``core.group.GDataStateGroup`` flatten correctly without this
   module importing that one (it needs no type check, only that groups are
   iterable). Strings pass through whole (never iterated character-by-character);
   non-dataset, non-iterable items also pass through so the downstream consumer

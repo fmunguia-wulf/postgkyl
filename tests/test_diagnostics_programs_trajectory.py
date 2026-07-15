@@ -203,7 +203,7 @@ class TestTrajectoryViaIoWriter:
 
     out = io.save(d, out_name=str(tmp_path / "traj.gkyl"), extension="gkyl")
 
-    from postgkyl.api import GData
+    from postgkyl.gdata import GData
     reloaded = GData(out)
     assert reloaded.grid[0].shape[0] == num_pos + 1  # field convention: N+1 edges
     assert reloaded.values.shape[0] == num_pos

@@ -881,7 +881,7 @@ class TestLoaders:
     """No PKPM fixture is staged; monkeypatch the loader (mirrors
     tests_bak/test_diagnostics_pkpm.py's technique) to check CLI wiring."""
     import postgkyl as pg
-    from postgkyl.api.gdata import GData
+    from postgkyl.gdata.gdata import GData
 
     calls = {}
 

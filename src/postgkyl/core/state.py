@@ -13,7 +13,7 @@ in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.m
 It constructs itself by delegating to the :mod:`postgkyl.io` leaf and exposes
 only *state*. Crucially it imports **nothing upward** (no ``operations``/``render``/
 ``api``). The fluent verb methods and the computing operators live on the
-:class:`postgkyl.api.gdata.GData` subclass, one layer up. That is what keeps
+:class:`postgkyl.gdata.gdata.GData` subclass, one layer up. That is what keeps
 the dependency graph a strict, cycle-free DAG — see HIERARCHY_2.md / HIERARCHY_3.md.
 """
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from postgkyl.core.group import DatasetGroup
+from postgkyl.core.group import GDataStateGroup
 
 if TYPE_CHECKING:
   from postgkyl.core.state import GDataState
@@ -43,7 +43,7 @@ def _get_range(str_in: str, length: int) -> np.ndarray:
 
 
 def val2coord(data: "GDataState", *, x: str, y: str, periodic: bool = False,
-    tag: str | None = None, label: str | None = None) -> DatasetGroup:
+    tag: str | None = None, label: str | None = None) -> GDataStateGroup:
   """Build new (x, y) datasets from columns of a DynVector.
 
   Reinterprets columns of ``data`` (typically a DynVector / diagnostic
@@ -66,7 +66,7 @@ def val2coord(data: "GDataState", *, x: str, y: str, periodic: bool = False,
     label: optional label for the returned datasets.
 
   Returns:
-    A ``DatasetGroup`` containing one dataset per selected y-component.
+    A ``GDataStateGroup`` containing one dataset per selected y-component.
 
   Raises:
     ValueError: if ``data`` is native modal (gkyl-backed), or if more than
@@ -102,5 +102,5 @@ def val2coord(data: "GDataState", *, x: str, y: str, periodic: bool = False,
     res.color = "C0"
     out.append(res)
   # end
-  return DatasetGroup(out)
+  return GDataStateGroup(out)
 # end

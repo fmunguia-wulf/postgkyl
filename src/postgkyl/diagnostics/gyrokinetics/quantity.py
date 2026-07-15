@@ -15,7 +15,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
-from postgkyl.api import GData
+from postgkyl.gdata import GData
 
 from .. import discovery
 

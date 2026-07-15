@@ -12,7 +12,7 @@ import pytest
 
 import postgkyl as pg
 from postgkyl import gpython, operations
-from postgkyl.core.group import DatasetGroup
+from postgkyl.core.group import GDataStateGroup
 from postgkyl.core.state import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
@@ -297,7 +297,7 @@ class TestVal2coord:
 
   def test_single_x_multiple_y(self):
     group = operations.val2coord(self._table(), x="0", y="1,2")
-    assert isinstance(group, DatasetGroup)
+    assert isinstance(group, GDataStateGroup)
     assert len(group) == 2
     np.testing.assert_allclose(group[0].get_grid()[0], np.arange(5.0) * 3.0)
     np.testing.assert_allclose(group[0].get_values().flatten(),

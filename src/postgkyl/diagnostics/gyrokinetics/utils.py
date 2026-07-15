@@ -2,7 +2,7 @@
 layer-13 program-scale diagnostics.
 
 Ported from ``src_bak/postgkyl/gk/gk_utils.py``. ``read_gfile``/
-``read_interpolated_gfile`` are adapted to the new API (``postgkyl.api.load``
+``read_interpolated_gfile`` are adapted to the new API (``postgkyl.gdata.load``
 + ``.interpolate()``) in place of the retired ``GData``/``GInterpModal`` pair;
 ``read_gfile_if_present`` drops the old code's ``verb_print(ctx, ...)`` call
 (``ctx`` was never a parameter of that function in ``src_bak`` -- an existing
@@ -21,7 +21,7 @@ import os
 
 import numpy as np
 
-from postgkyl.api import GData
+from postgkyl.gdata import GData
 
 # Maximum number of blocks a multiblock simulation is assumed to have, used
 # only to bound an open-ended slice request in get_block_indices.

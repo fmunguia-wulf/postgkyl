@@ -5,7 +5,7 @@ Ported from ``src_bak/postgkyl/gk/gk_quantities/fetch_funcs.py``. Every
 ``fetch_*`` there computed through ``GkeyllDGops`` -- a ``ctypes`` binding
 that is dead in this tree (rule #2). Rewired here onto the new surface:
 every fetch function **interpolates its inputs first**
-(:meth:`~postgkyl.api.gdata.GData.interpolate`, the sanctioned "evaluation"
+(:meth:`~postgkyl.gdata.gdata.GData.interpolate`, the sanctioned "evaluation"
 bridge -- REFACTOR_GKEYLL_FFI.md's field domain) and then computes with
 plain NumPy on the interpolated values, exactly like every sibling equation
 module (``five_moment``, ``ten_moment``, ``mhd``, ...). This is a deliberate

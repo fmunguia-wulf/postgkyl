@@ -18,7 +18,7 @@ import numpy as np
 from postgkyl.core.state import GDataState
 from postgkyl import operations, io
 
-from .group import DatasetGroup
+from .group import GDataGroup
 
 
 class GData(GDataState):
@@ -176,14 +176,14 @@ class GData(GDataState):
   # end
 
   def val2coord(self, *, x: str, y: str, periodic: bool = False,
-      tag: str | None = None, label: str | None = None) -> "DatasetGroup":
+      tag: str | None = None, label: str | None = None) -> "GDataGroup":
     """Build new (x, y) datasets from DynVector columns (see ``operations.val2coord``).
 
-    Wraps the ``operations`` verb's (verb-less) ``core.DatasetGroup`` result in a
-    fluent :class:`~postgkyl.api.group.DatasetGroup` so the chain keeps going,
+    Wraps the ``operations`` verb's (verb-less) ``core.GDataStateGroup`` result in a
+    fluent :class:`~postgkyl.gdata.group.GDataGroup` so the chain keeps going,
     e.g. ``d.val2coord(x='0', y='1:3')[0].plot()``.
     """
-    return DatasetGroup(operations.val2coord(self, x=x, y=y, periodic=periodic,
+    return GDataGroup(operations.val2coord(self, x=x, y=y, periodic=periodic,
         tag=tag, label=label))
   # end
 

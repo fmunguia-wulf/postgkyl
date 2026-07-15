@@ -1,4 +1,4 @@
-"""``DatasetGroup`` — an ordered, verb-less collection of datasets.
+"""``GDataStateGroup`` — an ordered, verb-less collection of datasets.
 
 The container counterpart of :class:`~postgkyl.core.state.GDataState`: a group
 holds several datasets and offers only *state*-reading operations —
@@ -7,8 +7,9 @@ construction/flattening, the sequence protocol, combining, and a summary
 no matplotlib, ever, and it imports only downward (``collection``/``state``,
 both in ``core``). The fluent group that *broadcasts* verbs over its members
 (``interpolate``, ``select``, ``plot``, ``info``, ...) is layer 10's job, one layer up
-— exactly the way :class:`postgkyl.api.gdata.GData` adds verb methods on top
-of ``GDataState`` without ``core`` ever importing ``api``.
+— exactly the way :class:`postgkyl.gdata.gdata.GData` adds verb methods on top
+of ``GDataState`` without ``core`` ever importing ``api`` (see
+:class:`postgkyl.gdata.group.GDataGroup`).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from postgkyl.core.collection import flatten_datasets
 from postgkyl.core.state import GDataState
 
 
-class DatasetGroup:
+class GDataStateGroup:
   """An ordered collection of ``GDataState`` (or subclass) members.
 
   Flattens nested lists/tuples/groups of datasets into one ordered sequence
@@ -67,12 +68,12 @@ class DatasetGroup:
         ``slice`` selects a contiguous range.
 
     Returns:
-      GDataState | DatasetGroup: The single member at an integer ``index``,
-      or a new ``DatasetGroup`` wrapping the selected members for a
-      ``slice``.
+      GDataState | GDataStateGroup: The single member at an integer
+      ``index``, or a new ``GDataStateGroup`` wrapping the selected members
+      for a ``slice``.
     """
     result = self._datasets[index]
-    return DatasetGroup(result) if isinstance(index, slice) else result
+    return GDataStateGroup(result) if isinstance(index, slice) else result
   # end
 
   @property
@@ -89,7 +90,7 @@ class DatasetGroup:
   # end
 
   # ------------------------------------------------------------ combining
-  def with_(self, *others) -> "DatasetGroup":
+  def with_(self, *others) -> "GDataStateGroup":
     """Return a new group with additional datasets appended.
 
     Does not mutate this group. ``__and__`` is an alias for this method, so
@@ -98,20 +99,20 @@ class DatasetGroup:
     Args:
       *others: GDataState | Iterable
         Additional members to append. Each may be a single dataset, a
-        ``DatasetGroup``, or an (optionally nested) iterable of them; all are
-        flattened into the resulting group.
+        ``GDataStateGroup``, or an (optionally nested) iterable of them; all
+        are flattened into the resulting group.
 
     Returns:
-      DatasetGroup: A new group containing this group's members followed by
-      the flattened ``others``.
+      GDataStateGroup: A new group containing this group's members followed
+      by the flattened ``others``.
     """
-    return DatasetGroup(self._datasets + list(others))
+    return GDataStateGroup(self._datasets + list(others))
   # end
 
   __and__ = with_
 
   # ---------------------------------------------------------------- repr
   def __repr__(self) -> str:
-    return f"<DatasetGroup [{len(self._datasets):d} datasets]>"
+    return f"<{type(self).__name__} [{len(self._datasets):d} datasets]>"
   # end
 # end

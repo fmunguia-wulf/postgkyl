@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from postgkyl.api import GData
+from postgkyl.gdata import GData
 
 
 @dataclass(frozen=True)

@@ -20,7 +20,7 @@ import click
 import numpy as np
 import pytest
 
-from postgkyl.api.gdata import GData
+from postgkyl.gdata.gdata import GData
 from postgkyl.cli._apply import is_active
 from postgkyl.cli.state import DataSpace
 from postgkyl.cli.commands import (

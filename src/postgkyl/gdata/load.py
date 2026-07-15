@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from postgkyl.api.gdata import GData
+from postgkyl.gdata.gdata import GData
 
 
 def load(file_name: str = "", *, tag: str = "default", label: str = "",

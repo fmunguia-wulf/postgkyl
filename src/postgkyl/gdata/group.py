@@ -1,11 +1,11 @@
-"""``DatasetGroup`` (fluent) — the fluent group container over
-``core.DatasetGroup``.
+"""``GDataGroup`` — the fluent group container over
+``core.GDataStateGroup``.
 
-Mirrors how :class:`~postgkyl.api.gdata.GData` adds the fluent verb methods
+Mirrors how :class:`~postgkyl.gdata.gdata.GData` adds the fluent verb methods
 on top of the verb-less :class:`~postgkyl.core.state.GDataState`: this class
 adds *broadcasting* verbs on top of the verb-less
-:class:`~postgkyl.core.group.DatasetGroup`, without duplicating a single verb
-body.
+:class:`~postgkyl.core.group.GDataStateGroup`, without duplicating a single
+verb body.
 
 Contract
 --------
@@ -55,13 +55,13 @@ broadcast here either) -- see ``api/gdata.py`` for why.
 from __future__ import annotations
 
 from postgkyl import operations
-from postgkyl.core.group import DatasetGroup as _CoreDatasetGroup
+from postgkyl.core.group import GDataStateGroup as _CoreGDataStateGroup
 from postgkyl.core.state import GDataState
 
 from . import verbs
 
 
-class DatasetGroup(_CoreDatasetGroup):
+class GDataGroup(_CoreGDataStateGroup):
   """A group whose members' fluent verbs broadcast over the whole group."""
 
   def __getattr__(self, name: str):
@@ -86,7 +86,7 @@ class DatasetGroup(_CoreDatasetGroup):
   # ------------------------------------------------------- combining (typed)
   # Overridden (not inherited) so the result stays the caller's concrete
   # subclass, mirroring GDataState._result's ``type(self)`` trick.
-  def with_(self, *others) -> "DatasetGroup":
+  def with_(self, *others) -> "GDataGroup":
     """Return a new group (same concrete class) with ``others`` appended."""
     return type(self)(self._datasets + list(others))
   # end

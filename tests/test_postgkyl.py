@@ -453,19 +453,19 @@ _ALLOWED = {
                                                       # models/ array math they delegated to;
                                                       # operations is now the equation-blind
                                                       # core-verb library only
-    "diagnostics": {"core", "operations", "numerics", "api", "render"}, # added by
+    "diagnostics": {"core", "operations", "numerics", "gdata", "render"}, # added by
                                                       # 10-diagnostics.md: equation-
                                                       # specific compositions (five_moment/
                                                       # ten_moment/mhd/plasma/multispecies/
                                                       # rotations/kinetic/pkpm) wrap core
                                                       # verbs and state -- none of core/operations/
                                                       # numerics imports upward, so this
-                                                      # cannot create a cycle; "api" added by
+                                                      # cannot create a cycle; "gdata" added by
                                                       # 12-diagnostics-loaders.md: the
                                                       # gyrokinetics/pkpm loaders build on
                                                       # pg.load/GData (modal arithmetic,
                                                       # .interpolate()) to read simulation output
-                                                      # -- api imports only core/operations/io, none
+                                                      # -- gdata imports only core/operations/io, none
                                                       # of which import diagnostics, so this
                                                       # still cannot create a cycle; "render"
                                                       # pre-authorized by 13-diagnostics-
@@ -482,8 +482,8 @@ _ALLOWED = {
                                                       # neither of which imports diagnostics,
                                                       # so this cannot create a cycle whether
                                                       # or not the edge is ever exercised
-    "api":    {"core", "operations", "io"},
-    "":       {"api", "operations", "render", "io", "diagnostics"}, # facade: pure re-export of
+    "gdata":  {"core", "operations", "io"},
+    "":       {"gdata", "operations", "render", "io", "diagnostics"}, # facade: pure re-export of
                                                       # public names; "diagnostics" added by
                                                       # 12-diagnostics-loaders.md, which
                                                       # explicitly authorizes the facade
