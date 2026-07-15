@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render._prep import (
     default_axis_labels,
     format_axis_label,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from postgkyl.core import flatten_datasets
+from postgkyl.gdatastate import flatten_datasets
 
 
 def info(*datasets, header: bool = True) -> list:

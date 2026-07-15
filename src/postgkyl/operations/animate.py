@@ -10,7 +10,7 @@ before the frames reach :func:`postgkyl.render.animate.animate`.
 from __future__ import annotations
 
 from postgkyl import render
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 
 from ._materialize import materialize_for_render
 

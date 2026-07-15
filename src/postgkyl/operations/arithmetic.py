@@ -25,7 +25,7 @@ import operator
 
 import numpy as np
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl import dg, numerics
 
 

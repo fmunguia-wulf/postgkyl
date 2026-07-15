@@ -23,7 +23,7 @@ import matplotlib as mpl
 import numpy as np
 from matplotlib import cm, colors
 
-from postgkyl.core import flatten_datasets
+from postgkyl.gdatastate import flatten_datasets
 
 from ._prep import subplot_grid
 from .style import apply_style

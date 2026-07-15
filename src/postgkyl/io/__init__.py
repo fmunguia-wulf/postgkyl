@@ -1,7 +1,7 @@
 """File I/O — bytes <-> dataset arrays.
 
 A leaf layer: one reader per format, dispatched by ``read()``; ``write()`` for
-output. Nothing here imports ``core``/``operations``; the readers fill a plain ``ctx``
+output. Nothing here imports ``gdatastate``/``operations``; the readers fill a plain ``ctx``
 dict and return ``(grid, values)`` so the container can construct itself on top.
 """
 

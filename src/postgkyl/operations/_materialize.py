@@ -4,7 +4,7 @@ Centralizes the check-and-bridge that ``plot`` and ``animate`` both need:
 point-value representations (nodal/quad) materialize directly at their true
 physical point locations; raw modal coefficients refuse -- the caller must
 choose ``.interpolate()``, ``.to_nodal()``, or ``.to_quad()`` explicitly. One home
-for the fact, mirroring ``core/guards.py``'s centralization of the analogous
+for the fact, mirroring ``gdatastate/guards.py``'s centralization of the analogous
 field-domain check.
 """
 
@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from postgkyl import dg
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

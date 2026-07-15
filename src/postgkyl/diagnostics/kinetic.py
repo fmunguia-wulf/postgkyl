@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..core.guards import require_field_domain as _require_field_domain
+from ..gdatastate.guards import require_field_domain as _require_field_domain
 
 if TYPE_CHECKING:
-  from ..core.state import GDataState
+  from ..gdatastate.gdatastate import GDataState
 # end
 
 _REASON = "shifting the grid of raw DG coefficients has no basis-space meaning"

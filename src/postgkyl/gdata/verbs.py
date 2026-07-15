@@ -7,7 +7,7 @@ cannot be one dataset's method the way ``interpolate``/``select``/``fft``/... ar
 :class:`~postgkyl.gdata.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.operations` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
-drift apart. :class:`~postgkyl.gdata.group.GDataGroup` re-uses these same
+drift apart. :class:`~postgkyl.gdata.gdatagroup.GDataGroup` re-uses these same
 functions for its own ``collect``/``evaluate``/``animate`` terminal methods.
 """
 
@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from postgkyl import operations
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

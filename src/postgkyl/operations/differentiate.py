@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from postgkyl.numerics import ev_ops
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

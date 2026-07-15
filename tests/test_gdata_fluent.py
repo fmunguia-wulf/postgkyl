@@ -22,10 +22,10 @@ import pytest
 
 import postgkyl as pg
 from postgkyl import gpython, operations
-from postgkyl.gdata.group import GDataGroup as ApiGDataGroup
+from postgkyl.gdata.gdatagroup import GDataGroup as ApiGDataGroup
 from postgkyl.gdata import verbs as api_verbs
-from postgkyl.core.group import GDataStateGroup as CoreGDataStateGroup
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastategroup import GDataStateGroup as CoreGDataStateGroup
+from postgkyl.gdatastate.gdatastate import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")

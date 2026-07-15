@@ -18,7 +18,7 @@ import base64
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

@@ -13,7 +13,7 @@ import pytest
 import postgkyl as pg
 from postgkyl import gpython
 from postgkyl.diagnostics import mhd
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")

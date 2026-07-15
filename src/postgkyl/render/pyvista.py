@@ -1,6 +1,6 @@
 """PyVista rendering backend: 3-D scalar-field volumes and isosurfaces.
 
-Imports only ``core``/``numerics`` (plus PyVista/NumPy themselves), mirroring
+Imports only ``gdatastate``/``numerics`` (plus PyVista/NumPy themselves), mirroring
 ``matplotlib.py``/``plotly.py``. PyVista needs a working (possibly
 software/off-screen) OpenGL context; every entry point re-raises a
 ``RuntimeError`` naming that requirement instead of letting a VTK error
@@ -20,7 +20,7 @@ from ._prep import resolve_axis_labels, squeeze_collapsed_axes
 from .labels import latex_to_unicode
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

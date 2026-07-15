@@ -1,10 +1,10 @@
 """``GDataGroup`` — the fluent group container over
-``core.GDataStateGroup``.
+``gdatastate.GDataStateGroup``.
 
 Mirrors how :class:`~postgkyl.gdata.gdata.GData` adds the fluent verb methods
-on top of the verb-less :class:`~postgkyl.core.state.GDataState`: this class
+on top of the verb-less :class:`~postgkyl.gdatastate.gdatastate.GDataState`: this class
 adds *broadcasting* verbs on top of the verb-less
-:class:`~postgkyl.core.group.GDataStateGroup`, without duplicating a single
+:class:`~postgkyl.gdatastate.gdatastategroup.GDataStateGroup`, without duplicating a single
 verb body.
 
 Contract
@@ -55,13 +55,13 @@ broadcast here either) -- see ``api/gdata.py`` for why.
 from __future__ import annotations
 
 from postgkyl import operations
-from postgkyl.core.group import GDataStateGroup as _CoreGDataStateGroup
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastategroup import GDataStateGroup
+from postgkyl.gdatastate.gdatastate import GDataState
 
 from . import verbs
 
 
-class GDataGroup(_CoreGDataStateGroup):
+class GDataGroup(GDataStateGroup):
   """A group whose members' fluent verbs broadcast over the whole group."""
 
   def __getattr__(self, name: str):

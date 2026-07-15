@@ -19,11 +19,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from ..gdata.gdata import GData
-from ..core.guards import require_field_domain as _require_field_domain
+from ..gdatastate.guards import require_field_domain as _require_field_domain
 from .kinetic import transform_frame
 
 if TYPE_CHECKING:
-  from ..core.state import GDataState
+  from ..gdatastate.gdatastate import GDataState
 # end
 
 _REASON = "composing raw DG coefficients would mix basis functions"

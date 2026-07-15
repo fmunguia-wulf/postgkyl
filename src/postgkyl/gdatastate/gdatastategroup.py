@@ -1,21 +1,21 @@
 """``GDataStateGroup`` — an ordered, verb-less collection of datasets.
 
-The container counterpart of :class:`~postgkyl.core.state.GDataState`: a group
+The container counterpart of :class:`~postgkyl.gdatastate.gdatastate.GDataState`: a group
 holds several datasets and offers only *state*-reading operations —
 construction/flattening, the sequence protocol, combining, and a summary
 ``repr``. Like ``GDataState`` it knows nothing about verbs: no ``operations`` call,
 no matplotlib, ever, and it imports only downward (``collection``/``state``,
-both in ``core``). The fluent group that *broadcasts* verbs over its members
+both in ``gdatastate``). The fluent group that *broadcasts* verbs over its members
 (``interpolate``, ``select``, ``plot``, ``info``, ...) is layer 10's job, one layer up
 — exactly the way :class:`postgkyl.gdata.gdata.GData` adds verb methods on top
-of ``GDataState`` without ``core`` ever importing ``api`` (see
-:class:`postgkyl.gdata.group.GDataGroup`).
+of ``GDataState`` without ``gdatastate`` ever importing ``api`` (see
+:class:`postgkyl.gdata.gdatagroup.GDataGroup`).
 """
 
 from __future__ import annotations
 
-from postgkyl.core.collection import flatten_datasets
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.collection import flatten_datasets
+from postgkyl.gdatastate.gdatastate import GDataState
 
 
 class GDataStateGroup:
@@ -34,7 +34,7 @@ class GDataStateGroup:
       datasets: GDataState | Iterable
         A single dataset, or an (optionally nested) iterable of datasets
         and/or other groups. Everything is flattened into one ordered list
-        via :func:`postgkyl.core.collection.flatten_datasets`. Defaults to an
+        via :func:`postgkyl.gdatastate.collection.flatten_datasets`. Defaults to an
         empty group.
 
     Raises:

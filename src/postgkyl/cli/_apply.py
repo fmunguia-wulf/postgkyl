@@ -5,7 +5,7 @@ command's backing store) and the by-tag lookups the multi-input diagnostic
 commands (``energetics``, ``velocity``, ``agyro``, ...) use to pick their
 named inputs out of the chain state.
 
-Datasets carry no built-in "active" concept (``core.state.GDataState`` is a
+Datasets carry no built-in "active" concept (``gdatastate.gdatastate.GDataState`` is a
 verb-less container); the CLI layer is the one place that needs one, so it is
 tracked here as a plain per-dataset attribute rather than threaded through
 every layer below -- doctrine V, one home, kept as local as the fact allows.

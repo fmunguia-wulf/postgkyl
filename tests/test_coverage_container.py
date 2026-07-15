@@ -1,4 +1,4 @@
-"""Coverage-completing tests for api/gdata, core/state, core/collection, cli/*.
+"""Coverage-completing tests for gdata/gdata, gdatastate/state, gdatastate/collection, cli/*.
 
 These target branches the golden-path tests in test_postgkyl.py don't reach:
 state readers on empty/bare containers, the modal .mul()/.div() aliases, the
@@ -22,8 +22,8 @@ matplotlib.use("Agg")
 
 import postgkyl as pg  # noqa: E402
 from postgkyl import gpython  # noqa: E402
-from postgkyl.core.state import GDataState  # noqa: E402
-from postgkyl.core.collection import flatten_datasets  # noqa: E402
+from postgkyl.gdatastate.gdatastate import GDataState  # noqa: E402
+from postgkyl.gdatastate.collection import flatten_datasets  # noqa: E402
 
 DATA = os.path.join(ROOT, "tests", "test_data")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")

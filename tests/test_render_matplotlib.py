@@ -18,7 +18,7 @@ import pytest
 
 import postgkyl as pg
 from postgkyl import gpython, operations
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render import matplotlib as backend
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from postgkyl.core import flatten_datasets
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate import flatten_datasets
+from postgkyl.gdatastate.gdatastate import GDataState
 
 
 def collect(*datasets, sumdata: bool = False, period: float | None = None,
@@ -14,7 +14,7 @@ def collect(*datasets, sumdata: bool = False, period: float | None = None,
   """Collect many single-frame datasets into one with a new leading time axis.
 
   Accepts ``collect(a, b)`` or ``collect([a, b])`` (flattened via
-  ``core.flatten_datasets``). The per-dataset time stamp is taken from
+  ``gdatastate.flatten_datasets``). The per-dataset time stamp is taken from
   ``ctx['time']``, then ``ctx['frame']``, then the dataset's position in the
   sequence as a fallback; frames are sorted by their (possibly folded) time
   stamp. The result copies the grid/ctx of the first frame (via its

@@ -4,7 +4,7 @@ and the module-level multi-dataset verbs (``collect``/``evaluate``/``relchange``
 
 from .gdata import GData
 from .load import load
-from .group import GDataGroup
+from .gdatagroup import GDataGroup
 from .verbs import animate, collect, evaluate, relchange
 
 __all__ = ["GData", "load", "GDataGroup", "collect", "evaluate", "relchange",

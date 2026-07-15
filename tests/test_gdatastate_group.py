@@ -1,4 +1,4 @@
-"""Tests for postgkyl.core.group.GDataStateGroup — the verb-less container.
+"""Tests for postgkyl.gdatastate.gdatastategroup.GDataStateGroup — the verb-less container.
 
 Ported from tests_bak/test_group.py: only the state-concerned tests survive
 (construction, flattening, indexing, iteration, combining, repr). Tests that
@@ -13,8 +13,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from postgkyl.core.group import GDataStateGroup
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastategroup import GDataStateGroup
+from postgkyl.gdatastate.gdatastate import GDataState
 
 
 def _line(tag: str = "default", offset: float = 0.0) -> GDataState:

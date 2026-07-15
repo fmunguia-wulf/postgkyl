@@ -6,7 +6,7 @@ each caller keeps its own ``reason`` clause (why *this* function's math has
 no meaning on raw modal coefficients), but the check itself --
 ``backend == "gkyl"`` -> raise with the standard ".interpolate() first" message
 shape -- has one home. This is a state-invariant helper, not a verb, so it
-lives on ``core`` (which stays verb-less) rather than ``operations``.
+lives on ``gdatastate`` (which stays verb-less) rather than ``operations``.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-  from .state import GDataState
+  from .gdatastate import GDataState
 # end
 
 

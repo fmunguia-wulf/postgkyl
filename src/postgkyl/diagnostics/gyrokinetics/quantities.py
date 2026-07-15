@@ -12,7 +12,7 @@ module (``five_moment``, ``ten_moment``, ``mhd``, ...). This is a deliberate
 divergence from a literal "stay modal and call the weak kernels" port:
 extracting one physical field's coefficients out of a *packed* multi-field
 source file (``M0M1M2``, ``BiMaxwellianMoments``, ``HamiltonianMoments``, ...)
-has no primitive reachable from this layer's allowed imports (``core``,
+has no primitive reachable from this layer's allowed imports (``gdatastate``,
 ``operations``, ``numerics``, ``api`` -- not ``dg``/``gpython``; only ``operations.select``
 could slice a component, and it unconditionally refuses gkyl-backed data).
 Interpolating first sidesteps that gap entirely and matches the one
@@ -37,7 +37,7 @@ from scipy import constants
 from postgkyl import operations
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

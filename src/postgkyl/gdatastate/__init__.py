@@ -1,7 +1,7 @@
 """The object-model layer: the verb-less ``GDataState`` container."""
 
-from .state import GDataState
+from .gdatastate import GDataState
 from .collection import flatten_datasets
-from .group import GDataStateGroup
+from .gdatastategroup import GDataStateGroup
 
 __all__ = ["GDataState", "flatten_datasets", "GDataStateGroup"]

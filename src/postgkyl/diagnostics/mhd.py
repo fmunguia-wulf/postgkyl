@@ -13,12 +13,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..core.guards import require_field_domain as _require_field_domain
+from ..gdatastate.guards import require_field_domain as _require_field_domain
 from .five_moment import _get_density, _get_vx, _get_vy, _get_vz
 from .five_moment import density, xvel, yvel, zvel, vel
 
 if TYPE_CHECKING:
-  from ..core.state import GDataState
+  from ..gdatastate.gdatastate import GDataState
 # end
 
 _REASON = ("extracting primitive variables from raw DG coefficients would "

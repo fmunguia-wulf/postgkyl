@@ -22,7 +22,7 @@ import numpy as np
 from postgkyl import numerics
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

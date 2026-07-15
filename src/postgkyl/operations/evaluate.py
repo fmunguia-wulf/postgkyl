@@ -30,7 +30,7 @@ from postgkyl.numerics import ev_cmds
 from postgkyl.operations.select import select
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 # f, f0, f12 ... with optional [comp] selection and optional .ctxkey suffix.

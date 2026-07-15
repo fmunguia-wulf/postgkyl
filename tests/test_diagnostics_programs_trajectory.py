@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 
 from postgkyl import io
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.diagnostics import trajectory as traj
 
 

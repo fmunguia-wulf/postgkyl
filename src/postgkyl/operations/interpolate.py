@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from postgkyl import dg
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 # Short basis code -> (long basis name, is_modal)

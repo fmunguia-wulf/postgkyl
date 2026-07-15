@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render import matplotlib as backend
 
 

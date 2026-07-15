@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render import animate as anim_mod
 
 needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None,

@@ -29,7 +29,7 @@ from postgkyl import gpython, dg  # noqa: E402
 # package's __init__ entirely and returns the actual submodule object.
 ip = importlib.import_module("postgkyl.numerics.idx_parser")
 from postgkyl.numerics import elementwise  # noqa: E402
-from postgkyl.core.state import GDataState  # noqa: E402
+from postgkyl.gdatastate.gdatastate import GDataState  # noqa: E402
 
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")

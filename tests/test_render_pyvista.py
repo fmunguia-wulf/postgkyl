@@ -13,7 +13,7 @@ import pytest
 
 pv = pytest.importorskip("pyvista")
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render.pyvista import pyvista
 
 

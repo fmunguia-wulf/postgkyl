@@ -3,7 +3,7 @@ animation, and rotating-figure export.
 
 Adapted from ``tests_bak/test_plot.py``'s ``plotly`` cases: the old tests fed
 ``(grid, values)`` tuples straight into ``pg.output.plotly``; this layer's
-``plotly()`` takes a :class:`~postgkyl.core.state.GDataState` instead (no
+``plotly()`` takes a :class:`~postgkyl.gdatastate.gdatastate.GDataState` instead (no
 dual "GData or tuple" signature -- see PYTHON_PRINCIPLES.md #9), so every
 case below builds one via ``GDataState().push(...)``.
 """
@@ -19,7 +19,7 @@ import numpy as np
 import plotly.graph_objects as go
 import pytest
 
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.render.plotly import (
     plotly,
     plotly_animate,

@@ -25,7 +25,7 @@ matplotlib.use("Agg")
 import postgkyl as pg  # noqa: E402
 from postgkyl import io  # noqa: E402
 from postgkyl.io import writer  # noqa: E402
-from postgkyl.core.state import GDataState  # noqa: E402
+from postgkyl.gdatastate.gdatastate import GDataState  # noqa: E402
 
 DATA = os.path.join(ROOT, "tests", "test_data")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
@@ -163,7 +163,7 @@ def test_vtk_series_recovers_from_a_corrupt_sidecar(tmp_path):
 def test_gkyl_roundtrip_preserves_grid_and_values_exactly(tmp_path):
   """``io.read`` is exercised both directly (grid) and through ``pg.load``
   (values, via the ``.values`` property that abstracts the gkyl/numpy
-  backend split -- see core/state.py) since a written already-interpolated
+  backend split -- see gdatastate/state.py) since a written already-interpolated
   field still carries file_type == 1 and so is picked up again by whichever
   reader is first compatible (GkylCReader when the FFI is available)."""
   a = pg.load(F1).interpolate().select(comp=0)

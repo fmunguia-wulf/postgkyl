@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 
 from postgkyl import gpython
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.diagnostics.gyrokinetics import distf, quantities as ff, quantity as qmod, utils
 from postgkyl.diagnostics.gyrokinetics.load_quantity import (
     available_quantities, load_gk_quantity)

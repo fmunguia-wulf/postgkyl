@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from postgkyl.core.group import GDataStateGroup
+from postgkyl.gdatastate.gdatastategroup import GDataStateGroup
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

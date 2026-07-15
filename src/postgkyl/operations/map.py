@@ -15,10 +15,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from postgkyl import dg
-from postgkyl.core.state import GDataState
+from postgkyl.gdatastate.gdatastate import GDataState
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState as _GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState as _GDataState
 # end
 
 

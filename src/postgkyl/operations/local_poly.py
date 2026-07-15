@@ -9,7 +9,7 @@ from postgkyl import dg
 from postgkyl.operations.interpolate import BASIS_MAP
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .. import numerics
-from ..core.guards import require_field_domain as _require_field_domain
+from ..gdatastate.guards import require_field_domain as _require_field_domain
 from .five_moment import _get_ke, _get_p
 
 if TYPE_CHECKING:
-  from ..core.state import GDataState
+  from ..gdatastate.gdatastate import GDataState
 # end
 
 _REASON = "decomposing energy from raw DG coefficients would mix basis functions"

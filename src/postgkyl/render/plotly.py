@@ -1,6 +1,6 @@
 """Plotly rendering backend: interactive 2-D surfaces and 3-D volumes.
 
-Imports only ``core``/``numerics`` (plus Plotly/Matplotlib themselves),
+Imports only ``gdatastate``/``numerics`` (plus Plotly/Matplotlib themselves),
 mirroring ``matplotlib.py``. Plotly cannot render mathtext, so labels go
 through ``render.labels.latex_to_html`` instead.
 """
@@ -24,7 +24,7 @@ from .labels import latex_to_html
 from .style import DEFAULT_STYLE, apply_style
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 
@@ -424,7 +424,7 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
 
   Args: see ``output/plotly.py``'s docstring in the migrated tree for the
     per-argument reference; the signature and semantics are unchanged except
-    that ``data`` is a :class:`~postgkyl.core.state.GDataState` (not a
+    that ``data`` is a :class:`~postgkyl.gdatastate.gdatastate.GDataState` (not a
     ``GData | (grid, values)`` tuple), ``figsize`` no longer accepts the
     CLI's comma-string spelling, and ``num_axes`` (the old CLI's "restrict to
     this many components" override, orthogonal to ``squeeze``) was dropped --

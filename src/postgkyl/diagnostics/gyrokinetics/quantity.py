@@ -20,7 +20,7 @@ from postgkyl.gdata import GData
 from .. import discovery
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 

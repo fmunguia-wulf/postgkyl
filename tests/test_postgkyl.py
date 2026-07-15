@@ -443,9 +443,9 @@ _ALLOWED = {
                                                       # the vtk writer) instead of duplicating
                                                       # it -- numerics has 0 internal imports,
                                                       # so this cannot create a cycle (layer 04-io)
-    "core":   {"io", "gpython"},                        # container holds a GkylArray backend
-    "render": {"core", "numerics"},
-    "operations": {"core", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
+    "gdatastate": {"io", "gpython"},                    # container holds a GkylArray backend
+    "render": {"gdatastate", "numerics"},
+    "operations": {"gdatastate", "dg", "numerics", "render"}, # "models" removed by 10-diagnostics.md:
                                                       # the physics verbs (moments/agyro/
                                                       # current/energetics/rotate/
                                                       # transform_frame/laguerre) moved up
@@ -453,19 +453,19 @@ _ALLOWED = {
                                                       # models/ array math they delegated to;
                                                       # operations is now the equation-blind
                                                       # core-verb library only
-    "diagnostics": {"core", "operations", "numerics", "gdata", "render"}, # added by
+    "diagnostics": {"gdatastate", "operations", "numerics", "gdata", "render"}, # added by
                                                       # 10-diagnostics.md: equation-
                                                       # specific compositions (five_moment/
                                                       # ten_moment/mhd/plasma/multispecies/
                                                       # rotations/kinetic/pkpm) wrap core
-                                                      # verbs and state -- none of core/operations/
+                                                      # verbs and state -- none of gdatastate/operations/
                                                       # numerics imports upward, so this
                                                       # cannot create a cycle; "gdata" added by
                                                       # 12-diagnostics-loaders.md: the
                                                       # gyrokinetics/pkpm loaders build on
                                                       # pg.load/GData (modal arithmetic,
                                                       # .interpolate()) to read simulation output
-                                                      # -- gdata imports only core/operations/io, none
+                                                      # -- gdata imports only gdatastate/operations/io, none
                                                       # of which import diagnostics, so this
                                                       # still cannot create a cycle; "render"
                                                       # pre-authorized by 13-diagnostics-
@@ -478,11 +478,11 @@ _ALLOWED = {
                                                       # ke_dke) actually import it, each
                                                       # building its own bespoke figure
                                                       # directly with matplotlib instead;
-                                                      # render imports only core/numerics,
+                                                      # render imports only gdatastate/numerics,
                                                       # neither of which imports diagnostics,
                                                       # so this cannot create a cycle whether
                                                       # or not the edge is ever exercised
-    "gdata":  {"core", "operations", "io"},
+    "gdata":  {"gdatastate", "operations", "io"},
     "":       {"gdata", "operations", "render", "io", "diagnostics"}, # facade: pure re-export of
                                                       # public names; "diagnostics" added by
                                                       # 12-diagnostics-loaders.md, which

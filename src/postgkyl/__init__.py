@@ -37,7 +37,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
     leaves     numerics/   (pure NumPy; imports nothing internal)
     engine     dg/         interpolation bridge + modal ops -> gpython
     leaves     io/         readers (C-native first)    -> gpython
-    container  core/       GDataState {gkyl|numpy} backend
+    container  gdatastate/ GDataState {gkyl|numpy} backend
     seam       operations/ one verb each
     backend    render/     matplotlib
     fluent     api/        GData(GDataState) + operators   <- above operations

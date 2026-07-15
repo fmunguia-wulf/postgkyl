@@ -25,7 +25,7 @@ from postgkyl import dg, numerics
 from ._materialize import materialize_for_render
 
 if TYPE_CHECKING:
-  from postgkyl.core.state import GDataState
+  from postgkyl.gdatastate.gdatastate import GDataState
 # end
 
 
