@@ -115,7 +115,7 @@ test (see "Import contract"). Arrow = "may import":
 > every real import against it) is the enforced source of truth; this file is only a
 > readable projection of it. The two *can* drift (they already had: `operations/_materialize.py`,
 > `operations/animate.py`, `operations/average.py`, `operations/eval_at_coord_proj.py`, `operations/local_poly.py`,
-> `core/guards.py`, `api/group.py`, and `api/verbs.py` existed in the tree before they
+> `gdatastate/guards.py`, `gdata/gdatagroup.py`, and `gdata/verbs.py` existed in the tree before they
 > were added here). Whenever you add a new top-level module file or a new allowed import
 > edge, update `_ALLOWED` and this section in the same commit — don't let the picture
 > outlive the code it describes.
@@ -125,19 +125,19 @@ src/postgkyl/
 │
 ├─ __init__.py          facade · `import postgkyl as pg`              [SURFACE]
 │
-├─ cli/                 Thin Click shells: argv → api / diagnostics   [SURFACE]
+├─ cli/                 Thin Click shells: argv → gdata / diagnostics   [SURFACE]
 │   ├─ app.py
 │   └─ commands/        All the callable commands from the command line
 │
 ├─ diagnostics/        equation-specific physics · one module        [COMPOSITION]
 │                      per equation model
 │
-├─ api/                ★ THE FLUENT SURFACE  (sits ABOVE operations)  [FLUENT API]
+├─ gdata/                ★ THE FLUENT SURFACE  (sits ABOVE operations)  [FLUENT API]
 │   ├─ gdata.py          class GData(GDataState) + .interpolate()/.plot()
-│   ├─ group.py          fluent DatasetGroup: broadcasts verbs over its members
+│   ├─ gdatagroup.py     fluent GDataGroup: broadcasts verbs over its members
 │   ├─ verbs.py          module-level fluent verbs with no single `self`
 │   │                    (collect/evaluate/relchange/animate) — one-line
-│   │                    delegations to `operations`, shared by GData and DatasetGroup
+│   │                    delegations to `operations`, shared by GData and GDataGroup
 │   └─ load.py           pg.load(...) → returns a GData
 │
 ├─ operations/         one function per verb · the single seam        [VERBS]
@@ -152,12 +152,12 @@ src/postgkyl/
 │   ├─ local_poly.py     modal coefficients → discontinuity-preserving plot mesh
 │   └─ _materialize.py   shared modal → NumPy-shadow bridge used by plot/animate
 │
-├─ render/             matplotlib · plotly · pyvista → core/numerics  [BACKEND]
+├─ render/             matplotlib · plotly · pyvista → gdatastate/numerics [BACKEND]
 │                      (below operations, which delegates plot() to it)
 │
-├─ core/               ★ THE CONTAINER  (state only, NO verbs)        [CONTAINER]
-│   ├─ state.py          class GDataState: grid·values·ctx·_result·dunders
-│   ├─ group.py          DatasetGroup
+├─ gdatastate/         ★ THE CONTAINER  (state only, NO verbs)        [CONTAINER]
+│   ├─ gdatastate.py          class GDataState: grid·values·ctx·_result·dunders
+│   ├─ gdatastategroup.py     GDataStateGroup
 │   └─ guards.py         shared field-domain guard (backend=="gkyl" -> raise);
 │                        one home for the ".interpolate() first" check reused
 │                        across operations/diagnostics instead of retyped per verb
@@ -199,15 +199,15 @@ src/postgkyl/
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║ FLUENT API   ★ the fluent surface lives HERE, above operations               ║
 ║                                                                              ║
-║   api/load.py    pg.load(path) ───────────────────────► returns api.GData    ║
-║   api/gdata.py   class GData(GDataState):                                    ║
+║   gdata/load.py    pg.load(path) ───────────────────► returns gdata.GData    ║
+║   gdata/gdata.py   class GData(GDataState):                                  ║
 ║                   def interpolate(self): return operations.interpolate(self) ║
 ║                      def plot(self):   return operations.plot(self)          ║
-║   api/group.py   class DatasetGroup(core.DatasetGroup): broadcasts any verb  ║
+║   gdata/gdatagroup.py  GDataGroup(gdatastate.GDataStateGroup): broadcasts any verb ║
 ║                  over its members via __getattr__ — no verb body duplicated  ║
-║   api/verbs.py   module-level verbs with no single `self` (collect/evaluate/ ║
+║   gdata/verbs.py module-level verbs with no single `self` (collect/evaluate/ ║
 ║                  relchange/animate) — one-line delegations to operations,    ║
-║                  shared by GData and DatasetGroup so spellings can't drift   ║
+║                  shared by GData and GDataGroup so spellings can't drift     ║
 ╚════════════════════════════╦═══════════════════════════════════╦═════════════╝
                              │ imports                           │ extends
                              ▼                                   │ (subclass)
@@ -221,7 +221,7 @@ src/postgkyl/
                              ▼                                    │
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║ BACKEND                                                                      ║
-║   render/ (mpl · plotly · pyvista) — imports only core + numerics; reached   ║
+║   render/ (mpl · plotly · pyvista) — imports gdatastate + numerics; reached  ║
 ║   from operations/plot.py, and pre-authorized from diagnostics/ (program-    ║
 ║   scale figures) and the facade (`pg.plot` ← render)                         ║
 ╚════════════════════════════╦════════════════════════════════════╦════════════╝
@@ -229,9 +229,9 @@ src/postgkyl/
                              ▼                                    ▼
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║ CONTAINER                                                                    ║
-║   core/state.py   class GDataState:  grid · values · ctx · _result · dunders ║
-║   core/group.py   DatasetGroup                                               ║
-║   core/guards.py  shared field-domain guard: backend=="gkyl" -> raise with   ║
+║   gdatastate/gdatastate.py   GDataState: grid · values · ctx ·_result·dunders║
+║   gdatastate/gdatagroup.py   GDataStateGroup                                 ║
+║   gdatastate/guards.py  shared field-domain guard: backend=="gkyl" -> raise  ║
 ║                   the ".interpolate() first" message — one home for a check  ║
 ║                   operations/diagnostics verbs used to retype independently  ║
 ╚════════════════════════════╦═════════════════════════════════════════════════╝
@@ -292,7 +292,7 @@ change representation (nodal↔modal exact; quad round-trip exact for degree
 project-back spelling (≡ `fn(d.to_quad()).to_modal()`). Datasets combine only
 within one representation. See REFACTOR_GKEYLL_FFI.md §3b.
 
-### `core/` — the container (`core/state.py`)
+### `gdatastate/` — the container (`gdatastate/state.py`)
 `GDataState` holds one dataset: a nodal `grid` (list of 1-D edge arrays), values in
 one of the two backends (`gpython.GkylArray` or `np.ndarray`), and metadata in `ctx`.
 It is **verb-less** and imports only downward (`io` to construct itself, `gpython` for
@@ -303,8 +303,8 @@ the backend type). It owns:
   the one "mutate-self vs. emit-new" decision point every verb funnels through,
 - pure state readers only: `__array__` (refuses on gkyl-backed data),
   `__repr__`/`__str__`, `info`, `is_interpolated`.
-`core/collection.py` has `flatten_datasets` (shared by the multi-dataset entry points).
-`core/guards.py` centralizes the field-domain check (`backend == "gkyl"` → raise with
+`gdatastate/collection.py` has `flatten_datasets` (shared by the multi-dataset entry points).
+`gdatastate/guards.py` centralizes the field-domain check (`backend == "gkyl"` → raise with
 the standard ".interpolate() first" message) that several `operations`/`diagnostics` verbs
 need but that isn't itself a verb, so it lives here rather than in `operations`.
 
@@ -315,19 +315,19 @@ need but that isn't itself a verb, so it lives here rather than in `operations`.
 *above* `operations`, these are plain top-level delegations — no lazy imports. `pg.load(...)`
 returns a `GData`.
 
-`api/group.py` mirrors the same move one level up: `class DatasetGroup(core.DatasetGroup)`
+`gdata/gdatagroup.py` mirrors the same move one level up: `class GDataGroup(gdatastate.GDataStateGroup)`
 adds broadcasting — any attribute not defined on the class is resolved by `__getattr__`,
 looked up on every member, so a verb call broadcasts across the whole group without a
-single verb body being duplicated. `api/verbs.py` holds the handful of verbs that
+single verb body being duplicated. `gdata/verbs.py` holds the handful of verbs that
 combine *several* datasets and so have no single `self` to hang off of a class —
 `collect`, `evaluate`, `relchange`, `animate` — each a one-line delegation to the
-matching `operations` function; `GData` and `DatasetGroup` both call through these same
+matching `operations` function; `GData` and `GDataGroup` both call through these same
 module-level functions for their own methods, so the functional and fluent spellings
 of a multi-dataset verb can never drift apart.
 
 **The trick that removes the cycle:** `operations` verbs are typed on `GDataState` but *return*
 the caller's concrete class, because `_result` builds `type(self)()`. So `operations` never needs
-to import `api`, yet the whole fluent chain stays `GData`. See `HIERARCHY_2.md`.
+to import `gdata`, yet the whole fluent chain stays `GData`. See `HIERARCHY_2.md`.
 
 ### `operations/` — the verb library (the single seam)
 One module per verb, re-exported from `operations/__init__.py`. Contract:
@@ -372,7 +372,7 @@ ported from the old `apps/gk_*.py`). Contract: a diagnostic takes loaded
 data — one or several `GData` — plus physical scalars as keyword-only
 options, and returns `GDataState` (via `_result`, same inplace/tag/label
 contract as a verb) or a Figure; it is built entirely from the public
-vocabulary below it (`operations`, `core`, `numerics`, `api`) and nothing below the
+vocabulary below it (`operations`, `gdatastate`, `numerics`, `gdata`) and nothing below the
 surfaces imports it. The `render` edge is pre-authorized for this layer (a
 program diagnostic may want `render.plot()`'s generic panel layout), but as
 of this writing every program module builds its own bespoke figure directly
@@ -408,7 +408,7 @@ the equation module that uses it.)
   and returns a native `GkylArray`; the pure-Python `GkylReader` is the fallback for
   no-library installs, partial loads, and dynvectors. `save()` supports
   `gkyl`/`txt`/`npy`/`vtk`. Readers fill a plain `ctx` dict and return
-  `(grid, values)` — they never import `core`.
+  `(grid, values)` — they never import `gdatastate`.
 
 ### Leaves — `numerics/` (imports nothing), `gpython/` (the foreign floor)
 - **`numerics/`** — pure NumPy: `idx_parser` (selection strings) and `elementwise`
@@ -436,10 +436,10 @@ the equation module that uses it.)
 
 ### `render/` — visualization backend (`render/matplotlib.py`)
 `plot(*datasets, ...)` — 1-D lines / 2-D pcolormesh, one panel per component, multi-dataset
-overlay. Imports `core`/`numerics` only; requires interpolated data.
+overlay. Imports `gdatastate`/`numerics` only; requires interpolated data.
 
 ### `__init__.py` — the facade (pure re-export)
-Gathers the public names from the layer that owns each: `load`/`GData` ← `api`,
+Gathers the public names from the layer that owns each: `load`/`GData` ← `gdata`,
 `plot` ← `render`, `info` ← `operations`, `save` ← `io`, `load_gk_quantity`/
 `load_gk_distf`/`available_gk_quantities` ← `diagnostics.gyrokinetics`. **It
 contains no function or class definitions** (a test enforces this).
