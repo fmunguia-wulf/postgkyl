@@ -15,6 +15,11 @@ class GkQuantity:
     is_time_dep: If the quantity is time-dependent (i.e. written in frames).
     is_species_dep: If the quantity is species-dependent.
     is_vector: If the quantity is a vector (i.e. has multiple components).
+    is_multi_species: If the quantity combines several species into a single
+      dataset (e.g. the sound speed, which mixes the electrons and every ion).
+      Such a quantity is fetched once for the whole species list rather than
+      once per species, and its fetch function receives one list of sources per
+      species instead of a flat list.
   """
   name = None
   source = None
@@ -26,10 +31,12 @@ class GkQuantity:
   is_tensor = None
   is_integrated = None
   is_geo = None
+  is_multi_species = None
 
   def __init__(self, name : str, source : list, fetch_func : callable, label : str,
                is_time_dep : bool = False, is_species_dep : bool = False, is_vector : bool = False,
-               is_tensor : bool = False, is_integrated : bool = False, is_geo : bool = False):
+               is_tensor : bool = False, is_integrated : bool = False, is_geo : bool = False,
+               is_multi_species : bool = False):
     self.name = name
     self.source = source
     self.fetch_func = fetch_func
@@ -40,6 +47,7 @@ class GkQuantity:
     self.is_tensor = is_tensor
     self.is_integrated = is_integrated
     self.is_geo = is_geo
+    self.is_multi_species = is_multi_species
 
   # Internal methods.
 
@@ -241,7 +249,7 @@ class GkQuantity:
   def fetch(self, path : str, name : str, species : str, frame : int | None,
             combo_idx : int, **extra) -> GData:
     """
-    Return the GData associated with this quantit by fetching the source files 
+    Return the GData associated with this quantit by fetching the source files
     and computing the quantity.
     """
     combo = self.source[combo_idx]
@@ -251,6 +259,53 @@ class GkQuantity:
     extra["path"] = path
     extra["name"] = name
     extra["species"] = species
+    extra["frame"] = frame
+    return fetch_func(gdatas, **extra)
+
+  def get_avail_source_multi(self, path : str, name : str, species_list : list[str],
+                             frame_inp : str | None) -> tuple[int, list[int | None]]:
+    """
+    Multi-species counterpart of get_avail_source: resolve the sources for each
+    species in species_list and keep only the frames available for all of them,
+    since the quantity combines every species into one dataset.
+    """
+    combo_idx = 0
+    frames_common : set[int | None] | None = None
+    for species in species_list:
+      combo_idx, frames = self.get_avail_source(path, name, species, frame_inp)
+      frames_common = set(frames) if frames_common is None else frames_common & set(frames)
+    # end
+
+    if not frames_common:
+      raise FileNotFoundError(
+        f"No frames are available for all of the requested species {species_list} "
+        f"(path='{path}', name='{name}').")
+    # end
+
+    return combo_idx, sorted(frames_common, key=lambda f: (f is None, f))
+
+  def fetch_multi(self, path : str, name : str, species_list : list[str],
+                  frame : int | None, combo_idx : int, **extra) -> GData:
+    """
+    Multi-species counterpart of fetch, for is_multi_species quantities.
+
+    The fetch function is handed one list of sources per species, in the order
+    of species_list: gdatas[i][j] is the j-th source of the i-th species. The
+    species names are passed along as extra['species'].
+
+    Each species' sources are resolved with extra['species_idx'] set to that
+    species' position, so a per-species '--extra' array (e.g. 'mass=1,2,3')
+    picks the right entry inside the sources too, not just at the top level.
+    """
+    combo = self.source[combo_idx]
+    fetch_func = self.fetch_func[combo_idx]
+    gdatas = [[self.get_src_gdata(src, path, name, species, frame,
+                                  **dict(extra, species_idx=species_idx))
+               for src in combo]
+              for species_idx, species in enumerate(species_list)]
+    extra["path"] = path
+    extra["name"] = name
+    extra["species"] = list(species_list)
     extra["frame"] = frame
     return fetch_func(gdatas, **extra)
 

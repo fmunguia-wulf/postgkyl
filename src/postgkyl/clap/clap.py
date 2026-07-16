@@ -683,7 +683,7 @@ Script example:
       path: (--path, -p) Directory containing the simulation files.
       tag: (--tag, -t) Tag for the output dataset.
       label: (--label, -l) Label override for the output dataset.
-      extra: (--extra, -e) Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.
+      extra: (--extra, -e) Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. A key may be given one value per species as a comma-separated array, e.g. mass=me,mi1,mi2 alongside --species elc,ion1,ion2. Purpose depends on -q.
     """
     return self._run(_cmd("gk-load-quantity"), quantity=quantity, qlist=qlist, name=name, species=species, frame=frame, path=path, tag=tag, label=label, extra=extra)
 

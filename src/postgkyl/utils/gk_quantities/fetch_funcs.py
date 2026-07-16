@@ -25,12 +25,36 @@ from postgkyl.tools.gkeyll_dg_ops import GkeyllDGops
 import postgkyl.utils.gkeyll_const as gkc
 
 def _get_ctx_val(gdata : GData, key : str, **kwargs):
-  if key in gdata.ctx:
+  """
+  Read a value(s) for 'key', the '--extra' value overrides the GData's context.
+  """
+  if key in kwargs:
+    val = kwargs[key]
+
+    if not isinstance(val, (list, tuple)):
+      # A single value applies to every species.
+      return val
+
+    species_idx = kwargs.get("species_idx", None)
+    if species_idx is None:
+      raise KeyError(f"fetch function: '--extra {key}=' was given {len(val)} values but this "
+                     f"quantity is not computed per species, so there is no way to tell which "
+                     f"one to use. Pass a single value instead.")
+
+    if species_idx >= len(val):
+      species = kwargs.get("species", None)
+      raise ValueError(f"fetch function: '--extra {key}=' was given only {len(val)} values but "
+                       f"species #{species_idx}{f' ({species})' if species else ''} was requested. "
+                       f"Give one value per species, in the order of '--species'.")
+
+    return val[species_idx]
+
+  if gdata.ctx.get(key, None) is not None:
     return gdata.ctx[key]
-  elif key in kwargs:
-    return kwargs[key]
-  else:
-    raise KeyError(f"fetch function: context key '{key}' not found in GData. Pass it as '--extra {key}=<value>'.")
+
+  raise KeyError(f"fetch function: context key '{key}' not found in GData. Pass it as "
+                 f"'--extra {key}=<value>', or as one value per species with "
+                 f"'--extra {key}=<value1>,<value2>,...'.")
 
 def _get_num_basis_from_gdata(gdata) -> int:
   from postgkyl.data.dg import get_num_basis
@@ -44,6 +68,28 @@ def _empty_gdata_from_gdata(gdata) -> GData:
   out = GData(ctx=gdata.ctx)
   out.push(gdata.get_grid(), np.zeros_like(gdata.get_values()))
   return out
+
+def _powsqrt_dg(gdata, exponent: float) -> GData:
+  """
+  pow(sqrt(f), exponent) of a single-component DG field. negative values are set to 1e-40.
+  """
+
+  # We could check negativity before applying the square root.
+  # psi0 = 2.0**(-0.5*gdata.get_num_dims())
+  # if np.any(gdata.get_values()[..., 0:1]*psi0 < 0.0):
+  #   raise ValueError("_powsqrt_dg: the field has negative cell averages, cannot take "
+  #                    "its square root.")
+
+  out = _empty_gdata_from_gdata(gdata)
+
+  dgops = GkeyllDGops()
+  dgops.powsqrt(out, gdata, exponent)
+
+  return out
+
+def _sqrt_dg(gdata) -> GData:
+  """Square root of a single-component DG field."""
+  return _powsqrt_dg(gdata, 1.0)
 
 def _make_fetch_comp(icomp: int):
   """Return a fetch function that extracts the comp-th physical component."""
@@ -73,15 +119,15 @@ def _make_fetch_sick_addsub_sjcl(si: int, ck: int, sj: int, cl: int, op):
     if not nb_l == nb_r:
       raise ValueError(f"Datasets have different basis")
 
-    vals_l = gd_l.get_values()
-    vals_r = gd_r.get_values()
-  
-    out = GData(ctx=gdl.ctx)
+    vals_l = gd_l.get_values()[..., ck*nb_l:(ck+1)*nb_l]
+    vals_r = gd_r.get_values()[..., cl*nb_r:(cl+1)*nb_r]
+
+    out = GData(ctx=gd_l.ctx)
     out.push(gd_l.get_grid(), op(vals_l,vals_r))
-  
+
     return out
   # end
-  fetch.__name__ = f"fetch_s{si}c{ck}_mul_s{sj}c{cl}"
+  fetch.__name__ = f"fetch_s{si}c{ck}_{op.__name__}_s{sj}c{cl}"
   return fetch
 
 def _make_fetch_sick_mul_sjcl(si: int, ck: int, sj: int, cl: int):
@@ -402,6 +448,264 @@ def fetch_press_p(gdatas, **kwargs):
 
   return press_p
 
+def _make_fetch_q(name: str):
+  """
+  Return a fetch function for the lab-frame parallel flux of the parallel
+  (name='par') or perpendicular (name='perp') kinetic energy:
+    q_par  = (m/2)*M3par  = (m/2) int(vpar^3 f) dv,
+    q_perp = (m/2)*M3perp = (m/2) int(vpar*vperp^2 f) dv,
+  so that q_par + q_perp is the parallel flux of the total kinetic energy.
+  Both are in W/m^2 (kg/s^3). gdatas has:
+    1. M3par (name='par') or M3perp (name='perp').
+  """
+  def fetch(gdatas, **kwargs):
+    m3 = gdatas[0]
+    mass = _get_ctx_val(m3, "mass", **kwargs)
+
+    out = _empty_gdata_from_gdata(m3)
+    out.set_values(0.5*mass*m3.get_values())
+    return out
+  # end
+  fetch.__name__ = f"fetch_q{name}"
+  return fetch
+
+fetch_qpar = _make_fetch_q("par")
+fetch_qperp = _make_fetch_q("perp")
+
+def _make_fetch_q_fluid(name: str):
+  """
+  Return a fetch function for the parallel heat flux in the fluid (drift)
+  frame, i.e. the energy carried by the random part of the parallel motion,
+  u = M1/M0 being the parallel drift speed:
+    q_par  = (m/2) int (vpar-u)^3 f dv
+           = (m/2) [M3par - 3*u*M2par + 3*u^2*M1 - u^3*M0]
+           = (m/2) [M3par - 3*u*M2par + 2*u^2*M1],
+    q_perp = (m/2) int (vpar-u)*vperp^2 f dv
+           = (m/2) [M3perp - u*M2perp].
+  gdatas has (in this order):
+    1. M0: zeroth moment (density).
+    2. M1: first moment.
+    3. M2par (name='par') or M2perp (name='perp').
+    4. M3par (name='par') or M3perp (name='perp').
+  """
+  is_par = name == "par"
+
+  def fetch(gdatas, **kwargs):
+    m0, m1, m2, m3 = gdatas
+    mass = _get_ctx_val(m0, "mass", **kwargs)
+
+    dgops = GkeyllDGops()
+
+    m0_inv = _empty_gdata_from_gdata(m0)
+    dgops.invert(0, m0_inv, 0, m0)
+
+    upar = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, upar, 0, m1, 0, m0_inv)
+
+    # u*M2par or u*M2perp.
+    u_m2 = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, u_m2, 0, upar, 0, m2)
+
+    if is_par:
+      # u^2*M1, which equals u^3*M0.
+      u_sq = _empty_gdata_from_gdata(m0)
+      dgops.multiply(0, u_sq, 0, upar, 0, upar)
+
+      u_sq_m1 = _empty_gdata_from_gdata(m0)
+      dgops.multiply(0, u_sq_m1, 0, u_sq, 0, m1)
+
+      vals = m3.get_values() - 3.0*u_m2.get_values() + 2.0*u_sq_m1.get_values()
+    else:
+      vals = m3.get_values() - u_m2.get_values()
+
+    out = _empty_gdata_from_gdata(m0)
+    out.set_values(0.5*mass*vals)
+    return out
+  # end
+  fetch.__name__ = f"fetch_q{name}_fluid"
+  return fetch
+
+fetch_qpar_fluid = _make_fetch_q_fluid("par")
+fetch_qperp_fluid = _make_fetch_q_fluid("perp")
+
+def fetch_vth(gdatas, **kwargs):
+  """
+  Thermal speed vth = sqrt(T/m) (m/s), where T is the temperature of the
+  requested species and m its mass. gdatas has:
+    1. temp: temperature (in Joules).
+  """
+  temp = gdatas[0]
+  mass = _get_ctx_val(temp, "mass", **kwargs)
+
+  temp_over_m = _empty_gdata_from_gdata(temp)
+  temp_over_m.set_values(temp.get_values()/mass)
+
+  return _sqrt_dg(temp_over_m)
+
+def _split_elc_ions(gdatas, quantity: str, **kwargs):
+  """
+  Split the per-species sources of a multi-species quantity into the electron
+  entry and the ion entries, by the sign of each species' charge..
+  """
+  species_names = kwargs.get("species", [])
+  if len(species_names) != len(gdatas):
+    species_names = [f"#{i}" for i in range(len(gdatas))]
+
+  elcs, ions = [], []
+  for species_idx, (name, srcs) in enumerate(zip(species_names, gdatas)):
+    # Resolve each species' attributes against its own slot in a '--extra' array.
+    species_kwargs = dict(kwargs, species_idx=species_idx, species=name)
+    entry = {
+      "name": name,
+      "srcs": srcs,
+      "mass": _get_ctx_val(srcs[0], "mass", **species_kwargs),
+      "charge": _get_ctx_val(srcs[0], "charge", **species_kwargs),
+    }
+    (elcs if entry["charge"] < 0.0 else ions).append(entry)
+
+  if len(elcs) != 1:
+    raise ValueError(f"{quantity}: expected exactly one negatively charged (electron) species "
+                     f"but found {len(elcs)} in {list(species_names)}.")
+    
+  if not ions:
+    raise ValueError(f"{quantity}: found no positively charged (ion) species in {list(species_names)}.")
+
+  return elcs[0], ions
+
+def _weighted_sum(entries, weights, comp: int):
+  """
+  Sum the comp-th source of each species, each scaled by a scalar weight.
+  """
+  out = _empty_gdata_from_gdata(entries[0]["srcs"][comp])
+  total = sum(w*e["srcs"][comp].get_values() for e, w in zip(entries, weights))
+  out.set_values(total)
+  return out
+
+def _c_s_ion_acoustic(gdatas, **kwargs):
+  """
+  Ion-acoustic sound speed (wave perspective), for the Bohm criterion and
+  sheath/presheath matching:
+    c_s = sqrt( T_e * sum_j(n_j*Z_j^2/m_j) / sum_j(n_j*Z_j) )
+  summing over the ion species j, with Z_j = q_j/e the ion charge state.
+  """
+  elc, ions = _split_elc_ions(gdatas, "fetch_c_s(kind=ion_acoustic)", **kwargs)
+
+  e = gkc.GKYL_ELEMENTARY_CHARGE
+  charge_states = [ion["charge"]/e for ion in ions]
+
+  # sum_j n_j*Z_j^2/m_j and sum_j n_j*Z_j, both linear in the densities (M0).
+  numer = _weighted_sum(ions, [z**2/ion["mass"] for z, ion in zip(charge_states, ions)], 0)
+  denom = _weighted_sum(ions, charge_states, 0)
+
+  dgops = GkeyllDGops()
+
+  denom_inv = _empty_gdata_from_gdata(denom)
+  dgops.invert(0, denom_inv, 0, denom)
+
+  # T_e * numer/denom.
+  c_s_sq = _empty_gdata_from_gdata(numer)
+  dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
+  dgops.multiply(0, c_s_sq, 0, c_s_sq, 0, elc["srcs"][1])
+
+  return _sqrt_dg(c_s_sq)
+
+def _c_s_thermo(gdatas, **kwargs):
+  """
+  Thermodynamic sound speed (bulk fluid perspective), for Mach numbers and
+  acoustic propagation in the core/SOL:
+    c_s = sqrt( (gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j)) / sum_j(n_j*m_j) )
+  summing over the ion species j. 
+  Default: gamma_e=1, gamma_i=3, but these can be set via '--extra'.
+  """
+  elc, ions = _split_elc_ions(gdatas, "fetch_c_s(kind=thermo)", **kwargs)
+
+  gamma_e = float(kwargs.get("gamma_e", 1.0))
+  gamma_i = float(kwargs.get("gamma_i", 3.0))
+
+  dgops = GkeyllDGops()
+
+  # gamma_e*n_e*T_e + sum_j gamma_j*n_j*T_j. Each n*T is a weak product.
+  numer = _empty_gdata_from_gdata(elc["srcs"][0])
+  dgops.multiply(0, numer, 0, elc["srcs"][0], 0, elc["srcs"][1])
+  numer.set_values(gamma_e*numer.get_values())
+
+  press_j = _empty_gdata_from_gdata(elc["srcs"][0])
+  for ion in ions:
+    dgops.multiply(0, press_j, 0, ion["srcs"][0], 0, ion["srcs"][1])
+    numer.set_values(numer.get_values() + gamma_i*press_j.get_values())
+
+  # sum_j n_j*m_j, the ion mass density; linear in the densities.
+  denom = _weighted_sum(ions, [ion["mass"] for ion in ions], 0)
+
+  denom_inv = _empty_gdata_from_gdata(denom)
+  dgops.invert(0, denom_inv, 0, denom)
+
+  c_s_sq = _empty_gdata_from_gdata(numer)
+  dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
+
+  return _sqrt_dg(c_s_sq)
+
+_C_S_KINDS = {
+  "ion_acoustic": _c_s_ion_acoustic,
+  "thermo": _c_s_thermo,
+}
+
+def fetch_c_s(gdatas, **kwargs):
+  """
+  Sound speed (m/s), combining the electrons and every ion species. gdatas has
+  one [M0, temp] pair per species, in the order they were requested, e.g.
+    pgkyl gk-load-quantity -q c_s -s elc,ion1,ion2 ...
+  Electrons and ions are told apart by the sign of each species' charge
+  attribute, so the species may be named anything.
+
+  Two definitions are available through '--extra kind=<kind>':
+    ion_acoustic (default): the wave/Bohm-criterion sound speed,
+      c_s = sqrt(T_e*sum_j(n_j*Z_j^2/m_j)/sum_j(n_j*Z_j)).
+    thermo: the bulk-fluid sound speed,
+      c_s = sqrt((gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j))/sum_j(n_j*m_j)),
+      with gamma_e and gamma_i settable via '--extra' (default 1 and 3).
+  """
+  kind = str(kwargs.get("kind", "ion_acoustic"))
+  if kind not in _C_S_KINDS:
+    raise ValueError(f"fetch_c_s: unknown kind '{kind}'. Select one with '--extra kind=<kind>' "
+                     f"from: {', '.join(sorted(_C_S_KINDS))}.")
+  # end
+  return _C_S_KINDS[kind](gdatas, **kwargs)
+
+def _make_fetch_q_norm(name: str):
+  """
+  Return a fetch function for a heat flux normalized by the free-streaming
+  estimate n*T*c_s:
+    q_norm = q / (n*T*c_s).
+  gdatas has (in this order):
+    1. q: the heat flux to normalize (in W/m^2).
+    2. M0: zeroth moment (density).
+    3. temp: temperature (in Joules).
+    4. c_s: sound speed (in m/s).
+  """
+  def fetch(gdatas, **kwargs):
+    q, m0, temp, c_s = gdatas
+
+    dgops = GkeyllDGops()
+
+    # n*T*c_s.
+    denom = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, denom, 0, m0, 0, temp)
+    dgops.multiply(0, denom, 0, denom, 0, c_s)
+
+    denom_inv = _empty_gdata_from_gdata(m0)
+    dgops.invert(0, denom_inv, 0, denom)
+
+    out = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, out, 0, q, 0, denom_inv)
+    return out
+
+  fetch.__name__ = f"fetch_q{name}_norm"
+  return fetch
+
+fetch_qpar_norm = _make_fetch_q_norm("par")
+fetch_qperp_norm = _make_fetch_q_norm("perp")
+
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
   """
   beta = 2*mu_0*press/bmag^2
@@ -448,7 +752,7 @@ def fetch_rho_e_over_lambda_d_sq(gdatas, **kwargs):
   dgops.multiply(0, out, 0, bmag_inv_sq, 0, m0)
 
   out.set_values(out.get_values() * me / eps0)
-  
+
   return out
 
 def fetch_phi_norm(gdatas, **kwargs):
@@ -470,7 +774,7 @@ def fetch_phi_norm(gdatas, **kwargs):
   dgops.multiply(0, out, 0, phi, 0, temp_inv)
 
   out.set_values(out.get_values() * e)
-  
+
   return out
 
 # ------------------------
