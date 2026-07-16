@@ -134,6 +134,18 @@ class GkeyllDGops:
     lib.gkyl_dg_eval_at_coord_proj_release.argtypes = [c_vp]
     lib.gkyl_dg_eval_at_coord_proj_release.restype  = None
 
+    # gkyl_proj_powsqrt_on_basis_new(*basis, num_quad, use_gpu) -> gkyl_proj_powsqrt_on_basis*
+    lib.gkyl_proj_powsqrt_on_basis_new.argtypes = [c_vp, c_i, ctypes.c_bool]
+    lib.gkyl_proj_powsqrt_on_basis_new.restype  = c_vp
+
+    # gkyl_proj_powsqrt_on_basis_advance(up*, *range, expIn, *fIn, *fOut)
+    lib.gkyl_proj_powsqrt_on_basis_advance.argtypes = [c_vp, c_vp, c_d, c_vp, c_vp]
+    lib.gkyl_proj_powsqrt_on_basis_advance.restype  = None
+
+    # gkyl_proj_powsqrt_on_basis_release(up*)
+    lib.gkyl_proj_powsqrt_on_basis_release.argtypes = [c_vp]
+    lib.gkyl_proj_powsqrt_on_basis_release.restype  = None
+
     # gkyl_array_average_new(*grid, *basis, *basis_avg, *local, *local_avg,
     #                         *local_avg_ext, *weight, *avg_dim, use_gpu) -> gkyl_array_average*
     lib.gkyl_array_average_new.argtypes = [c_vp, c_vp, c_vp, c_vp, c_vp, c_vp, c_vp,
@@ -541,4 +553,58 @@ class GkeyllDGops:
       self._lib.gkyl_cart_modal_basis_release(basis)
       self._lib.gkyl_array_release(arr_oop)
       self._lib.gkyl_array_release(arr_iop)
+
+  def powsqrt(self, oop, iop, exponent: float, num_quad: int | None = None) -> None:
+    """
+    Weak DG power of a square root: oop = pow(sqrt(iop), exponent), projected
+    onto the basis by Gauss-Legendre quadrature (gkyl_proj_powsqrt_on_basis).
+
+    Common exponents: 1 for sqrt(f), -1 for 1/sqrt(f), 3 for f^(3/2).
+
+    Unlike multiply/invert, the gkeyll kernel takes no component index: it
+    reads num_basis coefficients per cell, so both fields must be
+    single-component (scalar). This is checked rather than silently operating
+    on the first component of a multi-component field.
+
+    Note the kernel clamps: at quadrature points where iop is negative it
+    writes 1e-40 instead of failing, so a field that dips negative comes back
+    as ~0 there rather than as an error.
+
+    Inputs:
+      oop, iop:  Output and input datasets. oop must be pre-allocated.
+      exponent:  Exponent applied to sqrt(iop).
+      num_quad:  Quadrature nodes per direction. Defaults to poly_order+1,
+                 matching the gyrokinetic app's own use of this updater.
+    """
+    basis = self._gkyl_basis_new_from_gdata(iop)
+    try:
+      num_basis = int(self._lib.gkyl_cart_modal_basis_get_num_basis(basis))
+      for name, gdata in (("iop", iop), ("oop", oop)):
+        num_comps = int(np.squeeze(gdata.get_values()).shape[-1])
+        if num_comps != num_basis:
+          raise ValueError(
+            f"powsqrt: '{name}' has {num_comps} coefficients per cell but the basis has "
+            f"{num_basis}; this operation only takes single-component (scalar) fields.")
+        # end
+      # end
+
+      if num_quad is None:
+        num_quad = int(iop.ctx["poly_order"]) + 1
+      # end
+
+      up = self._lib.gkyl_proj_powsqrt_on_basis_new(
+        basis, ctypes.c_int(num_quad), ctypes.c_bool(False))
+      arr_oop, _ = self._gkyl_array_new_from_gdata(oop)
+      arr_iop, _ = self._gkyl_array_new_from_gdata(iop)
+      rng = self._gkyl_range_new_from_gdata(iop)
+      try:
+        self._lib.gkyl_proj_powsqrt_on_basis_advance(
+          up, rng, ctypes.c_double(exponent), arr_iop, arr_oop)
+      finally:
+        self._lib.gkyl_proj_powsqrt_on_basis_release(up)
+        self._lib.gkyl_array_release(arr_oop)
+        self._lib.gkyl_array_release(arr_iop)
+        self._lib.gkyl_range_release(rng)
+    finally:
+      self._lib.gkyl_cart_modal_basis_release(basis)
 

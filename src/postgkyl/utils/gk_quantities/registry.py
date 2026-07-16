@@ -154,6 +154,39 @@ _M2 : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_M2)
 
+# Third parallel velocity moment, int(vpar^3 f) dv.
+_M3par : GkQuantity = GkQuantity(
+  name = "M3par",
+  source = [["M3par"]],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$M_{3\parallel%s}$ (1/s$^3$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_M3par)
+
+# Third perpendicular velocity moment, int(vpar*vperp^2 f) dv.
+_M3perp : GkQuantity = GkQuantity(
+  name = "M3perp",
+  source = [["M3perp"]],
+  fetch_func = [ff.fetch_s0c0],
+  label = r"$M_{3\perp%s}$ (1/s$^3$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_M3perp)
+
+# Third velocity moment, int(vpar*(vpar^2 + vperp^2) f) dv.
+_M3 : GkQuantity = GkQuantity(
+  name = "M3",
+  source = [[_M3par,_M3perp],],
+  fetch_func = [ff.fetch_s0c0_add_s1c0,],
+  label = r"$M_{3%s}$ (1/s$^3$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_M3)
+
 # Parallel drift speed.
 _upar : GkQuantity = GkQuantity(
   name = "upar",
@@ -235,6 +268,50 @@ _pressperp : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_pressperp)
 
+# Parallel flux of parallel energy, in the lab frame: (m/2)*M3par.
+_qpar : GkQuantity = GkQuantity(
+  name = "qpar",
+  source = [[_M3par]],
+  fetch_func = [ff.fetch_qpar],
+  label = r"$q_{\parallel %s}$ (W/m$^2$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qpar)
+
+# Parallel flux of perpendicular energy, in the lab frame: (m/2)*M3perp.
+_qperp : GkQuantity = GkQuantity(
+  name = "qperp",
+  source = [[_M3perp]],
+  fetch_func = [ff.fetch_qperp],
+  label = r"$q_{\perp %s}$ (W/m$^2$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qperp)
+
+# Parallel heat flux in the fluid (drift) frame: (m/2)*int (vpar-upar)^3 f dv.
+_qpar_fluid : GkQuantity = GkQuantity(
+  name = "qpar_fluid",
+  source = [[_M0,_M1,_M2par,_M3par]],
+  fetch_func = [ff.fetch_qpar_fluid],
+  label = r"$q_{\parallel %s}^{fluid}$ (W/m$^2$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qpar_fluid)
+
+# Perpendicular heat flux in the fluid (drift) frame: (m/2)*int (vpar-upar)*vperp^2 f dv.
+_qperp_fluid : GkQuantity = GkQuantity(
+  name = "qperp_fluid",
+  source = [[_M0,_M1,_M2perp,_M3perp]],
+  fetch_func = [ff.fetch_qperp_fluid],
+  label = r"$q_{\perp %s}^{fluid}$ (W/m$^2$)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qperp_fluid)
+
 # Plasma beta.
 _beta : GkQuantity = GkQuantity(
   name = "beta",
@@ -245,6 +322,88 @@ _beta : GkQuantity = GkQuantity(
   is_species_dep = True,
 )
 gk_quant_registry.register(_beta)
+
+# Sound speed c_s = sqrt(T/mi) (m/s), the ion mass being passed with
+# '--extra mass_i=<value>'. Request it for the electrons to get sqrt(Te/mi).
+_c_s : GkQuantity = GkQuantity(
+  name = "c_s",
+  source = [[_temp],],
+  fetch_func = [ff.fetch_c_s],
+  label = r"$c_{s,%s}$ (m/s)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_c_s)
+
+# -----------------------------
+# --- Normalized quantities ---
+# -----------------------------
+
+# Square of electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
+_rho_e_over_lambda_d_sq : GkQuantity = GkQuantity(
+  name = "rho_e_over_lambda_d_sq",
+  source = [[_geo_int_bmag, _M0],],
+  fetch_func = [ff.fetch_rho_e_over_lambda_d_sq],
+  label = r"$(\rho_e/\lambda_d)^2$",
+  is_time_dep = True,
+  is_species_dep = False,
+)
+gk_quant_registry.register(_rho_e_over_lambda_d_sq)
+
+# Normalized elctrostatic potential.
+_phi_norm : GkQuantity = GkQuantity(
+  name = "phi_norm",
+  source = [[_field, _temp],],
+  fetch_func = [ff.fetch_phi_norm],
+  label = r"$e\phi/T_{%s}$",
+  is_time_dep = True,
+  is_species_dep = False,
+)
+gk_quant_registry.register(_phi_norm)
+
+# Normalized parallel heatflux qpar/(n T c_s).
+_qpar_norm : GkQuantity = GkQuantity(
+  name = "qpar_norm",
+  source = [[_qpar, _M0, _temp, _c_s],],
+  fetch_func = [ff.fetch_qpar_norm],
+  label = r"$q_{\parallel %s}/(n T c_s)$",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qpar_norm)
+
+# Normalized perpendicular heatflux qperp/(n T c_s).
+_qperp_norm : GkQuantity = GkQuantity(
+  name = "qperp_norm",
+  source = [[_qperp, _M0, _temp, _c_s],],
+  fetch_func = [ff.fetch_qperp_norm],
+  label = r"$q_{\perp %s}/(n T c_s)$",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qperp_norm)
+
+# Normalized parallel fluid-frame heatflux qpar_fluid/(n T c_s).
+_qpar_fluid_norm : GkQuantity = GkQuantity(
+  name = "qpar_fluid_norm",
+  source = [[_qpar_fluid, _M0, _temp, _c_s],],
+  fetch_func = [ff.fetch_qpar_norm],
+  label = r"$q_{\parallel %s}^{fluid}/(n T c_s)$",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qpar_fluid_norm)
+
+# Normalized perpendicular fluid-frame heatflux qperp_fluid/(n T c_s).
+_qperp_fluid_norm : GkQuantity = GkQuantity(
+  name = "qperp_fluid_norm",
+  source = [[_qperp_fluid, _M0, _temp, _c_s],],
+  fetch_func = [ff.fetch_qperp_norm],
+  label = r"$q_{\perp %s}^{fluid}/(n T c_s)$",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_qperp_fluid_norm)
 
 # ------------------------
 # --- Drift velocities ---

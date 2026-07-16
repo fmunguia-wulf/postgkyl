@@ -45,6 +45,33 @@ def _empty_gdata_from_gdata(gdata) -> GData:
   out.push(gdata.get_grid(), np.zeros_like(gdata.get_values()))
   return out
 
+def _powsqrt_dg(gdata, exponent: float) -> GData:
+  """
+  pow(sqrt(f), exponent) of a single-component DG field, projected back onto
+  the basis by quadrature (gkyl_proj_powsqrt_on_basis).
+
+  Use exponent=1 for sqrt(f), -1 for 1/sqrt(f), 3 for f^(3/2).
+
+  The gkeyll kernel quietly clamps negative values to ~0 (1e-40).
+  """
+
+  # We could check negativity before applying the square root.
+  # psi0 = 2.0**(-0.5*gdata.get_num_dims())
+  # if np.any(gdata.get_values()[..., 0:1]*psi0 < 0.0):
+  #   raise ValueError("_powsqrt_dg: the field has negative cell averages, cannot take "
+  #                    "its square root.")
+
+  out = _empty_gdata_from_gdata(gdata)
+
+  dgops = GkeyllDGops()
+  dgops.powsqrt(out, gdata, exponent)
+
+  return out
+
+def _sqrt_dg(gdata) -> GData:
+  """Square root of a single-component DG field."""
+  return _powsqrt_dg(gdata, 1.0)
+
 def _make_fetch_comp(icomp: int):
   """Return a fetch function that extracts the comp-th physical component."""
   def fetch(gdatas, **kw):
@@ -73,15 +100,15 @@ def _make_fetch_sick_addsub_sjcl(si: int, ck: int, sj: int, cl: int, op):
     if not nb_l == nb_r:
       raise ValueError(f"Datasets have different basis")
 
-    vals_l = gd_l.get_values()
-    vals_r = gd_r.get_values()
-  
-    out = GData(ctx=gdl.ctx)
+    vals_l = gd_l.get_values()[..., ck*nb_l:(ck+1)*nb_l]
+    vals_r = gd_r.get_values()[..., cl*nb_r:(cl+1)*nb_r]
+
+    out = GData(ctx=gd_l.ctx)
     out.push(gd_l.get_grid(), op(vals_l,vals_r))
-  
+
     return out
   # end
-  fetch.__name__ = f"fetch_s{si}c{ck}_mul_s{sj}c{cl}"
+  fetch.__name__ = f"fetch_s{si}c{ck}_{op.__name__}_s{sj}c{cl}"
   return fetch
 
 def _make_fetch_sick_mul_sjcl(si: int, ck: int, sj: int, cl: int):
@@ -401,6 +428,139 @@ def fetch_press_p(gdatas, **kwargs):
   dgops.multiply(0, press_p, 0, m0, 0, Tp)
 
   return press_p
+
+def _make_fetch_q(name: str):
+  """
+  Return a fetch function for the lab-frame parallel flux of the parallel
+  (name='par') or perpendicular (name='perp') kinetic energy:
+    q_par  = (m/2)*M3par  = (m/2) int(vpar^3 f) dv,
+    q_perp = (m/2)*M3perp = (m/2) int(vpar*vperp^2 f) dv,
+  so that q_par + q_perp is the parallel flux of the total kinetic energy.
+  Both are in W/m^2 (kg/s^3). gdatas has:
+    1. M3par (name='par') or M3perp (name='perp').
+  """
+  def fetch(gdatas, **kwargs):
+    m3 = gdatas[0]
+    mass = _get_ctx_val(m3, "mass", **kwargs)
+
+    out = _empty_gdata_from_gdata(m3)
+    out.set_values(0.5*mass*m3.get_values())
+    return out
+  # end
+  fetch.__name__ = f"fetch_q{name}"
+  return fetch
+
+fetch_qpar = _make_fetch_q("par")
+fetch_qperp = _make_fetch_q("perp")
+
+def _make_fetch_q_fluid(name: str):
+  """
+  Return a fetch function for the parallel heat flux in the fluid (drift)
+  frame, i.e. the energy carried by the random part of the parallel motion,
+  u = M1/M0 being the parallel drift speed:
+    q_par  = (m/2) int (vpar-u)^3 f dv
+           = (m/2) [M3par - 3*u*M2par + 3*u^2*M1 - u^3*M0]
+           = (m/2) [M3par - 3*u*M2par + 2*u^2*M1],
+    q_perp = (m/2) int (vpar-u)*vperp^2 f dv
+           = (m/2) [M3perp - u*M2perp].
+  gdatas has (in this order):
+    1. M0: zeroth moment (density).
+    2. M1: first moment.
+    3. M2par (name='par') or M2perp (name='perp').
+    4. M3par (name='par') or M3perp (name='perp').
+  """
+  is_par = name == "par"
+
+  def fetch(gdatas, **kwargs):
+    m0, m1, m2, m3 = gdatas
+    mass = _get_ctx_val(m0, "mass", **kwargs)
+
+    dgops = GkeyllDGops()
+
+    m0_inv = _empty_gdata_from_gdata(m0)
+    dgops.invert(0, m0_inv, 0, m0)
+
+    upar = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, upar, 0, m1, 0, m0_inv)
+
+    # u*M2par or u*M2perp.
+    u_m2 = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, u_m2, 0, upar, 0, m2)
+
+    if is_par:
+      # u^2*M1, which equals u^3*M0.
+      u_sq = _empty_gdata_from_gdata(m0)
+      dgops.multiply(0, u_sq, 0, upar, 0, upar)
+
+      u_sq_m1 = _empty_gdata_from_gdata(m0)
+      dgops.multiply(0, u_sq_m1, 0, u_sq, 0, m1)
+
+      vals = m3.get_values() - 3.0*u_m2.get_values() + 2.0*u_sq_m1.get_values()
+    else:
+      vals = m3.get_values() - u_m2.get_values()
+
+    out = _empty_gdata_from_gdata(m0)
+    out.set_values(0.5*mass*vals)
+    return out
+  # end
+  fetch.__name__ = f"fetch_q{name}_fluid"
+  return fetch
+
+fetch_qpar_fluid = _make_fetch_q_fluid("par")
+fetch_qperp_fluid = _make_fetch_q_fluid("perp")
+
+def fetch_c_s(gdatas, **kwargs):
+  """
+  Sound speed c_s = sqrt(T/m_i) (m/s), where T is the temperature of the
+  requested species and m_i the ion mass. gdatas has:
+    1. temp: temperature (in Joules).
+
+  The ion mass is not an attribute of a species' own output files, so it must
+  be supplied with '--extra mass_i=<value>' (e.g. mass_i=3.343e-27 for
+  deuterium). Requesting c_s for the electrons then gives the usual
+  sqrt(Te/mi).
+  """
+  temp = gdatas[0]
+  mass_i = _get_ctx_val(temp, "mass_i", **kwargs)
+
+  temp_over_mi = _empty_gdata_from_gdata(temp)
+  temp_over_mi.set_values(temp.get_values()/mass_i)
+
+  return _sqrt_dg(temp_over_mi)
+
+def _make_fetch_q_norm(name: str):
+  """
+  Return a fetch function for a heat flux normalized by the free-streaming
+  estimate n*T*c_s:
+    q_norm = q / (n*T*c_s).
+  gdatas has (in this order):
+    1. q: the heat flux to normalize (in W/m^2).
+    2. M0: zeroth moment (density).
+    3. temp: temperature (in Joules).
+    4. c_s: sound speed (in m/s).
+  """
+  def fetch(gdatas, **kwargs):
+    q, m0, temp, c_s = gdatas
+
+    dgops = GkeyllDGops()
+
+    # n*T*c_s.
+    denom = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, denom, 0, m0, 0, temp)
+    dgops.multiply(0, denom, 0, denom, 0, c_s)
+
+    denom_inv = _empty_gdata_from_gdata(m0)
+    dgops.invert(0, denom_inv, 0, denom)
+
+    out = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, out, 0, q, 0, denom_inv)
+    return out
+  # end
+  fetch.__name__ = f"fetch_q{name}_norm"
+  return fetch
+
+fetch_qpar_norm = _make_fetch_q_norm("par")
+fetch_qperp_norm = _make_fetch_q_norm("perp")
 
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
   """

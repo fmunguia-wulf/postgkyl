@@ -45,7 +45,15 @@ except Exception:  # noqa: BLE001 - any failure means the lib is unusable here
 
 # Extra command options required by specific quantities (beyond the per-component
 # selection that every vector quantity needs, which is added automatically below).
-_EXTRA_OPTS = {}
+# The ion mass is not a species' own file attribute, so c_s (and everything
+# normalized by it) must be given one explicitly.
+_EXTRA_OPTS = {
+  "c_s": "mass_i=1.0",
+  "qpar_norm": "mass_i=1.0",
+  "qperp_norm": "mass_i=1.0",
+  "qpar_fluid_norm": "mass_i=1.0",
+  "qperp_fluid_norm": "mass_i=1.0",
+}
 
 # Define the data used to test the handling of GK distribution functions.
 _TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
