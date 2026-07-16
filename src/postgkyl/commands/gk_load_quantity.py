@@ -1,62 +1,9 @@
+import re
+
 import click
 
 from postgkyl.utils.gk_quantities.registry import gk_quant_registry
 from postgkyl.utils import verb_print
-
-def _convert_extra_val(val: str):
-  """Convert an --extra value to an int or a float when it looks like one."""
-  try:
-    return int(val)
-  except ValueError:
-    try:
-      return float(val)
-    except ValueError:
-      return val
-
-def parse_extra(extra_inp: str | None) -> dict:
-  """
-  Parse the --extra string into a dict of key/value pairs.
-
-  Values are auto-converted to int/float when possible. A comma-separated value
-  that carries no '=' extends the previous key into a list, which is how a
-  per-species array is given:
-
-    'dir=1,mass=0.1'        -> {'dir': 1, 'mass': 0.1}
-    'mass=1,2,3'            -> {'mass': [1, 2, 3]}
-    'mass=1,2,charge=-1,1'  -> {'mass': [1, 2], 'charge': [-1, 1]}
-
-  A key given a single value stays a scalar and applies to every species.
-  """
-  extra : dict = {}
-  if not extra_inp:
-    return extra
-  # end
-
-  last_key = None
-  for token in extra_inp.split(","):
-    token = token.strip()
-    if not token:
-      continue
-    # end
-
-    if "=" in token:
-      key, _, val = token.partition("=")
-      key = key.strip()
-      extra[key] = _convert_extra_val(val.strip())
-      last_key = key
-    elif last_key is None:
-      raise ValueError(f"--extra: '{token}' is not a key=value pair and does not follow one. "
-                       f"Use e.g. 'mass=1,2,3' to give one value per species.")
-    else:
-      # A bare value continues the previous key's per-species list.
-      if not isinstance(extra[last_key], list):
-        extra[last_key] = [extra[last_key]]
-      # end
-      extra[last_key].append(_convert_extra_val(token))
-    # end
-  # end
-
-  return extra
 
 @click.command(name="gk-load-quantity")
 @click.option("--quantity", "-q", required=False, type=click.STRING,
@@ -116,7 +63,25 @@ def gk_load_quantity(ctx, **kwargs):
   gkquant = gk_quant_registry.get(kwargs['quantity'])
 
   # Parse --extra into a dict, auto-converting numeric values.
-  user_extra = parse_extra(kwargs.get('extra'))
+  user_extra = {}
+  if kwargs.get('extra'):
+    for pair in re.split(r"[,\s]+(?=[^\s,=]+=)", kwargs['extra'].strip()):
+      key, _, val = pair.partition("=")
+      vals = []
+      for v in val.split(","):
+        v = v.strip()
+        if not v:
+          continue
+        try:
+          v = int(v)
+        except ValueError:
+          try:
+            v = float(v)
+          except ValueError:
+            pass
+        vals.append(v)
+      # A single value stays a scalar and applies to every species.
+      user_extra[key.strip()] = vals[0] if len(vals) == 1 else vals
 
   path = kwargs['path'].rstrip("/") + "/"
 
