@@ -74,22 +74,12 @@ def _powsqrt_dg(gdata, exponent: float) -> GData:
   pow(sqrt(f), exponent) of a single-component DG field. negative values are set to 1e-40.
   """
 
-  # We could check negativity before applying the square root.
-  # psi0 = 2.0**(-0.5*gdata.get_num_dims())
-  # if np.any(gdata.get_values()[..., 0:1]*psi0 < 0.0):
-  #   raise ValueError("_powsqrt_dg: the field has negative cell averages, cannot take "
-  #                    "its square root.")
-
   out = _empty_gdata_from_gdata(gdata)
 
   dgops = GkeyllDGops()
   dgops.powsqrt(out, gdata, exponent)
 
   return out
-
-def _sqrt_dg(gdata) -> GData:
-  """Square root of a single-component DG field."""
-  return _powsqrt_dg(gdata, 1.0)
 
 def _make_fetch_comp(icomp: int):
   """Return a fetch function that extracts the comp-th physical component."""
@@ -521,16 +511,16 @@ def _make_fetch_q_fluid(name: str):
     out = _empty_gdata_from_gdata(m0)
     out.set_values(0.5*mass*vals)
     return out
-  # end
+
   fetch.__name__ = f"fetch_q{name}_fluid"
   return fetch
 
 fetch_qpar_fluid = _make_fetch_q_fluid("par")
 fetch_qperp_fluid = _make_fetch_q_fluid("perp")
 
-def fetch_vth(gdatas, **kwargs):
+def fetch_vt(gdatas, **kwargs):
   """
-  Thermal speed vth = sqrt(T/m) (m/s), where T is the temperature of the
+  Thermal speed vt = sqrt(T/m) (m/s), where T is the temperature of the
   requested species and m its mass. gdatas has:
     1. temp: temperature (in Joules).
   """
@@ -540,7 +530,7 @@ def fetch_vth(gdatas, **kwargs):
   temp_over_m = _empty_gdata_from_gdata(temp)
   temp_over_m.set_values(temp.get_values()/mass)
 
-  return _sqrt_dg(temp_over_m)
+  return _powsqrt_dg(temp_over_m, 1.0)
 
 def _split_elc_ions(gdatas, quantity: str, **kwargs):
   """
@@ -581,7 +571,7 @@ def _weighted_sum(entries, weights, comp: int):
   out.set_values(total)
   return out
 
-def _c_s_ion_acoustic(gdatas, **kwargs):
+def _fetch_c_s_ion_acoustic(gdatas, **kwargs):
   """
   Ion-acoustic sound speed (wave perspective), for the Bohm criterion and
   sheath/presheath matching:
@@ -607,9 +597,9 @@ def _c_s_ion_acoustic(gdatas, **kwargs):
   dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
   dgops.multiply(0, c_s_sq, 0, c_s_sq, 0, elc["srcs"][1])
 
-  return _sqrt_dg(c_s_sq)
+  return _powsqrt_dg(c_s_sq, 1.0)
 
-def _c_s_thermo(gdatas, **kwargs):
+def _fetch_c_s_thermo(gdatas, **kwargs):
   """
   Thermodynamic sound speed (bulk fluid perspective), for Mach numbers and
   acoustic propagation in the core/SOL:
@@ -643,12 +633,7 @@ def _c_s_thermo(gdatas, **kwargs):
   c_s_sq = _empty_gdata_from_gdata(numer)
   dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
 
-  return _sqrt_dg(c_s_sq)
-
-_C_S_KINDS = {
-  "ion_acoustic": _c_s_ion_acoustic,
-  "thermo": _c_s_thermo,
-}
+  return _powsqrt_dg(c_s_sq, 1.0)
 
 def fetch_c_s(gdatas, **kwargs):
   """
@@ -665,12 +650,16 @@ def fetch_c_s(gdatas, **kwargs):
       c_s = sqrt((gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j))/sum_j(n_j*m_j)),
       with gamma_e and gamma_i settable via '--extra' (default 1 and 3).
   """
-  kind = str(kwargs.get("kind", "ion_acoustic"))
-  if kind not in _C_S_KINDS:
+  c_s_kinds = {
+    "ion_acoustic": _fetch_c_s_ion_acoustic,
+    "thermo": _fetch_c_s_thermo,
+  }
+  kind = str(kwargs.get("kind", "thermo"))
+  if kind not in c_s_kinds:
     raise ValueError(f"fetch_c_s: unknown kind '{kind}'. Select one with '--extra kind=<kind>' "
-                     f"from: {', '.join(sorted(_C_S_KINDS))}.")
+                     f"from: {', '.join(sorted(c_s_kinds))}.")
   # end
-  return _C_S_KINDS[kind](gdatas, **kwargs)
+  return c_s_kinds[kind](gdatas, **kwargs)
 
 def _make_fetch_q_norm(name: str):
   """

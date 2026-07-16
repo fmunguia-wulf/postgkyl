@@ -154,7 +154,7 @@ _M2 : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_M2)
 
-# Third parallel velocity moment, int(vpar^3 f) dv.
+# Third parallel velocity moment.
 _M3par : GkQuantity = GkQuantity(
   name = "M3par",
   source = [["M3par"]],
@@ -165,7 +165,7 @@ _M3par : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_M3par)
 
-# Third perpendicular velocity moment, int(vpar*vperp^2 f) dv.
+# Third perpendicular velocity moment.
 _M3perp : GkQuantity = GkQuantity(
   name = "M3perp",
   source = [["M3perp"]],
@@ -176,11 +176,11 @@ _M3perp : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_M3perp)
 
-# Third velocity moment, int(vpar*(vpar^2 + vperp^2) f) dv.
+# Third velocity moment.
 _M3 : GkQuantity = GkQuantity(
   name = "M3",
-  source = [[_M3par,_M3perp],],
-  fetch_func = [ff.fetch_s0c0_add_s1c0,],
+  source = [["M3"],[_M3par,_M3perp],],
+  fetch_func = [ff.fetch_s0c0,ff.fetch_s0c0_add_s1c0],
   label = r"$M_{3%s}$ (1/s$^3$)",
   is_time_dep = True,
   is_species_dep = True,
@@ -323,21 +323,18 @@ _beta : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_beta)
 
-# Thermal velocity, v_th = sqrt(T/m).
-_vth : GkQuantity = GkQuantity(
-  name = "vth",
+# Thermal velocity.
+_vt : GkQuantity = GkQuantity(
+  name = "vt",
   source = [[_temp],],
-  fetch_func = [ff.fetch_vth],
-  label = r"$v_{th,%s}$ (m/s)",
+  fetch_func = [ff.fetch_vt],
+  label = r"$v_{t,%s}$ (m/s)",
   is_time_dep = True,
   is_species_dep = True,
 )
-gk_quant_registry.register(_vth)
+gk_quant_registry.register(_vt)
 
-# Sound speed (m/s), combining the electrons and every ion species; request it
-# with a species list, e.g. '-s elc,ion1,ion2'. Electrons and ions are told
-# apart by the sign of their charge, so species names do not matter. Pick the
-# definition with '--extra kind=ion_acoustic' (default) or '--extra kind=thermo'.
+# Sound speed (m/s).
 _c_s : GkQuantity = GkQuantity(
   name = "c_s",
   source = [[_M0, _temp],],
@@ -353,7 +350,7 @@ gk_quant_registry.register(_c_s)
 # --- Normalized quantities ---
 # -----------------------------
 
-# Square of electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
+# Square of electron larmor radius over Debye length.
 _rho_e_over_lambda_d_sq : GkQuantity = GkQuantity(
   name = "rho_e_over_lambda_d_sq",
   source = [[_geo_int_bmag, _M0],],
@@ -375,10 +372,10 @@ _phi_norm : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_phi_norm)
 
-# Normalized parallel heatflux qpar/(n T vth).
+# Normalized parallel heatflux.
 _qpar_norm : GkQuantity = GkQuantity(
   name = "qpar_norm",
-  source = [[_qpar, _M0, _temp, _vth],],
+  source = [[_qpar, _M0, _temp, _vt],],
   fetch_func = [ff.fetch_qpar_norm],
   label = r"$q_{\parallel %s}/(n T v_{th})$",
   is_time_dep = True,
@@ -386,10 +383,10 @@ _qpar_norm : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_qpar_norm)
 
-# Normalized perpendicular heatflux qperp/(n T vth).
+# Normalized perpendicular heatflux.
 _qperp_norm : GkQuantity = GkQuantity(
   name = "qperp_norm",
-  source = [[_qperp, _M0, _temp, _vth],],
+  source = [[_qperp, _M0, _temp, _vt],],
   fetch_func = [ff.fetch_qperp_norm],
   label = r"$q_{\perp %s}/(n T v_{th})$",
   is_time_dep = True,
@@ -397,23 +394,23 @@ _qperp_norm : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_qperp_norm)
 
-# Normalized parallel fluid-frame heatflux qpar_fluid/(n T vth).
+# Normalized parallel fluid-frame heatflux.
 _qpar_fluid_norm : GkQuantity = GkQuantity(
   name = "qpar_fluid_norm",
-  source = [[_qpar_fluid, _M0, _temp, _vth],],
+  source = [[_qpar_fluid, _M0, _temp, _vt],],
   fetch_func = [ff.fetch_qpar_norm],
-  label = r"$q_{\parallel %s}^{fluid}/(n T v_{th})$",
+  label = r"$q_{\parallel %s}^{fluid}/(n T v_{t})$",
   is_time_dep = True,
   is_species_dep = True,
 )
 gk_quant_registry.register(_qpar_fluid_norm)
 
-# Normalized perpendicular fluid-frame heatflux qperp_fluid/(n T vth).
+# Normalized perpendicular fluid-frame heatflux.
 _qperp_fluid_norm : GkQuantity = GkQuantity(
   name = "qperp_fluid_norm",
-  source = [[_qperp_fluid, _M0, _temp, _vth],],
+  source = [[_qperp_fluid, _M0, _temp, _vt],],
   fetch_func = [ff.fetch_qperp_norm],
-  label = r"$q_{\perp %s}^{fluid}/(n T v_{th})$",
+  label = r"$q_{\perp %s}^{fluid}/(n T v_{t})$",
   is_time_dep = True,
   is_species_dep = True,
 )
