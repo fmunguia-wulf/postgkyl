@@ -323,15 +323,29 @@ _beta : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_beta)
 
-# Sound speed c_s = sqrt(T/mi) (m/s), the ion mass being passed with
-# '--extra mass_i=<value>'. Request it for the electrons to get sqrt(Te/mi).
-_c_s : GkQuantity = GkQuantity(
-  name = "c_s",
+# Thermal velocity, v_th = sqrt(T/m).
+_vth : GkQuantity = GkQuantity(
+  name = "vth",
   source = [[_temp],],
-  fetch_func = [ff.fetch_c_s],
-  label = r"$c_{s,%s}$ (m/s)",
+  fetch_func = [ff.fetch_vth],
+  label = r"$v_{th,%s}$ (m/s)",
   is_time_dep = True,
   is_species_dep = True,
+)
+gk_quant_registry.register(_vth)
+
+# Sound speed (m/s), combining the electrons and every ion species; request it
+# with a species list, e.g. '-s elc,ion1,ion2'. Electrons and ions are told
+# apart by the sign of their charge, so species names do not matter. Pick the
+# definition with '--extra kind=ion_acoustic' (default) or '--extra kind=thermo'.
+_c_s : GkQuantity = GkQuantity(
+  name = "c_s",
+  source = [[_M0, _temp],],
+  fetch_func = [ff.fetch_c_s],
+  label = r"$c_{s}$ (m/s)",
+  is_time_dep = True,
+  is_species_dep = False,
+  is_multi_species = True,
 )
 gk_quant_registry.register(_c_s)
 
@@ -361,45 +375,45 @@ _phi_norm : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_phi_norm)
 
-# Normalized parallel heatflux qpar/(n T c_s).
+# Normalized parallel heatflux qpar/(n T vth).
 _qpar_norm : GkQuantity = GkQuantity(
   name = "qpar_norm",
-  source = [[_qpar, _M0, _temp, _c_s],],
+  source = [[_qpar, _M0, _temp, _vth],],
   fetch_func = [ff.fetch_qpar_norm],
-  label = r"$q_{\parallel %s}/(n T c_s)$",
+  label = r"$q_{\parallel %s}/(n T v_{th})$",
   is_time_dep = True,
   is_species_dep = True,
 )
 gk_quant_registry.register(_qpar_norm)
 
-# Normalized perpendicular heatflux qperp/(n T c_s).
+# Normalized perpendicular heatflux qperp/(n T vth).
 _qperp_norm : GkQuantity = GkQuantity(
   name = "qperp_norm",
-  source = [[_qperp, _M0, _temp, _c_s],],
+  source = [[_qperp, _M0, _temp, _vth],],
   fetch_func = [ff.fetch_qperp_norm],
-  label = r"$q_{\perp %s}/(n T c_s)$",
+  label = r"$q_{\perp %s}/(n T v_{th})$",
   is_time_dep = True,
   is_species_dep = True,
 )
 gk_quant_registry.register(_qperp_norm)
 
-# Normalized parallel fluid-frame heatflux qpar_fluid/(n T c_s).
+# Normalized parallel fluid-frame heatflux qpar_fluid/(n T vth).
 _qpar_fluid_norm : GkQuantity = GkQuantity(
   name = "qpar_fluid_norm",
-  source = [[_qpar_fluid, _M0, _temp, _c_s],],
+  source = [[_qpar_fluid, _M0, _temp, _vth],],
   fetch_func = [ff.fetch_qpar_norm],
-  label = r"$q_{\parallel %s}^{fluid}/(n T c_s)$",
+  label = r"$q_{\parallel %s}^{fluid}/(n T v_{th})$",
   is_time_dep = True,
   is_species_dep = True,
 )
 gk_quant_registry.register(_qpar_fluid_norm)
 
-# Normalized perpendicular fluid-frame heatflux qperp_fluid/(n T c_s).
+# Normalized perpendicular fluid-frame heatflux qperp_fluid/(n T vth).
 _qperp_fluid_norm : GkQuantity = GkQuantity(
   name = "qperp_fluid_norm",
-  source = [[_qperp_fluid, _M0, _temp, _c_s],],
+  source = [[_qperp_fluid, _M0, _temp, _vth],],
   fetch_func = [ff.fetch_qperp_norm],
-  label = r"$q_{\perp %s}^{fluid}/(n T c_s)$",
+  label = r"$q_{\perp %s}^{fluid}/(n T v_{th})$",
   is_time_dep = True,
   is_species_dep = True,
 )
