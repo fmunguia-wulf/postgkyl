@@ -399,3 +399,9 @@ _distf : GkQuantity = GkQuantity(
   is_species_dep = True,
 )
 gk_quant_registry.register(_distf)
+
+# Users can add their own quantities in personal/registry_pers.py
+try:
+  from .personal import registry_pers
+except ImportError:
+  pass
