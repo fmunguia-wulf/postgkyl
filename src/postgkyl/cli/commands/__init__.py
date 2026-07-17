@@ -83,18 +83,19 @@ COMMANDS = [
 # chain (``load`` is hidden -- see commands/load.py -- so it is omitted here).
 COMMAND_SECTIONS: dict[str, list[str]] = {
     "Verbs": [
-        "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
-        "extractinput", "fit", "growth", "differentiate", "evaluate", "map",
-        "integrate", "average", "evalatcoordproj", "interpolate",
-        "dg_local_poly", "select", "load",
+        "average", "collect", "dg_local_poly", "differentiate", "evalatcoordproj",
+        "evaluate", "extractinput", "fft", "fit", "grid", "growth", "integrate",
+        "interpolate", "load", "magsq", "map", "mask", "relchange", "select",
+        "val2coord",
     ],
     "Diagnostics": [
-        "euler", "tenmoment", "mhd", "velocity", "agyro", "current",
-        "energetics", "parrotate", "perprotate", "bparrotate", "bperprotate",
-        "transform_frame", "laguerre_compose", "gk_distf", "gk_load_quantity", "gkyl_pkpm"
+        "agyro", "bparrotate", "bperprotate", "current", "energetics",
+        "euler", "gk_distf", "gk_load_quantity", "gkyl_pkpm", "laguerre_compose",
+        "mhd", "parrotate", "perprotate", "tenmoment", "transform_frame",
+        "velocity",
     ],
-    "Render": ["plot", "animate", "plotly", "plotly_animate", "pyvista", "style"],
-    "Utility": ["info", "print", "listoutputs", "save", "status"],
+    "Render": ["animate", "plot", "plotly", "plotly_animate", "pyvista", "style"],
+    "Utility": ["info", "listoutputs", "print", "save", "status"],
 }
 
 __all__ = ["COMMANDS", "COMMAND_SECTIONS"]
