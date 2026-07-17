@@ -11,6 +11,7 @@ tests/test_data/generated/
 /*.gkyl
 /*.md
 /*.py
+!/setup.py
 /*.json
 # built gpython/_gpython extension (scripts/build_gpython.sh)
 src/postgkyl/gpython/_gpython.so
