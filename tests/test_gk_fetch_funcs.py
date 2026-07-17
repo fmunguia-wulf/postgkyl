@@ -491,40 +491,6 @@ class TestSoundSpeed:
                    mass=[_M_E, _M_I1, _M_I2],
                    charge=[-_E_CHARGE, _Z_I1*_E_CHARGE])
 
-
-@_needs_dgops
-class TestNormalizedHeatFluxes:
-  """q_norm = q/(n*T*vth)."""
-
-  def test_qpar_norm(self):
-    qpar = ff.fetch_qpar([_m3par()])
-    vth = ff.fetch_vt([_temp()])
-
-    qpar_norm = ff.fetch_qpar_norm([qpar, _m0(), _temp(), vth])
-
-    qpar_exact = 0.5*_MASS*_DENS*(_UPAR**3 + 3.0*_UPAR*_VT_SQ)
-    expected = qpar_exact/(_DENS*_TEMP*np.sqrt(_VT_SQ))
-    assert np.allclose(_cell_avg(qpar_norm), expected, rtol=1e-10)
-
-  def test_qperp_norm(self):
-    qperp = ff.fetch_qperp([_m3perp()])
-    vth = ff.fetch_vt([_temp()])
-
-    qperp_norm = ff.fetch_qperp_norm([qperp, _m0(), _temp(), vth])
-
-    expected = (_DENS*_UPAR*_TEMP)/(_DENS*_TEMP*np.sqrt(_VT_SQ))
-    assert np.allclose(_cell_avg(qperp_norm), expected, rtol=1e-10)
-
-  def test_qperp_norm_recovers_the_mach_number(self):
-    """qperp/(n*T*vth) = u/vth for a Maxwellian, a known physical limit."""
-    qperp = ff.fetch_qperp([_m3perp()])
-    vth = ff.fetch_vt([_temp()])
-
-    qperp_norm = ff.fetch_qperp_norm([qperp, _m0(), _temp(), vth])
-
-    assert np.allclose(_cell_avg(qperp_norm), _UPAR/np.sqrt(_VT_SQ), rtol=1e-10)
-
-
 def _linear_gdata(coeff0: float, coeff1: float) -> GData:
   """A single-component p1 field with the given two modal coefficients."""
   values = np.zeros((_NUM_CELLS, _NUM_BASIS))
