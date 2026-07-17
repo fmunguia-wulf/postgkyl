@@ -23,7 +23,6 @@ import pytest
 import postgkyl.commands as cmd
 import postgkyl.utils.gk_quantities.gkquantity as gkquantity
 from postgkyl.data import GData
-from postgkyl.commands.gk_load_quantity import parse_extra
 from postgkyl.pgkyl import cli
 from postgkyl.utils.gk_quantities.registry import gk_quant_registry
 
@@ -127,40 +126,6 @@ def _collect_source_files(quant, path: str, name: str, species: str, frame: int)
   return files
 
 
-class TestParseExtra:
-  """Parsing of the --extra string, including per-species arrays."""
-
-  def test_key_value_pairs(self):
-    assert parse_extra("dir=1,mass=0.1") == {"dir": 1, "mass": 0.1}
-
-  def test_values_are_converted_to_numbers(self):
-    parsed = parse_extra("i=3,f=2.5,s=source")
-    assert parsed == {"i": 3, "f": 2.5, "s": "source"}
-    assert isinstance(parsed["i"], int) and isinstance(parsed["f"], float)
-
-  def test_a_bare_value_extends_the_previous_key(self):
-    """This is what makes '--extra mass=1,2,3' a per-species array."""
-    assert parse_extra("mass=1,2,3") == {"mass": [1, 2, 3]}
-
-  def test_several_arrays(self):
-    assert parse_extra("mass=1,2,charge=-1,1") == {"mass": [1, 2], "charge": [-1, 1]}
-
-  def test_an_array_can_be_followed_by_a_scalar_key(self):
-    assert parse_extra("mass=1,2,3,dir=0") == {"mass": [1, 2, 3], "dir": 0}
-
-  def test_a_single_value_stays_a_scalar(self):
-    """A scalar applies to every species, so it must not become a 1-list."""
-    assert parse_extra("mass=1") == {"mass": 1}
-
-  def test_empty_input(self):
-    assert parse_extra(None) == {}
-    assert parse_extra("") == {}
-
-  def test_a_leading_bare_value_is_an_error(self):
-    with pytest.raises(ValueError, match="not a key=value pair"):
-      parse_extra("3,mass=1")
-
-
 class TestGkLoadQuantity:
   """Test that gk-load-quantity can load every registered quantity."""
 
@@ -258,10 +223,10 @@ class TestGkLoadQuantity:
   def test_per_species_extra_array_reaches_each_species(self, tmp_path, monkeypatch):
     """'--extra mass=1,2' must give species #0 mass 1 and species #1 mass 2.
 
-    This drives the whole chain end to end: parse_extra builds the array, the
-    command tags each species with its index, and _get_ctx_val picks the entry.
-    temp from the Maxwellian moments is mass*<component 2>, so the two datasets
-    must come out differing by exactly the mass ratio.
+    This drives the whole chain end to end: the command parses the array and
+    tags each species with its index, and _get_ctx_val picks the entry. temp
+    from the Maxwellian moments is mass*<component 2>, so the two datasets must
+    come out differing by exactly the mass ratio.
     """
     monkeypatch.setattr(gkquantity, "GData", _make_synthetic_gdata_no_attrs)
 
@@ -274,6 +239,23 @@ class TestGkLoadQuantity:
     second = ctx.obj["data"].get_dataset(0, tag=f"default_{_ION_SPECIES}").get_values()
     assert np.allclose(second, 2.0*first), (
       "the second species must be computed with the second mass of the array")
+
+  @pytest.mark.parametrize("extra", [
+    "mass=1,2,dir=0",   # Pairs separated by commas, as --extra has always been written.
+    "mass=1,2 dir=0",   # Pairs separated by spaces.
+    "mass=1,2  dir=0",  # Extra whitespace.
+  ])
+  def test_extra_pairs_may_be_separated_by_commas_or_spaces(self, extra, tmp_path, monkeypatch):
+    monkeypatch.setattr(gkquantity, "GData", _make_synthetic_gdata_no_attrs)
+
+    ctx = self._make_ctx()
+    self._load(ctx, "temp", str(tmp_path), f"{_ELC_SPECIES},{_ION_SPECIES}", extra=extra)
+
+    assert ctx.obj["data"].get_num_datasets() == 2
+    first = ctx.obj["data"].get_dataset(0, tag=f"default_{_ELC_SPECIES}").get_values()
+    second = ctx.obj["data"].get_dataset(0, tag=f"default_{_ION_SPECIES}").get_values()
+    assert np.allclose(second, 2.0*first), (
+      f"'--extra {extra}' must give the two species masses 1 and 2")
 
   def test_extra_overrides_the_file_attributes(self, tmp_path, monkeypatch):
     """'--extra mass=' must win over the mass stored in the output files.

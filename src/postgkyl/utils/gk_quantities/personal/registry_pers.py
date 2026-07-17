@@ -1,4 +1,4 @@
-# ------------------- personal register quantities -------------------
+## You can add your personnal quantities below.
 
 from ..gkquantity import GkQuantity
 from ..registry import (

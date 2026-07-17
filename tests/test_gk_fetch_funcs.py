@@ -317,15 +317,15 @@ class TestHeatFluxes:
 class TestThermalSpeed:
   """vth = sqrt(T/m), m being the requested species' own mass."""
 
-  def test_vth(self):
-    vth = ff.fetch_vth([_temp()])
-    assert np.allclose(_cell_avg(vth), np.sqrt(_VT_SQ), rtol=1e-12)
+  def test_vt(self):
+    vt = ff.fetch_vt([_temp()])
+    assert np.allclose(_cell_avg(vt), np.sqrt(_VT_SQ), rtol=1e-12)
 
-  def test_vth_uses_the_species_mass_from_ctx(self):
+  def test_vt_uses_the_species_mass_from_ctx(self):
     """A different species mass must give a different thermal speed."""
     mass = 100.0*_MASS
-    vth = ff.fetch_vth([_const_gdata(_TEMP, mass=mass)])
-    assert np.allclose(_cell_avg(vth), np.sqrt(_TEMP/mass), rtol=1e-12)
+    vt = ff.fetch_vt([_const_gdata(_TEMP, mass=mass)])
+    assert np.allclose(_cell_avg(vt), np.sqrt(_TEMP/mass), rtol=1e-12)
 
 
 # --- Sound speed: a two-ion-species plasma -----------------------------------
@@ -415,10 +415,10 @@ class TestSoundSpeed:
     numer = (5.0/3.0)*(_N_E*_T_E + _N_I1*_T_I1)
     assert np.allclose(_cell_avg(c_s), np.sqrt(numer/(_N_I1*_M_I1)), rtol=1e-10)
 
-  def test_default_kind_is_ion_acoustic(self):
+  def test_default_kind_is_thermo(self):
     default = ff.fetch_c_s([_elc_srcs(), _ion1_srcs()], species=["elc", "ion1"])
     explicit = ff.fetch_c_s([_elc_srcs(), _ion1_srcs()],
-                            species=["elc", "ion1"], kind="ion_acoustic")
+                            species=["elc", "ion1"], kind="thermo")
     assert np.allclose(_cell_avg(default), _cell_avg(explicit), rtol=1e-12)
 
   def test_species_order_does_not_matter(self):
@@ -491,40 +491,6 @@ class TestSoundSpeed:
                    mass=[_M_E, _M_I1, _M_I2],
                    charge=[-_E_CHARGE, _Z_I1*_E_CHARGE])
 
-
-@_needs_dgops
-class TestNormalizedHeatFluxes:
-  """q_norm = q/(n*T*vth)."""
-
-  def test_qpar_norm(self):
-    qpar = ff.fetch_qpar([_m3par()])
-    vth = ff.fetch_vth([_temp()])
-
-    qpar_norm = ff.fetch_qpar_norm([qpar, _m0(), _temp(), vth])
-
-    qpar_exact = 0.5*_MASS*_DENS*(_UPAR**3 + 3.0*_UPAR*_VT_SQ)
-    expected = qpar_exact/(_DENS*_TEMP*np.sqrt(_VT_SQ))
-    assert np.allclose(_cell_avg(qpar_norm), expected, rtol=1e-10)
-
-  def test_qperp_norm(self):
-    qperp = ff.fetch_qperp([_m3perp()])
-    vth = ff.fetch_vth([_temp()])
-
-    qperp_norm = ff.fetch_qperp_norm([qperp, _m0(), _temp(), vth])
-
-    expected = (_DENS*_UPAR*_TEMP)/(_DENS*_TEMP*np.sqrt(_VT_SQ))
-    assert np.allclose(_cell_avg(qperp_norm), expected, rtol=1e-10)
-
-  def test_qperp_norm_recovers_the_mach_number(self):
-    """qperp/(n*T*vth) = u/vth for a Maxwellian, a known physical limit."""
-    qperp = ff.fetch_qperp([_m3perp()])
-    vth = ff.fetch_vth([_temp()])
-
-    qperp_norm = ff.fetch_qperp_norm([qperp, _m0(), _temp(), vth])
-
-    assert np.allclose(_cell_avg(qperp_norm), _UPAR/np.sqrt(_VT_SQ), rtol=1e-10)
-
-
 def _linear_gdata(coeff0: float, coeff1: float) -> GData:
   """A single-component p1 field with the given two modal coefficients."""
   values = np.zeros((_NUM_CELLS, _NUM_BASIS))
@@ -559,7 +525,7 @@ class TestPowSqrt:
   """The gkyl_proj_powsqrt_on_basis binding backing vth."""
 
   def test_sqrt_of_a_constant_field_is_exact(self):
-    out = ff._sqrt_dg(_const_gdata(4.0))
+    out = ff._powsqrt_dg(_const_gdata(4.0), 1.0)
     assert np.allclose(_cell_avg(out), 2.0, rtol=1e-12)
 
   def test_sqrt_keeps_the_higher_moments(self):
@@ -568,14 +534,14 @@ class TestPowSqrt:
     This is the whole point of projecting onto the basis rather than taking
     the square root of the cell average: the slope must survive.
     """
-    out = ff._sqrt_dg(_linear_gdata(4.0/_PSI0, 0.35))
+    out = ff._powsqrt_dg(_linear_gdata(4.0/_PSI0, 0.35), 1.0)
     assert not np.allclose(out.get_values()[:, 1], 0.0), (
       "sqrt of a varying field must not be piecewise constant")
 
   def test_sqrt_matches_an_independent_quadrature(self):
     """Check the binding against a from-scratch numpy projection."""
     coeff0, coeff1 = 4.0/_PSI0, 0.35
-    out = ff._sqrt_dg(_linear_gdata(coeff0, coeff1))
+    out = ff._powsqrt_dg(_linear_gdata(coeff0, coeff1),1.0)
 
     expected = _project_powsqrt_reference(coeff0, coeff1, 1.0)
     assert np.allclose(out.get_values()[0, :], expected, rtol=1e-12)

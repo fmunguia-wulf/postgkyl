@@ -74,22 +74,12 @@ def _powsqrt_dg(gdata, exponent: float) -> GData:
   pow(sqrt(f), exponent) of a single-component DG field. negative values are set to 1e-40.
   """
 
-  # We could check negativity before applying the square root.
-  # psi0 = 2.0**(-0.5*gdata.get_num_dims())
-  # if np.any(gdata.get_values()[..., 0:1]*psi0 < 0.0):
-  #   raise ValueError("_powsqrt_dg: the field has negative cell averages, cannot take "
-  #                    "its square root.")
-
   out = _empty_gdata_from_gdata(gdata)
 
   dgops = GkeyllDGops()
   dgops.powsqrt(out, gdata, exponent)
 
   return out
-
-def _sqrt_dg(gdata) -> GData:
-  """Square root of a single-component DG field."""
-  return _powsqrt_dg(gdata, 1.0)
 
 def _make_fetch_comp(icomp: int):
   """Return a fetch function that extracts the comp-th physical component."""
@@ -521,16 +511,16 @@ def _make_fetch_q_fluid(name: str):
     out = _empty_gdata_from_gdata(m0)
     out.set_values(0.5*mass*vals)
     return out
-  # end
+
   fetch.__name__ = f"fetch_q{name}_fluid"
   return fetch
 
 fetch_qpar_fluid = _make_fetch_q_fluid("par")
 fetch_qperp_fluid = _make_fetch_q_fluid("perp")
 
-def fetch_vth(gdatas, **kwargs):
+def fetch_vt(gdatas, **kwargs):
   """
-  Thermal speed vth = sqrt(T/m) (m/s), where T is the temperature of the
+  Thermal speed vt = sqrt(T/m) (m/s), where T is the temperature of the
   requested species and m its mass. gdatas has:
     1. temp: temperature (in Joules).
   """
@@ -540,7 +530,7 @@ def fetch_vth(gdatas, **kwargs):
   temp_over_m = _empty_gdata_from_gdata(temp)
   temp_over_m.set_values(temp.get_values()/mass)
 
-  return _sqrt_dg(temp_over_m)
+  return _powsqrt_dg(temp_over_m, 1.0)
 
 def _split_elc_ions(gdatas, quantity: str, **kwargs):
   """
@@ -581,7 +571,7 @@ def _weighted_sum(entries, weights, comp: int):
   out.set_values(total)
   return out
 
-def _c_s_ion_acoustic(gdatas, **kwargs):
+def _fetch_c_s_ion_acoustic(gdatas, **kwargs):
   """
   Ion-acoustic sound speed (wave perspective), for the Bohm criterion and
   sheath/presheath matching:
@@ -607,9 +597,9 @@ def _c_s_ion_acoustic(gdatas, **kwargs):
   dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
   dgops.multiply(0, c_s_sq, 0, c_s_sq, 0, elc["srcs"][1])
 
-  return _sqrt_dg(c_s_sq)
+  return _powsqrt_dg(c_s_sq, 1.0)
 
-def _c_s_thermo(gdatas, **kwargs):
+def _fetch_c_s_thermo(gdatas, **kwargs):
   """
   Thermodynamic sound speed (bulk fluid perspective), for Mach numbers and
   acoustic propagation in the core/SOL:
@@ -643,12 +633,7 @@ def _c_s_thermo(gdatas, **kwargs):
   c_s_sq = _empty_gdata_from_gdata(numer)
   dgops.multiply(0, c_s_sq, 0, numer, 0, denom_inv)
 
-  return _sqrt_dg(c_s_sq)
-
-_C_S_KINDS = {
-  "ion_acoustic": _c_s_ion_acoustic,
-  "thermo": _c_s_thermo,
-}
+  return _powsqrt_dg(c_s_sq, 1.0)
 
 def fetch_c_s(gdatas, **kwargs):
   """
@@ -665,46 +650,16 @@ def fetch_c_s(gdatas, **kwargs):
       c_s = sqrt((gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j))/sum_j(n_j*m_j)),
       with gamma_e and gamma_i settable via '--extra' (default 1 and 3).
   """
-  kind = str(kwargs.get("kind", "ion_acoustic"))
-  if kind not in _C_S_KINDS:
+  c_s_kinds = {
+    "ion_acoustic": _fetch_c_s_ion_acoustic,
+    "thermo": _fetch_c_s_thermo,
+  }
+  kind = str(kwargs.get("kind", "thermo"))
+  if kind not in c_s_kinds:
     raise ValueError(f"fetch_c_s: unknown kind '{kind}'. Select one with '--extra kind=<kind>' "
-                     f"from: {', '.join(sorted(_C_S_KINDS))}.")
+                     f"from: {', '.join(sorted(c_s_kinds))}.")
   # end
-  return _C_S_KINDS[kind](gdatas, **kwargs)
-
-def _make_fetch_q_norm(name: str):
-  """
-  Return a fetch function for a heat flux normalized by the free-streaming
-  estimate n*T*c_s:
-    q_norm = q / (n*T*c_s).
-  gdatas has (in this order):
-    1. q: the heat flux to normalize (in W/m^2).
-    2. M0: zeroth moment (density).
-    3. temp: temperature (in Joules).
-    4. c_s: sound speed (in m/s).
-  """
-  def fetch(gdatas, **kwargs):
-    q, m0, temp, c_s = gdatas
-
-    dgops = GkeyllDGops()
-
-    # n*T*c_s.
-    denom = _empty_gdata_from_gdata(m0)
-    dgops.multiply(0, denom, 0, m0, 0, temp)
-    dgops.multiply(0, denom, 0, denom, 0, c_s)
-
-    denom_inv = _empty_gdata_from_gdata(m0)
-    dgops.invert(0, denom_inv, 0, denom)
-
-    out = _empty_gdata_from_gdata(m0)
-    dgops.multiply(0, out, 0, q, 0, denom_inv)
-    return out
-
-  fetch.__name__ = f"fetch_q{name}_norm"
-  return fetch
-
-fetch_qpar_norm = _make_fetch_q_norm("par")
-fetch_qperp_norm = _make_fetch_q_norm("perp")
+  return c_s_kinds[kind](gdatas, **kwargs)
 
 def fetch_beta_from_bmag_press(gdatas, **kwargs):
   """
@@ -726,55 +681,6 @@ def fetch_beta_from_bmag_press(gdatas, **kwargs):
   
   mu0 = gkc.GKYL_MU0
   out.set_values(2.0*mu0*out_val)
-  return out
-
-def fetch_rho_e_over_lambda_d_sq(gdatas, **kwargs):
-  """
-  Electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
-  (rho_e/lambda_d)^2 = 1/B^2 (m_e n_e/ eps0). Gdatas has:
-    1. Bmag: magnetic field magnitude (bmag).
-    2. M0: zeroth moment (density).
-  We output the square of the quantity to avoid the square root operation.
-  """
-  bmag, m0 = gdatas
-  me = gkc.GKYL_ELECTRON_MASS
-  eps0 = gkc.GKYL_EPSILON0
-
-  dgops = GkeyllDGops()
-
-  bmag_sq = _empty_gdata_from_gdata(bmag)
-  dgops.multiply(0, bmag_sq, 0, bmag, 0, bmag)
-
-  bmag_inv_sq = _empty_gdata_from_gdata(bmag)
-  dgops.invert(0, bmag_inv_sq, 0, bmag_sq)
-
-  out = _empty_gdata_from_gdata(bmag)
-  dgops.multiply(0, out, 0, bmag_inv_sq, 0, m0)
-
-  out.set_values(out.get_values() * me / eps0)
-
-  return out
-
-def fetch_phi_norm(gdatas, **kwargs):
-  """
-  Normalized electrostatic potential.
-  phi_norm = e*phi/T_e. Gdatas has:
-    1. phi: electrostatic potential (phi).
-    2. temp: temperature (temp).
-  """
-  phi, temp = gdatas
-  e = gkc.GKYL_ELEMENTARY_CHARGE
-
-  dgops = GkeyllDGops()
-
-  temp_inv = _empty_gdata_from_gdata(temp)
-  dgops.invert(0, temp_inv, 0, temp)
-
-  out = _empty_gdata_from_gdata(phi)
-  dgops.multiply(0, out, 0, phi, 0, temp_inv)
-
-  out.set_values(out.get_values() * e)
-
   return out
 
 # ------------------------

@@ -559,17 +559,6 @@ class GkeyllDGops:
     Weak DG power of a square root: oop = pow(sqrt(iop), exponent), projected
     onto the basis by Gauss-Legendre quadrature (gkyl_proj_powsqrt_on_basis).
 
-    Common exponents: 1 for sqrt(f), -1 for 1/sqrt(f), 3 for f^(3/2).
-
-    Unlike multiply/invert, the gkeyll kernel takes no component index: it
-    reads num_basis coefficients per cell, so both fields must be
-    single-component (scalar). This is checked rather than silently operating
-    on the first component of a multi-component field.
-
-    Note the kernel clamps: at quadrature points where iop is negative it
-    writes 1e-40 instead of failing, so a field that dips negative comes back
-    as ~0 there rather than as an error.
-
     Inputs:
       oop, iop:  Output and input datasets. oop must be pre-allocated.
       exponent:  Exponent applied to sqrt(iop).
