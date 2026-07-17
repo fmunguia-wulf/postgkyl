@@ -18,6 +18,8 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
+#include <errno.h>
+
 #include <gkyl_gpython.h>
 
 static const char ARRAY_CAP[] = "pg0_array";
@@ -916,6 +918,11 @@ py_dynvec_write(PyObject *self, PyObject *args)
         "dynvec_write: tm and data must share the same length");
     return NULL;
   }
+  /* pg0_dynvec_write (gkeyll/core/zero/dynvec.c) returns raw errno from its
+   * fopen/fwrite calls, which is only set on failure and never cleared on
+   * success — so a stale errno from an earlier, unrelated failed syscall in
+   * this process would otherwise be misread as this write having failed. */
+  errno = 0;
   int status = pg0_dynvec_write(fname, (size_t)ncomp, (size_t)n,
       PyArray_DATA(tm), PyArray_DATA(data));
   Py_DECREF(tm);
