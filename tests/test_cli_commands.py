@@ -375,7 +375,7 @@ class TestChainedPipelines:
 
   @needs_gkeyll
   def test_map_conf_deforms_the_grid(self):
-    result = _ok([F2D, "interp", "map", "--file", F2D_MAPC2P, "info"])
+    result = _ok([F2D, "interp", "map", F2D_MAPC2P, "info"])
     assert "(mapped)" in result.output
   # end
 

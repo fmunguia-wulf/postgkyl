@@ -9,8 +9,7 @@ from .._options import label_option, tag_option, use_option
 
 
 @click.command("map")
-@click.option("--file", "-f", "mapping_file", required=True,
-    help="Coordinate-mapping file (mapc2p / mc2nu / mapc2p_vel).")
+@click.argument("mapping_file")
 @click.option("--space", "-s", type=click.Choice(["conf", "vel"]), default="conf",
     help="Deform the leading 'conf' axes or the trailing 'vel' axes.")
 @use_option
@@ -19,6 +18,9 @@ from .._options import label_option, tag_option, use_option
 @click.pass_context
 def command(ctx, mapping_file, space, use, tag, label) -> None:
   """Deform the grid by evaluating a coordinate-mapping field.
+
+  MAPPING_FILE is the coordinate-mapping file (mapc2p / mc2nu / mapc2p_vel),
+  e.g. ``map mapc2p.gkyl``.
 
   Typically run after ``interpolate``. For a combined map, apply the command
   twice (once per space).
