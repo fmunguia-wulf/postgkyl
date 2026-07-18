@@ -20,6 +20,7 @@ the dependency graph a strict, cycle-free DAG — see HIERARCHY_2.md / HIERARCHY
 from __future__ import annotations
 
 import numbers
+import warnings
 from typing import Tuple
 
 import numpy as np
@@ -51,6 +52,24 @@ class GDataState:
       self._grid, self._values = io.read(self._file_name, self.ctx,
           representation=representation, basis_type=basis_type,
           poly_order=poly_order, **read_kwargs)
+      missing = [key for key in ("basis_type", "poly_order")
+          if self.ctx.get(key) is None]
+      if missing:
+        warnings.warn(
+            f"{self._file_name}:\n"
+            f"loaded without {' and '.join(missing)} "
+            "metadata (not present in the file header); pass it explicitly "
+            f"({', '.join(f'{key}=...' for key in missing)}) if the data is "
+            "DG/modal, or downstream verbs that need it (e.g. interpolate) "
+            "will fail.", stacklevel=2)
+      # end
+      if "representation" not in self.ctx and not self.ctx.get("is_modal"):
+        warnings.warn(
+            f"{self._file_name}:\n"
+            "no representation or is_modal metadata "
+            "found or specified; defaulting to 'modal'. Pass "
+            "representation=... (--representation) explicitly if this is wrong.", stacklevel=2)
+      # end
   # end
     # end
 
