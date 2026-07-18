@@ -23,8 +23,9 @@ if TYPE_CHECKING:
 
 
 def map(data: "_GDataState", mapping: "str | _GDataState", *,
-    space: str = "conf", inplace: bool = False, tag: str | None = None,
-    label: str | None = None) -> "_GDataState":
+    space: str = "conf", basis_type: str | None = None,
+    poly_order: int | None = None, inplace: bool = False,
+    tag: str | None = None, label: str | None = None) -> "_GDataState":
   """Replace a block of ``data``'s grid axes with mapped coordinates.
 
   Evaluates the mapping's DG coefficients at ``data``'s existing grid
@@ -38,13 +39,23 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
     mapping: The coordinate-mapping field, as a filename or an
       already-loaded dataset. Read from its native modal coefficients --
       never interpolated. Its number of dimensions (``m``) sets how many
-      of ``data``'s axes are replaced; its component count must be
-      ``m * num_basis`` for its own basis/order.
+      of ``data``'s axes are replaced.
     space: ``'conf'`` deforms the leading ``m`` axes (offset 0),
       curvilinearly (every physical coordinate is evaluated over all ``m``
-      mapped dimensions, so non-separable maps such as rotations work).
+      mapped dimensions, so non-separable maps such as rotations work); its
+      component count must be ``m * num_basis`` for an ``m``-D basis.
       ``'vel'`` deforms the trailing ``m`` axes (offset
-      ``data.num_dims - m``). For a combined map, apply the verb twice.
+      ``data.num_dims - m``); Gkeyll's velocity-space maps
+      (``mapc2p_vel``) are diagonal -- each dimension is evaluated by its
+      *own* 1-D map, so the component count must be ``m * num_basis`` for a
+      *1-D* basis. For a combined map, apply the verb twice.
+    basis_type: override the mapping's ``basis_type`` (long name, e.g.
+      ``"serendipity"``); falls back to the mapping dataset's own
+      ``ctx["basis_type"]``. Velocity-space mapping files (``mapc2p_vel``)
+      commonly carry no basis metadata at all, so this is typically
+      required for ``space="vel"``.
+    poly_order: override the mapping's ``poly_order``; falls back to the
+      mapping dataset's own ``ctx["poly_order"]``.
     inplace: mutate and return ``data`` instead of a new dataset.
     tag: optional tag for the returned dataset.
     label: optional label for the returned dataset.
@@ -62,7 +73,8 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
     ValueError: if ``data`` is native modal (gkyl-backed); if ``space`` is
       neither ``'conf'`` nor ``'vel'``; if the map does not fit ``data``'s
       dimensionality; if the mapping has no ``basis_type``/``poly_order``
-      metadata; or if its component count does not match ``m * num_basis``.
+      metadata (and none was given as an override); or if its component
+      count does not match the expected ``m * num_basis``.
   """
   if data.backend == "gkyl":
     raise ValueError(
@@ -89,20 +101,25 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
         f"map: a {m}D {space} map does not fit a {num_dims}D dataset.")
   # end
 
-  basis_type = map_data.ctx.get("basis_type")
-  poly_order = map_data.ctx.get("poly_order")
-  if basis_type is None or poly_order is None:
+  resolved_basis_type = basis_type if basis_type is not None else map_data.ctx.get("basis_type")
+  resolved_poly_order = poly_order if poly_order is not None else map_data.ctx.get("poly_order")
+  if resolved_basis_type is None or resolved_poly_order is None:
     raise ValueError(
         "map: the mapping dataset has no 'basis_type'/'poly_order' "
-        "metadata.")
+        "metadata; pass basis_type=.../poly_order=... to override.")
   # end
 
-  num_basis = dg.num_basis(m, poly_order, basis_type)
+  # Velocity-space maps (mapc2p_vel) are diagonal: each mapped dimension is
+  # its own separate 1-D map, so its basis is 1-D regardless of m; a
+  # configuration-space map (mapc2p/mc2nu) is one joint m-D curvilinear map.
+  basis_dim = 1 if space == "vel" else m
+  num_basis = dg.num_basis(basis_dim, resolved_poly_order, resolved_basis_type)
   if map_data.num_comps != m * num_basis:
     raise ValueError(
         f"map: mapping has {map_data.num_comps} component(s), expected "
         f"m * num_basis = {m} * {num_basis} = {m * num_basis} for a "
-        f"{m}D {basis_type} p{poly_order} map.")
+        f"{basis_dim}D {resolved_basis_type} p{resolved_poly_order} map"
+        + (" per velocity dimension." if space == "vel" else "."))
   # end
 
   target_axes = list(data.grid[offset:offset + m])
@@ -110,11 +127,15 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
       "lower": map_data.ctx["lower"],
       "upper": map_data.ctx["upper"],
       "cells": map_data.ctx["cells"],
-      "basis_type": basis_type,
-      "poly_order": poly_order,
+      "basis_type": resolved_basis_type,
+      "poly_order": resolved_poly_order,
       "is_modal": map_data.ctx.get("is_modal", True),
   }
-  new_axes = dg.map_grid(map_data.get_values(), map_ctx, target_axes)
+  if space == "vel":
+    new_axes = dg.map_grid_separable(map_data.get_values(), map_ctx, target_axes)
+  else:
+    new_axes = dg.map_grid(map_data.get_values(), map_ctx, target_axes)
+  # end
 
   grid = list(data.grid)
   for d in range(m):

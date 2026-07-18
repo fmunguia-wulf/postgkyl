@@ -143,3 +143,52 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
       for d in range(m)
   ]
 # end
+
+
+def map_grid_separable(map_coeffs: np.ndarray, map_ctx: dict,
+    target_axes: list[np.ndarray]) -> list[np.ndarray]:
+  """Evaluate each mapped dimension's coordinates independently.
+
+  Gkeyll's velocity-space coordinate maps (``mapc2p_vel``) are diagonal:
+  dimension ``d`` is a **separate** 1-D map ``v_d(z_d)`` over its own axis
+  only, not a joint ``m``-dimensional curvilinear map like :func:`map_grid`
+  handles for configuration-space maps (``mapc2p``/``mc2nu``). Component
+  block ``d*num_basis:(d+1)*num_basis`` (``num_basis`` for a *1-D* basis of
+  the given order) holds dimension ``d``'s own coefficients; Gkeyll's writer
+  stores them on the full ``m``-dimensional cell grid but broadcasts them
+  along every axis other than ``d``, so cell index 0 on every other axis
+  already carries the full set of values.
+
+  Args:
+    map_coeffs: ``(*cells, m * num_basis)`` array — ``GDataState.get_values()``,
+      ``num_basis`` being the 1-D basis size for ``basis_type``/``poly_order``.
+    map_ctx: the mapping dataset's ``ctx`` dict; reads ``lower``, ``upper``,
+      ``cells``, ``basis_type``, ``poly_order``, and ``is_modal`` (default
+      ``True``).
+    target_axes: the target's own 1-D edge arrays for the ``m`` axes being
+      deformed, one per mapped dimension.
+
+  Returns:
+    A list of ``m`` new 1-D grid arrays, one per mapped dimension.
+  """
+  lower = map_ctx["lower"]
+  upper = map_ctx["upper"]
+  cells = map_ctx["cells"]
+  basis_type = map_ctx["basis_type"]
+  poly_order = map_ctx["poly_order"]
+  modal = bool(map_ctx.get("is_modal", True))
+  m = len(target_axes)
+
+  nb = gpython.basis.num_basis(basis_type, 1, poly_order)
+  new_axes = []
+  for d in range(m):
+    idx = [0] * m
+    idx[d] = slice(None)
+    coeffs_d = map_coeffs[tuple(idx)][:, d * nb:(d + 1) * nb]
+    points = np.asarray(target_axes[d], dtype=np.float64)[:, np.newaxis]
+    new_axes.append(eval_at_points(coeffs_d, lower[d:d + 1], upper[d:d + 1],
+        cells[d:d + 1], points, basis_type=basis_type, poly_order=poly_order,
+        modal=modal))
+  # end
+  return new_axes
+# end

@@ -16,8 +16,8 @@ Four modules, one per domain boundary:
 """
 
 from .interpolate import interpolate, local_poly, num_basis
-from .map import eval_at_points, map_grid
+from .map import eval_at_points, map_grid, map_grid_separable
 from . import modal, rep
 
 __all__ = ["interpolate", "local_poly", "num_basis", "modal", "rep",
-    "eval_at_points", "map_grid"]
+    "eval_at_points", "map_grid", "map_grid_separable"]

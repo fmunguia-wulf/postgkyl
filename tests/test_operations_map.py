@@ -11,15 +11,19 @@ Mapping fields are built two ways:
 - **from the real generated fixtures** (``generated/2d_c2p_*.gkyl``) for a
   genuine file-based conf-space integration test.
 
-A real vel-space fixture also exists
-(``rt_gk_tcv_iwl_1x2v_p1-elc_mapc2p_vel.gkyl``), but it turns out to be laid
-out for the pre-``MAPPING.md`` *separable* algorithm (``src_bak``): its 4
-components live on a 2-D (16, 8) grid, so under the current engine's "one
-joint m-D basis" contract that would need ``num_basis == 2`` for a
-2-dimensional map, which no (basis, poly_order) combination produces (see
-``test_vel_map_legacy_fixture_has_no_basis_metadata_and_cannot_fit`` below).
-This is a genuine fixture/engine mismatch, not a bug in this verb -- it is
-exercised directly instead of silently skipped.
+**Conf-space maps (``mapc2p``/``mc2nu``) are one joint ``m``-D curvilinear
+map**: every physical coordinate is evaluated over all ``m`` mapped
+dimensions, so a non-separable map (e.g. a rotation) is representable.
+**Velocity-space maps (``mapc2p_vel``) are diagonal instead**: Gkeyll writes
+each mapped dimension as its own independent 1-D map (basis dimensionality
+1, not ``m``), broadcast across the other velocity dimensions' cells --
+gyrokinetic velocity coordinates never couple. A real vel-space fixture
+(``rt_gk_tcv_iwl_1x2v_p1-elc_mapc2p_vel.gkyl``) is laid out exactly this
+way: its 4 components live on a 2-D (16, 8) grid, matching
+``m * num_basis_1d == 2 * 2 == 4`` for 1-D serendipity p1, and it carries no
+``basis_type``/``poly_order`` metadata of its own -- callers must supply it
+(see ``load_gk_distf``, which passes ``basis_type="serendipity",
+poly_order=1``).
 """
 
 from __future__ import annotations
@@ -199,33 +203,35 @@ class TestVelMap:
     np.testing.assert_allclose(out.grid[2], scale * v1_edges, atol=1e-12)
   # end
 
-  def test_2d_vel_can_be_genuinely_non_separable(self):
-    """Unlike the superseded ``src_bak`` algorithm (which always treats
-    velocity maps as separable, one 1-D basis per axis), the current engine
-    evaluates every physical coordinate over all ``m`` mapped dimensions --
-    so a joint (non-separable) 2-D velocity map is representable and
-    evaluates exactly, exercising the same curvilinear path a conf map
-    would use."""
-    lower, upper, cells = [-1.0, -1.0], [1.0, 1.0], [2, 2]
-    theta = 0.3
-    cos_t, sin_t = np.cos(theta), np.sin(theta)
-    fn0 = lambda v0, v1: cos_t * v0 - sin_t * v1
-    fn1 = lambda v0, v1: sin_t * v0 + cos_t * v1
-    m0 = _project_2d(fn0, lower, upper, cells, "serendipity", 1)
-    m1 = _project_2d(fn1, lower, upper, cells, "serendipity", 1)
-    mapping = _synthetic_map(np.concatenate([m0, m1], axis=-1),
+  def test_2d_vel_is_separable_per_dimension(self):
+    """Gkeyll's real ``mapc2p_vel`` files (see the module docstring) store
+    each velocity dimension as its own independent 1-D map, broadcast
+    across the other dimensions' cells -- not a joint m-D curvilinear map
+    like a conf-space map. Both dimensions evaluate independently even
+    though m == 2, and the resulting grid arrays stay 1-D."""
+    lower, upper, cells = [-1.0, -1.0], [1.0, 1.0], [4, 3]
+    m0 = _project_1d(lambda v: 2.0 * v, lower[0], upper[0], cells[0],
+        "serendipity", 1)
+    m1 = _project_1d(lambda v: 3.0 * v + 1.0, lower[1], upper[1], cells[1],
+        "serendipity", 1)
+    # Broadcast each 1-D map's coefficients across the other axis' cells,
+    # matching Gkeyll's on-disk mapc2p_vel layout.
+    coeffs0 = np.broadcast_to(m0[:, None, :], (cells[0], cells[1], m0.shape[-1]))
+    coeffs1 = np.broadcast_to(m1[None, :, :], (cells[0], cells[1], m1.shape[-1]))
+    mapping = _synthetic_map(np.concatenate([coeffs0, coeffs1], axis=-1),
         lower, upper, cells)
 
     x_edges = np.linspace(0.0, 1.0, 3)
-    v0_edges = np.linspace(lower[0], upper[0], 6)
-    v1_edges = np.linspace(lower[1], upper[1], 4)
+    v0_edges = np.linspace(lower[0], upper[0], 9)
+    v1_edges = np.linspace(lower[1], upper[1], 7)
     target = _numpy_target([x_edges, v0_edges, v1_edges],
-        np.zeros((2, 5, 3, 1)))
+        np.zeros((2, 8, 6, 1)))
     out = operations.map(target, mapping, space="vel")
 
-    v0, v1 = np.meshgrid(v0_edges, v1_edges, indexing="ij")
-    np.testing.assert_allclose(out.grid[1], fn0(v0, v1), atol=1e-12)
-    np.testing.assert_allclose(out.grid[2], fn1(v0, v1), atol=1e-12)
+    assert out.grid[1].ndim == 1  # separable: stays 1-D unlike a conf map
+    assert out.grid[2].ndim == 1
+    np.testing.assert_allclose(out.grid[1], 2.0 * v0_edges, atol=1e-12)
+    np.testing.assert_allclose(out.grid[2], 3.0 * v1_edges + 1.0, atol=1e-12)
     np.testing.assert_allclose(out.grid[0], x_edges)  # conf axis untouched
   # end
 # end
@@ -277,25 +283,24 @@ class TestMapErrors:
     # end
   # end
 
-  def test_vel_map_legacy_fixture_has_no_basis_metadata_and_cannot_fit(self):
-    """See the module docstring: this real fixture predates MAPPING.md's
-    engine and is laid out for the superseded separable algorithm."""
+  def test_vel_map_real_fixture_fits_the_separable_algorithm(self):
+    """See the module docstring: this real fixture carries no basis
+    metadata of its own (callers must supply it, as ``load_gk_distf``
+    does), and its 4 components match m * num_basis_1d == 2 * 2 == 4 for
+    1-D serendipity p1 -- not m * num_basis_2d (== 2 * 4 == 8), which is
+    what the joint-curvilinear (conf-style) contract would require."""
     mapping = pg.load(F_MAPC2P_VEL)
     assert mapping.ctx.get("basis_type") is None
     assert mapping.num_dims == 2 and mapping.num_comps == 4
-    # No (dim=2, poly_order, basis) combination has num_basis == 2, so even
-    # supplying metadata by hand cannot satisfy num_comps == m * num_basis.
-    for basis_type in ("serendipity", "tensor"):
-      for poly_order in (0, 1, 2):
-        assert gpython.basis.num_basis(basis_type, 2, poly_order) != 2
-      # end
-    # end
+    assert gpython.basis.num_basis("serendipity", 1, 1) == 2
+    assert gpython.basis.num_basis("serendipity", 2, 1) == 4
 
     target = pg.load(F_ELC).interpolate()
-    mapping.ctx.update(basis_type="serendipity", poly_order=1)
-    with pytest.raises(ValueError, match="component"):
-      operations.map(target, mapping, space="vel")
-    # end
+    out = operations.map(target, mapping, space="vel", basis_type="serendipity",
+        poly_order=1)
+    assert out.grid[-1].ndim == 1 and out.grid[-2].ndim == 1
+    assert np.all(np.isfinite(out.grid[-1]))
+    assert np.all(np.isfinite(out.grid[-2]))
   # end
 # end
 
@@ -344,24 +349,20 @@ class TestSelectCurvilinearGuard:
     assert out.values.shape[1] == 1
   # end
 
-  def test_select_on_2d_vel_map_uses_relative_axis_behind_a_nonzero_offset(self):
-    """Regression: an m > 1 ``space="vel"`` map sits behind a nonzero
-    ``offset`` (``num_dims - m``), so a curvilinear grid array's own axis k
-    is mapped dimension k (absolute dimension ``offset + k``), not axis d
-    of ``data.grid``. Before ``ctx["mapped_axes"]`` was threaded through,
-    ``select`` indexed the array by the absolute axis d directly: selecting
-    the *last* mapped dimension raised ``IndexError`` (d >= the array's
-    ndim == m), and selecting any other mapped dimension silently sliced
-    the wrong array axis while values were (correctly) sliced along the
-    intended one."""
-    lower, upper, cells = [-1.0, -1.0], [1.0, 1.0], [2, 2]
-    theta = 0.3
-    cos_t, sin_t = np.cos(theta), np.sin(theta)
-    fn0 = lambda v0, v1: cos_t * v0 - sin_t * v1
-    fn1 = lambda v0, v1: sin_t * v0 + cos_t * v1
-    m0 = _project_2d(fn0, lower, upper, cells, "serendipity", 1)
-    m1 = _project_2d(fn1, lower, upper, cells, "serendipity", 1)
-    mapping = _synthetic_map(np.concatenate([m0, m1], axis=-1),
+  def test_2d_vel_map_keeps_ordinary_selection_behind_a_nonzero_offset(self):
+    """An m > 1 ``space="vel"`` map sits behind a nonzero ``offset``
+    (``num_dims - m``), same as any vel map -- but because each mapped
+    dimension stays its own independent 1-D map (unlike a conf-space
+    curvilinear map), every mapped axis keeps ordinary coordinate-based
+    ``select``, with no ``mapped_axes`` offset translation needed."""
+    lower, upper, cells = [-1.0, -1.0], [1.0, 1.0], [4, 3]
+    m0 = _project_1d(lambda v: 2.0 * v, lower[0], upper[0], cells[0],
+        "serendipity", 1)
+    m1 = _project_1d(lambda v: v, lower[1], upper[1], cells[1],
+        "serendipity", 1)
+    coeffs0 = np.broadcast_to(m0[:, None, :], (cells[0], cells[1], m0.shape[-1]))
+    coeffs1 = np.broadcast_to(m1[None, :, :], (cells[0], cells[1], m1.shape[-1]))
+    mapping = _synthetic_map(np.concatenate([coeffs0, coeffs1], axis=-1),
         lower, upper, cells)
 
     x_edges = np.linspace(0.0, 1.0, 3)
@@ -370,20 +371,16 @@ class TestSelectCurvilinearGuard:
     target = _numpy_target([x_edges, v0_edges, v1_edges],
         np.arange(2 * 5 * 3).reshape(2, 5, 3, 1).astype(float))
     out = operations.map(target, mapping, space="vel")  # offset = 3 - 2 = 1
-    assert out.ctx["mapped_axes"] == {1: 1, 2: 1}
+    assert out.grid[1].ndim == 1 and out.grid[2].ndim == 1
 
-    # z2 (v1, the *last* mapped dimension) used to raise IndexError: its
-    # own relative axis is 1, but the old code indexed by absolute d == 2
-    # into a 2-D (ndim == 2) array.
-    sel2 = operations.select(out, z2=2)
+    sel2 = operations.select(out, z2=v1_edges[2])
     assert sel2.values.shape == (2, 5, 1, 1)
-    assert sel2.grid[2].shape == (6, 2)  # v1's own axis sliced 4 -> 2
-    assert sel2.grid[1].shape == (6, 4)  # untouched by this call
+    assert sel2.grid[2].shape == (2,)  # v1's own axis sliced 4 -> 2
+    assert sel2.grid[1].shape == (6,)  # untouched by this call
 
-    # z1 (v0) used to silently slice the *other* (v1) axis instead of v0's.
-    sel1 = operations.select(out, z1=1)
+    sel1 = operations.select(out, z1=v0_edges[1])
     assert sel1.values.shape == (2, 1, 3, 1)
-    assert sel1.grid[1].shape == (2, 4)  # v0's own axis sliced 6 -> 2
-    assert sel1.grid[2].shape == (6, 4)  # untouched by this call
+    assert sel1.grid[1].shape == (2,)  # v0's own axis sliced 6 -> 2
+    assert sel1.grid[2].shape == (4,)  # untouched by this call
   # end
 # end

@@ -159,6 +159,7 @@ class TestLoadGkDistfCoordinateMaps:
         "sim-ion_0.gkyl": (grid, values),
         "sim-ion_jacobvel.gkyl": (grid, values),
         "sim-geo_int_jacobtot_inv.gkyl": (grid, values),
+        "sim-ion_mapc2p_vel.gkyl": (grid, values),
     }
 
     def fake_load(file_name="", *, tag="default", label="", ctx=None,
@@ -166,6 +167,7 @@ class TestLoadGkDistfCoordinateMaps:
       d = _FakeDistfData(tag=tag, label=label, ctx=ctx)
       if file_name:
         d.push(*registry[file_name])
+        d._file_name = file_name
       # end
       return d
     # end
@@ -173,8 +175,13 @@ class TestLoadGkDistfCoordinateMaps:
     monkeypatch.setattr(distf, "load", fake_load)
     calls = []
 
-    def fake_map(data, mapping, *, space):
-      calls.append((mapping, space))
+    def fake_map(data, mapping, *, space, basis_type=None, poly_order=None):
+      # mapc2p_vel is pre-loaded (to attach basis_type/poly_order overrides)
+      # before it reaches operations.map, so `mapping` arrives as a
+      # dataset there, not a filename -- unlike the conf-space maps
+      # (mc2nu/mapc2p), which are still passed through as bare paths.
+      recorded = mapping._file_name if hasattr(mapping, "_file_name") else mapping
+      calls.append((recorded, space))
       return data
     # end
 

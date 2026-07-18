@@ -213,11 +213,12 @@ class GData(GDataState):
   # end
 
   def map(self, mapping: "str | GData", *, space: str = "conf",
+      basis_type: str | None = None, poly_order: int | None = None,
       inplace: bool = False, tag: str | None = None,
       label: str | None = None) -> "GData":
     """Deform this dataset's grid by evaluating a coordinate map (see ``operations.map``)."""
-    return operations.map(self, mapping, space=space, inplace=inplace, tag=tag,
-        label=label)
+    return operations.map(self, mapping, space=space, basis_type=basis_type,
+        poly_order=poly_order, inplace=inplace, tag=tag, label=label)
   # end
 
   # Note: no fluent ``grid`` method. ``GData.grid`` (inherited from
