@@ -17,7 +17,7 @@ def command(ctx) -> None:
   patterns, ds.in_data_strings = list(ds.in_data_strings), []
   for pattern in patterns:
     for fn in sorted(glob(pattern)):
-      ds.datasets.append(pg.load(fn))
+      ds.datasets.append(pg.load(fn, representation=ds.representation))
 # end
     # end
   # end

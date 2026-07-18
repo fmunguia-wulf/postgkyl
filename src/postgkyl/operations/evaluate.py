@@ -149,7 +149,8 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
       grid, values = None, np.array(dat.ctx[ctx_key])
     # end
     else:
-      # select() carries the field-domain guard (".interpolate() first") for
+      # select() carries the shared operability guard (raw modal coefficients
+      # refuse; nodal/quad representations, already point values, pass) for
       # every data token, comp-sliced or not.
       selected = select(dat, comp=comp)
       grid, values = selected.grid, selected.values

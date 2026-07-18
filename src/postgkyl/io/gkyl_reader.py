@@ -86,6 +86,7 @@ class GkylReader(object):
   def __init__(self, file_name: str, ctx: dict | None = None,
       axes: tuple | None = (None, None, None, None, None, None),
       comp: str | int | None = None,
+      representation: str | None = None,
       **kwargs):
     """Initialize the instance of Gkeyll reader.
 
@@ -98,11 +99,16 @@ class GkylReader(object):
         Allows to specify the axes to be loaded.
       comp: int or slice
         Allows to specify the components to be loaded.
+      representation: overrides the ``ctx["representation"]`` the header
+        metadata would otherwise imply (e.g. a file tagged with basis
+        metadata whose stored values are already point values, not modal
+        coefficients).
       **kwargs
         This is not directly used but allowes for unified interface to all the readers
         we use.
     """
     self.file_name = file_name
+    self._representation_override = representation
 
     self.dtf = np.dtype("f8")
     self.dti = np.dtype("i8")
@@ -188,6 +194,7 @@ class GkylReader(object):
       self.offset += 8
 
       # read meta
+      has_basis = False
       if meta_size > 0:
         fh = open(self.file_name, "rb")
         fh.seek(self.offset)
@@ -200,8 +207,12 @@ class GkylReader(object):
             elif key == "basisType" or key == "basis_type":
               self.ctx["basis_type"] = unp[key]
               self.ctx["is_modal"] = True
+              has_basis = True
             # end
             else:
+              # Covers "representation" too, if the writer stamped one
+              # directly: a file's own metadata is the next-best source of
+              # truth once no explicit override was given (see below).
               self.ctx[key] = unp[key]
             # end
           # end
@@ -212,9 +223,16 @@ class GkylReader(object):
         self.offset += meta_size
         fh.close()
       # end
+      if has_basis and "representation" not in self.ctx:
+        self.ctx["representation"] = "modal"
+      # end
     # end
       #end
     #end
+    if self._representation_override is not None:
+      # Wins over both the file's own metadata and the "modal" default.
+      self.ctx["representation"] = self._representation_override
+    # end
 
     # read real-type
     real_type = np.fromfile(self.file_name, dtype=self.dti, count=1, offset=self.offset)[0]

@@ -24,9 +24,11 @@ from . import mapping
 class GkylCReader:
   """Reader protocol implementation backed by ``gkyl_array_rio``."""
 
-  def __init__(self, file_name: str, ctx: dict | None = None, **kwargs):
+  def __init__(self, file_name: str, ctx: dict | None = None,
+      representation: str | None = None, **kwargs):
     self.file_name = str(file_name)
     self.ctx = ctx if ctx is not None else {}
+    self._representation_override = representation
     # Any partial-load request (axes=, comp=, ...) -> defer to the Python reader.
     self._partial = any(v is not None for v in kwargs.get("axes") or ()) or \
         kwargs.get("comp") is not None or \
@@ -47,6 +49,7 @@ class GkylCReader:
 
   def preload(self) -> None:
     grid, _, meta, esznc, _ = gpython.rio.read_header(self.file_name)
+    has_basis = False
     if meta:
       for key, val in msgpack.unpackb(meta).items():
         if key in ("polyOrder", "poly_order"):
@@ -55,12 +58,25 @@ class GkylCReader:
         elif key in ("basisType", "basis_type"):
           self.ctx["basis_type"] = val
           self.ctx["is_modal"] = True
-          self.ctx["representation"] = "modal"
+          has_basis = True
         # end
         else:
+          # Covers "representation" too, if the writer stamped one directly:
+          # a file's own metadata is the next-best source of truth once no
+          # explicit override was given.
           self.ctx[key] = val
         # end
       # end
+    # end
+    if has_basis and "representation" not in self.ctx:
+      self.ctx["representation"] = "modal"
+    # end
+    if self._representation_override is not None:
+      # The writer stamps every field with basis/order metadata, even
+      # non-DG diagnostic outputs (e.g. a per-cell CFL rate); this lets a
+      # caller correct a mistagged file to what its values actually are.
+      # Wins over both the file's own metadata and the "modal" default.
+      self.ctx["representation"] = self._representation_override
     # end
     self.ctx["cells"] = grid["cells"]
     self.ctx["lower"] = grid["lower"]

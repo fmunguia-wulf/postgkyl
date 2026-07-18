@@ -82,17 +82,23 @@ class PgkylGroup(click.Group):
 @click.group(cls=PgkylGroup, chain=True,
     context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(__version__, "--version", prog_name="pgkyl")
-@click.option("--batch-mode", is_flag=True, help="Do not show plots; save them instead.")
+@click.option("--batch-mode", "-b", is_flag=True, help="Do not show plots; save them instead.")
 @click.option("--saveframes-prefix", default="pgkyl", help="Output prefix used in batch mode.")
+@click.option("--representation", "-r", default=None,
+    type=click.Choice(["modal", "nodal", "quad"]),
+    help="Override every loaded file's modal/nodal/quad tag -- for files "
+    "whose header carries DG basis metadata even though the stored values "
+    "are already point values (e.g. a per-cell diagnostic like a CFL rate).")
 @click.pass_context
-def cli(ctx, batch_mode, saveframes_prefix) -> None:
+def cli(ctx, batch_mode, saveframes_prefix, representation) -> None:
   """Postprocessing and plotting tool for Gkeyll data.
 
   Datasets are loaded, processed and plotted by chaining commands, e.g.::
 
       pgkyl file.gkyl interp sel --z0 0 plot
   """
-  ctx.obj = DataSpace(batch=batch_mode, prefix=saveframes_prefix)
+  ctx.obj = DataSpace(batch=batch_mode, prefix=saveframes_prefix,
+      representation=representation)
 # end
 
 

@@ -32,7 +32,8 @@ class GDataState:
   """Storage + metadata for one dataset. No verbs; no upward imports."""
 
   def __init__(self, file_name: str = "", *, ctx: dict | None = None,
-      tag: str = "default", label: str = "", **read_kwargs):
+      tag: str = "default", label: str = "", representation: str | None = None,
+      **read_kwargs):
     self._grid: list | None = None
     self._values: np.ndarray | gpython.GkylArray | None = None
     self.ctx: dict = {}
@@ -46,7 +47,8 @@ class GDataState:
     self.color = None
 
     if self._file_name:
-      self._grid, self._values = io.read(self._file_name, self.ctx, **read_kwargs)
+      self._grid, self._values = io.read(self._file_name, self.ctx,
+          representation=representation, **read_kwargs)
   # end
     # end
 

@@ -29,13 +29,16 @@ def select(data: "GDataState", *, comp=None,
   still works, as does a separable (1-D) mapped axis (``.map(space="vel")``).
 
   Raises:
-    ValueError: if ``data`` is native modal (gkyl-backed), or a
-      coordinate/slice selector targets a curvilinear grid axis.
+    ValueError: if ``data`` holds native modal DG coefficients (nodal/quad
+      representations of gkyl-backed data are point values and slice fine),
+      or a coordinate/slice selector targets a curvilinear grid axis.
   """
-  if data.backend == "gkyl":
+  if data.backend == "gkyl" and data.ctx.get("representation", "modal") == "modal":
     raise ValueError(
-        "select operates on interpolated (NumPy) values; call .interpolate() "
-        "first — slicing raw DG coefficients would mix basis functions.")
+        "select operates on interpolated (NumPy) values, or on gkyl-native "
+        "nodal/quad representations; call .interpolate()/.to_nodal()/"
+        ".to_quad() first -- slicing raw modal DG coefficients would mix "
+        "basis functions.")
   # end
   zs = (z0, z1, z2, z3, z4, z5)
   grid = list(data.grid)

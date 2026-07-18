@@ -17,6 +17,7 @@ class DataSpace:
   in_data_strings: list = field(default_factory=list)
   batch: bool = False
   prefix: str = "pgkyl"
+  representation: str | None = None
 
   def __iter__(self):
     return iter(self.datasets)
