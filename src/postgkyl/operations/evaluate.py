@@ -394,23 +394,48 @@ def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     raise ValueError("evaluate: at least one dataset is required.")
   # end
 
-  grid_stack, value_stack, ctx_stack = [], [], []
-  for token in filter(None, chain.split(" ")):
-    if apply_operator(grid_stack, value_stack, ctx_stack, token):
-      continue
+  tokens = list(filter(None, chain.split(" ")))
+  fast_match = _DATA_TOKEN.match(tokens[0]) if len(tokens) == 1 else None
+
+  if fast_match and fast_match.group(3) is None and tokens[0] not in ev_cmds:
+    # A bare "f"/"fN"[comp] with no operator at all is a pure identity read
+    # -- resolve it directly instead of forcing it through select()'s
+    # point-value materialization (which the generic stack path below uses
+    # for every non-modal token, since apply_operator's weak-kernel dispatch
+    # can't tell modal coefficients from nodal/quad point values once both
+    # are native). With no operator involved here, that ambiguity doesn't
+    # arise, so a gkyl-backed nodal/quad dataset can stay gkyl-native and in
+    # its original representation -- mirroring the modal fast path in
+    # _push_token -- rather than silently falling out of the gkyl backend
+    # just for being named alone in an `evaluate` chain.
+    idx = int(fast_match.group(1)) if fast_match.group(1) else 0
+    comp = fast_match.group(2)
+    dat = datasets[idx]
+    source = dat if comp is None else select(dat, comp=comp)
+    final_grid = source.grid
+    final_values = source.native if source.backend == "gkyl" else source.values
+    final_ctx = dict(source.ctx)
+  # end
+  else:
+    grid_stack, value_stack, ctx_stack = [], [], []
+    for token in tokens:
+      if apply_operator(grid_stack, value_stack, ctx_stack, token):
+        continue
+      # end
+      if not _push_token(token, datasets, grid_stack, value_stack, ctx_stack):
+        raise ValueError(f"evaluate: token '{token}' is neither data nor an operator")
+      # end
     # end
-    if not _push_token(token, datasets, grid_stack, value_stack, ctx_stack):
-      raise ValueError(f"evaluate: token '{token}' is neither data nor an operator")
+
+    if not value_stack:
+      raise ValueError("evaluate: expression produced no result")
     # end
+
+    final_grid = grid_stack[-1][0]
+    final_values = value_stack[-1][0]
+    final_ctx = dict(ctx_stack[-1][0])
   # end
 
-  if not value_stack:
-    raise ValueError("evaluate: expression produced no result")
-  # end
-
-  final_grid = grid_stack[-1][0]
-  final_values = value_stack[-1][0]
-  final_ctx = dict(ctx_stack[-1][0])
   out_grid = final_grid if final_grid is not None else datasets[0].grid
   result = datasets[0]._result(out_grid, final_values,
       tag=(tag or "default"), label=(label if label is not None else chain))

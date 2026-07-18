@@ -23,7 +23,8 @@ from postgkyl.cli.state import DataSpace
 from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
 
 # Hidden aliases (abbreviation already covers interp->interpolate, sel->select).
-_ALIASES = {"pl": "plot"}
+_ALIASES = {"pl": "plot", \
+            "ev": "evaluate"}
 
 
 class PgkylGroup(click.Group):

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from postgkyl import dg
 from postgkyl.numerics import idx_parser
 
 if TYPE_CHECKING:
@@ -99,6 +100,15 @@ def select(data: "GDataState", *, comp=None,
   values_out = values[tuple(values_idx)]
   if num_dims == values_out.ndim:  # restore the squeezed component axis
     values_out = values_out[..., np.newaxis]
+  # end
+
+  if data.backend == "gkyl":
+    # A nodal/quad representation stays gkyl-native (REFACTOR_GKEYLL_FFI.md
+    # §3b): ``values`` above was only a read-only NumPy *view* of the native
+    # array for slicing purposes -- wrap the sliced result back into a
+    # native GkylArray so the dataset doesn't silently fall out of the gkyl
+    # backend (and lose its representation) just for having been selected.
+    values_out = dg.rep.wrap(values_out)
   # end
 
   return data._result(grid, values_out, inplace=inplace, tag=tag, label=label)
