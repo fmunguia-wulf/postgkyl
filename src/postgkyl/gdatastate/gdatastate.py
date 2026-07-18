@@ -324,10 +324,14 @@ class GDataState:
     if values is not None:
       vmax = np.nanmax(values)
       vmin = np.nanmin(values)
-      max_pos = tuple(int(i) for i in np.unravel_index(np.nanargmax(values), values.shape)[:num_dims])
-      min_pos = tuple(int(i) for i in np.unravel_index(np.nanargmin(values), values.shape)[:num_dims])
-      out += f"├─ Maximum: {vmax:e} at {max_pos}\n"
-      out += f"├─ Minimum: {vmin:e} at {min_pos}\n"
+      max_idx = np.unravel_index(np.nanargmax(values), values.shape)
+      min_idx = np.unravel_index(np.nanargmin(values), values.shape)
+      max_pos = tuple(int(i) for i in max_idx[:num_dims])
+      min_pos = tuple(int(i) for i in min_idx[:num_dims])
+      out += f"├─ Maximum: {vmax:e} at {max_pos}"
+      out += f" component {int(max_idx[-1]):d}\n" if num_comps > 1 else "\n"
+      out += f"├─ Minimum: {vmin:e} at {min_pos}"
+      out += f" component {int(min_idx[-1]):d}\n" if num_comps > 1 else "\n"
     # end
     if self.ctx.get("basis_type"):
       modal = "modal" if self.ctx.get("is_modal") else "nodal"
@@ -345,9 +349,59 @@ class GDataState:
       # end
       out += f"├─ DG: {self.ctx['basis_type']} p{self.ctx.get('poly_order', '?')} ({modal})\n"
     # end
+    if "changeset" in self.ctx or "builddate" in self.ctx:
+      out += "├─ Created with Gkeyll:\n"
+      if "changeset" in self.ctx:
+        out += f"│  ├─ Changeset: {self.ctx['changeset']}\n"
+      # end
+      if "builddate" in self.ctx:
+        out += f"│  └─ Build Date: {self.ctx['builddate']}\n"
+      # end
+    # end
+    if "geometry_type" in self.ctx or "geqdsk_sign_convention" in self.ctx:
+      out += "├─ Geometry info:\n"
+      if "geometry_type" in self.ctx:
+        out += f"│  ├─ Type: {self.ctx['geometry_type']}\n"
+      # end
+      if "geqdsk_sign_convention" in self.ctx:
+        out += f"│  ├─ GEQDSK sign convention: {self.ctx['geqdsk_sign_convention']:d}\n"
+      # end
+    # end
+    if any(k in self.ctx for k in ("mass", "charge", "gas_gamma", "vdim")):
+      out += "├─ Species properties:\n"
+      if "mass" in self.ctx:
+        out += f"│  ├─ Mass: {self.ctx['mass']:e}\n"
+      # end
+      if "charge" in self.ctx:
+        out += f"│  ├─ Charge: {self.ctx['charge']:e}\n"
+      # end
+      if "gas_gamma" in self.ctx:
+        out += f"│  ├─ Adiabatic index: {self.ctx['gas_gamma']:e}\n"
+      # end
+      if "vdim" in self.ctx:
+        out += f"│  ├─ Velocity dimensions: {self.ctx['vdim']:d}\n"
+      # end
+    # end
+    for key, val in self.ctx.items():
+      if key not in self._INFO_HANDLED_CTX_KEYS:
+        out += f"├─ {key}: {val}\n"
+      # end
+    # end
+    out += "└─ File: " + (self._file_name or "<no file>") + "\n"
     print(out)
     return out
   # end
+
+  # Keys already rendered by a dedicated branch above; anything else in ctx
+  # is file/reader-native metadata (e.g. a .gkyl file's msgpack meta) that
+  # still deserves to surface, so it falls through to the generic dump.
+  _INFO_HANDLED_CTX_KEYS = frozenset({
+      "time", "frame", "lower", "upper", "cells", "grid_type",
+      "poly_order", "basis_type", "is_modal", "num_comps",
+      "representation", "num_quad", "interpolated",
+      "changeset", "builddate", "geometry_type", "geqdsk_sign_convention",
+      "mass", "charge", "gas_gamma", "vdim",
+  })
 
   # --------------------------------------------------------------- summary
   def _summary(self) -> str:
