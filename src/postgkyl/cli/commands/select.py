@@ -5,6 +5,7 @@ from __future__ import annotations
 import click
 
 from .._apply import apply
+from .._options import label_option, tag_option
 
 
 @click.command("select")
@@ -15,8 +16,11 @@ from .._apply import apply
 @click.option("--z3", default=None, help="Select in dim 3.")
 @click.option("--z4", default=None, help="Select in dim 4.")
 @click.option("--z5", default=None, help="Select in dim 5.")
+@tag_option()
+@label_option()
 @click.pass_context
-def command(ctx, comp, z0, z1, z2, z3, z4, z5) -> None:
+def command(ctx, comp, z0, z1, z2, z3, z4, z5, tag, label) -> None:
   """Subselect coordinates and/or components."""
-  apply(ctx, lambda d: d.select(comp=comp, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5))
+  apply(ctx, lambda d: d.select(comp=comp, z0=z0, z1=z1, z2=z2, z3=z3, z4=z4, z5=z5,
+      tag=tag, label=label))
 # end

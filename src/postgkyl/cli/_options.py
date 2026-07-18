@@ -7,10 +7,6 @@ name the result. Declaring each one once here keeps the flag spellings and
 help text in lockstep instead of being copy-pasted across every command
 module (one home for the fact, mirroring ``src_bak/postgkyl/commands/
 _options.py``).
-
-Note: ``select`` deliberately does not use ``tag_option``/``label_option`` --
-see ``cli/commands/select.py``; it was already given its own option
-declarations by an earlier pass of this layer.
 """
 
 from __future__ import annotations

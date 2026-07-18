@@ -6,7 +6,7 @@ import click
 
 import postgkyl as pg
 
-from .._options import tag_option
+from .._options import label_option, tag_option
 
 
 @click.command("gk_distf")
@@ -33,10 +33,11 @@ from .._options import tag_option
 @click.option("--mapc2p-file", default=None, help="mapc2p filename override.")
 @click.option("--mapc2p-vel-file", default=None, help="mapc2p_vel filename override.")
 @tag_option(default="f")
+@label_option()
 @click.pass_context
 def command(ctx, name, species, frame, suffix, num_interp, c2p_vel, mc2nu, mapc2p,
     block, jf_file, jacobvel_file, jacobtot_inv_file, mc2nu_file, mapc2p_file,
-    mapc2p_vel_file, tag) -> None:
+    mapc2p_vel_file, tag, label) -> None:
   """Gyrokinetics: build f from a saved Jf-times-Jacobian(s) file."""
   frames = pg.diagnostics.gyrokinetics.resolve_frames(frame, name=name,
       species=species, suffix=suffix, block_idx=block)
@@ -47,6 +48,9 @@ def command(ctx, name, species, frame, suffix, num_interp, c2p_vel, mc2nu, mapc2
         jacobvel_file=jacobvel_file, jacobtot_inv_file=jacobtot_inv_file,
         mc2nu_file=mc2nu_file, mapc2p_file=mapc2p_file,
         mapc2p_vel_file=mapc2p_vel_file)
+    if label:
+      out.label = label
+    # end
     ctx.obj.datasets.append(out)
 # end
   # end
