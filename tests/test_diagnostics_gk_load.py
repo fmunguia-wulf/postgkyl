@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 
 from postgkyl import gpython
+from postgkyl.gdata import GData
 from postgkyl.gdatastate.gdatastate import GDataState
 from postgkyl.diagnostics.gyrokinetics import distf, quantities as ff, quantity as qmod, utils
 from postgkyl.diagnostics.gyrokinetics.load_quantity import (
@@ -128,37 +129,18 @@ class TestLoadGkDistfReal:
     # end
 
 
-class _FakeDistfGData:
-  """Stands in for ``postgkyl.gdata.GData`` so ``load_gk_distf``'s coordinate-
-  map branches (``use_c2p_vel``/``use_mc2nu``/``use_mapc2p``) can be
-  exercised without real mapc2p_vel/mc2nu/mapc2p DG fixtures (the staged
-  rt_gk_tcv_iwl* files carry no such metadata -- see TestLoadGkDistfReal)."""
+class _FakeDistfData(GData):
+  """A ``GData`` whose ``.interpolate()`` is a stubbed no-op (real
+  interpolation needs the compiled Gkeyll shim), keeping the real computing
+  operators (``*``/``/``) so ``load_gk_distf``'s weak-multiply-then-divide
+  step still runs (as a plain NumPy op, since these fakes are never
+  gkyl-native) -- letting ``load_gk_distf``'s coordinate-map branches
+  (``use_c2p_vel``/``use_mc2nu``/``use_mapc2p``) be exercised without real
+  mapc2p_vel/mc2nu/mapc2p DG fixtures (the staged rt_gk_tcv_iwl* files carry
+  no such metadata -- see TestLoadGkDistfReal)."""
 
-  _registry: dict = {}
-
-  def __init__(self, file_name="", *, ctx=None, tag="default", label=""):
-    self.ctx = dict(ctx) if ctx else {}
-    self._tag = tag
-    if file_name:
-      self._grid, self._values = self._registry[file_name]
-    else:
-      self._grid, self._values = None, None
-    # end
-  # end
-
-  def get_values(self):
-    return self._values
-  # end
-
-  def get_grid(self):
-    return self._grid
-  # end
-
-  def push(self, grid, values):
-    self._grid, self._values = grid, values
-  # end
-
-  def interpolate(self, basis, p, num_interp=None):
+  def interpolate(self, *, basis=None, p=None, num_interp=None,
+      inplace=False, tag=None, label=None):
     return self
   # end
 # end
@@ -166,7 +148,7 @@ class _FakeDistfGData:
 
 class TestLoadGkDistfCoordinateMaps:
   """Unit tests of ``load_gk_distf``'s ``use_c2p_vel``/``use_mc2nu``/
-  ``use_mapc2p`` branches, stubbed through ``distf.GData``/``operations.map``
+  ``use_mapc2p`` branches, stubbed through ``distf.load``/``operations.map``
   since the compiled-Gkeyll fixtures have no mapping-file metadata to
   exercise them against."""
 
@@ -178,8 +160,17 @@ class TestLoadGkDistfCoordinateMaps:
         "sim-ion_jacobvel.gkyl": (grid, values),
         "sim-jacobtot_inv.gkyl": (grid, values),
     }
-    monkeypatch.setattr(_FakeDistfGData, "_registry", registry)
-    monkeypatch.setattr(distf, "GData", _FakeDistfGData)
+
+    def fake_load(file_name="", *, tag="default", label="", ctx=None,
+        representation=None, **read_kwargs):
+      d = _FakeDistfData(tag=tag, label=label, ctx=ctx)
+      if file_name:
+        d.push(*registry[file_name])
+      # end
+      return d
+    # end
+
+    monkeypatch.setattr(distf, "load", fake_load)
     calls = []
 
     def fake_map(data, mapping, *, space):

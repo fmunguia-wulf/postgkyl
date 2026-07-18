@@ -5,22 +5,29 @@ with the velocity/configuration Jacobians, divides them out, and
 interpolates onto a nodal grid, optionally applying velocity- and
 position-space coordinate mappings.
 
-Ported from ``src_bak/postgkyl/loaders/gk_distf.py``. The Jf / jacobvel
-division happens on the *raw* (pre-interpolation) coefficient arrays, exactly
-as in ``src_bak`` -- this is not a general DG weak divide, it relies on
-``jacobvel`` being stored piecewise-constant per cell (a single component),
-so dividing every one of Jf's basis coefficients by that one constant is
-exact scalar division, cell by cell. ``resolve_frames``' range-discovery now
-calls the shared :mod:`postgkyl.diagnostics.discovery` helper instead of its
-own glob.
+Jf (phase-space) is weak-multiplied by jacobtot_inv (conf-space) via Gkeyll's
+``gkyl_dg_mul_conf_phase_op_range`` staying gkyl-native and
+already on the same (phase-space) grid as Jf, so a single ``interpolate()``
+at the end suffices; no separate jacobtot_inv interpolation or manual
+NumPy reshape/broadcast is needed. The division by jacobvel, in contrast,
+happens on the *raw* modal coefficient arrays via plain NumPy division on
+the ``.values`` views, not Gkeyll's weak-divide kernel: ``jacobvel`` carries
+no DG basis metadata of its own and is stored piecewise-constant per cell (a
+single component), so Gkeyll's ``weak_div`` (which requires both operands'
+component count to be a multiple of a shared basis's ``num_basis``) cannot
+take it as an operand at all. Scaling every one of the coefficients by that
+one per-cell constant is nonetheless the exact quotient, and commutes freely
+with the weak conf x phase multiply above (both are linear in Jf's
+coefficients), so the two can happen in either order.
+
+``resolve_frames``' range-discovery calls the shared
+:mod:`postgkyl.diagnostics.discovery` helper instead of its own glob.
 """
 
 from __future__ import annotations
 
-import numpy as np
-
 from postgkyl import operations
-from postgkyl.gdata import GData
+from postgkyl.gdata import load
 
 from .. import discovery
 
@@ -82,7 +89,7 @@ def load_gk_distf(
     mc2nu_file: str | None = None,
     mapc2p_file: str | None = None,
     jacobtot_inv_file: str | None = None,
-) -> GData:
+) -> "GData":
   """Build a real distribution function from saved ``Jf`` data.
 
   Args:
@@ -131,33 +138,17 @@ def load_gk_distf(
     jacobtot_inv_file = f"{prefix}-jacobtot_inv.gkyl"
   # end
 
-  jf_data = GData(jf_file)
-  jacobvel_data = GData(jacobvel_file)
-  jacobtot_inv_data = GData(jacobtot_inv_file)
+  jf_data = load(jf_file)
+  jacobvel_data = load(jacobvel_file)
+  jacobtot_inv_data = load(jacobtot_inv_file)
 
-  # Divide Jf by jacobvel to get f * J_x * B (raw coefficients: exact
-  # because jacobvel is piecewise-constant per cell).
-  fjxb_values = jf_data.get_values() / jacobvel_data.get_values()
-  fjxb_data = GData(ctx=jf_data.ctx)
-  fjxb_data.push(jf_data.get_grid(), fjxb_values)
+  weak_product = jf_data * jacobtot_inv_data
+  # Pointwise division by jacobvel because Gkeyll doesn't have the right operators for this
+  f_coeffs = weak_product.values / jacobvel_data.values
+  f_modal = weak_product._result(weak_product.grid, f_coeffs)
 
-  # Interpolate f * J_x * B and jacobtot_inv onto the same (refined) grid.
-  interpolated = fjxb_data.interpolate(basis="gkhyb", p=1, num_interp=num_interp)
-  jacobtot_inv_interpolated = jacobtot_inv_data.interpolate(basis="ms", p=1, num_interp=num_interp)
-  out_grid = interpolated.get_grid()
-  fjxb_interpolated_values = np.squeeze(interpolated.get_values())
-  jacobtot_inv_values = np.squeeze(jacobtot_inv_interpolated.get_values())
-
-  # Reshape jacobtot_inv to have 1 component over velocity dimensions, then
-  # multiply.
-  vdim = fjxb_interpolated_values.ndim - jacobtot_inv_values.ndim
-  jacobtot_inv_reshaped = jacobtot_inv_values.reshape(
-      jacobtot_inv_values.shape + (1,) * vdim)
-  f_values = fjxb_interpolated_values * jacobtot_inv_reshaped
-  f_values = f_values.reshape(f_values.shape + (1,))  # component axis
-
-  out = GData(tag=tag, ctx=jf_data.ctx)
-  out.push(out_grid, f_values)
+  interpolated = f_modal.interpolate(basis="gkhyb", p=1, num_interp=num_interp)
+  out = interpolated._result(interpolated.grid, interpolated.values, tag=tag)
 
   # Coordinate maps run on the already-interpolated data via the shared map
   # verb. Velocity space (c2p_vel) deforms the trailing axes; configuration
