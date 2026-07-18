@@ -18,17 +18,33 @@ in ``numerics.ev_cmds`` is a plain array function -- none needed a
 ``NotImplementedError`` GData-only placeholder (see the numerics module
 docstring), so there is nothing left to resolve here.
 
-A data token referencing native modal (raw DG coefficient) data is kept
-native, not forced through ``select()``'s point-value guard: ``+ - * /`` and
-integer ``pow``/``sq`` route through Gkeyll's own weak DG kernels (see
-``_modal_kernel``), the same math ``operations.arithmetic`` uses for the
-``GData`` operators. An operator with no weak-kernel meaning (``sqrt``,
-``sin``, reductions, ...) -- or one Gkeyll's kernel itself refuses for this
-basis/order -- warns and falls back to plain NumPy math on the raw
-coefficient view, rather than hard-blocking: representation/basis metadata
-is sometimes simply wrong (a diagnostic file mistagged "modal" by its
-writer; see the load-time ``--representation`` override), and the raw view
-is exact whenever coefficient 0 already *is* the point value (e.g. p0 data).
+A data token referencing native (gkyl-backed) data is kept native, not
+forced through ``select()``'s point-value guard, regardless of
+representation -- see ``_native_kernel``:
+
+- **modal** (raw DG coefficients): ``+ - * /`` and integer ``pow``/``sq``
+  route through Gkeyll's own weak DG kernels, the same math
+  ``operations.arithmetic`` uses for the ``GData`` operators. An operator
+  with no weak-kernel meaning (``sqrt``, ``sin``, reductions, ...) -- or one
+  Gkeyll's kernel itself refuses for this basis/order -- warns and falls
+  back to plain NumPy math on the raw coefficient view, rather than
+  hard-blocking: representation/basis metadata is sometimes simply wrong (a
+  diagnostic file mistagged "modal" by its writer; see the load-time
+  ``--representation`` override), and the raw view is exact whenever
+  coefficient 0 already *is* the point value (e.g. p0 data).
+- **nodal/quad** (point values): every operator in ``_POINTWISE_TOKENS``
+  (``+ - * / pow sq sqrt sin cos tan abs log log10 exp max2 min2
+  scale_comp scale_zi_axis``) is exact regardless of packing, so it is
+  computed with plain NumPy on the view and the result is wrapped back into
+  a native array -- computed on the view, wrapped back native, staying
+  in-representation, mirroring ``operations.arithmetic``'s ufunc dispatch.
+  Anything else (``dot``, ``avg``, ``max``, ``min``, ``mean``, ``len``,
+  ``grad``, ``grad2``, ``int``, ``div``, ``curl``) is a genuine reduction or
+  finite-difference derivative -- not a per-point transform -- so it leaves
+  the native domain for plain NumPy math on the raw view, same as before;
+  ``apply_operator`` then strips the now-stale ``representation`` tag and
+  marks the result ``interpolated`` (mirroring ``.interpolate()``) so
+  ``info()`` doesn't keep claiming a representation the data no longer has.
 """
 
 from __future__ import annotations
@@ -50,8 +66,24 @@ if TYPE_CHECKING:
 # RPN tokens with an exact Gkeyll weak-kernel meaning on modal data.
 _MODAL_BINARY_OPS = {"+", "-", "*", "/", "pow"}
 
+# RPN tokens that are exact, shape-preserving pointwise math on nodal/quad
+# point values (elementwise, no cross-cell/cross-node access, no reduction)
+# -- safe to compute on the raw view and wrap back into a native array.
+# Everything else in numerics.ev_cmds (dot, avg, max, min, mean, len, grad,
+# grad2, int, div, curl) is a reduction or a finite-difference derivative
+# and must leave the native domain instead.
+_POINTWISE_TOKENS = frozenset({
+    "+", "-", "*", "/", "pow", "sq", "sqrt", "sin", "cos", "tan", "abs",
+    "log", "log10", "exp", "max2", "min2", "scale_comp", "scale_zi_axis",
+})
+
 # f, f0, f12 ... with optional [comp] selection and optional .ctxkey suffix.
 _DATA_TOKEN = re.compile(r"^f(\d*)(?:\[([^\]]*)\])?(?:\.(\w+))?$")
+
+
+def _rep_of(ctx: dict) -> str:
+  return ctx.get("representation", "modal")
+# end
 
 
 def _compare(a, b) -> bool:
@@ -208,6 +240,55 @@ def _modal_kernel(token: str, tmp_grid, tmp_values, tmp_ctx):
 # end
 
 
+def _native_kernel(token: str, tmp_grid, tmp_values, tmp_ctx, func):
+  """Dispatch a native (gkyl-backed) operand to the representation-correct math.
+
+  Returns ``(out_grid, out_values)`` -- with ``out_values`` wrapped back into
+  native arrays whenever the result stays a per-point/per-coefficient field
+  -- or ``None`` when nothing here applies (the caller runs the plain NumPy
+  ``func`` on the raw view as usual, e.g. for reductions/derivatives).
+
+  - Every native operand modal: delegates to :func:`_modal_kernel` (weak
+    DG kernels), unchanged.
+  - Every native operand the *same* nodal/quad representation, and ``token``
+    in :data:`_POINTWISE_TOKENS`: exact NumPy math on the raw view, wrapped
+    back native -- mirrors ``operations.arithmetic``'s "compute on the view,
+    wrap back native, stay in-representation" pointwise dispatch.
+  - Native operands in *different* representations: warns and falls back
+    (the caller then runs ``func`` on plain views, same as a representation
+    mismatch anywhere else in this module).
+  - Any other token (reductions, finite-difference derivatives): returns
+    ``None`` so the caller's plain-NumPy path runs -- the result then
+    genuinely leaves the native/representation domain.
+  """
+  is_native = [dg.modal.is_native(v) for v in tmp_values]
+  if not any(is_native):
+    return None
+  # end
+
+  reps = {_rep_of(c) for v, c, native in zip(tmp_values, tmp_ctx, is_native) if native}
+  if reps == {"modal"}:
+    return _modal_kernel(token, tmp_grid, tmp_values, tmp_ctx)
+  # end
+
+  if len(reps) > 1:
+    warnings.warn(
+        f"evaluate: '{token}' mixes native operands in different "
+        f"representations ({sorted(reps)}); falling back to plain math on "
+        "the raw views.", stacklevel=3)
+    return None
+  # end
+
+  if token not in _POINTWISE_TOKENS:
+    return None
+  # end
+
+  view_values = [_modal_view(v, c) for v, c in zip(tmp_values, tmp_ctx)]
+  out_grid, out_values = func(tmp_grid, view_values)
+  return out_grid, [dg.rep.wrap(v) for v in out_values]
+# end
+
+
 def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
   """Reduce the RPN stacks in place by applying ``token`` if it is an operator.
 
@@ -257,9 +338,9 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
       tmp_ctx.append(in_ctx[i][min(set_idx, num_sets[i] - 1)])
     # end
     try:
-      modal_out = _modal_kernel(token, tmp_grid, tmp_values, tmp_ctx)
-      if modal_out is not None:
-        out_grid, out_values = modal_out
+      native_out = _native_kernel(token, tmp_grid, tmp_values, tmp_ctx, func)
+      if native_out is not None:
+        out_grid, out_values = native_out
       # end
       else:
         view_values = [_modal_view(v, c) for v, c in zip(tmp_values, tmp_ctx)]
@@ -290,10 +371,26 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
       out_ctx.pop(key)
     # end
 
+    # A native nodal/quad operand whose result did *not* come back wrapped
+    # native (a genuine reduction/derivative, per _native_kernel) has left
+    # the per-point field domain: the merged ctx's 'representation' is now
+    # stale (it still names a representation this output no longer has), so
+    # drop it and mark the result the same way .interpolate() does -- no
+    # longer gkyl-native -- rather than let info() keep describing it as a
+    # representation it left behind.
+    was_native_nonmodal = any(
+        dg.modal.is_native(v) and _rep_of(c) != "modal"
+        for v, c in zip(tmp_values, tmp_ctx))
+
     for i in range(num_out):
       grid_stack[-num_out + i].append(out_grid[i])
       value_stack[-num_out + i].append(out_values[i])
-      ctx_stack[-num_out + i].append(out_ctx)
+      this_ctx = dict(out_ctx)
+      if was_native_nonmodal and not dg.modal.is_native(out_values[i]):
+        this_ctx.pop("representation", None)
+        this_ctx["interpolated"] = True
+      # end
+      ctx_stack[-num_out + i].append(this_ctx)
     # end
   # end
   return True
@@ -317,12 +414,13 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
       # end
       grid, values = None, np.array(dat.ctx[ctx_key])
     # end
-    elif comp is None and dat.backend == "gkyl" and \
-        dat.ctx.get("representation", "modal") == "modal":
-      # Keep native modal data on the stack (rather than forcing it through
-      # select()'s point-value guard): RPN math routes through Gkeyll's own
-      # weak kernels when the operator supports it, or warns and falls back
-      # to the raw coefficient view otherwise -- see _modal_kernel.
+    elif comp is None and dat.backend == "gkyl":
+      # Keep native data on the stack (rather than forcing it through
+      # select()'s point-value guard), regardless of representation: RPN
+      # math routes through Gkeyll's own weak kernels for modal data, or
+      # exact NumPy math wrapped back native for nodal/quad point values,
+      # when the operator supports it, or warns/falls back to the raw view
+      # otherwise -- see _native_kernel.
       grid, values = dat.grid, dat.native
     # end
     else:
@@ -330,9 +428,12 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
       # refuse; nodal/quad representations, already point values, pass) for
       # a comp-sliced modal token (still genuinely unsafe -- slicing raw DG
       # coefficients by component can mix basis functions) and every
-      # already-point-value token.
+      # already-point-value token. select() itself now keeps a gkyl-backed
+      # nodal/quad result native, so keep pushing the native array here too
+      # (not its plain-view .values) so it stays eligible for _native_kernel.
       selected = select(dat, comp=comp)
-      grid, values = selected.grid, selected.values
+      grid = selected.grid
+      values = selected.native if selected.backend == "gkyl" else selected.values
     # end
     grid_stack.append([grid])
     value_stack.append([values])
@@ -394,48 +495,23 @@ def evaluate(chain: str, *datasets: "GDataState", tag: str | None = None,
     raise ValueError("evaluate: at least one dataset is required.")
   # end
 
-  tokens = list(filter(None, chain.split(" ")))
-  fast_match = _DATA_TOKEN.match(tokens[0]) if len(tokens) == 1 else None
-
-  if fast_match and fast_match.group(3) is None and tokens[0] not in ev_cmds:
-    # A bare "f"/"fN"[comp] with no operator at all is a pure identity read
-    # -- resolve it directly instead of forcing it through select()'s
-    # point-value materialization (which the generic stack path below uses
-    # for every non-modal token, since apply_operator's weak-kernel dispatch
-    # can't tell modal coefficients from nodal/quad point values once both
-    # are native). With no operator involved here, that ambiguity doesn't
-    # arise, so a gkyl-backed nodal/quad dataset can stay gkyl-native and in
-    # its original representation -- mirroring the modal fast path in
-    # _push_token -- rather than silently falling out of the gkyl backend
-    # just for being named alone in an `evaluate` chain.
-    idx = int(fast_match.group(1)) if fast_match.group(1) else 0
-    comp = fast_match.group(2)
-    dat = datasets[idx]
-    source = dat if comp is None else select(dat, comp=comp)
-    final_grid = source.grid
-    final_values = source.native if source.backend == "gkyl" else source.values
-    final_ctx = dict(source.ctx)
-  # end
-  else:
-    grid_stack, value_stack, ctx_stack = [], [], []
-    for token in tokens:
-      if apply_operator(grid_stack, value_stack, ctx_stack, token):
-        continue
-      # end
-      if not _push_token(token, datasets, grid_stack, value_stack, ctx_stack):
-        raise ValueError(f"evaluate: token '{token}' is neither data nor an operator")
-      # end
+  grid_stack, value_stack, ctx_stack = [], [], []
+  for token in filter(None, chain.split(" ")):
+    if apply_operator(grid_stack, value_stack, ctx_stack, token):
+      continue
     # end
-
-    if not value_stack:
-      raise ValueError("evaluate: expression produced no result")
+    if not _push_token(token, datasets, grid_stack, value_stack, ctx_stack):
+      raise ValueError(f"evaluate: token '{token}' is neither data nor an operator")
     # end
-
-    final_grid = grid_stack[-1][0]
-    final_values = value_stack[-1][0]
-    final_ctx = dict(ctx_stack[-1][0])
   # end
 
+  if not value_stack:
+    raise ValueError("evaluate: expression produced no result")
+  # end
+
+  final_grid = grid_stack[-1][0]
+  final_values = value_stack[-1][0]
+  final_ctx = dict(ctx_stack[-1][0])
   out_grid = final_grid if final_grid is not None else datasets[0].grid
   result = datasets[0]._result(out_grid, final_values,
       tag=(tag or "default"), label=(label if label is not None else chain))

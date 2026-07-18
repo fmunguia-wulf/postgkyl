@@ -341,7 +341,7 @@ class GDataState:
       elif self.backend == "gkyl":
         rep = self.ctx.get("representation", "modal")
         if rep != "modal":
-          modal = f"{rep} representation"
+          modal = f"{rep}"
           if rep == "quad" and self.ctx.get("num_quad"):
             modal += f", num_quad={self.ctx['num_quad']}"
           # end
