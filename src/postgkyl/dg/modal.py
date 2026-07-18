@@ -24,6 +24,17 @@ integrate = gpython.kernels.integrate
 reduce = gpython.kernels.reduce
 
 
+def is_native(value) -> bool:
+  """True if ``value`` is a native (gkyl-backed) array, not a plain NumPy one.
+
+  The one place outside ``gdatastate``/``gpython`` that needs to tell modal
+  data apart from plain arrays without importing ``gpython`` directly (an
+  import-contract boundary; see ``operations.evaluate``).
+  """
+  return isinstance(value, GkylArray)
+# end
+
+
 def shift_mean(basis_type: str, ndim: int, poly_order: int,
     a: GkylArray, val: float) -> GkylArray:
   """``f + val`` for a modal field: only the mean coefficient moves.

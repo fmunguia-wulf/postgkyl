@@ -17,21 +17,38 @@ Anything else is parsed as a numeric/axis literal (a float, a ``"0,1"`` /
 in ``numerics.ev_cmds`` is a plain array function -- none needed a
 ``NotImplementedError`` GData-only placeholder (see the numerics module
 docstring), so there is nothing left to resolve here.
+
+A data token referencing native modal (raw DG coefficient) data is kept
+native, not forced through ``select()``'s point-value guard: ``+ - * /`` and
+integer ``pow``/``sq`` route through Gkeyll's own weak DG kernels (see
+``_modal_kernel``), the same math ``operations.arithmetic`` uses for the
+``GData`` operators. An operator with no weak-kernel meaning (``sqrt``,
+``sin``, reductions, ...) -- or one Gkeyll's kernel itself refuses for this
+basis/order -- warns and falls back to plain NumPy math on the raw
+coefficient view, rather than hard-blocking: representation/basis metadata
+is sometimes simply wrong (a diagnostic file mistagged "modal" by its
+writer; see the load-time ``--representation`` override), and the raw view
+is exact whenever coefficient 0 already *is* the point value (e.g. p0 data).
 """
 
 from __future__ import annotations
 
 import re
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from postgkyl import dg
 from postgkyl.numerics import ev_cmds
 from postgkyl.operations.select import select
 
 if TYPE_CHECKING:
   from postgkyl.gdatastate.gdatastate import GDataState
 # end
+
+# RPN tokens with an exact Gkeyll weak-kernel meaning on modal data.
+_MODAL_BINARY_OPS = {"+", "-", "*", "/", "pow"}
 
 # f, f0, f12 ... with optional [comp] selection and optional .ctxkey suffix.
 _DATA_TOKEN = re.compile(r"^f(\d*)(?:\[([^\]]*)\])?(?:\.(\w+))?$")
@@ -43,6 +60,151 @@ def _compare(a, b) -> bool:
     return np.array_equal(a, b)
   # end
   return a == b
+# end
+
+
+def _modal_view(value, ctx: dict):
+  """Read-only NumPy view of a native modal operand, for the (warned)
+  pointwise fallback; anything else passes through unchanged."""
+  if dg.modal.is_native(value):
+    return value.view(ctx.get("cells"))
+  # end
+  return value
+# end
+
+
+def _basis_of(ctx: dict):
+  basis_type, poly_order = ctx.get("basis_type"), ctx.get("poly_order")
+  if basis_type is None or poly_order is None:
+    raise ValueError("modal operand has no basis_type/poly_order metadata")
+  # end
+  return str(basis_type), int(poly_order)
+# end
+
+
+def _as_scalar(value):
+  """A Python float if ``value`` is scalar-shaped, else None."""
+  if isinstance(value, (int, float, np.integer, np.floating)):
+    return float(value)
+  # end
+  if isinstance(value, np.ndarray) and value.ndim == 0:
+    return float(value)
+  # end
+  return None
+# end
+
+
+def _modal_kernel(token: str, tmp_grid, tmp_values, tmp_ctx):
+  """Try to compute ``token`` via Gkeyll's own weak DG kernels when a modal
+  (native, raw-DG-coefficient) operand is present.
+
+  Returns ``(out_grid, out_values)`` when the operator has an exact modal
+  meaning and Gkeyll's kernel accepts this basis/order (``+ - * /`` and
+  integer ``pow``/``sq``). Returns ``None`` when no operand is modal
+  (nothing to do here -- the caller runs the plain NumPy ``func`` as usual).
+
+  Deliberately never raises: basis/representation metadata can be wrong
+  (a diagnostic file mistagged "modal" by its writer), so an operator with
+  no weak-kernel form, a basis/kernel Gkeyll itself refuses, or a
+  non-scalar second operand all warn and return ``None`` too -- the caller
+  then falls back to plain NumPy math on the raw coefficient view (exact
+  whenever coefficient 0 already *is* the point value, e.g. p0 data).
+  """
+  is_modal = [dg.modal.is_native(v) for v in tmp_values]
+  if not any(is_modal):
+    return None
+  # end
+
+  try:
+    if len(tmp_values) == 1:
+      if token != "sq":
+        raise ValueError(f"'{token}' has no weak-kernel form")
+      # end
+      basis_type, poly_order = _basis_of(tmp_ctx[0])
+      out = dg.modal.power(basis_type, len(tmp_grid[0]), poly_order, tmp_values[0], 2)
+      return [tmp_grid[0]], [out]
+    # end
+
+    if len(tmp_values) == 2:
+      if token not in _MODAL_BINARY_OPS:
+        raise ValueError(f"'{token}' has no weak-kernel form")
+      # end
+      # RPN order: tmp_values[0] is "b" (top of stack), tmp_values[1] is "a".
+      a, b = tmp_values[1], tmp_values[0]
+      a_modal, b_modal = is_modal[1], is_modal[0]
+
+      if a_modal and b_modal:
+        grid = tmp_grid[1] if tmp_grid[1] is not None else tmp_grid[0]
+        basis_a, basis_b = _basis_of(tmp_ctx[1]), _basis_of(tmp_ctx[0])
+        if basis_a != basis_b:
+          raise ValueError(f"operands have different DG bases ({basis_a} vs {basis_b})")
+        # end
+        basis_type, poly_order = basis_a
+        ndim = len(grid)
+        if token == "+":
+          out = dg.modal.lincomb(1.0, a, 1.0, b)
+        # end
+        elif token == "-":
+          out = dg.modal.lincomb(1.0, a, -1.0, b)
+        # end
+        elif token in ("*", "/"):
+          fn = dg.modal.weak_mul if token == "*" else dg.modal.weak_div
+          out = fn(basis_type, ndim, poly_order, a, b)
+        # end
+        else:
+          raise ValueError("'pow' is not defined between two modal datasets")
+        # end
+        return [grid], [out]
+      # end
+
+      # Exactly one operand is modal; the other must be a plain scalar.
+      modal_arr, modal_ctx, modal_grid = (a, tmp_ctx[1], tmp_grid[1]) if a_modal \
+          else (b, tmp_ctx[0], tmp_grid[0])
+      other = b if a_modal else a
+      scalar = _as_scalar(other)
+      if scalar is None:
+        raise ValueError("cannot mix native modal data with a plain array")
+      # end
+      basis_type, poly_order = _basis_of(modal_ctx)
+      ndim = len(modal_grid)
+      scalar_first = not a_modal  # the scalar came first in the expression
+
+      if token == "*":
+        out = dg.modal.scale(modal_arr, scalar)
+      # end
+      elif token == "/":
+        out = (dg.modal.scale(dg.modal.weak_inv(basis_type, ndim, poly_order, modal_arr), scalar)
+               if scalar_first else dg.modal.scale(modal_arr, 1.0 / scalar))
+      # end
+      elif token == "+":
+        out = dg.modal.shift_mean(basis_type, ndim, poly_order, modal_arr, scalar)
+      # end
+      elif token == "-":
+        out = (dg.modal.shift_mean(basis_type, ndim, poly_order,
+                   dg.modal.scale(modal_arr, -1.0), scalar) if scalar_first
+               else dg.modal.shift_mean(basis_type, ndim, poly_order, modal_arr, -scalar))
+      # end
+      else:  # pow
+        if scalar_first or not float(scalar).is_integer() or scalar < 1:
+          raise ValueError(
+              f"modal 'pow' needs a modal base and a positive integer "
+              f"exponent, got exponent {scalar!r} (scalar_first={scalar_first})")
+        # end
+        out = dg.modal.power(basis_type, ndim, poly_order, modal_arr, int(scalar))
+      # end
+      return [modal_grid], [out]
+    # end
+
+    raise ValueError(f"'{token}' has no weak-kernel form for {len(tmp_values)} operands")
+  # end
+  except Exception as err:
+    warnings.warn(
+        f"evaluate: '{token}' on native modal (raw DG coefficient) data: {err}; "
+        "falling back to plain math on the raw coefficient view -- exact only "
+        "if coefficient 0 already IS the point value (e.g. p0 data, or a file "
+        "whose 'modal' tag is wrong; see --representation).", stacklevel=3)
+    return None
+  # end
 # end
 
 
@@ -95,7 +257,14 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
       tmp_ctx.append(in_ctx[i][min(set_idx, num_sets[i] - 1)])
     # end
     try:
-      out_grid, out_values = func(tmp_grid, tmp_values)
+      modal_out = _modal_kernel(token, tmp_grid, tmp_values, tmp_ctx)
+      if modal_out is not None:
+        out_grid, out_values = modal_out
+      # end
+      else:
+        view_values = [_modal_view(v, c) for v, c in zip(tmp_values, tmp_ctx)]
+        out_grid, out_values = func(tmp_grid, view_values)
+      # end
     # end
     except Exception as err:
       raise ValueError(str(err)) from err
@@ -148,10 +317,20 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
       # end
       grid, values = None, np.array(dat.ctx[ctx_key])
     # end
+    elif comp is None and dat.backend == "gkyl" and \
+        dat.ctx.get("representation", "modal") == "modal":
+      # Keep native modal data on the stack (rather than forcing it through
+      # select()'s point-value guard): RPN math routes through Gkeyll's own
+      # weak kernels when the operator supports it, or warns and falls back
+      # to the raw coefficient view otherwise -- see _modal_kernel.
+      grid, values = dat.grid, dat.native
+    # end
     else:
       # select() carries the shared operability guard (raw modal coefficients
       # refuse; nodal/quad representations, already point values, pass) for
-      # every data token, comp-sliced or not.
+      # a comp-sliced modal token (still genuinely unsafe -- slicing raw DG
+      # coefficients by component can mix basis functions) and every
+      # already-point-value token.
       selected = select(dat, comp=comp)
       grid, values = selected.grid, selected.values
     # end

@@ -184,9 +184,28 @@ def test_operator_failure_is_wrapped_in_value_error():
 
 
 @needs_gkeyll
-def test_rejects_modal_data():
+def test_modal_data_supported_ops_use_weak_kernels():
+  """+ - * / and integer pow/sq have an exact DG meaning, so they run on raw
+  modal coefficients via Gkeyll's own weak kernels -- the result stays
+  native (gkyl-backed), never silently dropping to plain NumPy math."""
   d = pg.load(F1)
-  with pytest.raises(ValueError, match=r"\.interpolate\(\)"):
-    operations.evaluate("f sq", d)
+  assert d.backend == "gkyl"
+  for chain in ("f sq", "f 2 *", "1 f /", "f0 f0 +"):
+    result = operations.evaluate(chain, d)
+    assert result.backend == "gkyl"
   # end
+# end
+
+
+@needs_gkeyll
+def test_modal_data_unsupported_op_warns_and_falls_back():
+  """sqrt has no weak-kernel form: rather than hard-blocking (basis/
+  representation metadata can be wrong), evaluate warns and computes on the
+  raw coefficient view, which is exact only when coefficient 0 already IS
+  the point value."""
+  d = pg.load(F1)
+  with pytest.warns(UserWarning, match="weak-kernel"):
+    result = operations.evaluate("f sqrt", d)
+  # end
+  assert result.backend == "numpy"
 # end
