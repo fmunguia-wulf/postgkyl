@@ -129,13 +129,13 @@ def load_gk_distf(
     jacobvel_file = f"{prefix}-{species}_jacobvel.gkyl"
   # end
   if mc2nu_file is None:
-    mc2nu_file = f"{prefix}-mc2nu_pos_deflated.gkyl"
+    mc2nu_file = f"{prefix}-geo_corn_mc2nu_pos_deflated.gkyl"
   # end
   if mapc2p_file is None:
-    mapc2p_file = f"{prefix}-mapc2p_deflated.gkyl"
+    mapc2p_file = f"{prefix}-geo_corn_mapc2p_deflated.gkyl"
   # end
   if jacobtot_inv_file is None:
-    jacobtot_inv_file = f"{prefix}-jacobtot_inv.gkyl"
+    jacobtot_inv_file = f"{prefix}-geo_int_jacobtot_inv.gkyl"
   # end
 
   jf_data = load(jf_file)
@@ -143,7 +143,6 @@ def load_gk_distf(
   jacobtot_inv_data = load(jacobtot_inv_file)
 
   weak_product = jf_data * jacobtot_inv_data
-  # Pointwise division by jacobvel because Gkeyll doesn't have the right operators for this
   f_coeffs = weak_product.values / jacobvel_data.values
   f_modal = weak_product._result(weak_product.grid, f_coeffs)
 
@@ -155,7 +154,8 @@ def load_gk_distf(
   # space (mc2nu / mapc2p) deforms the leading ones.
   grid_type = []
   if use_c2p_vel:
-    out = operations.map(out, mapc2p_vel_file, space="vel")
+    mc2p_vel = load(mapc2p_vel_file, poly_order=1, basis_type="serendipity")
+    out = operations.map(out, mc2p_vel, space="vel")
     grid_type.append("c2p_vel")
   # end
   if use_mc2nu:

@@ -120,10 +120,10 @@ class TestLoadGkDistfReal:
     assert np.all(np.isfinite(out.values))
   # end
 
-  def test_missing_default_jacobtot_inv_file_raises(self):
+  def test_missing_jacobtot_inv_file_raises(self):
     with pytest.raises(Exception):
       distf.load_gk_distf(name=os.path.join(DATA, GK_NAME), species="elc",
-          frame=250)
+          frame=250, jacobtot_inv_file=os.path.join(DATA, "does_not_exist.gkyl"))
   # end
 # end
     # end
@@ -158,7 +158,7 @@ class TestLoadGkDistfCoordinateMaps:
     registry = {
         "sim-ion_0.gkyl": (grid, values),
         "sim-ion_jacobvel.gkyl": (grid, values),
-        "sim-jacobtot_inv.gkyl": (grid, values),
+        "sim-geo_int_jacobtot_inv.gkyl": (grid, values),
     }
 
     def fake_load(file_name="", *, tag="default", label="", ctx=None,
@@ -192,21 +192,21 @@ class TestLoadGkDistfCoordinateMaps:
   def test_use_mc2nu(self, monkeypatch):
     calls = self._stub(monkeypatch)
     out = distf.load_gk_distf("sim", "ion", 0, use_mc2nu=True)
-    assert calls == [("sim-mc2nu_pos_deflated.gkyl", "conf")]
+    assert calls == [("sim-geo_corn_mc2nu_pos_deflated.gkyl", "conf")]
     assert out.ctx["grid_type"] == "mc2nu"
   # end
 
   def test_use_mapc2p(self, monkeypatch):
     calls = self._stub(monkeypatch)
     out = distf.load_gk_distf("sim", "ion", 0, use_mapc2p=True)
-    assert calls == [("sim-mapc2p_deflated.gkyl", "conf")]
+    assert calls == [("sim-geo_corn_mapc2p_deflated.gkyl", "conf")]
     assert out.ctx["grid_type"] == "mapc2p"
   # end
 
   def test_use_mc2nu_takes_precedence_over_mapc2p(self, monkeypatch):
     calls = self._stub(monkeypatch)
     out = distf.load_gk_distf("sim", "ion", 0, use_mc2nu=True, use_mapc2p=True)
-    assert calls == [("sim-mc2nu_pos_deflated.gkyl", "conf")]
+    assert calls == [("sim-geo_corn_mc2nu_pos_deflated.gkyl", "conf")]
     assert out.ctx["grid_type"] == "mc2nu"
   # end
 
@@ -214,7 +214,7 @@ class TestLoadGkDistfCoordinateMaps:
     calls = self._stub(monkeypatch)
     out = distf.load_gk_distf("sim", "ion", 0, use_c2p_vel=True, use_mapc2p=True)
     assert calls == [("sim-ion_mapc2p_vel.gkyl", "vel"),
-        ("sim-mapc2p_deflated.gkyl", "conf")]
+        ("sim-geo_corn_mapc2p_deflated.gkyl", "conf")]
     assert out.ctx["grid_type"] == "c2p_vel + mapc2p"
   # end
 

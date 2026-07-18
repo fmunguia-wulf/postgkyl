@@ -87,6 +87,8 @@ class GkylReader(object):
       axes: tuple | None = (None, None, None, None, None, None),
       comp: str | int | None = None,
       representation: str | None = None,
+      basis_type: str | None = None,
+      poly_order: int | None = None,
       **kwargs):
     """Initialize the instance of Gkeyll reader.
 
@@ -103,12 +105,21 @@ class GkylReader(object):
         metadata would otherwise imply (e.g. a file tagged with basis
         metadata whose stored values are already point values, not modal
         coefficients).
+      basis_type: overrides the ``ctx["basis_type"]`` the header metadata
+        would otherwise imply -- for files with no basis metadata at all,
+        or metadata that mislabels the basis actually used.
+      poly_order: overrides the ``ctx["poly_order"]`` the header metadata
+        would otherwise imply. Independent of ``basis_type``/``is_modal`` --
+        it corrects only the polynomial order, asserting nothing about
+        modality.
       **kwargs
         This is not directly used but allowes for unified interface to all the readers
         we use.
     """
     self.file_name = file_name
     self._representation_override = representation
+    self._basis_type_override = basis_type
+    self._poly_order_override = poly_order
 
     self.dtf = np.dtype("f8")
     self.dti = np.dtype("i8")
@@ -222,6 +233,19 @@ class GkylReader(object):
         #end
         self.offset += meta_size
         fh.close()
+      # end
+      if self._basis_type_override is not None:
+        # Wins over the file's own metadata (or its absence): lets a caller
+        # correct a missing/mislabeled basis_type so downstream verbs
+        # (interpolate, average, integrate, ...) resolve the right basis.
+        self.ctx["basis_type"] = self._basis_type_override
+        self.ctx["is_modal"] = True
+        has_basis = True
+      # end
+      if self._poly_order_override is not None:
+        # Independent of basis_type/is_modal: corrects only the polynomial
+        # order, asserting nothing about modality.
+        self.ctx["poly_order"] = self._poly_order_override
       # end
       if has_basis and "representation" not in self.ctx:
         self.ctx["representation"] = "modal"

@@ -33,6 +33,7 @@ class GDataState:
 
   def __init__(self, file_name: str = "", *, ctx: dict | None = None,
       tag: str = "default", label: str = "", representation: str | None = None,
+      basis_type: str | None = None, poly_order: int | None = None,
       **read_kwargs):
     self._grid: list | None = None
     self._values: np.ndarray | gpython.GkylArray | None = None
@@ -48,7 +49,8 @@ class GDataState:
 
     if self._file_name:
       self._grid, self._values = io.read(self._file_name, self.ctx,
-          representation=representation, **read_kwargs)
+          representation=representation, basis_type=basis_type,
+          poly_order=poly_order, **read_kwargs)
   # end
     # end
 

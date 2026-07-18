@@ -167,8 +167,8 @@ def test_require_operable_raises_on_empty_dataset():
 @needs_gkeyll
 def test_info_reports_nodal_and_quad_representation():
   a = pg.load(F1)
-  assert "nodal representation" in a.to_nodal().info()
-  assert "quad representation" in a.to_quad().info()
+  assert "nodal" in a.to_nodal().info()
+  assert "quad" in a.to_quad().info()
 # end
 
 

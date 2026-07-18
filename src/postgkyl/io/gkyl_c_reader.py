@@ -25,10 +25,13 @@ class GkylCReader:
   """Reader protocol implementation backed by ``gkyl_array_rio``."""
 
   def __init__(self, file_name: str, ctx: dict | None = None,
-      representation: str | None = None, **kwargs):
+      representation: str | None = None, basis_type: str | None = None,
+      poly_order: int | None = None, **kwargs):
     self.file_name = str(file_name)
     self.ctx = ctx if ctx is not None else {}
     self._representation_override = representation
+    self._basis_type_override = basis_type
+    self._poly_order_override = poly_order
     # Any partial-load request (axes=, comp=, ...) -> defer to the Python reader.
     self._partial = any(v is not None for v in kwargs.get("axes") or ()) or \
         kwargs.get("comp") is not None or \
@@ -67,6 +70,21 @@ class GkylCReader:
           self.ctx[key] = val
         # end
       # end
+    # end
+    if self._basis_type_override is not None:
+      # The writer stamps modal metadata itself; this lets a caller correct
+      # a missing/mistagged basis_type (e.g. a file with no header metadata
+      # at all, or one written by a version that mislabeled it) so downstream
+      # verbs (interpolate, average, integrate, ...) resolve the right basis.
+      self.ctx["basis_type"] = self._basis_type_override
+      self.ctx["is_modal"] = True
+      has_basis = True
+    # end
+    if self._poly_order_override is not None:
+      # Independent of basis_type/is_modal: lets a caller correct just the
+      # polynomial order (e.g. a file with no header metadata at all) without
+      # asserting anything about modality.
+      self.ctx["poly_order"] = self._poly_order_override
     # end
     if has_basis and "representation" not in self.ctx:
       self.ctx["representation"] = "modal"

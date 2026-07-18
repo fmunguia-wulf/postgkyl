@@ -7,6 +7,8 @@ dict and return ``(grid, values)`` so the container can construct itself on top.
 
 from __future__ import annotations
 
+import os.path
+
 from . import mapping
 from .gkyl_c_reader import GkylCReader
 from .gkyl_reader import GkylReader
@@ -53,6 +55,9 @@ def read(file_name: str, ctx: dict | None = None, **kwargs):
   """
   if ctx is None:
     ctx = {}
+  # end
+  if not os.path.exists(file_name):
+    raise FileNotFoundError(f"No such file: '{file_name}'")
   # end
   for reader_cls in _READERS.values():
     reader = reader_cls(file_name=file_name, ctx=ctx, **kwargs)
