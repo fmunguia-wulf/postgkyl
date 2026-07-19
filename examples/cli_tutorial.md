@@ -64,7 +64,22 @@ pgkyl tests/test_data/twostream-field-energy.bp print
 pgkyl tests/test_data/twostream-field-energy.bp fit linear
 ```
 
-## 5. Gyrokinetics: pre-named quantities and distribution functions
+## 5. Combining datasets: `evaluate`
+
+`evaluate` runs a Reverse Polish Notation expression over every dataset
+currently loaded: `fN` refers to the `N`-th one in load order (`f` alone
+means `f0`), so `"f0 f1 -"` subtracts the second dataset from the first --
+e.g. two frames of the same field, to see how it changed between them.
+(`fN[c]` selects component `c` of dataset `N`; don't confuse that with
+indexing datasets themselves -- there is no `f[N]` form.) Data must be
+`interpolate`d first, same as `select`/`plot`.
+
+```bash
+pgkyl --batch-mode tests/test_data/twostream-f-p2_0.bp tests/test_data/twostream-f-p2_1.bp \
+    interpolate evaluate "f0 f1 -" info
+```
+
+## 6. Gyrokinetics: pre-named quantities and distribution functions
 
 `gk_load_quantity` loads one of a registry of named gyrokinetic quantities
 (list them with `--qlist`) straight from a simulation's naming convention --
@@ -87,7 +102,7 @@ pgkyl gk_distf -n tests/test_data/rt_gk_tcv_iwl_1x2v_p1 -s elc -f 250 \
     info
 ```
 
-## 6. Saving to another format
+## 7. Saving to another format
 
 `save` writes the active dataset(s) out as `gkyl`/`txt`/`npy`/`vtk`.
 
@@ -95,7 +110,7 @@ pgkyl gk_distf -n tests/test_data/rt_gk_tcv_iwl_1x2v_p1 -s elc -f 250 \
 pgkyl tests/test_data/twostream-f-p2_0.bp save --out distf --format npy
 ```
 
-## 7. The working set: `status`
+## 8. The working set: `status`
 
 Every loaded file becomes a dataset in the session's working set; verbs
 after it act on whichever datasets are currently active. `status` lists
