@@ -14,6 +14,45 @@ if TYPE_CHECKING:
 # end
 
 
+def _curvilinear_coord_curve(grid_arr: np.ndarray, rel: int, d: int, offset: int,
+    values_shape: tuple, touched: set) -> np.ndarray:
+  """A 1-D coordinate curve along ``grid_arr``'s relative axis ``rel``.
+
+  Holds every other axis fixed at cell 0. That is exact only if
+  ``grid_arr`` doesn't actually vary along those other axes -- true for the
+  diagonal/separable maps this codebase's real mapped grids tend to produce
+  (e.g. field-aligned ``mc2nu`` coordinates, each depending on only one
+  computational axis even though stored jointly), false for a genuinely
+  coupled map (e.g. a rotation). Raises rather than silently picking an
+  arbitrary cross-section when a still-*unresolved* other axis of the
+  block demonstrably varies the coordinate. An axis is resolved -- and
+  skipped by the check -- either because ``values_shape`` (the dataset's
+  own values array; the one true record of what a prior, possibly separate,
+  ``select()`` call already narrowed) already holds a single cell on its
+  absolute dimension ``offset + k``, or because a selector targeted it
+  earlier in this same call (``touched``, before ``values`` itself was
+  re-sliced at the end of that call). Either way the caller has made a
+  deliberate choice of cross-section that this search takes as given.
+  """
+  fixed = tuple(0 if k != rel else slice(None) for k in range(grid_arr.ndim))
+  full_range = np.ptp(grid_arr)
+  for k in range(grid_arr.ndim):
+    if k == rel or k in touched or values_shape[offset + k] == 1:
+      continue
+    # end
+    if np.ptp(grid_arr, axis=k).max() > 1e-9 * full_range:
+      raise ValueError(
+          f"select: z{d}'s physical coordinate also varies along another "
+          "axis of the same mapped (curvilinear) block, so a coordinate "
+          "value or slice string has no single answer -- select an "
+          "integer index for that other axis first (narrowing it to one "
+          f"cell), or pass an integer index for z{d} itself.")
+    # end
+  # end
+  return grid_arr[fixed]
+# end
+
+
 def select(data: "GDataState", *, comp=None,
     z0=None, z1=None, z2=None, z3=None, z4=None, z5=None,
     inplace: bool = False, tag: str | None = None, label: str | None = None):
@@ -25,14 +64,27 @@ def select(data: "GDataState", *, comp=None,
   the legacy behaviour.
 
   A curvilinear axis (a multi-dimensional grid array, produced by ``.map()``
-  with ``space="conf"``) has no single 1-D coordinate array to search, so a
-  coordinate/slice-string selector on that axis raises; an integer index
-  still works, as does a separable (1-D) mapped axis (``.map(space="vel")``).
+  with ``space="conf"``) has no single 1-D coordinate array of its own to
+  search -- a coordinate value or slice string is resolved against a 1-D
+  cross-section instead (:func:`_curvilinear_coord_curve`), holding every
+  other axis of the same mapped block at cell 0, *unless* that axis was
+  already narrowed to a single cell by an earlier selector -- either in
+  this same call, or in a prior ``select()`` call in the chain (recorded
+  the only place it needs to be: the dataset's own values shape). Selecting
+  one axis of a block also narrows every sibling axis' grid array along
+  that same relative axis, so the block stays internally consistent and a
+  later selector on a sibling sees the narrowed cross-section rather than
+  the original full extent. If the array still varies along an
+  as-yet-unresolved sibling axis (a genuinely non-separable map, e.g. a
+  rotation), the coordinate/slice selector has no single answer and raises
+  -- pick an integer index for that sibling axis first (in the same call,
+  or an earlier one in the chain).
 
   Raises:
     ValueError: if ``data`` holds native modal DG coefficients (nodal/quad
       representations of gkyl-backed data are point values and slice fine),
-      or a coordinate/slice selector targets a curvilinear grid axis.
+      or a coordinate/slice selector targets a curvilinear axis whose
+      physical coordinate still varies along an unresolved sibling axis.
   """
   if data.backend == "gkyl" and data.ctx.get("representation", "modal") == "modal":
     raise ValueError(
@@ -47,28 +99,43 @@ def select(data: "GDataState", *, comp=None,
   num_dims = data.num_dims
   values_idx = [slice(0, values.shape[d]) for d in range(num_dims + 1)]
 
+  # ctx["mapped_axes"] records, for every dimension touched by a .map()
+  # call, the offset of the mapped block it belongs to; group them back
+  # into blocks so selecting one axis can keep every sibling's grid array
+  # (they all share the block's tensor shape) in sync.
+  mapped_axes = data.ctx.get("mapped_axes", {})
+  block_dims: dict[int, list[int]] = {}
+  for dd, off in mapped_axes.items():
+    block_dims.setdefault(off, []).append(dd)
+  # end
+  # per-block set of relative axes already given a selector earlier in this
+  # same call -- lets a later axis's coordinate search skip the
+  # separability check on a sibling the caller has deliberately pinned.
+  touched: dict[int, set] = {}
+
   for d, z in enumerate(zs):
     if d >= num_dims or z is None:
       continue
     # end
     grid_arr = grid[d]
-    curvilinear = grid_arr.ndim > 1  # a .map()-deformed, non-separable axis
-    if curvilinear and not isinstance(z, int):
-      raise ValueError(
-          f"select: z{d}'s grid axis is multi-dimensional (curvilinear, "
-          "produced by .map()); coordinate values and slice strings have "
-          f"no single coordinate array to match against -- pass an "
-          f"integer index for z{d} instead.")
-    # end
-    # grid holds edges (cells+1) -> is_matching is usually False; a
-    # curvilinear array's own axis k corresponds to absolute dimension
+    curvilinear = grid_arr.ndim > 1  # a .map()-deformed grid axis
+    # a curvilinear array's own axis k corresponds to absolute dimension
     # `offset + k` (map.py's mapped block), not to axis d of `grid` itself
     # -- ctx["mapped_axes"] records each absolute dimension's block offset
     # so the N-D array can be indexed on its own relative axis.
-    rel = d - data.ctx.get("mapped_axes", {}).get(d, 0) if curvilinear else d
+    offset = mapped_axes.get(d, 0)
+    rel = d - offset if curvilinear else d
     len_grid = grid_arr.shape[rel] if curvilinear else grid_arr.shape[0]
     is_matching = values.shape[d] == len_grid
-    idx = z if curvilinear else idx_parser(z, grid_arr, is_matching)
+    if curvilinear and isinstance(z, int):
+      idx = z
+    elif curvilinear:
+      coord_curve = _curvilinear_coord_curve(
+          grid_arr, rel, d, offset, values.shape, touched.get(offset, set()))
+      idx = idx_parser(z, coord_curve, is_matching)
+    else:
+      idx = idx_parser(z, grid_arr, is_matching)
+    # end
     if isinstance(idx, int):
       if idx < 0:
         idx = values.shape[d] + idx
@@ -83,9 +150,17 @@ def select(data: "GDataState", *, comp=None,
     else:
       raise TypeError("Coordinate selector must be a single index or a slice.")
     # end
-    if curvilinear:  # slice only the N-D grid array's own relative axis
-      grid[d] = grid_arr[tuple(g_idx if k == rel else slice(None)
-          for k in range(grid_arr.ndim))]
+    if curvilinear:
+      # every axis in the same mapped block shares this array shape, so
+      # slicing relative axis `rel` in lockstep keeps them all consistent
+      # -- a later selector on a sibling axis then resolves against the
+      # already-narrowed cross-section instead of the original full extent.
+      for dd in block_dims.get(offset, [d]):
+        arr = grid[dd]
+        grid[dd] = arr[tuple(g_idx if k == rel else slice(None)
+            for k in range(arr.ndim))]
+      # end
+      touched.setdefault(offset, set()).add(rel)
     # end
     else:
       grid[d] = grid_arr[g_idx]

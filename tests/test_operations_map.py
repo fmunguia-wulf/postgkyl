@@ -305,7 +305,7 @@ class TestMapErrors:
 # end
 
 
-# --------------------------------------------- select's curvilinear guard
+# --------------------------------------- select on curvilinear (conf) grids
 class TestSelectCurvilinearGuard:
   def _mapped(self):
     data = pg.load(os.path.join(GEN, "2d_ms_p1.gkyl")).interpolate()
@@ -313,18 +313,34 @@ class TestSelectCurvilinearGuard:
         space="conf")
   # end
 
-  def test_coordinate_selector_on_curvilinear_axis_refuses(self):
+  def test_coordinate_selector_on_non_separable_axis_refuses(self):
+    """A rotation map genuinely couples both axes -- a bare coordinate
+    value has no single answer until the other axis is pinned first."""
     mapped = self._mapped()
-    with pytest.raises(ValueError, match="curvilinear"):
+    with pytest.raises(ValueError, match="varies along another axis"):
       mapped.select(z0=0.0)
     # end
   # end
 
-  def test_slice_selector_on_curvilinear_axis_refuses(self):
+  def test_slice_selector_on_non_separable_axis_refuses(self):
     mapped = self._mapped()
-    with pytest.raises(ValueError, match="curvilinear"):
+    with pytest.raises(ValueError, match="varies along another axis"):
       mapped.select(z0="1:3")
     # end
+  # end
+
+  def test_coordinate_selector_works_once_the_other_axis_is_pinned(self):
+    """Selecting z1 by index first narrows its *values* to one cell (even
+    though the curvilinear grid array itself keeps 2 bounding edges); a
+    later, separate select() call's z0 coordinate curve is then read off
+    that specific (now unambiguous) cross-section -- resolved purely from
+    the dataset's own values shape, with no extra state to thread through."""
+    mapped = self._mapped()
+    pinned = operations.select(mapped, z1=2)
+    assert pinned.values.shape[1] == 1  # z1 resolved to a single cell
+    assert pinned.grid[0].shape[1] == 2  # edges: 2 bound that one cell
+    out = operations.select(pinned, z0=pinned.grid[0][3, 0])
+    assert out.values.shape[0] == 1
   # end
 
   def test_integer_index_selector_still_works(self):
@@ -333,6 +349,37 @@ class TestSelectCurvilinearGuard:
     assert out.values.shape[0] == 1
     # grid holds edges (2 bound one cell) even along a curvilinear axis
     assert out.grid[0].shape[0] == 2
+  # end
+
+  def test_coordinate_selector_works_on_a_separable_joint_map(self):
+    """A conf-space map stored jointly (m*num_basis components) but whose
+    physical coordinates each happen to depend on only one computational
+    axis -- e.g. Gkeyll's field-aligned ``mc2nu`` remap -- resolves a
+    coordinate value exactly, with no need to pin the other axis first."""
+    lower, upper, cells = [0.0, 0.0], [1.0, 1.0], [2, 2]
+    m0 = _project_2d(lambda z0, z1: 2.0 * z0, lower, upper, cells,
+        "serendipity", 1)
+    m1 = _project_2d(lambda z0, z1: 3.0 * z1 + 1.0, lower, upper, cells,
+        "serendipity", 1)
+    mapping = _synthetic_map(np.concatenate([m0, m1], axis=-1),
+        lower, upper, cells)
+    target = _numpy_target(
+        [np.linspace(lower[0], upper[0], 5), np.linspace(lower[1], upper[1], 5)],
+        np.zeros((4, 4, 1)))
+    mapped = operations.map(target, mapping, space="conf")
+    assert mapped.grid[0].ndim == 2  # stored jointly, curvilinear shape
+
+    out = operations.select(mapped, z0=1.0)  # 2.0 * 0.5 == 1.0
+    assert out.values.shape[0] == 1
+    assert out.grid[0].shape == (2, 5)  # only z0's own axis narrowed
+    assert out.grid[1].shape == (2, 5)  # sibling kept in sync
+  # end
+
+  def test_selecting_one_axis_narrows_the_sibling_grid_too(self):
+    mapped = self._mapped()
+    out = operations.select(mapped, z0=1)
+    assert out.grid[0].shape[0] == 2  # z0's own axis: sliced 5 -> 2 (edges)
+    assert out.grid[1].shape[0] == 2  # z1's array shares the block shape
   # end
 
   def test_separable_1d_mapped_axis_keeps_coordinate_selection(self):
