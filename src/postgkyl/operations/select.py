@@ -177,14 +177,20 @@ def select(data: "GDataState", *, comp=None,
     values_out = values_out[..., np.newaxis]
   # end
 
+  ctx_updates = {}
   if data.backend == "gkyl":
     # A nodal/quad representation stays gkyl-native (REFACTOR_GKEYLL_FFI.md
     # §3b): ``values`` above was only a read-only NumPy *view* of the native
     # array for slicing purposes -- wrap the sliced result back into a
     # native GkylArray so the dataset doesn't silently fall out of the gkyl
     # backend (and lose its representation) just for having been selected.
+    # Cell layout isn't derivable from the flat native array (see
+    # ``GDataState.set_values``), so it must be threaded through explicitly,
+    # the same way ``average``/``eval_at_coord_proj`` do.
+    ctx_updates["cells"] = np.array(values_out.shape[:-1], dtype=np.int64)
     values_out = dg.rep.wrap(values_out)
   # end
 
-  return data._result(grid, values_out, inplace=inplace, tag=tag, label=label)
+  return data._result(grid, values_out, inplace=inplace, tag=tag, label=label,
+      **ctx_updates)
 # end
