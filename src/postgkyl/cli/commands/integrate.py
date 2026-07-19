@@ -9,14 +9,9 @@ from .._options import label_option, tag_option, use_option
 
 
 @click.command("integrate")
-@click.option("--axis", "-a", default=None,
-    help="Axis (or axes) to integrate over: an index ('1'), a comma list "
-         "('0,2'), or a colon slice ('0:2'); omit to run every axis. Runs "
-         "the NumPy trapezoidal integral over point-value data (already-"
-         "interpolated, or a native nodal/quad representation) and produces "
-         "a new (reduced) dataset. Mutually exclusive with --op.")
+@click.argument("axis", required=False, default=None)
 @click.option("--op", type=click.Choice(["none", "abs", "sq"]), default="none",
-    help="Integrand transform for the whole-grid modal integral (--axis not given).")
+    help="Integrand transform for the whole-grid modal integral (axis not given).")
 @use_option
 @tag_option()
 @label_option()
@@ -24,15 +19,17 @@ from .._options import label_option, tag_option, use_option
 def command(ctx, axis, op, use, tag, label) -> None:
   """Integrate data over the whole grid (modal) or over chosen axes (point-value).
 
-  With ``--axis``, integrates point-value data (already-interpolated, or a
-  native ``nodal``/``quad`` representation materialized to its true point
-  locations) over the given axis/axes via NumPy trapezoidal quadrature,
-  producing a new dataset with those axes collapsed -- like ``select``.
-  Raw modal DG coefficients raise; run ``interpolate`` first (representation
-  changes to native ``nodal``/``quad`` -- ``.to_nodal()``/``.to_quad()`` --
-  are fluent-API only, not exposed as CLI commands).
+  AXIS (or axes) to integrate over: an index ('1'), a comma list ('0,2'), or
+  a colon slice ('0:2'); omit to run every axis. With AXIS given, integrates
+  point-value data (already-interpolated, or a native nodal/quad
+  representation materialized to its true point locations) over the given
+  axis/axes via NumPy trapezoidal quadrature, producing a new dataset with
+  those axes collapsed -- like ``select``. Raw modal DG coefficients raise;
+  run ``interpolate`` first (representation changes to native
+  ``nodal``/``quad`` -- ``.to_nodal()``/``.to_quad()`` -- are fluent-API
+  only, not exposed as CLI commands).
 
-  Without ``--axis`` (the default), this is a terminal verb (like ``info``):
+  Without AXIS (the default), this is a terminal verb (like ``info``):
   it integrates the *whole* grid natively inside Gkeyll on modal
   (pre-``interpolate()``) data via ``gkyl_array_integrate``, and prints one value
   per field component instead of producing a new dataset. ``--op`` only

@@ -469,7 +469,8 @@ class TestFitAndGrowth:
 
 # ---------------------------------------------------------------------------
 # integrate -- two modes: whole-grid modal (terminal, prints values) via
-# --op, or per-axis point-value data (produces a new dataset) via --axis.
+# --op, or per-axis point-value data (produces a new dataset) via the axis
+# argument.
 # ---------------------------------------------------------------------------
 
 class TestIntegrate:
@@ -491,13 +492,13 @@ class TestIntegrate:
   # end
 
   def test_integrate_axis_collapses_the_chosen_axis(self):
-    result = _ok([DISTF_P2_0, "interp", "integrate", "--axis", "0", "info"])
+    result = _ok([DISTF_P2_0, "interp", "integrate", "0", "info"])
     assert "Dim 0: Num. cells: 1;" in result.output
     assert "Dim 1: Num. cells: 96;" in result.output
   # end
 
   def test_integrate_axis_on_raw_modal_data_fails_closed(self):
-    result = _run([DISTF_P2_0, "integrate", "--axis", "0"])
+    result = _run([DISTF_P2_0, "integrate", "0"])
     assert result.exit_code != 0
   # end
 # end
