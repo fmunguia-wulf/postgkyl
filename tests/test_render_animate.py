@@ -93,6 +93,15 @@ class TestFrameValueRange:
     assert vmin_cut >= vmin_full
     assert vmax_cut <= vmax_full
   # end
+
+  def test_scale_is_applied_before_taking_extrema(self):
+    # A fixed range computed on unscaled values would not match what
+    # matplotlib.plot actually draws once yscale/zscale is applied.
+    frames = anim_mod._normalize_frames(_three_frames())
+    vmin, vmax = anim_mod._frame_value_range(frames, yscale=2.0)
+    assert vmin == 0.0
+    assert vmax == 18.0  # last frame: (arange(8) + 2.0).max() * 2.0
+  # end
 # end
 
 
@@ -145,6 +154,13 @@ class TestLiveAnimation:
     assert "frame: 1" in fig._suptitle.get_text()
     assert "time:" in fig._suptitle.get_text()
   # end
+
+  def test_explicit_title_is_not_clobbered_by_the_auto_title(self):
+    fig = plt.figure()
+    anim_mod._render_frame(1, anim_mod._normalize_frames(_three_frames()), fig,
+        {"title": "My Animation"})
+    assert fig._suptitle.get_text() == "My Animation"
+  # end
 # end
 
 
@@ -167,6 +183,25 @@ class TestSaveFrames:
     paths = anim_mod.animate(_three_frames(), saveframes=prefix, show=False)
     assert paths[0] == f"{prefix}_0.png"
     assert paths[2] == f"{prefix}_2.png"
+  # end
+
+  def test_nproc_parallel_writes_the_same_frames(self, tmp_path):
+    prefix = str(tmp_path / "frame")
+    paths = anim_mod.animate(_three_frames(), saveframes=prefix, nproc=2, show=False)
+    assert len(paths) == 3
+    for p in paths:
+      assert os.path.isfile(p)
+    # end
+  # end
+
+  def test_nproc_without_saveframes_compiles_through_a_scratch_dir(self, tmp_path):
+    out = tmp_path / "parallel.gif"
+    result = anim_mod.animate(_three_frames(), nproc=2, tmpdir=str(tmp_path),
+        saveas=str(out), show=False)
+    assert result == str(out)
+    assert out.exists()
+    # the scratch directory must not leak its frame PNGs behind.
+    assert list(tmp_path.glob("*.png")) == []
   # end
 # end
 

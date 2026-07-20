@@ -689,16 +689,24 @@ class TestAnimateFrameGrouping:
   # end
 
   def test_infers_frame_from_diverging_filename(self):
+    # Gkeyll's multiblock naming convention is <name>_<frame>_b<N>.gkyl: the
+    # frame digit precedes the block digit. With only one frame present
+    # there's nothing to disambiguate frame from block (the block digit is
+    # the *only* thing that varies) -- so this needs at least two frames,
+    # matching how main's ``set_frame`` was actually meant to be used (a
+    # multiblock animation spans more than one frame).
     from postgkyl.cli.commands.animate import _group_by_frame
 
-    d0 = pg.load(DISTF_P2_0).interpolate()
-    d1 = pg.load(DISTF_P2_0).interpolate()
-    d0._file_name, d1._file_name = "run_block0_5.gkyl", "run_block1_5.gkyl"
-    del d0.ctx["frame"]
-    del d1.ctx["frame"]
-    groups = _group_by_frame([d0, d1])
-    assert len(groups) == 1
-    assert groups[0] == [d0, d1]
+    names = ["sim_5_b0.gkyl", "sim_5_b1.gkyl", "sim_6_b0.gkyl", "sim_6_b1.gkyl"]
+    datasets = [pg.load(DISTF_P2_0).interpolate() for _ in names]
+    for d, name in zip(datasets, names):
+      d._file_name = name
+      del d.ctx["frame"]
+    # end
+    groups = _group_by_frame(datasets)
+    assert len(groups) == 2
+    assert groups[0] == datasets[0:2]
+    assert groups[1] == datasets[2:4]
   # end
 # end
 
