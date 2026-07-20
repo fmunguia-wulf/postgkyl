@@ -55,6 +55,17 @@ class GData(GDataState):
     return operations.plot(self, **kwargs)
   # end
 
+  def plotly(self, **kwargs):
+    """Render this dataset with Plotly (terminal verb; see ``operations.plotly``).
+
+    ``d.plotly()`` alone just builds and returns the figure; pass
+    ``show=True`` to open an auto-rotating browser preview, or
+    ``save=True``/``saveas=...`` to write it instead -- no CLI glue needed
+    either way (see ``render.plotly``'s docstring).
+    """
+    return operations.plotly(self, **kwargs)
+  # end
+
   def save(self, out_name: str = "", extension: str = "gkyl") -> str:
     """Write this dataset to disk (see ``io.save``)."""
     return io.save(self, out_name=out_name, extension=extension)

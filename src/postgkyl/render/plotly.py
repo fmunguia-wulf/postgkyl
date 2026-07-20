@@ -3,6 +3,22 @@
 Imports only ``gdatastate``/``numerics`` (plus Plotly/Matplotlib themselves),
 mirroring ``matplotlib.py``. Plotly cannot render mathtext, so labels go
 through ``render.labels.latex_to_html`` instead.
+
+Unlike ``matplotlib.py`` (where save/batch file-naming stays a CLI concern,
+``show``/``fig`` being the only render-time conveniences it owns), ``plotly``
+and ``plotly_animate`` own their *entire* save/preview lifecycle here --
+``save``/``saveas``/``show`` (plus the rotating-export camera parameters) are
+real parameters of both functions, so e.g. ``pg.load(f).interpolate().plotly(show=True)``
+opens an auto-rotating browser preview with zero CLI glue, exactly as
+``cli/commands/plotly.py`` now expects (it passes ``show=True`` explicitly,
+matching main's own "show a preview by default" CLI behavior). Both default
+to inert (``show=False``, ``save=False``): a bare call just builds and
+returns the figure -- deliberately so a stray script or unit test calling
+either function never has an unrequested side effect (writing a file to an
+unexpected path, or popping a browser tab). The CLI module stays thin: it
+resolves which of several *active* datasets gets which label/output name
+(inherently pool-level bookkeeping this single-dataset function cannot
+know), then calls straight through.
 """
 
 from __future__ import annotations
@@ -10,6 +26,8 @@ from __future__ import annotations
 import os.path
 import tempfile
 import time
+import webbrowser
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib as mpl
@@ -349,6 +367,61 @@ def save_rotating_plotly_figure(fig, file_name: str,
   # end
 
 
+def _default_output_stem(data: "GDataState") -> str:
+  """Best-effort output-file stem for a dataset with no explicit ``saveas``."""
+  file_name = getattr(data, "_file_name", "") or ""
+  if file_name:
+    return os.path.basename(file_name).split(".")[0]
+  # end
+  label = data.get_label() if hasattr(data, "get_label") else ""
+  return label or "plotly_output"
+# end
+
+
+def _write_plotly_output(fig, file_name: str, *, starting_azimuthal_angle: float,
+    polar_angle: float, rotation_period: float, fps: int) -> str:
+  """Save ``fig`` to ``file_name``, returning the (possibly extension-coerced) path.
+
+  ``.mp4``/``.gif``/``.html`` rotate the camera on save (via
+  :func:`save_rotating_plotly_figure`); any other extension -- or none --
+  is coerced to a plain, non-rotating ``.html``.
+  """
+  root, ext = os.path.splitext(file_name)
+  ext = ext.lower()
+  if ext in (".mp4", ".gif", ".html"):
+    save_rotating_plotly_figure(fig, file_name,
+        starting_azimuthal_angle=starting_azimuthal_angle, polar_angle=polar_angle,
+        rotation_period=rotation_period, fps=fps)
+    return file_name
+  # end
+  file_name = f"{root}.html" if root else f"{file_name}.html"
+  fig.write_html(file_name)
+  return file_name
+# end
+
+
+def _preview_plotly_figure(fig, base_name: str, *, starting_azimuthal_angle: float,
+    polar_angle: float, rotation_period: float, fps: int) -> str:
+  """Write a temp, auto-rotating HTML preview of ``fig`` and return its path."""
+  safe_base = "".join(
+      ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in base_name).strip("_")
+  if not safe_base:
+    safe_base = "plotly_preview"
+  # end
+  file_name = os.path.join(tempfile.gettempdir(), f"{safe_base}_preview.html")
+  save_rotating_plotly_figure(fig, file_name,
+      starting_azimuthal_angle=starting_azimuthal_angle, polar_angle=polar_angle,
+      rotation_period=rotation_period, fps=fps)
+  return file_name
+# end
+
+
+def open_preview(path: str) -> None:
+  """Open a saved HTML file in the default web browser."""
+  webbrowser.open(Path(path).resolve().as_uri())
+# end
+
+
 def _prepare_3d_coordinates(coords, value_shape):
   arrays = tuple(np.asarray(coord) for coord in coords)
   if len(arrays) != 3:
@@ -414,13 +487,30 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     yrange: tuple[float, float] | None = None,
     zrange: tuple[float, float] | None = None,
     figsize: tuple[int, int] | None = None,
-    cylindrical_to_cartesian: bool = False, cmap: str | None = None):
+    cylindrical_to_cartesian: bool = False, cmap: str | None = None,
+    save: bool = False, saveas: str | None = None, show: bool = False,
+    azimuthal_angle: float = 0.0, polar_angle: float = 85.0,
+    rotation_period: float = 40.0, fps: int = 1):
   """Render 2-D surface or 3-D volumetric data with Plotly.
 
   2-D data (``num_dims == 2``, after squeezing any size-1 axis) is drawn as
   a ``go.Surface`` (height map); 3-D data is drawn as a ``go.Volume`` or,
   with ``scatter=True``, a ``go.Scatter3d`` point cloud. Multi-component
   data lays out one scene per component unless ``squeeze`` is set.
+
+  ``save``/``saveas``/``show`` make this call self-sufficient without any CLI
+  glue: ``show=True`` opens an auto-rotating HTML preview in the browser;
+  ``saveas`` (or ``save=True`` for an auto-derived name from ``data``'s
+  source file) writes it instead -- ``.mp4``/``.gif``/``.html`` extensions
+  get the rotating camera baked in (via :func:`save_rotating_plotly_figure`),
+  any other extension a plain static ``.html``. If both a save and
+  ``show=True`` are requested, the just-saved file is what opens (no
+  separate preview render). All three default to inert (``show=False``,
+  ``save=False``) -- a bare ``pg.load(f).interpolate().plotly()`` just
+  builds and returns the figure, no file written and no browser opened;
+  the CLI's ``--show/--no-show`` defaults to *on* by passing ``show=True``
+  explicitly, since a human running it from a terminal does want to see
+  something.
 
   Args: see ``output/plotly.py``'s docstring in the migrated tree for the
     per-argument reference; the signature and semantics are unchanged except
@@ -432,7 +522,9 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     ``.select(comp=...)`` upstream to restrict components instead. ``xscale``/
     ``yscale``/``zscale`` are ported with identical semantics: they scale
     the plotted coordinates (and, in surface mode, the height/color value)
-    the same way ``xshift``/``yshift``/``zshift`` do.
+    the same way ``xshift``/``yshift``/``zshift`` do. ``save``/``saveas``/
+    ``show`` and the rotating-export camera parameters were a CLI-only
+    concern in main; they are real parameters here now (see module docstring).
 
   Returns:
     plotly.graph_objects.Figure: the assembled figure.
@@ -645,6 +737,21 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
     fig.update_layout(width=figsize[0] * 100, height=figsize[1] * 100)
   # end
   fig.update_layout(margin=dict(l=10, r=10, t=40 if title else 10, b=10))
+
+  output_path = None
+  if save or saveas:
+    output_path = _write_plotly_output(fig, saveas or _default_output_stem(data),
+        starting_azimuthal_angle=azimuthal_angle, polar_angle=polar_angle,
+        rotation_period=rotation_period, fps=fps)
+  # end
+  if show:
+    if output_path is None:
+      output_path = _preview_plotly_figure(fig, _default_output_stem(data),
+          starting_azimuthal_angle=azimuthal_angle, polar_angle=polar_angle,
+          rotation_period=rotation_period, fps=fps)
+    # end
+    open_preview(output_path)
+  # end
   return fig
 # end
 
@@ -652,19 +759,31 @@ def plotly(data: "GDataState", *, squeeze: bool = False,
 def plotly_animate(data_sequence: list["GDataState"],
     frame_labels: list[str] | None = None, frame_duration: int = 50,
     transition_duration: int = 0, fromcurrent: bool = True,
-    redraw: bool = True, **plot_kwargs):
+    redraw: bool = True, save: bool = False, saveas: str | None = None,
+    show: bool = False, **plot_kwargs):
   """Build a Plotly animation figure from a sequence of datasets.
 
   Renders the first dataset with :func:`plotly` to create the base figure,
   then renders every subsequent dataset as an animation frame, wiring up
   Play/Pause buttons and a frame slider. All datasets must produce the same
   number of traces.
+
+  Like :func:`plotly`, ``save``/``saveas``/``show`` are self-sufficient here
+  with zero CLI glue: ``show=True`` opens the animation (a plain HTML preview
+  -- the frame slider is its own scrubber, so unlike :func:`plotly` this
+  never rotates the camera on save) in the browser; both default to inert,
+  so a bare call just builds and returns the figure (see :func:`plotly`'s
+  docstring for why). The per-frame :func:`plotly` calls below always render
+  with ``save=False, show=False`` regardless of ``plot_kwargs``: only *this*
+  function's own save/preview, on the assembled animation, should ever hit
+  disk or a browser tab.
   """
   if not data_sequence:
     raise ValueError("plotly_animate requires at least one dataset")
   # end
 
-  base_fig = plotly(data_sequence[0], **plot_kwargs)
+  frame_plot_kwargs = dict(plot_kwargs, save=False, saveas=None, show=False)
+  base_fig = plotly(data_sequence[0], **frame_plot_kwargs)
   num_traces = len(base_fig.data)
 
   if frame_labels is None:
@@ -679,7 +798,7 @@ def plotly_animate(data_sequence: list["GDataState"],
     if idx == 0:
       continue
     # end
-    frame_fig = plotly(dat, **plot_kwargs)
+    frame_fig = plotly(dat, **frame_plot_kwargs)
     if len(frame_fig.data) != num_traces:
       raise ValueError(
           "All animation frames must produce the same number of traces; "
@@ -716,8 +835,25 @@ def plotly_animate(data_sequence: list["GDataState"],
       sliders=[{"active": 0, "currentvalue": {"prefix": "Frame: "},
           "pad": {"t": 24}, "steps": slider_steps}],
   )
+
+  output_path = None
+  if save or saveas:
+    out_name = saveas or "plotly_animate.html"
+    if not str(out_name).lower().endswith(".html"):
+      out_name = f"{out_name}.html"
+    # end
+    base_fig.write_html(out_name)
+    output_path = out_name
+  # end
+  if show:
+    if output_path is None:
+      output_path = os.path.join(tempfile.gettempdir(), "plotly-animate_preview.html")
+      base_fig.write_html(output_path)
+    # end
+    open_preview(output_path)
+  # end
   return base_fig
 # end
 
 
-__all__ = ["plotly", "plotly_animate", "save_rotating_plotly_figure"]
+__all__ = ["plotly", "plotly_animate", "save_rotating_plotly_figure", "open_preview"]

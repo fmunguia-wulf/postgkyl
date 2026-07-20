@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 
 import matplotlib
 import numpy as np
@@ -736,15 +737,20 @@ class TestPlotOptionCoverage:
 
 
 class TestPlotly:
+  """``--save`` is a flag and ``--saveas`` takes the path (mirroring main's
+  ``commands/plotly.py``); ``--show``'s default browser preview goes through
+  ``render.plotly.open_preview`` (a thin ``webbrowser.open`` wrapper) now,
+  not Plotly's own ``Figure.show``, so tests mock that instead."""
+
   def test_plotly_2d_html(self, tmp_path):
     out = tmp_path / "surf.html"
-    _ok([DISTF_P2_0, "interp", "plotly", "--save", str(out)])
+    _ok([DISTF_P2_0, "interp", "plotly", "--no-show", "--saveas", str(out)])
     assert out.exists()
   # end
 
   def test_plotly_animate_html(self, tmp_path):
     out = tmp_path / "anim.html"
-    _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate", "--save", str(out)])
+    _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate", "--no-show", "--saveas", str(out)])
     assert out.exists()
   # end
 
@@ -755,7 +761,7 @@ class TestPlotly:
 
   def test_plotly_use_filter(self, tmp_path):
     out = tmp_path / "surf.html"
-    _ok([DISTF_P2_0, "interp", "plotly", "--use", "default", "--save", str(out)])
+    _ok([DISTF_P2_0, "interp", "plotly", "--use", "default", "--no-show", "--saveas", str(out)])
     assert out.exists()
   # end
 
@@ -765,17 +771,27 @@ class TestPlotly:
     assert os.path.exists(f"{prefix}_0.html")
   # end
 
-  def test_plotly_non_html_save_writes_image(self, tmp_path):
+  def test_plotly_non_html_saveas_coerces_to_html(self, tmp_path):
+    """Only ``.mp4``/``.gif``/``.html`` are real output kinds (see
+    ``render.plotly._write_plotly_output``); anything else is coerced to a
+    plain, non-rotating ``.html`` rather than saved under its own extension."""
     out = tmp_path / "surf.png"
-    _ok([DISTF_P2_0, "interp", "plotly", "--save", str(out)])
-    assert out.exists()
+    _ok([DISTF_P2_0, "interp", "plotly", "--no-show", "--saveas", str(out)])
+    assert not out.exists()
+    assert (tmp_path / "surf.html").exists()
   # end
 
-  def test_plotly_no_save_no_batch_calls_show(self, monkeypatch):
+  def test_plotly_no_save_no_batch_opens_preview(self, monkeypatch):
     calls = []
-    monkeypatch.setattr(go.Figure, "show", lambda self, *a, **k: calls.append(True))
+    # `render/__init__.py` re-exports the `plotly` *function* under the same
+    # name as the `plotly` *submodule* (see its docstring), which shadows the
+    # submodule everywhere except `sys.modules` -- patch there so the
+    # `open_preview` call inside `render.plotly.plotly`/`plotly_animate`
+    # (resolved against that submodule's own globals) actually sees it.
+    monkeypatch.setattr(sys.modules["postgkyl.render.plotly"], "open_preview",
+        lambda path: calls.append(path))
     _ok([DISTF_P2_0, "interp", "plotly"])
-    assert calls == [True]
+    assert len(calls) == 1
   # end
 
   def test_plotly_animate_no_datasets_fails_closed(self):
@@ -790,11 +806,17 @@ class TestPlotly:
     assert os.path.exists(f"{prefix}.html")
   # end
 
-  def test_plotly_animate_no_save_no_batch_calls_show(self, monkeypatch):
+  def test_plotly_animate_no_save_no_batch_opens_preview(self, monkeypatch):
     calls = []
-    monkeypatch.setattr(go.Figure, "show", lambda self, *a, **k: calls.append(True))
+    # `render/__init__.py` re-exports the `plotly` *function* under the same
+    # name as the `plotly` *submodule* (see its docstring), which shadows the
+    # submodule everywhere except `sys.modules` -- patch there so the
+    # `open_preview` call inside `render.plotly.plotly`/`plotly_animate`
+    # (resolved against that submodule's own globals) actually sees it.
+    monkeypatch.setattr(sys.modules["postgkyl.render.plotly"], "open_preview",
+        lambda path: calls.append(path))
     _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate"])
-    assert calls == [True]
+    assert len(calls) == 1
   # end
 # end
 

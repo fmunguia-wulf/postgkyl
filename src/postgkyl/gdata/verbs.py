@@ -1,14 +1,16 @@
 """Module-level fluent verbs — the multi-dataset verbs that have no single
 ``self``.
 
-``collect``, ``evaluate``, ``relchange``, and ``animate`` each combine *several*
-datasets into one result (or, for ``animate``, into one animation), so they
-cannot be one dataset's method the way ``interpolate``/``select``/``fft``/... are on
+``collect``, ``evaluate``, ``relchange``, ``animate``, and ``plotly_animate``
+each combine *several* datasets into one result (or, for ``animate``/
+``plotly_animate``, into one animation), so they cannot be one dataset's
+method the way ``interpolate``/``select``/``fft``/... are on
 :class:`~postgkyl.gdata.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.operations` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
 drift apart. :class:`~postgkyl.gdata.gdatagroup.GDataGroup` re-uses these same
-functions for its own ``collect``/``evaluate``/``animate`` terminal methods.
+functions for its own ``collect``/``evaluate``/``animate``/``plotly_animate``
+terminal methods.
 """
 
 from __future__ import annotations
@@ -65,4 +67,16 @@ def animate(*datasets, **kwargs):
   "flat iterable, or iterable of frames" contract).
   """
   return operations.animate(datasets, **kwargs)
+# end
+
+
+def plotly_animate(*datasets, **kwargs):
+  """Animate a sequence of datasets with Plotly, one frame per dataset.
+
+  See ``operations.plotly_animate``. Called with no further arguments this
+  just builds and returns the figure; pass ``show=True`` to open the
+  animation in the browser, or ``save=True``/``saveas=...`` to write it
+  instead -- no CLI glue needed either way.
+  """
+  return operations.plotly_animate(datasets, **kwargs)
 # end

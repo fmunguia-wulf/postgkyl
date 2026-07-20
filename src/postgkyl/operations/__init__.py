@@ -28,6 +28,8 @@ from .average import average
 from .eval_at_coord_proj import eval_at_coord_proj
 from .plot import plot
 from .animate import animate
+from .plotly import plotly
+from .plotly_animate import plotly_animate
 from .represent import apply, represent
 
 from .fft import fft
@@ -45,7 +47,7 @@ from .map import map
 
 __all__ = ["interpolate", "local_poly", "select", "info", "integrate", "integrate_axis", "average",
     "eval_at_coord_proj",
-    "plot", "animate",
+    "plot", "animate", "plotly", "plotly_animate",
     "arithmetic", "represent", "apply",
     "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
     "extract_input", "fit", "differentiate", "evaluate", "available_evaluate_operators",

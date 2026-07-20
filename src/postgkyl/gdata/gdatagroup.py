@@ -35,18 +35,21 @@ every member, in order (**broadcasting**):
   unaffected. An attribute missing from any member also raises
   ``AttributeError`` immediately, at access time.
 
-Four verbs are **not** broadcast because they combine the members into a
+Five verbs are **not** broadcast because they combine the members into a
 single result rather than acting on each independently; these are defined
 explicitly below, delegating to the matching multi-dataset function in
 ``operations``/``api.verbs``: ``info`` (one combined summary), ``collect`` (stack
 into one dataset), ``evaluate`` (evaluate an RPN expression over the members),
-``animate`` (one animation, one frame per member) -- matching the deferred
-worklist from layer 05's report (the old ``src_bak`` class's non-broadcast
-methods were exactly ``__getattr__`` broadcasting, ``plot``, ``info``,
-``animate``, ``plotly_animate``, ``collect``, ``evaluate``; ``plot`` and
-``plotly_animate`` are not in the new ``operations`` verb inventory as multi-dataset
-verbs, so only ``info``/``collect``/``evaluate``/``animate`` need the explicit
-treatment here).
+``animate`` (one animation, one frame per member), ``plotly_animate`` (one
+Plotly animation, one frame per member) -- matching the deferred worklist
+from layer 05's report (the old ``src_bak`` class's non-broadcast methods
+were exactly ``__getattr__`` broadcasting, ``plot``, ``info``, ``animate``,
+``plotly_animate``, ``collect``, ``evaluate``). ``plot`` is still not in the
+new ``operations`` verb inventory as a multi-dataset verb, so it stays a
+broadcast (one figure per member, see above); ``plotly`` (single-dataset) is
+now a plain ``GData`` method, so ``group.plotly()`` is already covered by the
+broadcast rule too -- only ``info``/``collect``/``evaluate``/``animate``/
+``plotly_animate`` need the explicit treatment here.
 
 ``operations.grid`` has no fluent spelling anywhere (not on ``GData``, so not
 broadcast here either) -- see ``api/gdata.py`` for why.
@@ -121,5 +124,10 @@ class GDataGroup(GDataStateGroup):
   def animate(self, **kwargs):
     """Animate the members, one frame each (see ``api.verbs.animate``)."""
     return verbs.animate(*self._datasets, **kwargs)
+  # end
+
+  def plotly_animate(self, **kwargs):
+    """Animate the members with Plotly, one frame each (see ``api.verbs.plotly_animate``)."""
+    return verbs.plotly_animate(*self._datasets, **kwargs)
   # end
 # end
