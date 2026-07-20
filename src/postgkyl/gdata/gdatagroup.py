@@ -109,11 +109,12 @@ class GDataGroup(GDataStateGroup):
   # end
 
   def collect(self, *, sumdata: bool = False, period: float | None = None,
-      offset: float = 0.0, tag: str | None = None, label: str | None = None):
+      offset: float = 0.0, chunk: int | None = None, tag: str | None = None,
+      label: str | None = None):
     """Combine the members into one dataset along a time axis (see
-    ``api.verbs.collect``)."""
+    ``api.verbs.collect``). Returns a list of datasets when ``chunk`` is given."""
     return verbs.collect(*self._datasets, sumdata=sumdata, period=period,
-        offset=offset, tag=tag, label=label)
+        offset=offset, chunk=chunk, tag=tag, label=label)
   # end
 
   def evaluate(self, chain: str, *, tag: str | None = None, label: str | None = None):

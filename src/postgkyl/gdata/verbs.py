@@ -25,14 +25,15 @@ if TYPE_CHECKING:
 
 
 def collect(*datasets: "GDataState", sumdata: bool = False,
-    period: float | None = None, offset: float = 0.0, tag: str | None = None,
-    label: str | None = None) -> "GDataState":
+    period: float | None = None, offset: float = 0.0, chunk: int | None = None,
+    tag: str | None = None, label: str | None = None):
   """Combine many single-frame datasets into one with a new time axis.
 
   See ``operations.collect``. Accepts ``collect(a, b)`` or ``collect([a, b])``.
+  Returns a single dataset, or a list of datasets when ``chunk`` is given.
   """
   return operations.collect(*datasets, sumdata=sumdata, period=period, offset=offset,
-      tag=tag, label=label)
+      chunk=chunk, tag=tag, label=label)
 # end
 
 

@@ -94,6 +94,25 @@ def test_empty_raises():
 # end
 
 
+def test_chunk_splits_into_multiple_datasets():
+  frames = [_frame(float(i), float(i)) for i in range(5)]
+  out = operations.collect(frames, chunk=2)
+  assert isinstance(out, list)
+  assert len(out) == 3
+  np.testing.assert_allclose(out[0].get_grid()[0], [0.0, 1.0])
+  np.testing.assert_allclose(out[1].get_grid()[0], [2.0, 3.0])
+  np.testing.assert_allclose(out[2].get_grid()[0], [4.0])
+# end
+
+
+def test_chunk_falsy_returns_single_dataset():
+  frames = [_frame(0.0, 1.0), _frame(1.0, 2.0)]
+  out = operations.collect(frames, chunk=0)
+  assert not isinstance(out, list)
+  assert out.get_values().shape[0] == 2
+# end
+
+
 @needs_gkeyll
 def test_rejects_modal_data():
   modal = pg.load(F1)

@@ -369,6 +369,13 @@ class TestChainedPipelines:
     assert result.exit_code != 0
   # end
 
+  def test_collect_chunk_produces_multiple_datasets(self):
+    result = _ok([DISTF_P2_0, DISTF_P2_1, DISTF_P2_0, "interp", "collect",
+        "--chunk", "2", "status"])
+    lines = [l for l in result.output.splitlines() if l.startswith("[")]
+    assert sum("inactive" not in l for l in lines) == 2
+  # end
+
   def test_extractinput_use_filter(self):
     result = _ok([ENERGY, "extractinput", "--use", "default"])
     assert result.exit_code == 0

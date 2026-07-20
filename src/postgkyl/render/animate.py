@@ -49,18 +49,29 @@ def _normalize_frames(data) -> list[list["GDataState"]]:
 
 
 def _frame_value_range(frames: list[list["GDataState"]],
-    cutoff: float | None = None) -> tuple[float, float]:
+    cutoff: float | None = None, *, yscale: float = 1.0,
+    zscale: float = 1.0) -> tuple[float, float]:
   """Value range spanning every dataset in every frame.
+
+  Each dataset is scaled by ``yscale`` (1-D) or ``zscale`` (2-D) before its
+  extrema are taken, matching the scale ``matplotlib.plot`` applies when it
+  actually draws the values -- otherwise a fixed range computed here would
+  not match the plotted (scaled) data.
 
   With ``cutoff`` (a central fraction in ``(0, 1]``), the range is clipped
   to that percentile band of the per-dataset extrema instead of the true
   min/max -- useful when a few outlier frames would otherwise wash out the
   color/y-axis scale for the rest of the animation.
   """
-  extrema = np.array([
-      bound for frame in frames for dat in frame
-      for bound in (np.nanmin(dat.values), np.nanmax(dat.values))
-  ])
+  extrema = []
+  for frame in frames:
+    for dat in frame:
+      scaled = dat.values * (yscale if dat.num_dims == 1 else zscale)
+      extrema.append(np.nanmin(scaled))
+      extrema.append(np.nanmax(scaled))
+    # end
+  # end
+  extrema = np.array(extrema)
   vmin, vmax = float(extrema.min()), float(extrema.max())
   if cutoff:
     boundary = 100.0 * (1.0 - cutoff) / 2.0
@@ -71,15 +82,17 @@ def _frame_value_range(frames: list[list["GDataState"]],
 # end
 
 
-def _render_frame(index: int, frames: list[list["GDataState"]],
-    fig: "Figure", plot_kwargs: dict):
-  """Redraw ``frames[index]`` onto ``fig`` (the ``FuncAnimation``/frame-dump
-  callback). The per-frame title is taken from the first dataset's ``ctx``
-  (frame index and time) unless ``plot_kwargs['notitle']`` is set."""
+def _draw_frame(frame: list["GDataState"], fig: "Figure", plot_kwargs: dict):
+  """Redraw one frame (a list of datasets drawn together) onto ``fig``.
+
+  When the caller hasn't given an explicit ``title``, it is generated from
+  the first dataset's ``ctx`` (frame index and time) unless
+  ``plot_kwargs['notitle']`` is set; an explicit ``title`` is always
+  respected and shown on every frame.
+  """
   kwargs = dict(plot_kwargs)
   notitle = kwargs.pop("notitle", False)
-  frame = frames[index]
-  if not notitle:
+  if not notitle and kwargs.get("title") is None:
     dat0 = frame[0]
     parts = []
     if dat0.ctx.get("frame") is not None:
@@ -94,17 +107,61 @@ def _render_frame(index: int, frames: list[list["GDataState"]],
 # end
 
 
+def _render_frame(index: int, frames: list[list["GDataState"]],
+    fig: "Figure", plot_kwargs: dict):
+  """``FuncAnimation``'s per-frame callback: draw ``frames[index]``."""
+  return _draw_frame(frames[index], fig, plot_kwargs)
+# end
+
+
+def _save_frame_worker(args) -> str:
+  """One frame, one process (see ``_save_frames``'s ``nproc`` path). Each
+  worker builds its own figure -- Matplotlib figures are not shared across
+  processes."""
+  index, frame, plot_kwargs, prefix, dpi, figsize = args
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  fig = plt.figure(figsize=figsize)
+  try:
+    _draw_frame(frame, fig, plot_kwargs)
+    path = f"{prefix}_{index}.png"
+    fig.savefig(path, dpi=dpi)
+  finally:
+    plt.close(fig)
+  # end
+  return path
+# end
+
+
 def _save_frames(frames: list[list["GDataState"]], prefix: str, *,
-    dpi: int | None = None, figsize=None, plot_kwargs: dict | None = None
-    ) -> list[str]:
-  """Write ``<prefix>_<i>.png`` for every frame, reusing one figure."""
+    dpi: int | None = None, figsize=None, plot_kwargs: dict | None = None,
+    nproc: int = 1) -> list[str]:
+  """Write ``<prefix>_<i>.png`` for every frame.
+
+  Sequentially (``nproc == 1``), one figure is reused across every frame.
+  With ``nproc > 1``, frames are split across a :class:`multiprocessing.Pool`
+  of that many worker processes, each with its own figure.
+  """
+  plot_kwargs = plot_kwargs or {}
+  if nproc > 1:
+    from multiprocessing import Pool
+
+    args_list = [(i, frames[i], plot_kwargs, prefix, dpi, figsize)
+                 for i in range(len(frames))]
+    with Pool(nproc) as pool:
+      return pool.map(_save_frame_worker, args_list)
+    # end
+  # end
+
   import matplotlib.pyplot as plt
 
   fig = plt.figure(figsize=figsize)
   paths = []
   try:
     for i in range(len(frames)):
-      _render_frame(i, frames, fig, plot_kwargs or {})
+      _draw_frame(frames[i], fig, plot_kwargs)
       path = f"{prefix}_{i}.png"
       fig.savefig(path, dpi=dpi)
       paths.append(path)
@@ -166,7 +223,8 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
     cutoffglobalrange: float | None = None, notitle: bool = False,
     show: bool = False, save: bool = False, saveas: str | None = None,
     fps: int | None = None, dpi: int | None = None,
-    saveframes: str | None = None, figsize=None, **plot_kwargs):
+    saveframes: str | None = None, figsize=None, nproc: int = 1,
+    tmpdir: str | None = None, **plot_kwargs):
   """Animate a sequence of frames, one frame per dataset (or dataset group).
 
   Args:
@@ -176,12 +234,13 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
     interval: live-animation delay between frames, in milliseconds.
     fixed_range: hold a constant value/color scale across every frame
       (``ymin``/``ymax``/``zmin``/``zmax``, unless already given in
-      ``plot_kwargs``).
+      ``plot_kwargs``); scaled by ``plot_kwargs``' ``yscale``/``zscale`` to
+      match what actually gets drawn.
     cutoffglobalrange: clip the fixed range to this central percentile band
       (see ``_frame_value_range``); ``None`` uses the true min/max.
     notitle: suppress the per-frame frame/time title.
     show: open a live window (the ``FuncAnimation`` path only).
-    save: write to ``saveas`` (or ``anim.mp4``) after building the frames.
+    save: write to ``saveas`` (or ``anim.gif``) after building the frames.
     saveas: output path; its extension selects the writer (``.gif``/
       ``.webp``/``.apng`` via PIL, ``.mp4``/``.mov``/``.avi``/``.mkv`` via
       ffmpeg).
@@ -190,12 +249,19 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
     saveframes: when given, write ``<saveframes>_<i>.png`` for every frame
       instead of building a live ``FuncAnimation``.
     figsize: figure size in inches, forwarded to ``matplotlib.plot``.
+    nproc: parallel worker processes for frame generation (``saveframes``,
+      or the ``tmpdir``-backed compile path below); ``1`` renders sequentially
+      in-process.
+    tmpdir: directory for the temporary frame directory used when ``nproc``
+      is greater than 1 and ``saveframes`` is not given (frames are written
+      there, compiled into the output, then discarded).
     **plot_kwargs: forwarded to ``matplotlib.plot`` for every frame.
 
   Returns:
     The list of written frame paths when ``saveframes`` is set; otherwise
     the ``FuncAnimation`` (keep a reference -- Matplotlib does not keep the
-    live animation alive for you).
+    live animation alive for you). When ``nproc`` renders through the
+    ``tmpdir`` compile path, the compiled output path is returned instead.
 
   Raises:
     ValueError: no datasets to animate, or an unsupported ``saveas``
@@ -206,7 +272,8 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
   plot_kwargs["notitle"] = notitle
 
   if fixed_range:
-    vmin, vmax = _frame_value_range(frames, cutoffglobalrange)
+    vmin, vmax = _frame_value_range(frames, cutoffglobalrange,
+        yscale=plot_kwargs.get("yscale", 1.0), zscale=plot_kwargs.get("zscale", 1.0))
     # Applied as both the 1-D y-limits (ymin/ymax) and the 2-D color range
     # (zmin/zmax) -- whichever the frame's dimensionality actually uses.
     plot_kwargs.setdefault("ymin", vmin)
@@ -217,15 +284,31 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
 
   num_frames = len(frames)
   duration = 1.0e3 / fps if fps else float(interval)
-  out_file = saveas or "anim.mp4"
+  out_file = saveas or "anim.gif"
 
   if saveframes:
     frame_files = _save_frames(frames, saveframes, dpi=dpi, figsize=figsize,
-        plot_kwargs=plot_kwargs)
+        plot_kwargs=plot_kwargs, nproc=nproc)
     if save or saveas:
       _compile_movie(frame_files, out_file, fps=fps, duration=duration)
     # end
     return frame_files
+  # end
+
+  if nproc > 1:
+    # No standing PNGs requested -- render into a scratch directory, compile,
+    # then discard it. Mirrors the ``saveframes`` path with parallel workers,
+    # so it always produces the compiled output (there is no live window to
+    # hand parallel workers' figures back to).
+    import tempfile
+
+    with tempfile.TemporaryDirectory(dir=tmpdir) as tmp:
+      tmp_prefix = f"{tmp}/frame"
+      frame_files = _save_frames(frames, tmp_prefix, dpi=dpi, figsize=figsize,
+          plot_kwargs=plot_kwargs, nproc=nproc)
+      _compile_movie(frame_files, out_file, fps=fps, duration=duration)
+    # end
+    return out_file
   # end
 
   import matplotlib.pyplot as plt
