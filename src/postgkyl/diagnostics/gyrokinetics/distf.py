@@ -139,7 +139,11 @@ def load_gk_distf(
   # end
 
   jf_data = load(jf_file)
-  jacobvel_data = load(jacobvel_file)
+  # jacobvel is stored piecewise-constant per cell (see module docstring): one
+  # coefficient per cell is exactly a poly_order=0 DG field, so this is real
+  # metadata, not a guess -- it silences the load-time "missing basis"
+  # warning honestly instead of leaving it to fire on every distf load.
+  jacobvel_data = load(jacobvel_file, basis_type="serendipity", poly_order=0)
   jacobtot_inv_data = load(jacobtot_inv_file)
 
   weak_product = jf_data * jacobtot_inv_data

@@ -52,23 +52,29 @@ class GDataState:
       self._grid, self._values = io.read(self._file_name, self.ctx,
           value_form=value_form, basis_type=basis_type,
           poly_order=poly_order, **read_kwargs)
-      missing = [key for key in ("basis_type", "poly_order")
-          if self.ctx.get(key) is None]
-      if missing:
-        warnings.warn(
-            f"{self._file_name}:\n"
-            f"loaded without {' and '.join(missing)} "
-            "metadata (not present in the file header); pass it explicitly "
-            f"({', '.join(f'{key}=...' for key in missing)}) if the data is "
-            "DG/modal, or downstream verbs that need it (e.g. interpolate) "
-            "will fail.", stacklevel=2)
-      # end
-      if "value_form" not in self.ctx:
-        warnings.warn(
-            f"{self._file_name}:\n"
-            "no value_form metadata found or specified; defaulting to "
-            "'modal'. Pass value_form=... (--value-form/-v) explicitly if "
-            "this is wrong.", stacklevel=2)
+      # A dynvector/diagnostic file (no "cells" in ctx: no reader ever stamps
+      # one without a spatial grid, e.g. a dynvector time series) has no DG
+      # basis to speak of -- basis_type/poly_order/value_form genuinely don't
+      # apply, so warning about their absence would be noise, not signal.
+      if self.ctx.get("cells") is not None:
+        missing = [key for key in ("basis_type", "poly_order")
+            if self.ctx.get(key) is None]
+        if missing:
+          warnings.warn(
+              f"{self._file_name}:\n"
+              f"loaded without {' and '.join(missing)} "
+              "metadata (not present in the file header); pass it explicitly "
+              f"({', '.join(f'{key}=...' for key in missing)}) if the data is "
+              "DG/modal, or downstream verbs that need it (e.g. interpolate) "
+              "will fail.", stacklevel=2)
+        # end
+        if "value_form" not in self.ctx:
+          warnings.warn(
+              f"{self._file_name}:\n"
+              "no value_form metadata found or specified; defaulting to "
+              "'modal'. Pass value_form=... (--value-form/-v) explicitly if "
+              "this is wrong.", stacklevel=2)
+        # end
       # end
   # end
     # end

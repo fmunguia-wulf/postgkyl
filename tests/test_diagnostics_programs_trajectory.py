@@ -193,6 +193,10 @@ class TestTrajectoryViaIoWriter:
   3-component trajectory is exercised directly (no disk I/O) by
   ``TestTrajectorySynthetic`` instead."""
 
+  @pytest.mark.filterwarnings(
+      "ignore:(?s).*loaded without basis_type and poly_order metadata.*:UserWarning")
+  @pytest.mark.filterwarnings(
+      "ignore:(?s).*no value_form metadata found or specified.*:UserWarning")
   def test_single_component_trajectory_round_trips_and_animates(self, tmp_path):
     num_pos = 6
     time_edges = np.linspace(0.0, 1.0, num_pos + 1)
