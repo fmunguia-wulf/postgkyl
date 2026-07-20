@@ -304,9 +304,11 @@ basis_type=..., poly_order=..., value_form=...)` / the CLI's bare-filename
 `.local_poly()`, `.average()`, `.eval_at_coord_proj()`, `.integrate()`, … all
 read `ctx["basis_type"]`/`ctx["poly_order"]`/`ctx["value_form"]` off the
 dataset and raise a clear error if a required one is missing; none of them
-take a `basis`/`poly_order` override argument. Loading without `basis_type`/
-`poly_order`/`value_form` resolvable (neither in the file header nor given
-explicitly) warns rather than silently guessing wrong.
+take a `basis`/`poly_order` override argument. Loading a dataset that has a
+spatial grid (`ctx["cells"]`) without `basis_type`/`poly_order`/`value_form`
+resolvable (neither in the file header nor given explicitly) warns rather
+than silently guessing wrong; a dynvector/diagnostic file has no spatial grid
+and thus no DG basis to speak of, so it is exempt from this warning.
 
 ### `gdatastate/` — the container (`gdatastate/state.py`)
 `GDataState` holds one dataset: a nodal `grid` (list of 1-D edge arrays), values in
