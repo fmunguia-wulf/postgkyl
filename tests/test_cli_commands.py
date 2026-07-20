@@ -604,6 +604,102 @@ class TestAnimate:
         "interp", "animate"])
     assert os.path.exists(f"{prefix}.gif")
   # end
+
+  def test_animate_nproc_parallel_saveframes(self, tmp_path):
+    prefix = str(tmp_path / "frame")
+    _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
+        "--saveframes", prefix, "--nproc", "2"])
+    assert os.path.exists(f"{prefix}_0.png")
+    assert os.path.exists(f"{prefix}_1.png")
+  # end
+
+  def test_animate_float_range_smoke(self, tmp_path):
+    prefix = str(tmp_path / "frame")
+    _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
+        "--float", "--saveframes", prefix])
+    assert os.path.exists(f"{prefix}_0.png")
+  # end
+
+  def test_animate_multiblock_saveframes(self, tmp_path):
+    prefix = str(tmp_path / "frame")
+    _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
+        "--multiblock", "--saveframes", prefix])
+    assert os.path.exists(f"{prefix}_0.png")
+    assert os.path.exists(f"{prefix}_1.png")
+  # end
+# end
+
+
+class TestAnimateTagAndFrameGrouping:
+  """``--use``/``--grouptags``/``--multiblock`` need datasets carrying
+  distinct tags/frames, which the CLI's chained bare-filename loading cannot
+  produce in one command line (every bare filename is queued before any
+  ``load`` step runs -- a pre-existing limitation of the chain, unrelated to
+  animate). These invoke the ``animate`` click command directly against a
+  hand-built ``DataSpace`` instead, exactly as the CLI machinery would.
+  """
+
+  def _pool(self):
+    d0 = pg.load(DISTF_P2_0).interpolate()
+    d1 = pg.load(DISTF_P2_1).interpolate()
+    d0.tag, d1.tag = "a", "b"
+    return d0, d1
+  # end
+
+  def test_use_filters_by_tag(self, tmp_path):
+    from postgkyl.cli.commands.animate import command
+    from postgkyl.cli.state import DataSpace
+
+    d0, d1 = self._pool()
+    prefix = str(tmp_path / "use")
+    result = CliRunner().invoke(command, ["--use", "a", "--saveframes", prefix],
+        obj=DataSpace(datasets=[d0, d1]))
+    assert result.exit_code == 0, result.output
+    assert os.path.exists(f"{prefix}_0.png")
+    assert not os.path.exists(f"{prefix}_1.png")
+  # end
+
+  def test_grouptags_writes_one_output_per_tag(self, tmp_path):
+    from postgkyl.cli.commands.animate import command
+    from postgkyl.cli.state import DataSpace
+
+    d0, d1 = self._pool()
+    saveas = str(tmp_path / "anim.gif")
+    result = CliRunner().invoke(command,
+        ["--grouptags", "--save", "--saveas", saveas, "--no-show"],
+        obj=DataSpace(datasets=[d0, d1]))
+    assert result.exit_code == 0, result.output
+    assert os.path.exists(str(tmp_path / "anim_a.gif"))
+    assert os.path.exists(str(tmp_path / "anim_b.gif"))
+  # end
+# end
+
+
+class TestAnimateFrameGrouping:
+  """Unit coverage for ``_group_by_frame``, the ``--multiblock`` helper."""
+
+  def test_uses_ctx_frame_when_already_set(self):
+    from postgkyl.cli.commands.animate import _group_by_frame
+
+    d0, d1, d2 = (pg.load(DISTF_P2_0).interpolate() for _ in range(3))
+    d0.ctx["frame"], d1.ctx["frame"], d2.ctx["frame"] = 1, 0, 1
+    groups = _group_by_frame([d0, d1, d2])
+    assert [g[0].ctx["frame"] for g in groups] == [0, 1]
+    assert groups[1] == [d0, d2]
+  # end
+
+  def test_infers_frame_from_diverging_filename(self):
+    from postgkyl.cli.commands.animate import _group_by_frame
+
+    d0 = pg.load(DISTF_P2_0).interpolate()
+    d1 = pg.load(DISTF_P2_0).interpolate()
+    d0._file_name, d1._file_name = "run_block0_5.gkyl", "run_block1_5.gkyl"
+    del d0.ctx["frame"]
+    del d1.ctx["frame"]
+    groups = _group_by_frame([d0, d1])
+    assert len(groups) == 1
+    assert groups[0] == [d0, d1]
+  # end
 # end
 
 
