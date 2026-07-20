@@ -22,10 +22,10 @@ def command(ctx, axis, op, use, tag, label) -> None:
   AXIS (or axes) to integrate over: an index ('1'), a comma list ('0,2'), or
   a colon slice ('0:2'); omit to run every axis. With AXIS given, integrates
   point-value data (already-interpolated, or a native nodal/quad
-  representation materialized to its true point locations) over the given
+  value_form materialized to its true point locations) over the given
   axis/axes via NumPy trapezoidal quadrature, producing a new dataset with
   those axes collapsed -- like ``select``. Raw modal DG coefficients raise;
-  run ``interpolate`` first (representation changes to native
+  run ``interpolate`` first (value_form changes to native
   ``nodal``/``quad`` -- ``.to_nodal()``/``.to_quad()`` -- are fluent-API
   only, not exposed as CLI commands).
 

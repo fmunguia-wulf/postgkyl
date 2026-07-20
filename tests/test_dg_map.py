@@ -82,7 +82,7 @@ def test_map_grid_identity_1d_matches_target_axis():
   target_axes = [np.linspace(lower, upper, 17)]
   map_ctx = dict(lower=np.array([lower]), upper=np.array([upper]),
       cells=np.array([cells]), basis_type="serendipity", poly_order=1,
-      is_modal=True)
+      value_form="modal")
   out = dg.map_grid(modal, map_ctx, target_axes)
   assert len(out) == 1
   assert out[0].shape == target_axes[0].shape  # m == 1 stays 1-D
@@ -144,7 +144,7 @@ def test_map_grid_nodal_basis_map_file():
   target_axes = [np.linspace(lower, upper, 9)]
   map_ctx = dict(lower=np.array([lower]), upper=np.array([upper]),
       cells=np.array([cells]), basis_type="serendipity", poly_order=1,
-      is_modal=False)
+      value_form="nodal")
   out = dg.map_grid(nodal, map_ctx, target_axes)
   np.testing.assert_allclose(out[0], target_axes[0], atol=1e-12)
 # end
@@ -162,7 +162,7 @@ def test_map_grid_identity_2d_curvilinear_matches_meshgrid():
                  np.linspace(lower[1], upper[1], 7)]
   map_ctx = dict(lower=np.array(lower), upper=np.array(upper),
       cells=np.array(cells), basis_type="serendipity", poly_order=1,
-      is_modal=True)
+      value_form="modal")
   out = dg.map_grid(map_coeffs, map_ctx, target_axes)
 
   expected = np.meshgrid(*target_axes, indexing="ij")
@@ -189,7 +189,7 @@ def test_map_grid_2d_rotation_is_exact_non_separable():
                  np.linspace(lower[1], upper[1], 4)]
   map_ctx = dict(lower=np.array(lower), upper=np.array(upper),
       cells=np.array(cells), basis_type="serendipity", poly_order=1,
-      is_modal=True)
+      value_form="modal")
   out = dg.map_grid(map_coeffs, map_ctx, target_axes)
 
   z0, z1 = np.meshgrid(*target_axes, indexing="ij")

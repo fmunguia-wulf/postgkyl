@@ -31,7 +31,11 @@ class GkylAdiosReader:
   def __init__(self, file_name: str, ctx: dict | None = None,
       var_name: str = "CartGridField",
       axes: tuple | None = (None, None, None, None, None, None),
-      comp: int | slice | None = None, **kwargs):
+      comp: int | slice | None = None,
+      value_form: str | None = None,
+      basis_type: str | None = None,
+      poly_order: int | None = None,
+      **kwargs):
     """Initialize the instance of the ADIOS reader.
 
     Args:
@@ -40,6 +44,12 @@ class GkylAdiosReader:
       var_name: the field variable to read (frame files only).
       axes: partial-load selectors, one per spatial axis.
       comp: partial-load component selector.
+      value_form: overrides the ``ctx["value_form"]`` the file's attributes
+        would otherwise imply -- same override policy as the other readers.
+      basis_type: overrides the ``ctx["basis_type"]`` the file's attributes
+        would otherwise imply.
+      poly_order: overrides the ``ctx["poly_order"]`` the file's attributes
+        would otherwise imply.
       **kwargs: unused; keeps the constructor signature uniform across the
         reader registry.
     """
@@ -48,6 +58,9 @@ class GkylAdiosReader:
 
     self.axes = axes
     self.comp = comp
+    self._value_form_override = value_form
+    self._basis_type_override = basis_type
+    self._poly_order_override = poly_order
 
     self.lower: np.ndarray | None = None
     self.upper: np.ndarray | None = None
@@ -165,13 +178,26 @@ class GkylAdiosReader:
     if "builddate" in available_attrs:
       self.ctx["builddate"] = fh.read_attribute_string("builddate")
     # end
+    has_basis = False
     if "polyOrder" in available_attrs:
       self.ctx["poly_order"] = int(fh.read_attribute("polyOrder"))
-      self.ctx["is_modal"] = True
     # end
     if "basisType" in available_attrs:
       self.ctx["basis_type"] = fh.read_attribute_string("basisType")
-      self.ctx["is_modal"] = True
+      has_basis = True
+    # end
+    if self._basis_type_override is not None:
+      self.ctx["basis_type"] = self._basis_type_override
+      has_basis = True
+    # end
+    if self._poly_order_override is not None:
+      self.ctx["poly_order"] = self._poly_order_override
+    # end
+    if has_basis and "value_form" not in self.ctx:
+      self.ctx["value_form"] = "modal"
+    # end
+    if self._value_form_override is not None:
+      self.ctx["value_form"] = self._value_form_override
     # end
     if "charge" in available_attrs:
       self.ctx["charge"] = float(fh.read_attribute("charge"))

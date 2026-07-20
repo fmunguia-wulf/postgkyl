@@ -2,7 +2,7 @@
 render backend's animation engine.
 
 Mirrors ``operations/plot.py``: each modal dataset in the sequence is bridged
-through its NumPy shadow (point-value representations plot directly; modal
+through its NumPy shadow (point-value forms plot directly; modal
 coefficients refuse) via the shared ``_materialize.materialize_for_render``
 before the frames reach :func:`postgkyl.render.animate.animate`.
 """

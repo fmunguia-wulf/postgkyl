@@ -1,6 +1,6 @@
 """The ``plotly`` verb — terminal; hands the dataset to the Plotly render backend.
 
-Mirrors ``operations/plot.py``: point-value representations (nodal/quad) plot
+Mirrors ``operations/plot.py``: point-value forms (nodal/quad) plot
 directly via ``materialize_for_render``; raw modal coefficients refuse (the
 user chooses ``.interpolate()``, ``.to_nodal()``, or ``.to_quad()`` first).
 """

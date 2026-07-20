@@ -1,7 +1,7 @@
 """The shared "bridge modal data to its plottable NumPy shadow" logic.
 
 Centralizes the check-and-bridge that ``plot`` and ``animate`` both need:
-point-value representations (nodal/quad) materialize directly at their true
+point-value forms (nodal/quad) materialize directly at their true
 physical point locations; raw modal coefficients refuse -- the caller must
 choose ``.interpolate()``, ``.to_nodal()``, or ``.to_quad()`` explicitly. One home
 for the fact, mirroring ``gdatastate/guards.py``'s centralization of the analogous
@@ -35,7 +35,7 @@ def materialize_for_render(data: "GDataState") -> "GDataState":
   if data.backend != "gkyl":
     return data
   # end
-  rep = data.ctx.get("representation", "modal")
+  rep = data.ctx.get("value_form", "modal")
   if rep == "modal":
     raise ValueError(
         "modal DG coefficients are not plottable; choose explicitly: "

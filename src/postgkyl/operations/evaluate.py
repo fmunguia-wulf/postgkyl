@@ -20,7 +20,7 @@ docstring), so there is nothing left to resolve here.
 
 A data token referencing native (gkyl-backed) data is kept native, not
 forced through ``select()``'s point-value guard, regardless of
-representation -- see ``_native_kernel``:
+value_form -- see ``_native_kernel``:
 
 - **modal** (raw DG coefficients): ``+ - * /`` and integer ``pow``/``sq``
   route through Gkeyll's own weak DG kernels, the same math
@@ -28,23 +28,23 @@ representation -- see ``_native_kernel``:
   with no weak-kernel meaning (``sqrt``, ``sin``, reductions, ...) -- or one
   Gkeyll's kernel itself refuses for this basis/order -- warns and falls
   back to plain NumPy math on the raw coefficient view, rather than
-  hard-blocking: representation/basis metadata is sometimes simply wrong (a
+  hard-blocking: value_form/basis metadata is sometimes simply wrong (a
   diagnostic file mistagged "modal" by its writer; see the load-time
-  ``--representation`` override), and the raw view is exact whenever
+  ``--value-form`` override), and the raw view is exact whenever
   coefficient 0 already *is* the point value (e.g. p0 data).
 - **nodal/quad** (point values): every operator in ``_POINTWISE_TOKENS``
   (``+ - * / pow sq sqrt sin cos tan abs log log10 exp max2 min2
   scale_comp scale_zi_axis``) is exact regardless of packing, so it is
   computed with plain NumPy on the view and the result is wrapped back into
   a native array -- computed on the view, wrapped back native, staying
-  in-representation, mirroring ``operations.arithmetic``'s ufunc dispatch.
+  in-value_form, mirroring ``operations.arithmetic``'s ufunc dispatch.
   Anything else (``dot``, ``avg``, ``max``, ``min``, ``mean``, ``len``,
   ``grad``, ``grad2``, ``int``, ``div``, ``curl``) is a genuine reduction or
   finite-difference derivative -- not a per-point transform -- so it leaves
   the native domain for plain NumPy math on the raw view, same as before;
-  ``apply_operator`` then strips the now-stale ``representation`` tag and
+  ``apply_operator`` then strips the now-stale ``value_form`` tag and
   marks the result ``interpolated`` (mirroring ``.interpolate()``) so
-  ``info()`` doesn't keep claiming a representation the data no longer has.
+  ``info()`` doesn't keep claiming a value_form the data no longer has.
 """
 
 from __future__ import annotations
@@ -82,7 +82,7 @@ _DATA_TOKEN = re.compile(r"^f(\d*)(?:\[([^\]]*)\])?(?:\.(\w+))?$")
 
 
 def _rep_of(ctx: dict) -> str:
-  return ctx.get("representation", "modal")
+  return ctx.get("value_form", "modal")
 # end
 
 
@@ -135,7 +135,7 @@ def _modal_kernel(token: str, tmp_grid, tmp_values, tmp_ctx):
   integer ``pow``/``sq``). Returns ``None`` when no operand is modal
   (nothing to do here -- the caller runs the plain NumPy ``func`` as usual).
 
-  Deliberately never raises: basis/representation metadata can be wrong
+  Deliberately never raises: basis/value_form metadata can be wrong
   (a diagnostic file mistagged "modal" by its writer), so an operator with
   no weak-kernel form, a basis/kernel Gkeyll itself refuses, or a
   non-scalar second operand all warn and return ``None`` too -- the caller
@@ -234,14 +234,14 @@ def _modal_kernel(token: str, tmp_grid, tmp_values, tmp_ctx):
         f"evaluate: '{token}' on native modal (raw DG coefficient) data: {err}; "
         "falling back to plain math on the raw coefficient view -- exact only "
         "if coefficient 0 already IS the point value (e.g. p0 data, or a file "
-        "whose 'modal' tag is wrong; see --representation).", stacklevel=3)
+        "whose 'modal' tag is wrong; see --value-form).", stacklevel=3)
     return None
   # end
 # end
 
 
 def _native_kernel(token: str, tmp_grid, tmp_values, tmp_ctx, func):
-  """Dispatch a native (gkyl-backed) operand to the representation-correct math.
+  """Dispatch a native (gkyl-backed) operand to the value_form-correct math.
 
   Returns ``(out_grid, out_values)`` -- with ``out_values`` wrapped back into
   native arrays whenever the result stays a per-point/per-coefficient field
@@ -250,16 +250,16 @@ def _native_kernel(token: str, tmp_grid, tmp_values, tmp_ctx, func):
 
   - Every native operand modal: delegates to :func:`_modal_kernel` (weak
     DG kernels), unchanged.
-  - Every native operand the *same* nodal/quad representation, and ``token``
+  - Every native operand the *same* nodal/quad value_form, and ``token``
     in :data:`_POINTWISE_TOKENS`: exact NumPy math on the raw view, wrapped
     back native -- mirrors ``operations.arithmetic``'s "compute on the view,
-    wrap back native, stay in-representation" pointwise dispatch.
-  - Native operands in *different* representations: warns and falls back
-    (the caller then runs ``func`` on plain views, same as a representation
+    wrap back native, stay in-value_form" pointwise dispatch.
+  - Native operands in *different* value_forms: warns and falls back
+    (the caller then runs ``func`` on plain views, same as a value_form
     mismatch anywhere else in this module).
   - Any other token (reductions, finite-difference derivatives): returns
     ``None`` so the caller's plain-NumPy path runs -- the result then
-    genuinely leaves the native/representation domain.
+    genuinely leaves the native/value_form domain.
   """
   is_native = [dg.modal.is_native(v) for v in tmp_values]
   if not any(is_native):
@@ -274,7 +274,7 @@ def _native_kernel(token: str, tmp_grid, tmp_values, tmp_ctx, func):
   if len(reps) > 1:
     warnings.warn(
         f"evaluate: '{token}' mixes native operands in different "
-        f"representations ({sorted(reps)}); falling back to plain math on "
+        f"value_forms ({sorted(reps)}); falling back to plain math on "
         "the raw views.", stacklevel=3)
     return None
   # end
@@ -373,11 +373,11 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
 
     # A native nodal/quad operand whose result did *not* come back wrapped
     # native (a genuine reduction/derivative, per _native_kernel) has left
-    # the per-point field domain: the merged ctx's 'representation' is now
-    # stale (it still names a representation this output no longer has), so
+    # the per-point field domain: the merged ctx's 'value_form' is now
+    # stale (it still names a value_form this output no longer has), so
     # drop it and mark the result the same way .interpolate() does -- no
     # longer gkyl-native -- rather than let info() keep describing it as a
-    # representation it left behind.
+    # value_form it left behind.
     was_native_nonmodal = any(
         dg.modal.is_native(v) and _rep_of(c) != "modal"
         for v, c in zip(tmp_values, tmp_ctx))
@@ -387,7 +387,7 @@ def apply_operator(grid_stack, value_stack, ctx_stack, token: str) -> bool:
       value_stack[-num_out + i].append(out_values[i])
       this_ctx = dict(out_ctx)
       if was_native_nonmodal and not dg.modal.is_native(out_values[i]):
-        this_ctx.pop("representation", None)
+        this_ctx.pop("value_form", None)
         this_ctx["interpolated"] = True
       # end
       ctx_stack[-num_out + i].append(this_ctx)
@@ -416,7 +416,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
     # end
     elif comp is None and dat.backend == "gkyl":
       # Keep native data on the stack (rather than forcing it through
-      # select()'s point-value guard), regardless of representation: RPN
+      # select()'s point-value guard), regardless of value_form: RPN
       # math routes through Gkeyll's own weak kernels for modal data, or
       # exact NumPy math wrapped back native for nodal/quad point values,
       # when the operator supports it, or warns/falls back to the raw view
@@ -425,7 +425,7 @@ def _push_token(token: str, datasets, grid_stack, value_stack, ctx_stack) -> boo
     # end
     else:
       # select() carries the shared operability guard (raw modal coefficients
-      # refuse; nodal/quad representations, already point values, pass) for
+      # refuse; nodal/quad value_forms, already point values, pass) for
       # a comp-sliced modal token (still genuinely unsafe -- slicing raw DG
       # coefficients by component can mix basis functions) and every
       # already-point-value token. select() itself now keeps a gkyl-backed

@@ -3,7 +3,7 @@
 The golden-path tests exercise ``comp=`` selection, the happy arithmetic
 paths, and the default basis/poly_order. This file targets the error edges
 and the less obvious dispatch branches: coordinate (``z0``) selection,
-mixed-representation/mixed-basis rejections, modal-scalar operator
+mixed-value_form/mixed-basis rejections, modal-scalar operator
 combinations, ufunc edge cases, and every verb's metadata-missing guard.
 
 Run:  PYTHONPATH=src pytest tests/test_coverage_ops.py -v
@@ -150,7 +150,7 @@ def test_modal_dataset_pair_rejects_unsupported_op():
 
 @needs_gkeyll
 def test_conf_phase_mul_requires_both_operands_modal():
-  """Mixed representation on a conf*phase multiply (different num_dims)
+  """Mixed value_form on a conf*phase multiply (different num_dims)
   must refuse just like the same-dims path, not silently coerce."""
   conf_edges = [np.linspace(0.0, 1.0, 4)]
   phase_edges = [np.linspace(0.0, 1.0, 4), np.linspace(-1.0, 1.0, 5)]
@@ -158,11 +158,11 @@ def test_conf_phase_mul_requires_both_operands_modal():
   pbasis = gpython.basis.get_basis("hybrid", 2, 1)
 
   conf = pg.GData()
-  conf.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True, cells=np.array([3]))
+  conf.ctx.update(basis_type="serendipity", poly_order=1, value_form="modal", cells=np.array([3]))
   conf.push(conf_edges, gpython.array.GkylArray.from_numpy(np.zeros((3, cbasis.num_basis))))
 
   phase = pg.GData()
-  phase.ctx.update(basis_type="hybrid", poly_order=1, is_modal=True, cells=np.array([3, 4]))
+  phase.ctx.update(basis_type="hybrid", poly_order=1, value_form="modal", cells=np.array([3, 4]))
   phase.push(phase_edges, gpython.array.GkylArray.from_numpy(np.zeros((12, pbasis.num_basis))))
 
   phase_nodal = phase.to_nodal()
@@ -224,25 +224,10 @@ def test_apply_ufunc_accepts_scalars_and_rejects_unhandled_types():
 
 
 # ========================================================== operations.interpolate
-def test_interpolate_rejects_unknown_short_basis_code():
-  d = pg.load(F1)
-  with pytest.raises(ValueError, match="Unknown basis"):
-    d.interpolate(basis="bogus")
-  # end
-# end
-
-
-@needs_gkeyll
-def test_interpolate_accepts_a_short_basis_code():
-  d = pg.load(F1).interpolate(basis="ms")
-  assert d.is_interpolated
-# end
-
-
 def test_interpolate_requires_basis_type_when_none_given():
   d = pg.GData()
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
-  with pytest.raises(ValueError, match="no stored 'basis_type'"):
+  with pytest.raises(ValueError, match="no 'basis_type' metadata"):
     d.interpolate()
   # end
 # end
@@ -252,7 +237,7 @@ def test_interpolate_requires_poly_order_when_none_given():
   d = pg.GData()
   d.ctx["basis_type"] = "serendipity"
   d.push([np.linspace(0.0, 1.0, 4)], np.zeros((3, 2)))
-  with pytest.raises(ValueError, match="No polynomial order"):
+  with pytest.raises(ValueError, match="no 'poly_order' metadata"):
     d.interpolate()
   # end
 # end
@@ -277,7 +262,7 @@ def test_represent_rejects_numpy_backed_and_missing_metadata():
 @needs_gkeyll
 def test_represent_rejects_unknown_target():
   a = pg.load(F1)
-  with pytest.raises(ValueError, match="unknown representation"):
+  with pytest.raises(ValueError, match="unknown value_form"):
     operations.represent(a, to="bogus")
   # end
 # end
@@ -358,8 +343,8 @@ def test_average_partial_reduction_of_a_constant_field():
   coeffs[:, 0] = 3.0 / b0
 
   d = pg.GData()
-  d.ctx.update(basis_type=basis_type, poly_order=p, is_modal=True,
-      cells=np.array(cells), representation="modal")
+  d.ctx.update(basis_type=basis_type, poly_order=p,
+      cells=np.array(cells), value_form="modal")
   grid = [np.linspace(0.0, 2.0, cells[0] + 1), np.linspace(0.0, 1.0, cells[1] + 1)]
   d.push(grid, gpython.array.GkylArray.from_numpy(coeffs))
 
@@ -381,7 +366,7 @@ def test_average_rejects_numpy_backed_and_non_modal():
   # end
 
   nodal = pg.load(F1).to_nodal()
-  with pytest.raises(ValueError, match="modal representation"):
+  with pytest.raises(ValueError, match="modal value_form"):
     nodal.average([0])
   # end
 # end
@@ -402,7 +387,7 @@ def test_average_rejects_weight_mismatch():
   a = pg.load(F1)
   weight_wrong_dims = pg.GData()
   weight_wrong_dims.ctx.update(basis_type="serendipity", poly_order=1,
-      is_modal=True, cells=np.array([4, 3]), representation="modal")
+      cells=np.array([4, 3]), value_form="modal")
   weight_wrong_dims.push(
       [np.linspace(0.0, 1.0, 5), np.linspace(0.0, 1.0, 4)],
       gpython.array.GkylArray.from_numpy(np.zeros((12, 4))))
@@ -483,7 +468,7 @@ def test_integrate_axis_on_native_nodal_representation():
   r = nodal.integrate_axis(0)
   assert r.backend == "numpy"
   assert r.num_cells[0] == 1
-  assert r.ctx.get("representation") is None  # stale tag cleared, not "nodal"
+  assert r.ctx.get("value_form") is None  # stale tag cleared, not "nodal"
 # end
 
 

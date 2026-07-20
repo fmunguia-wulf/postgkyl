@@ -27,10 +27,10 @@ def _native_basis(data: "GDataState", what: str):
         f"{what} is not available after .interpolate() or without the "
         "Gkeyll library.")
   # end
-  if data.ctx.get("representation", "modal") != "modal":
+  if data.ctx.get("value_form", "modal") != "modal":
     raise ValueError(
-        f"average expects the modal representation, not "
-        f"'{data.ctx['representation']}' ({what}); call .to_modal() first.")
+        f"average expects the modal value_form, not "
+        f"'{data.ctx['value_form']}' ({what}); call .to_modal() first.")
   # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
@@ -46,10 +46,10 @@ def average(data: "GDataState", dims, *, weight: "GDataState | None" = None,
   """``int f w dx^dims / int w dx^dims`` over the directions in ``dims``.
 
   Args:
-    data: gkyl-backed (native modal) dataset in the modal representation.
+    data: gkyl-backed (native modal) dataset in the modal value_form.
     dims: iterable of 0-based direction indices to average over (e.g. the
       selected ``z0``-``z5`` flags at the CLI layer).
-    weight: optional gkyl-backed dataset in the modal representation, same
+    weight: optional gkyl-backed dataset in the modal value_form, same
       ``num_dims``/``basis_type``/``poly_order`` as ``data`` and exactly one
       field (``gkyl_array_average`` takes no field-index argument) -- the
       plain average (dividing by volume) is computed when omitted.

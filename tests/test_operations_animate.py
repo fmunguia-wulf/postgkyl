@@ -49,7 +49,7 @@ class TestAnimateVerb:
 
   def test_modal_frames_are_materialized_first(self):
     """A raw (non-interpolated) modal dataset is bridged through its NumPy
-    shadow (nodal representation), just like ``operations.plot``."""
+    shadow (nodal value_form), just like ``operations.plot``."""
     from matplotlib.animation import FuncAnimation
     a = pg.load(F1D).to_nodal()
     b = pg.load(F1D).to_nodal()

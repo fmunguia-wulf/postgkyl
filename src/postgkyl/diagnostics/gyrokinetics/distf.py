@@ -145,8 +145,14 @@ def load_gk_distf(
   weak_product = jf_data * jacobtot_inv_data
   f_coeffs = weak_product.values / jacobvel_data.values
   f_modal = weak_product._result(weak_product.grid, f_coeffs)
+  # The composed distribution's true basis (gkhybrid, p1) is fixed by this
+  # diagnostic's convention, not necessarily what jf_data's own file header
+  # implies -- basis_type/poly_order/value_form are load-time-fixed
+  # properties, so the override lands on ctx here rather than as an
+  # interpolate() argument.
+  f_modal.ctx.update(basis_type="gkhybrid", poly_order=1, value_form="modal")
 
-  interpolated = f_modal.interpolate(basis="gkhyb", p=1, num_interp=num_interp)
+  interpolated = f_modal.interpolate(num_interp=num_interp)
   out = interpolated._result(interpolated.grid, interpolated.values, tag=tag)
 
   # Coordinate maps run on the already-interpolated data via the shared map

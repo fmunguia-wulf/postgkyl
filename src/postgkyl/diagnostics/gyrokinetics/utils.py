@@ -95,8 +95,7 @@ def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
   Args:
     file_name: Path to the file.
     poly_order: Polynomial order of the DG basis.
-    basis_type: Long basis name (see ``operations.interpolate.BASIS_MAP`` for the
-      short-code equivalents), e.g. ``"serendipity"``.
+    basis_type: Long basis name, e.g. ``"serendipity"``.
     comp: Optional component selector applied *after* interpolation
       (an int index or a ``"start:stop"`` slice string); ``None`` keeps
       every component.
@@ -105,8 +104,8 @@ def read_interpolated_gfile(file_name: str, poly_order: int, basis_type: str,
     ``(grid, values, gdata)``: the squeezed interpolated grid (a list of
     squeezed per-dimension arrays) and values, and the interpolated dataset.
   """
-  gdata = GData(file_name)
-  interpolated = gdata.interpolate(basis=basis_type, p=poly_order)
+  gdata = GData(file_name, basis_type=basis_type, poly_order=poly_order)
+  interpolated = gdata.interpolate()
   if comp is not None:
     interpolated = interpolated.select(comp=comp)
   # end

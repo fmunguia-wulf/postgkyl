@@ -26,7 +26,7 @@ from postgkyl.numerics import nodal_to_cell_centered_grid
 # msgpack meta blob Gkeyll writes.
 _INTERNAL_CTX_KEYS = frozenset({
     "cells", "lower", "upper", "num_comps", "num_dims", "grid_type",
-    "is_modal", "representation", "num_quad", "interpolated", "var_names",
+    "value_form", "num_quad", "interpolated", "var_names",
 })
 
 # ctx uses postgkyl's snake_case names; Gkeyll's own meta blob (and anything

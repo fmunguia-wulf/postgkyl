@@ -107,18 +107,10 @@ def test_2d_and_3d_shapes():
 # end
 
 
-def test_basis_and_poly_order_overrides_take_precedence_over_ctx():
-  d = pg.load(F1D)
-  del d.ctx["poly_order"]
-  lp = d.local_poly(basis="ms", p=1)
-  assert lp.get_values().shape[0] > 0
-# end
-
-
 def test_missing_poly_order_raises():
   d = pg.load(F1D)
   del d.ctx["poly_order"]
-  with pytest.raises(ValueError, match="polynomial order"):
+  with pytest.raises(ValueError, match="poly_order"):
     d.local_poly()
   # end
 # end
@@ -133,17 +125,9 @@ def test_missing_basis_type_raises():
 # end
 
 
-def test_unknown_basis_code_raises():
-  d = pg.load(F1D)
-  with pytest.raises(ValueError, match="Unknown basis"):
-    d.local_poly(basis="nope")
-  # end
-# end
-
-
-def test_rejects_non_modal_representation():
+def test_rejects_non_modal_value_form():
   d = pg.load(F1D).to_nodal()
-  with pytest.raises(ValueError, match="modal representation"):
+  with pytest.raises(ValueError, match="modal value_form"):
     d.local_poly()
   # end
 # end

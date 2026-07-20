@@ -97,7 +97,7 @@ def _modal_binary(op, a, b, pa, pb):
 
 
 def _rep_of(data: GDataState) -> str:
-  return data.ctx.get("representation", "modal")
+  return data.ctx.get("value_form", "modal")
 # end
 
 
@@ -120,7 +120,7 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
   rep = _rep_of(pa)
   if rep != _rep_of(pb):
     raise ValueError(
-        f"operands are in different representations ({rep} vs {_rep_of(pb)}); "
+        f"operands are in different value_forms ({rep} vs {_rep_of(pb)}); "
         "convert one explicitly (.to_modal()/.to_nodal()/.to_quad()).")
   # end
   A, B = pa.native, pb.native
@@ -132,7 +132,7 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
   # end
   elif rep != "modal":
     # Point values (nodal/quad): every pointwise operation is exact — compute
-    # with NumPy on the views, wrap back native, stay in-representation.
+    # with NumPy on the views, wrap back native, stay in-value_form.
     out = dg.rep.wrap(op(np.asarray(pa.values), np.asarray(pb.values)))
   # end
   elif op in (operator.mul, operator.truediv):
@@ -191,7 +191,7 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
   basis = _basis_of(data)
   rep = _rep_of(data)
   A = data.native
-  # In point-value representations (nodal/quad) a scalar shift moves every
+  # In point-value forms (nodal/quad) a scalar shift moves every
   # component; in modal it moves only the mean coefficient.
   shift = (dg.modal.shift_all if rep != "modal"
            else lambda a, v: dg.modal.shift_mean(*basis, a, v))
@@ -238,8 +238,8 @@ def apply_ufunc(ufunc, method, *inputs, **kwargs):
   """Backend for ``GData.__array_ufunc__`` — keeps the result a dataset.
 
   Ufuncs are pointwise, so they are valid wherever the data are point values:
-  the NumPy field domain, and the nodal/quad representations (computed on the
-  views, wrapped back native, staying in-representation). Modal coefficients
+  the NumPy field domain, and the nodal/quad value_forms (computed on the
+  views, wrapped back native, staying in-value_form). Modal coefficients
   refuse (via ``_require_operable``): a ufunc has no basis-space meaning.
   """
   if method != "__call__" or "out" in kwargs:
@@ -255,7 +255,7 @@ def apply_ufunc(ufunc, method, *inputs, **kwargs):
       if x.backend == "gkyl" and _rep_of(x) != rep or (
           x.backend != "gkyl" and rep is not None):
         raise ValueError(
-            "operands are in different representations; convert one "
+            "operands are in different value_forms; convert one "
             "explicitly (.to_modal()/.to_nodal()/.to_quad()).")
       # end
       if x.values.shape != primary.values.shape:

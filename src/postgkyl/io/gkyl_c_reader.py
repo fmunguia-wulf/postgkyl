@@ -25,11 +25,11 @@ class GkylCReader:
   """Reader protocol implementation backed by ``gkyl_array_rio``."""
 
   def __init__(self, file_name: str, ctx: dict | None = None,
-      representation: str | None = None, basis_type: str | None = None,
+      value_form: str | None = None, basis_type: str | None = None,
       poly_order: int | None = None, **kwargs):
     self.file_name = str(file_name)
     self.ctx = ctx if ctx is not None else {}
-    self._representation_override = representation
+    self._value_form_override = value_form
     self._basis_type_override = basis_type
     self._poly_order_override = poly_order
     # Any partial-load request (axes=, comp=, ...) -> defer to the Python reader.
@@ -60,11 +60,10 @@ class GkylCReader:
         # end
         elif key in ("basisType", "basis_type"):
           self.ctx["basis_type"] = val
-          self.ctx["is_modal"] = True
           has_basis = True
         # end
         else:
-          # Covers "representation" too, if the writer stamped one directly:
+          # Covers "value_form" too, if the writer stamped one directly:
           # a file's own metadata is the next-best source of truth once no
           # explicit override was given.
           self.ctx[key] = val
@@ -77,24 +76,23 @@ class GkylCReader:
       # at all, or one written by a version that mislabeled it) so downstream
       # verbs (interpolate, average, integrate, ...) resolve the right basis.
       self.ctx["basis_type"] = self._basis_type_override
-      self.ctx["is_modal"] = True
       has_basis = True
     # end
     if self._poly_order_override is not None:
-      # Independent of basis_type/is_modal: lets a caller correct just the
+      # Independent of basis_type/value_form: lets a caller correct just the
       # polynomial order (e.g. a file with no header metadata at all) without
       # asserting anything about modality.
       self.ctx["poly_order"] = self._poly_order_override
     # end
-    if has_basis and "representation" not in self.ctx:
-      self.ctx["representation"] = "modal"
+    if has_basis and "value_form" not in self.ctx:
+      self.ctx["value_form"] = "modal"
     # end
-    if self._representation_override is not None:
+    if self._value_form_override is not None:
       # The writer stamps every field with basis/order metadata, even
       # non-DG diagnostic outputs (e.g. a per-cell CFL rate); this lets a
       # caller correct a mistagged file to what its values actually are.
       # Wins over both the file's own metadata and the "modal" default.
-      self.ctx["representation"] = self._representation_override
+      self.ctx["value_form"] = self._value_form_override
     # end
     self.ctx["cells"] = grid["cells"]
     self.ctx["lower"] = grid["lower"]

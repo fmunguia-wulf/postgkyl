@@ -213,8 +213,8 @@ def test_write_gkyl_with_no_extra_ctx_writes_zero_meta_size(tmp_path):
 def test_build_meta_excludes_internal_keys_and_renames_dg_fields():
   ctx = {
       "cells": np.array([4]), "lower": np.array([0.0]), "upper": np.array([4.0]),
-      "num_comps": 1, "num_dims": 1, "grid_type": "uniform", "is_modal": True,
-      "representation": "modal", "num_quad": 3, "interpolated": True,
+      "num_comps": 1, "num_dims": 1, "grid_type": "uniform",
+      "value_form": "modal", "num_quad": 3, "interpolated": True,
       "var_names": ["f"],
       "poly_order": 2, "basis_type": "serendipity", "time": 0.5, "frame": 3,
   }

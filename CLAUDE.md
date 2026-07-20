@@ -273,24 +273,40 @@ Every dataset lives in one of two backends, discriminated by
 `interpolate()` is the **one-way bridge**: matrix from Gkeyll's basis functions,
 applied per cell with NumPy `tensordot`, returning a *new, by-value* array.
 
-Within the native domain a dataset has one of three **representations**
-(`ctx["representation"]`): `modal` coefficients, `nodal` values at the basis
-`node_list` points, or `quad` values at Gauss–Legendre points. **The capability
-boundary is modal vs point-values, not gkyl vs NumPy:**
+Every dataset has one **`value_form`** (`ctx["value_form"]`): `modal`
+coefficients, `nodal` values at the basis `node_list` points, or `quad`
+values at Gauss–Legendre points. This is a single, backend-agnostic fact —
+there is no separate `is_modal` flag duplicating it; a numpy-backed dataset
+that was never native (e.g. a plain nodal-basis file read without the
+Gkeyll library) carries the same three-valued `value_form` as a gkyl-native
+one, and every consumer (`_require_operable`, `interpolate`, `average`, …)
+reads that one key. **The capability boundary is modal vs point-values, not
+gkyl vs NumPy:**
 
 - **modal** — only Gkeyll's DG operations: weak `* /`, coefficient `+ -`/scalar
   kernels, `.integrate()`, `.interpolate()`. Ufuncs/`np.asarray`/`plot` refuse.
 - **nodal / quad** — the values ARE the field at points, so *every* pointwise
   NumPy operation is exact and allowed (ufuncs, `* / **`, `np.asarray`) —
-  computed on the views, wrapped back native, **staying in-representation** —
+  computed on the views, wrapped back native, **staying in-value_form** —
   and they `plot()` directly at their true point locations (non-tensor node
   sets, e.g. serendipity p2 in 2-D, plot via `.to_quad()`).
 
 Conversions are **never implicit** — only `.to_modal()/.to_nodal()/.to_quad()`
-change representation (nodal↔modal exact; quad round-trip exact for degree
+change `value_form` (nodal↔modal exact; quad round-trip exact for degree
 ≤ 2·num_quad−1); `.apply(fn, num_quad=…)` is the one-shot modal → quad → fn →
 project-back spelling (≡ `fn(d.to_quad()).to_modal()`). Datasets combine only
-within one representation. See REFACTOR_GKEYLL_FFI.md §3b.
+within one value_form. See REFACTOR_GKEYLL_FFI.md §3b.
+
+`basis_type`, `poly_order`, and `value_form` are properties **of the data
+itself** — read from a file's header metadata, or set once via `pg.load(...,
+basis_type=..., poly_order=..., value_form=...)` / the CLI's bare-filename
+`load` (`-b`/`-p`/`-v`) — never re-specified by a downstream verb. `.interpolate()`,
+`.local_poly()`, `.average()`, `.eval_at_coord_proj()`, `.integrate()`, … all
+read `ctx["basis_type"]`/`ctx["poly_order"]`/`ctx["value_form"]` off the
+dataset and raise a clear error if a required one is missing; none of them
+take a `basis`/`poly_order` override argument. Loading without `basis_type`/
+`poly_order`/`value_form` resolvable (neither in the file header nor given
+explicitly) warns rather than silently guessing wrong.
 
 ### `gdatastate/` — the container (`gdatastate/state.py`)
 `GDataState` holds one dataset: a nodal `grid` (list of 1-D edge arrays), values in
@@ -337,10 +353,10 @@ produced the file; anything that does belongs in `diagnostics/`.
 Implemented: `interpolate` (the bridge verb: gkyl-backed in, numpy-backed out),
 `select` (field-domain only), `plot` (delegates to `render`), `info`, `integrate`
 (terminal; runs inside Gkeyll on modal data), `represent`/`apply` (the explicit
-representation verbs behind `.to_modal()/.to_nodal()/.to_quad()/.apply()`),
+value_form verbs behind `.to_modal()/.to_nodal()/.to_quad()/.apply()`),
 `arithmetic` (`binary` + `apply_ufunc`), which **dispatches on `backend`**: modal
 operands → `dg.modal` kernel calls; numpy operands → the NumPy path; mixed
-domains or mixed representations → error, plus the field-domain analysis verbs
+domains or mixed value_forms → error, plus the field-domain analysis verbs
 (`fft`, `magsq`, `relchange`, `mask`, `collect`, `grid`, `val2coord`,
 `extract_input`, `fit` (its `window=True` mode covers growth-rate-style
 leading-window fits), `differentiate`, `evaluate`, `map`); and the modal-native
@@ -354,7 +370,7 @@ rather than dropping to NumPy. `local_poly` bridges modal coefficients to a
 discontinuity-preserving plotting mesh, and `animate` is `plot`'s terminal
 sibling for a dataset sequence — both funnel through the shared, private
 `_materialize` helper that does the one "modal must `.interpolate()` first;
-point-value representations plot at their true locations" check, so `plot`
+point-value value_forms plot at their true locations" check, so `plot`
 and `animate` can't drift apart on that rule. Verbs wrap the layers below;
 they don't reimplement.
 
@@ -401,7 +417,7 @@ the equation module that uses it.)
   bridge (matrix from `gpython.basis`, applied per cell with `tensordot`; nodal-basis
   files convert through the exact `nodal_to_modal` matrix first); `dg/modal.py`
   holds the operations that stay modal (weak algebra, `lincomb`, `shift_mean`,
-  `power`, `integrate`); `dg/rep.py` holds the explicit representation changes
+  `power`, `integrate`); `dg/rep.py` holds the explicit value_form changes
   (modal·nodal·quad) and `apply_pointwise` — all on native arrays.
 - **`io/`** — file I/O: `read()` dispatches over a reader registry. `GkylCReader`
   (first) reads field files entirely inside Gkeyll (`gkyl_grid_array_new_from_file`)
@@ -461,6 +477,12 @@ depends on the facade alone.
 `--version` (via `postgkyl.__version__`) and `--help` are wired through Click's
 own `version_option`/group help. The console entry point object is
 `postgkyl.cli.app:cli`.
+
+`load` (bare-filename dispatch) is the one command carrying `-b`/`--basis`
+(a short DG basis code: `ms`/`ns`/`mo`/`mt`/`gkhyb`/`pkpmhyb`), `-p`/
+`--poly-order`, and `-v`/`--value-form` — `basis_type`/`poly_order`/
+`value_form` are properties of the data fixed once here at load time, so no
+other verb command (`interpolate`, `dg_local_poly`, …) repeats them.
 
 > Chaining is a Click feature; Typer deliberately single-dispatches and cannot do it
 > without re-implementing the loop. See `CLI_PLAN.md` for that decision.

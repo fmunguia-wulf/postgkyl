@@ -545,8 +545,8 @@ class TestAverage:
     coeffs = np.zeros((int(cells[0]), nb))
     coeffs[:, 0] = 5.0
     w = pg.GData()
-    w.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True,
-        cells=np.array(cells), representation="modal")
+    w.ctx.update(basis_type="serendipity", poly_order=1,
+        cells=np.array(cells), value_form="modal")
     w.push([np.copy(g) for g in d.grid], gpython.array.GkylArray.from_numpy(coeffs))
     weight_path = str(tmp_path / "weight.gkyl")
     w.save(weight_path)

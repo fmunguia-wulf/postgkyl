@@ -49,13 +49,14 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
       (``mapc2p_vel``) are diagonal -- each dimension is evaluated by its
       *own* 1-D map, so the component count must be ``m * num_basis`` for a
       *1-D* basis. For a combined map, apply the verb twice.
-    basis_type: override the mapping's ``basis_type`` (long name, e.g.
-      ``"serendipity"``); falls back to the mapping dataset's own
-      ``ctx["basis_type"]``. Velocity-space mapping files (``mapc2p_vel``)
-      commonly carry no basis metadata at all, so this is typically
-      required for ``space="vel"``.
-    poly_order: override the mapping's ``poly_order``; falls back to the
-      mapping dataset's own ``ctx["poly_order"]``.
+    basis_type: ``mapping``'s ``basis_type`` (long name, e.g.
+      ``"serendipity"``), set at the moment this call loads it -- only
+      takes effect when ``mapping`` is given as a filename (a property of
+      already-loaded data can't be re-specified here). Velocity-space
+      mapping files (``mapc2p_vel``) commonly carry no basis metadata at
+      all, so this is typically required for ``space="vel"``.
+    poly_order: ``mapping``'s ``poly_order``, set the same way as
+      ``basis_type``.
     inplace: mutate and return ``data`` instead of a new dataset.
     tag: optional tag for the returned dataset.
     label: optional label for the returned dataset.
@@ -73,7 +74,7 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
     ValueError: if ``data`` is native modal (gkyl-backed); if ``space`` is
       neither ``'conf'`` nor ``'vel'``; if the map does not fit ``data``'s
       dimensionality; if the mapping has no ``basis_type``/``poly_order``
-      metadata (and none was given as an override); or if its component
+      metadata (and none was given at load time); or if its component
       count does not match the expected ``m * num_basis``.
   """
   if data.backend == "gkyl":
@@ -82,7 +83,12 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
         "first -- deforming a native modal grid has no basis-space meaning.")
   # end
 
-  map_data = mapping if isinstance(mapping, GDataState) else GDataState(mapping)
+  # basis_type/poly_order are load-time properties of the mapping dataset;
+  # they only apply here when this call is the one loading it (a filename),
+  # threaded straight into GDataState's own override mechanism -- the one
+  # home for "correct a file's missing/mislabeled basis metadata."
+  map_data = (mapping if isinstance(mapping, GDataState) else
+      GDataState(mapping, basis_type=basis_type, poly_order=poly_order))
   m = map_data.num_dims
   num_dims = data.num_dims
 
@@ -101,12 +107,13 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
         f"map: a {m}D {space} map does not fit a {num_dims}D dataset.")
   # end
 
-  resolved_basis_type = basis_type if basis_type is not None else map_data.ctx.get("basis_type")
-  resolved_poly_order = poly_order if poly_order is not None else map_data.ctx.get("poly_order")
+  resolved_basis_type = map_data.ctx.get("basis_type")
+  resolved_poly_order = map_data.ctx.get("poly_order")
   if resolved_basis_type is None or resolved_poly_order is None:
     raise ValueError(
         "map: the mapping dataset has no 'basis_type'/'poly_order' "
-        "metadata; pass basis_type=.../poly_order=... to override.")
+        "metadata; pass basis_type=.../poly_order=... (mapping as a "
+        "filename), or load it explicitly first with those set.")
   # end
 
   # Velocity-space maps (mapc2p_vel) are diagonal: each mapped dimension is
@@ -129,7 +136,7 @@ def map(data: "_GDataState", mapping: "str | _GDataState", *,
       "cells": map_data.ctx["cells"],
       "basis_type": resolved_basis_type,
       "poly_order": resolved_poly_order,
-      "is_modal": map_data.ctx.get("is_modal", True),
+      "value_form": map_data.ctx.get("value_form", "modal"),
   }
   if space == "vel":
     new_axes = dg.map_grid_separable(map_data.get_values(), map_ctx, target_axes)

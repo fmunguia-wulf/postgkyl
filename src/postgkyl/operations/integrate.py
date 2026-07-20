@@ -9,7 +9,7 @@ basis.
 calculus.integrate`` in the legacy tree, ported verbatim to ``numerics.
 calculus.integrate`` and wired here): it collapses one or more axes of
 point-value data and returns a new (reduced) dataset, like ``select``. It
-never touches raw modal coefficients — nodal/quad representations are
+never touches raw modal coefficients — nodal/quad value_forms are
 materialized to their true point locations first (the same bridge ``plot``
 uses); modal data must be converted explicitly first.
 """
@@ -44,10 +44,10 @@ def integrate(data: "GDataState", *, op: str = "none"):
         "integrate wraps gkyl_array_integrate and needs native modal data; "
         "it is not available after .interpolate() or without the Gkeyll library.")
   # end
-  if data.ctx.get("representation", "modal") != "modal":
+  if data.ctx.get("value_form", "modal") != "modal":
     raise ValueError(
-        f"integrate expects the modal representation, not "
-        f"'{data.ctx['representation']}'; call .to_modal() first.")
+        f"integrate expects the modal value_form, not "
+        f"'{data.ctx['value_form']}'; call .to_modal() first.")
   # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
@@ -72,7 +72,7 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
 
   Args:
     data: point-value dataset -- already-interpolated (NumPy) data, or a
-      native ``nodal``/``quad`` representation (materialized to its true
+      native ``nodal``/``quad`` value_form (materialized to its true
       point locations first). Raw modal DG coefficients raise; convert
       explicitly first (``.interpolate()``, ``.to_nodal()``, ``.to_quad()``).
     axis: axis (or axes) to integrate over: an ``int``, a ``tuple`` of
@@ -82,13 +82,13 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
   Returns:
     A new dataset with the integrated axes collapsed to a single, grid-mean
     cell (shape retained, like ``select``). Always NumPy-backed, whatever the
-    input's representation (like ``.interpolate()``'s result): stamped
-    ``interpolated=True`` and cleared of any stale ``representation`` tag so
+    input's value_form (like ``.interpolate()``'s result): stamped
+    ``interpolated=True`` and cleared of any stale ``value_form`` tag so
     ``info``/``repr`` don't keep describing collapsed values as "modal".
   """
   data._require_operable()  # the one home for "is this point-value data"
   shadow = materialize_for_render(data)
   grid, values = numerics.integrate(shadow.grid, shadow.values, axis)
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
-      interpolated=True, representation=None)
+      interpolated=True, value_form=None)
 # end

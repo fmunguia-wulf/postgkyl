@@ -25,20 +25,23 @@ class GData(GDataState):
   """Fluent dataset: ``pg.load(...).interpolate().select(z0=0.0).plot()``."""
 
   # ---------------------------------------------------------- fluent verbs
-  def interpolate(self, *, basis: str | None = None, p: int | None = None,
-      num_interp: int | None = None, inplace: bool = False,
+  def interpolate(self, *, num_interp: int | None = None, inplace: bool = False,
       tag: str | None = None, label: str | None = None) -> "GData":
-    """Interpolate DG coefficients onto a uniform mesh (see ``operations.interpolate``)."""
-    return operations.interpolate(self, basis=basis, p=p, num_interp=num_interp,
+    """Interpolate DG coefficients onto a uniform mesh (see ``operations.interpolate``).
+
+    Basis, polynomial order, and value_form are properties of this dataset,
+    fixed at load time -- this method never re-specifies them.
+    """
+    return operations.interpolate(self, num_interp=num_interp,
         inplace=inplace, tag=tag, label=label)
   # end
 
-  def local_poly(self, *, basis: str | None = None, p: int | None = None,
-      npoints: int = 2, inplace: bool = False, tag: str | None = None,
-      label: str | None = None) -> "GData":
+  def local_poly(self, *, npoints: int = 2, inplace: bool = False,
+      tag: str | None = None, label: str | None = None) -> "GData":
     """Evaluate the DG polynomial cell-by-cell onto a discontinuity-preserving
-    plotting mesh (see ``operations.local_poly``)."""
-    return operations.local_poly(self, basis=basis, p=p, npoints=npoints,
+    plotting mesh (see ``operations.local_poly``). Basis/order/value_form are
+    properties of this dataset, fixed at load time."""
+    return operations.local_poly(self, npoints=npoints,
         inplace=inplace, tag=tag, label=label)
   # end
 
@@ -101,7 +104,7 @@ class GData(GDataState):
     (see ``operations.integrate_axis``); a new (reduced) dataset, like ``.select()``.
 
     Works on already-interpolated (NumPy) data or a native nodal/quad
-    representation; raw modal DG coefficients raise -- convert explicitly
+    value_form; raw modal DG coefficients raise -- convert explicitly
     first (``.interpolate()``/``.to_nodal()``/``.to_quad()``).
     """
     return operations.integrate_axis(self, axis, inplace=inplace, tag=tag, label=label)
@@ -138,9 +141,9 @@ class GData(GDataState):
         inplace=inplace, tag=tag, label=label)
   # end
 
-  # --------------------------------------- representation changes (explicit)
+  # --------------------------------------------- value_form changes (explicit)
   # Conversions never happen implicitly — these verbs are the only doorway
-  # between the modal / nodal / quadrature representations (all gkyl-native).
+  # between the modal / nodal / quadrature value_forms (all gkyl-native).
   def to_modal(self, **kwargs) -> "GData":
     """Convert to modal coefficients (exact from nodal; projection from quad)."""
     return operations.represent(self, to="modal", **kwargs)

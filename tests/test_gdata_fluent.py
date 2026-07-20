@@ -213,7 +213,7 @@ class TestSubclassPropagation:
     modal = nodal_z @ n2m.T  # exact per-cell modal coeffs of the identity map
 
     mapping = GDataState()
-    mapping.ctx.update(basis_type="serendipity", poly_order=1, is_modal=True,
+    mapping.ctx.update(basis_type="serendipity", poly_order=1, value_form="modal",
         cells=np.array([cells], dtype=np.int64))
     mgrid = [np.linspace(lower, upper, cells + 1)]
     mapping.push(mgrid, gpython.GkylArray.from_numpy(modal))

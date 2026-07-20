@@ -163,7 +163,7 @@ class TestLoadGkDistfCoordinateMaps:
     }
 
     def fake_load(file_name="", *, tag="default", label="", ctx=None,
-        representation=None, **read_kwargs):
+        value_form=None, **read_kwargs):
       d = _FakeDistfData(tag=tag, label=label, ctx=ctx)
       if file_name:
         d.push(*registry[file_name])
@@ -837,7 +837,7 @@ class TestUtils:
   def test_read_interpolated_gfile(self):
     grid, values, gdata = utils.read_interpolated_gfile(
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
-        poly_order=1, basis_type="ms")
+        poly_order=1, basis_type="serendipity")
     assert gdata.is_interpolated
   # end
 
@@ -845,7 +845,7 @@ class TestUtils:
   def test_read_interpolated_gfile_with_comp(self):
     grid, values, gdata = utils.read_interpolated_gfile(
         os.path.join(DATA, f"{GK_NAME}-geo_int_jacobtot_inv.gkyl"),
-        poly_order=1, basis_type="ms", comp=0)
+        poly_order=1, basis_type="serendipity", comp=0)
     assert gdata.num_comps == 1
   # end
 # end

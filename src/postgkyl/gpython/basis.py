@@ -194,7 +194,7 @@ def eval_matrix(basis_type: str, ndim: int, poly_order: int,
     points: np.ndarray) -> np.ndarray:
   """``(npts, num_basis)`` matrix ``M[i, j] = b_j(z_i)`` at arbitrary points
   in the reference cell [-1, 1]^ndim — built by evaluating Gkeyll's own basis
-  through the shim. The workhorse behind every representation change *and*
+  through the shim. The workhorse behind every value_form change *and*
   the plotting bridge."""
   g0 = _lib.require()
   basis = get_basis(basis_type, ndim, poly_order)

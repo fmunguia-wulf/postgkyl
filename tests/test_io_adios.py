@@ -54,7 +54,7 @@ def test_adios_frame_p2():
   np.testing.assert_array_equal(data.shape[:-1], (64, 32))
   assert r.ctx["basis_type"] == "serendipity"
   assert r.ctx["poly_order"] == 2
-  assert r.ctx["is_modal"] is True
+  assert r.ctx["value_form"] == "modal"
 # end
 
 

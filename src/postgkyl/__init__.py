@@ -15,7 +15,7 @@ owns it and simply gathered here:
     info                             <- operations/ (the info verb, one-or-many)
     integrate                        <- operations/ (grid integral, via Gkeyll)
     interpolate, select              <- operations/ (functional verb spellings)
-    represent, apply                 <- operations/ (representation verbs)
+    represent, apply                 <- operations/ (value_form verbs)
     available_evaluate_operators     <- operations/ (``evaluate``'s RPN token vocabulary)
     save                             <- io/        (file output)
     load_gk_quantity,                <- diagnostics/gyrokinetics/

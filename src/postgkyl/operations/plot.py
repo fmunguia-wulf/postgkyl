@@ -1,6 +1,6 @@
 """The ``plot`` verb — terminal; hands the dataset to the render backend.
 
-Point-value representations (nodal/quad) plot **directly**: their values are
+Point-value forms (nodal/quad) plot **directly**: their values are
 materialized at the true physical point locations (a non-uniform mesh whose
 cell centers coincide with the points -- ``_materialize.materialize_for_render``),
 then rendered by the unchanged backend. Modal data refuses: coefficients are

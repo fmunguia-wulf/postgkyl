@@ -33,7 +33,7 @@ class GDataState:
   """Storage + metadata for one dataset. No verbs; no upward imports."""
 
   def __init__(self, file_name: str = "", *, ctx: dict | None = None,
-      tag: str = "default", label: str = "", representation: str | None = None,
+      tag: str = "default", label: str = "", value_form: str | None = None,
       basis_type: str | None = None, poly_order: int | None = None,
       **read_kwargs):
     self._grid: list | None = None
@@ -50,7 +50,7 @@ class GDataState:
 
     if self._file_name:
       self._grid, self._values = io.read(self._file_name, self.ctx,
-          representation=representation, basis_type=basis_type,
+          value_form=value_form, basis_type=basis_type,
           poly_order=poly_order, **read_kwargs)
       missing = [key for key in ("basis_type", "poly_order")
           if self.ctx.get(key) is None]
@@ -63,12 +63,12 @@ class GDataState:
             "DG/modal, or downstream verbs that need it (e.g. interpolate) "
             "will fail.", stacklevel=2)
       # end
-      if "representation" not in self.ctx and not self.ctx.get("is_modal"):
+      if "value_form" not in self.ctx:
         warnings.warn(
             f"{self._file_name}:\n"
-            "no representation or is_modal metadata "
-            "found or specified; defaulting to 'modal'. Pass "
-            "representation=... (--representation) explicitly if this is wrong.", stacklevel=2)
+            "no value_form metadata found or specified; defaulting to "
+            "'modal'. Pass value_form=... (--value-form/-v) explicitly if "
+            "this is wrong.", stacklevel=2)
       # end
   # end
     # end
@@ -268,21 +268,26 @@ class GDataState:
   # ---------------------------------------------------------- operability
   @property
   def is_interpolated(self) -> bool:
-    """True when values are safe for element-wise math: never-modal data, or
-    modal data already run through ``interpolate`` (``ctx['interpolated']``)."""
-    return (not self.ctx.get("is_modal", False)) or self.ctx.get("interpolated", False)
+    """True when values are safe for element-wise math: data with no DG
+    structure at all (no ``basis_type`` -- plain point values by
+    construction), never-modal DG data (``value_form`` is ``nodal``/
+    ``quad``), or modal data already run through ``interpolate``
+    (``ctx['interpolated']``)."""
+    if not self.ctx.get("basis_type"):
+      return True
+    # end
+    return (self.ctx.get("value_form", "modal") != "modal"
+        or self.ctx.get("interpolated", False))
   # end
 
   def _require_operable(self) -> None:
     """Pointwise math is allowed exactly where the data are point values:
-    the NumPy field domain, or the nodal/quad representations. Modal
-    coefficients refuse — a pointwise operation has no basis-space meaning."""
+    the NumPy field domain, or the nodal/quad value forms. Modal
+    coefficients refuse — a pointwise operation has no basis-space meaning.
+    ``value_form`` applies uniformly regardless of ``backend`` -- it is the
+    one fact for "what do these values mean", set once at load time."""
     if self._values is None:
       raise ValueError("GData has no values to operate on.")
-    # end
-    if self.backend == "gkyl" and self.ctx.get("representation",
-        "modal") != "modal":
-      return  # nodal/quad: the values ARE the field at points
     # end
     if not self.is_interpolated:
       raise ValueError(
@@ -305,7 +310,7 @@ class GDataState:
     native *modal* data refuses: silently handing out DG coefficients as if
     they were point values is a correctness trap."""
     if isinstance(self._values, gpython.GkylArray):
-      if self.ctx.get("representation", "modal") != "modal":
+      if self.ctx.get("value_form", "modal") != "modal":
         return np.asarray(self.get_values(), dtype=dtype)
       # end
       raise ValueError(
@@ -355,20 +360,14 @@ class GDataState:
       out += f" component {int(min_idx[-1]):d}\n" if num_comps > 1 else "\n"
     # end
     if self.ctx.get("basis_type"):
-      modal = "modal" if self.ctx.get("is_modal") else "nodal"
+      form = self.ctx.get("value_form", "modal")
       if self.ctx.get("interpolated"):
-        modal = "interpolated"
+        form = "interpolated"
       # end
-      elif self.backend == "gkyl":
-        rep = self.ctx.get("representation", "modal")
-        if rep != "modal":
-          modal = f"{rep}"
-          if rep == "quad" and self.ctx.get("num_quad"):
-            modal += f", num_quad={self.ctx['num_quad']}"
-          # end
-        # end
+      elif form == "quad" and self.ctx.get("num_quad"):
+        form = f"quad, num_quad={self.ctx['num_quad']}"
       # end
-      out += f"├─ DG: {self.ctx['basis_type']} p{self.ctx.get('poly_order', '?')} ({modal})\n"
+      out += f"├─ DG: {self.ctx['basis_type']} p{self.ctx.get('poly_order', '?')} ({form})\n"
     # end
     if "changeset" in self.ctx or "builddate" in self.ctx:
       out += "├─ Created with Gkeyll:\n"
@@ -418,8 +417,8 @@ class GDataState:
   # still deserves to surface, so it falls through to the generic dump.
   _INFO_HANDLED_CTX_KEYS = frozenset({
       "time", "frame", "lower", "upper", "cells", "grid_type",
-      "poly_order", "basis_type", "is_modal", "num_comps",
-      "representation", "num_quad", "interpolated",
+      "poly_order", "basis_type", "num_comps",
+      "value_form", "num_quad", "interpolated",
       "changeset", "builddate", "geometry_type", "geqdsk_sign_convention",
       "mass", "charge", "gas_gamma", "vdim",
   })
@@ -435,6 +434,7 @@ class GDataState:
     if lo is not None:
       parts.append(" ".join(f"[{lo[d]:g},{up[d]:g}]" for d in range(self.num_dims)))
     # end
+    value_form = self.ctx.get("value_form", "modal")
     if self.ctx.get("basis_type"):
       dg = str(self.ctx["basis_type"])
       if self.ctx.get("poly_order") is not None:
@@ -443,14 +443,14 @@ class GDataState:
       if self.ctx.get("interpolated"):
         dg += " interpolate"
       # end
-      elif self.ctx.get("is_modal"):
+      elif value_form == "modal":
         dg += " modal"
       # end
       parts.append(dg)
     # end
     if self.backend == "gkyl":
-      rep = self.ctx.get("representation", "modal")
-      parts.append("gkyl-native" if rep == "modal" else f"gkyl-native ({rep})")
+      parts.append("gkyl-native" if value_form == "modal"
+          else f"gkyl-native ({value_form})")
     # end
     parts.append(f"tag '{self._tag}'")
     return " | ".join(parts) + ">"

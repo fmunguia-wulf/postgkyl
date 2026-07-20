@@ -134,14 +134,19 @@ def test_interpolate_degenerates_1d_hybrid_to_serendipity():
 
 @needs_gkeyll
 def test_interpolate_converts_nodal_basis_data_through_nodal_to_modal():
-  """``modal=False`` is the legacy nodal-basis-file convention (``BASIS_MAP``'s
-  'ns'/'ms' short codes) -- reinterpolating already-modal data through it just
-  exercises the conversion machinery (the values themselves are meaningless
-  here, only the code path and output shape matter)."""
-  d = pg.load(F1).interpolate(basis="ns")
-  assert d.is_interpolated
-  assert d.values.shape[0] == d.num_cells[0] if False else True  # smoke: no crash
-  assert d.values.ndim == 2
+  """A NumPy-backed dataset tagged ``value_form="nodal"`` at load time
+  forces the nodal-basis-file convention -- exercising the nodal-to-modal
+  conversion machinery inside ``dg.interpolate`` (the values themselves are
+  meaningless here, only the code path and output shape matter). Native
+  (gkyl-backed) data always enforces the modal value_form, so this must be
+  plain NumPy from the start."""
+  nb = dg.num_basis(1, 1, "serendipity")
+  d = pg.GData(ctx={"poly_order": 1, "basis_type": "serendipity",
+      "value_form": "nodal"})
+  d.push([np.linspace(0.0, 1.0, 5)], np.zeros((4, nb)))
+  out = d.interpolate()
+  assert out.is_interpolated
+  assert out.values.ndim == 2
 # end
 
 
@@ -157,9 +162,13 @@ def test_local_poly_degenerates_1d_hybrid_to_serendipity():
 
 @needs_gkeyll
 def test_local_poly_converts_nodal_basis_data_through_nodal_to_modal():
-  d = pg.load(F1).local_poly(basis="ns")
-  assert d.is_interpolated
-  assert d.values.ndim == 2
+  nb = dg.num_basis(1, 1, "serendipity")
+  d = pg.GData(ctx={"poly_order": 1, "basis_type": "serendipity",
+      "value_form": "nodal"})
+  d.push([np.linspace(0.0, 1.0, 5)], np.zeros((4, nb)))
+  out = d.local_poly()
+  assert out.is_interpolated
+  assert out.values.ndim == 2
 # end
 
 

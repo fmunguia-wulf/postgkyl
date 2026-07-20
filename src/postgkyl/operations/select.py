@@ -82,14 +82,14 @@ def select(data: "GDataState", *, comp=None,
 
   Raises:
     ValueError: if ``data`` holds native modal DG coefficients (nodal/quad
-      representations of gkyl-backed data are point values and slice fine),
+      value_forms of gkyl-backed data are point values and slice fine),
       or a coordinate/slice selector targets a curvilinear axis whose
       physical coordinate still varies along an unresolved sibling axis.
   """
-  if data.backend == "gkyl" and data.ctx.get("representation", "modal") == "modal":
+  if data.backend == "gkyl" and data.ctx.get("value_form", "modal") == "modal":
     raise ValueError(
         "select operates on interpolated (NumPy) values, or on gkyl-native "
-        "nodal/quad representations; call .interpolate()/.to_nodal()/"
+        "nodal/quad value_forms; call .interpolate()/.to_nodal()/"
         ".to_quad() first -- slicing raw modal DG coefficients would mix "
         "basis functions.")
   # end
@@ -179,11 +179,11 @@ def select(data: "GDataState", *, comp=None,
 
   ctx_updates = {}
   if data.backend == "gkyl":
-    # A nodal/quad representation stays gkyl-native (REFACTOR_GKEYLL_FFI.md
+    # A nodal/quad value_form stays gkyl-native (REFACTOR_GKEYLL_FFI.md
     # §3b): ``values`` above was only a read-only NumPy *view* of the native
     # array for slicing purposes -- wrap the sliced result back into a
     # native GkylArray so the dataset doesn't silently fall out of the gkyl
-    # backend (and lose its representation) just for having been selected.
+    # backend (and lose its value_form) just for having been selected.
     # Cell layout isn't derivable from the flat native array (see
     # ``GDataState.set_values``), so it must be threaded through explicitly,
     # the same way ``average``/``eval_at_coord_proj`` do.

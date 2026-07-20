@@ -152,7 +152,7 @@ class _FakeGData:
     return self._values
   # end
 
-  def interpolate(self, basis, p, num_interp=None):
+  def interpolate(self, num_interp=None):
     return self
   # end
 # end
@@ -164,7 +164,7 @@ class _StubFiles:
     monkeypatch.setattr(gk_utils, "GData", self._dispatch)
   # end
 
-  def _dispatch(self, file_name):
+  def _dispatch(self, file_name, **kwargs):
     return self._registry[file_name]
   # end
 

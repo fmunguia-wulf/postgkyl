@@ -9,7 +9,7 @@ Four modules, one per domain boundary:
 - :mod:`.modal` — operations that stay in the modal domain (weak algebra,
   coefficient linear combinations, integration), all executed by Gkeyll
   kernels on native arrays.
-- :mod:`.rep` — explicit representation changes (modal · nodal · quad) and
+- :mod:`.rep` — explicit value_form changes (modal · nodal · quad) and
   pointwise functions via quadrature; the field never leaves the native domain.
 - :mod:`.map` — grid mapping: evaluate a coordinate-map field's coefficients
   at a target's own grid points (see ``MAPPING.md``).

@@ -27,10 +27,10 @@ def _native_basis(data: "GDataState"):
         "native modal data; it is not available after .interpolate() or "
         "without the Gkeyll library.")
   # end
-  if data.ctx.get("representation", "modal") != "modal":
+  if data.ctx.get("value_form", "modal") != "modal":
     raise ValueError(
-        f"eval_at_coord_proj expects the modal representation, not "
-        f"'{data.ctx['representation']}'; call .to_modal() first.")
+        f"eval_at_coord_proj expects the modal value_form, not "
+        f"'{data.ctx['value_form']}'; call .to_modal() first.")
   # end
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
@@ -48,7 +48,7 @@ def eval_at_coord_proj(data: "GDataState", eval_dirs, eval_coords, *,
   the surviving directions' target basis.
 
   Args:
-    data: gkyl-backed (native modal) dataset in the modal representation.
+    data: gkyl-backed (native modal) dataset in the modal value_form.
     eval_dirs: 0-based direction indices to evaluate away (e.g. the selected
       ``z0``-``z5`` flags at the CLI layer).
     eval_coords: physical coordinates, one per entry of ``eval_dirs`` (same

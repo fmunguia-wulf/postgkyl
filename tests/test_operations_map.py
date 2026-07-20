@@ -77,14 +77,14 @@ def _project_2d(fn, lower, upper, cells, basis_type, poly_order):
 
 
 def _synthetic_map(coeffs, lower, upper, cells, *, basis_type="serendipity",
-    poly_order=1, is_modal=True):
+    poly_order=1, value_form="modal"):
   """A gkyl-backed mapping dataset holding ``coeffs`` directly -- no mapc2p
   file needed, per the layer instructions. ``cells`` must be set in ``ctx``
   before ``push`` (``GDataState.set_grid`` needs it to know ``num_dims``,
   and a flat ``GkylArray`` carries no cell layout of its own)."""
   d = GDataState()
   d.ctx.update(basis_type=basis_type, poly_order=poly_order,
-      is_modal=is_modal, cells=np.asarray(cells, dtype=np.int64))
+      value_form=value_form, cells=np.asarray(cells, dtype=np.int64))
   grid = [np.linspace(lower[i], upper[i], int(cells[i]) + 1)
       for i in range(len(cells))]
   d.push(grid, gpython.GkylArray.from_numpy(coeffs))
@@ -285,19 +285,19 @@ class TestMapErrors:
 
   def test_vel_map_real_fixture_fits_the_separable_algorithm(self):
     """See the module docstring: this real fixture carries no basis
-    metadata of its own (callers must supply it, as ``load_gk_distf``
-    does), and its 4 components match m * num_basis_1d == 2 * 2 == 4 for
-    1-D serendipity p1 -- not m * num_basis_2d (== 2 * 4 == 8), which is
-    what the joint-curvilinear (conf-style) contract would require."""
-    mapping = pg.load(F_MAPC2P_VEL)
-    assert mapping.ctx.get("basis_type") is None
+    metadata of its own (callers must supply it at load time, as
+    ``load_gk_distf`` does), and its 4 components match m * num_basis_1d
+    == 2 * 2 == 4 for 1-D serendipity p1 -- not m * num_basis_2d (== 2 * 4
+    == 8), which is what the joint-curvilinear (conf-style) contract would
+    require."""
+    mapping = pg.load(F_MAPC2P_VEL, basis_type="serendipity", poly_order=1)
+    assert mapping.ctx.get("basis_type") == "serendipity"
     assert mapping.num_dims == 2 and mapping.num_comps == 4
     assert gpython.basis.num_basis("serendipity", 1, 1) == 2
     assert gpython.basis.num_basis("serendipity", 2, 1) == 4
 
     target = pg.load(F_ELC).interpolate()
-    out = operations.map(target, mapping, space="vel", basis_type="serendipity",
-        poly_order=1)
+    out = operations.map(target, mapping, space="vel")
     assert out.grid[-1].ndim == 1 and out.grid[-2].ndim == 1
     assert np.all(np.isfinite(out.grid[-1]))
     assert np.all(np.isfinite(out.grid[-2]))

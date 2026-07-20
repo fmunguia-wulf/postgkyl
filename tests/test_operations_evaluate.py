@@ -200,7 +200,7 @@ def test_modal_data_supported_ops_use_weak_kernels():
 @needs_gkeyll
 def test_modal_data_unsupported_op_warns_and_falls_back():
   """sqrt has no weak-kernel form: rather than hard-blocking (basis/
-  representation metadata can be wrong), evaluate warns and computes on the
+  value_form metadata can be wrong), evaluate warns and computes on the
   raw coefficient view, which is exact only when coefficient 0 already IS
   the point value."""
   d = pg.load(F1)

@@ -142,13 +142,15 @@ def load_pkpm(name: str, species: str, idx: "str | int", poly_order: int, *,
     A populated, interpolated, frame-transformed
     :class:`~postgkyl.gdata.gdata.GData`.
   """
-  gf = GData(f"{name!s}-{species!s}_{idx!s}.gkyl")
-  gvars = GData(f"{name!s}-{species!s}_pkpm_vars_{idx!s}.gkyl")
+  gf = GData(f"{name!s}-{species!s}_{idx!s}.gkyl",
+      basis_type="hybrid", poly_order=poly_order)
+  gvars = GData(f"{name!s}-{species!s}_pkpm_vars_{idx!s}.gkyl",
+      basis_type="serendipity", poly_order=poly_order)
 
   c_dim = gf.num_dims - 1
 
-  gf_interpolated = gf.interpolate(basis="pkpmhyb", p=poly_order)
-  gvars_interpolated = gvars.interpolate(basis="ms", p=poly_order)
+  gf_interpolated = gf.interpolate()
+  gvars_interpolated = gvars.interpolate()
 
   t_over_m = gvars_interpolated.select(comp=3)
   bulk_u = gvars_interpolated.select(comp="0:3")

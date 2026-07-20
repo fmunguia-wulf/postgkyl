@@ -212,7 +212,7 @@ class TestLoadPkpm:
   # end
 
   def _patch(self, monkeypatch, gf, gvars):
-    def fake_ctor(file_name):
+    def fake_ctor(file_name, **kwargs):
       return gvars if "pkpm_vars" in file_name else gf
     # end
     monkeypatch.setattr(pkpm, "GData", fake_ctor)
@@ -235,8 +235,8 @@ class TestLoadPkpm:
     self._patch(monkeypatch, gf, gvars)
     out = pkpm.load_pkpm("sim", "ion", 0, 1)
 
-    gf_interpolated = gf.interpolate(basis="pkpmhyb", p=1)
-    gvars_interpolated = gvars.interpolate(basis="ms", p=1)
+    gf_interpolated = gf.interpolate()
+    gvars_interpolated = gvars.interpolate()
     composed = pkpm.laguerre_compose(gf_interpolated, gvars_interpolated.select(comp=3))
     from postgkyl.diagnostics.kinetic import transform_frame
     expected = transform_frame(composed, gvars_interpolated.select(comp="0:3"), cdim=1)

@@ -86,7 +86,7 @@ class GkylReader(object):
   def __init__(self, file_name: str, ctx: dict | None = None,
       axes: tuple | None = (None, None, None, None, None, None),
       comp: str | int | None = None,
-      representation: str | None = None,
+      value_form: str | None = None,
       basis_type: str | None = None,
       poly_order: int | None = None,
       **kwargs):
@@ -101,7 +101,7 @@ class GkylReader(object):
         Allows to specify the axes to be loaded.
       comp: int or slice
         Allows to specify the components to be loaded.
-      representation: overrides the ``ctx["representation"]`` the header
+      value_form: overrides the ``ctx["value_form"]`` the header
         metadata would otherwise imply (e.g. a file tagged with basis
         metadata whose stored values are already point values, not modal
         coefficients).
@@ -109,7 +109,7 @@ class GkylReader(object):
         would otherwise imply -- for files with no basis metadata at all,
         or metadata that mislabels the basis actually used.
       poly_order: overrides the ``ctx["poly_order"]`` the header metadata
-        would otherwise imply. Independent of ``basis_type``/``is_modal`` --
+        would otherwise imply. Independent of ``basis_type``/``value_form`` --
         it corrects only the polynomial order, asserting nothing about
         modality.
       **kwargs
@@ -117,7 +117,7 @@ class GkylReader(object):
         we use.
     """
     self.file_name = file_name
-    self._representation_override = representation
+    self._value_form_override = value_form
     self._basis_type_override = basis_type
     self._poly_order_override = poly_order
 
@@ -217,11 +217,10 @@ class GkylReader(object):
             # end
             elif key == "basisType" or key == "basis_type":
               self.ctx["basis_type"] = unp[key]
-              self.ctx["is_modal"] = True
               has_basis = True
             # end
             else:
-              # Covers "representation" too, if the writer stamped one
+              # Covers "value_form" too, if the writer stamped one
               # directly: a file's own metadata is the next-best source of
               # truth once no explicit override was given (see below).
               self.ctx[key] = unp[key]
@@ -239,23 +238,22 @@ class GkylReader(object):
         # correct a missing/mislabeled basis_type so downstream verbs
         # (interpolate, average, integrate, ...) resolve the right basis.
         self.ctx["basis_type"] = self._basis_type_override
-        self.ctx["is_modal"] = True
         has_basis = True
       # end
       if self._poly_order_override is not None:
-        # Independent of basis_type/is_modal: corrects only the polynomial
+        # Independent of basis_type/value_form: corrects only the polynomial
         # order, asserting nothing about modality.
         self.ctx["poly_order"] = self._poly_order_override
       # end
-      if has_basis and "representation" not in self.ctx:
-        self.ctx["representation"] = "modal"
+      if has_basis and "value_form" not in self.ctx:
+        self.ctx["value_form"] = "modal"
       # end
     # end
       #end
     #end
-    if self._representation_override is not None:
+    if self._value_form_override is not None:
       # Wins over both the file's own metadata and the "modal" default.
-      self.ctx["representation"] = self._representation_override
+      self.ctx["value_form"] = self._value_form_override
     # end
 
     # read real-type

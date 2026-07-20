@@ -11,7 +11,7 @@ backends of the explicit ``.to_nodal()/.to_modal()/.to_quad()/.apply()`` verbs.
 Exactness: nodal↔modal is an exact N×N change of basis; a quad round-trip is
 exact for integrands of degree ≤ 2·num_quad−1 (default ``num_quad = p+1``).
 
-Note: this is the *cell-local* nodal representation (N unshared values per
+Note: this is the *cell-local* nodal value_form (N unshared values per
 cell). Grid-level shared-node nodal fields (``gkyl_nodal_ops``, used by the
 geometry/mapped-grid workflow) are phase C.
 """
@@ -77,7 +77,7 @@ def wrap(values: np.ndarray) -> GkylArray:
   """Wrap ``(cells..., ncomp)`` NumPy values back into a native array.
 
   The doorway for pointwise NumPy results on nodal/quad data: computed on the
-  view, wrapped back, so the dataset stays gkyl-native and in-representation.
+  view, wrapped back, so the dataset stays gkyl-native and in-value_form.
   """
   return GkylArray.from_numpy(values)
 # end

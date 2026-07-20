@@ -227,7 +227,7 @@ def gk_nodes(
   if psi_file:
     resolved_psi = psi_file if psi_file[0] == "/" else path + psi_file
     psi_grid, psi_values, _ = utils.read_interpolated_gfile(resolved_psi, poly_order=2,
-        basis_type="mt")
+        basis_type="tensor")
     psi_grid_cc = [0.5 * (psi_grid[d][:-1] + psi_grid[d][1:]) for d in range(len(psi_grid))]
 
     levels = _parse_levels(clevels, cnlevels)

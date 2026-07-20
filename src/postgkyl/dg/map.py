@@ -108,8 +108,8 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
       coefficients (``GDataState.get_values()``); components
       ``d*num_basis:(d+1)*num_basis`` are the coefficients of ``x_d(z)``.
     map_ctx: the mapping dataset's ``ctx`` dict; reads ``lower``, ``upper``,
-      ``cells``, ``basis_type``, ``poly_order``, and ``is_modal`` (default
-      ``True``).
+      ``cells``, ``basis_type``, ``poly_order``, and ``value_form`` (default
+      ``"modal"``).
     target_axes: the target's own edge/node arrays for the ``m`` axes being
       deformed, one 1-D array per mapped dimension.
 
@@ -124,7 +124,7 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
   cells = map_ctx["cells"]
   basis_type = map_ctx["basis_type"]
   poly_order = map_ctx["poly_order"]
-  modal = bool(map_ctx.get("is_modal", True))
+  modal = map_ctx.get("value_form", "modal") == "modal"
   m = len(target_axes)
 
   if m == 1:
@@ -163,8 +163,8 @@ def map_grid_separable(map_coeffs: np.ndarray, map_ctx: dict,
     map_coeffs: ``(*cells, m * num_basis)`` array — ``GDataState.get_values()``,
       ``num_basis`` being the 1-D basis size for ``basis_type``/``poly_order``.
     map_ctx: the mapping dataset's ``ctx`` dict; reads ``lower``, ``upper``,
-      ``cells``, ``basis_type``, ``poly_order``, and ``is_modal`` (default
-      ``True``).
+      ``cells``, ``basis_type``, ``poly_order``, and ``value_form`` (default
+      ``"modal"``).
     target_axes: the target's own 1-D edge arrays for the ``m`` axes being
       deformed, one per mapped dimension.
 
@@ -176,7 +176,7 @@ def map_grid_separable(map_coeffs: np.ndarray, map_ctx: dict,
   cells = map_ctx["cells"]
   basis_type = map_ctx["basis_type"]
   poly_order = map_ctx["poly_order"]
-  modal = bool(map_ctx.get("is_modal", True))
+  modal = map_ctx.get("value_form", "modal") == "modal"
   m = len(target_axes)
 
   nb = gpython.basis.num_basis(basis_type, 1, poly_order)

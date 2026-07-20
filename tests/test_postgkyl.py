@@ -183,7 +183,7 @@ def _make_modal(grid, cells, basis_type, poly_order, coeffs):
   """A bare modal GData, built in-memory rather than from a file — for
   exercising the conf x phase cross-multiply path with grids we control."""
   d = pg.GData()
-  d.ctx.update(basis_type=basis_type, poly_order=poly_order, is_modal=True,
+  d.ctx.update(basis_type=basis_type, poly_order=poly_order, value_form="modal",
       cells=np.array(cells))
   d.push(grid, gpython.array.GkylArray.from_numpy(coeffs))
   return d
@@ -249,15 +249,15 @@ def _relerr(x, y):
 
 
 @needs_gkeyll
-def test_representation_round_trips():
+def test_value_form_round_trips():
   """modal <-> nodal is exact; modal <-> quad is exact for num_quad >= p+1."""
   a = pg.load(F1)
   n = a.to_nodal()
-  assert n.ctx["representation"] == "nodal"
+  assert n.ctx["value_form"] == "nodal"
   assert n.backend == "gkyl"                     # never leaves the native domain
   assert _relerr(n.to_modal().values, a.values) < 1e-14
   q = a.to_quad()
-  assert (q.ctx["representation"], q.ctx["num_quad"]) == ("quad", 2)
+  assert (q.ctx["value_form"], q.ctx["num_quad"]) == ("quad", 2)
   assert _relerr(q.to_modal().values, a.values) < 1e-14
   # nodal -> quad composes through modal
   assert _relerr(n.to_quad().to_modal().values, a.values) < 1e-14
@@ -278,7 +278,7 @@ def test_apply_pointwise_via_quadrature():
   assert _relerr(a.apply(np.square).values, (a * a).values) < 1e-13
   chained = a.apply(np.abs).apply(np.sqrt)       # stays modal + gkyl-native
   assert chained.backend == "gkyl"
-  assert chained.ctx.get("representation", "modal") == "modal"
+  assert chained.ctx.get("value_form", "modal") == "modal"
   with pytest.raises(ValueError):
     a.apply(lambda v: v.sum(axis=-1))            # fn must act pointwise
   # end
@@ -287,11 +287,11 @@ def test_apply_pointwise_via_quadrature():
 
 @needs_gkeyll
 def test_conversions_are_always_explicit():
-  """No implicit representation change, ever (REFACTOR_GKEYLL_FFI.md §3b)."""
+  """No implicit value_form change, ever (REFACTOR_GKEYLL_FFI.md §3b)."""
   a = pg.load(F1)
   n, q = a.to_nodal(), a.to_quad()
   with pytest.raises(ValueError):
-    _ = a + n                                    # mixed representations
+    _ = a + n                                    # mixed value_forms
   # end
   with pytest.raises(ValueError):
     _ = np.add(n, q)                             # mixed reps through a ufunc
@@ -316,11 +316,11 @@ def test_conversions_are_always_explicit():
 
 @needs_gkeyll
 def test_pointwise_numpy_on_point_values():
-  """NumPy math is exact on nodal/quad data and stays native, in-rep."""
+  """NumPy math is exact on nodal/quad data and stays native, in-value_form."""
   a = pg.load(F1)
   n, q = a.to_nodal(), a.to_quad()
   s = np.sqrt(np.abs(n))                         # ufunc on nodal
-  assert (s.backend, s.ctx["representation"]) == ("gkyl", "nodal")
+  assert (s.backend, s.ctx["value_form"]) == ("gkyl", "nodal")
   assert np.allclose(s.values, np.sqrt(np.abs(np.asarray(n.values))))
   assert np.allclose((n ** 2).values, np.asarray(n.values) ** 2)
   assert np.allclose((q * q).values, np.asarray(q.values) ** 2)
@@ -350,7 +350,7 @@ def test_plot_point_values_directly():
 
 
 @needs_gkeyll
-def test_linear_ops_valid_in_any_representation():
+def test_linear_ops_valid_in_any_value_form():
   """+ - and scalar ops act pointwise in nodal/quad and agree with modal."""
   a = pg.load(F1)
   n = a.to_nodal()
