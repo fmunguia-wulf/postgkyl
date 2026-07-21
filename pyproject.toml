@@ -75,6 +75,9 @@ filterwarnings = [
     "ignore:Animation was deleted without rendering anything:UserWarning",
     "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
     "ignore:invalid value encountered in divide:RuntimeWarning",
+    # ev_ops' sqrt fallback path (see test_operations_evaluate.py) deliberately
+    # runs sqrt on raw modal coefficients, some of which are negative.
+    "ignore:invalid value encountered in sqrt:RuntimeWarning",
     "ignore::scipy.optimize.OptimizeWarning",
     # vtkmodules' own numpy_support helper, not our code; fires on every
     # pyvista array upload under NumPy >= 2.5.
@@ -82,4 +85,8 @@ filterwarnings = [
     # plotly's kaleido wrapper, not our code; fires on every static image
     # export against kaleido's server-based renderer.
     "ignore:The kopts argument is ignored if using a server\\.:UserWarning",
+    # CPython's own fork() safety check, not our code; pytest's capture
+    # machinery keeps background threads alive, so any test that forks a
+    # worker process (animate's --nproc) trips it regardless of correctness.
+    "ignore:This process \\(pid=\\d+\\) is multi-threaded, use of fork\\(\\) may lead to deadlocks in the child\\.:DeprecationWarning",
 ]
