@@ -29,6 +29,11 @@ def command(ctx, axis, op, use, tag, label) -> None:
   ``nodal``/``quad`` -- ``.to_nodal()``/``.to_quad()`` -- are fluent-API
   only, not exposed as CLI commands).
 
+  A curvilinear (``map --space conf``) axis has no per-axis width of its
+  own; requesting only part of such a block raises -- include every axis of
+  the block together, and it is reduced via its physical cell volume
+  instead of a per-axis trapezoidal width.
+
   Without AXIS (the default), this is a terminal verb (like ``info``):
   it integrates the *whole* grid natively inside Gkeyll on modal
   (pre-``interpolate()``) data via ``gkyl_array_integrate``, and prints one value

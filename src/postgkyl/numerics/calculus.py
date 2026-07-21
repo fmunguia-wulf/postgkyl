@@ -32,7 +32,7 @@ def _split_axis_string(axis: str) -> tuple:
 # end
 
 
-def _parse_axis(axis: int | tuple | str | None, num_dims: int) -> tuple:
+def parse_axis(axis: int | tuple | str | None, num_dims: int) -> tuple:
   """Turn an axis selector into a tuple of integer axes."""
   if axis is None:
     return tuple(range(num_dims))
@@ -78,7 +78,7 @@ def integrate(grid: list[np.ndarray], values: np.ndarray,
   """
   grid = list(grid)
   values = np.copy(values)
-  axis = _parse_axis(axis, len(grid))
+  axis = parse_axis(axis, len(grid))
 
   # Get dz elements
   dz = []

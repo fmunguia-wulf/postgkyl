@@ -6,18 +6,29 @@ compiled shim (``gkeyll/core/zero/gkyl_gpython.h``/``gpython.c`` +
 ``gpython/csrc/_gpythonmodule.c``), out of scope for every layer above
 ``gpython``. This
 verb instead differentiates *after* ``.interpolate()``, with ``np.gradient`` on the
-plain NumPy field values (via ``numerics.ev_ops.grad``/``grad2``, the
-existing pure ``(grid, values)`` gradient operators shared with the
-``evaluate`` verb) -- a numerical (second-order accurate, cell-centered), not exact,
-derivative. Exactness on the modal polynomial is unnecessary here precisely
+plain NumPy field values -- a numerical (second-order accurate, cell-centered), not
+exact, derivative. Exactness on the modal polynomial is unnecessary here precisely
 because the data have already been interpolated to a uniform mesh.
+
+On a separable axis (the ordinary case, including a nonuniform/stretched
+grid), this is a plain per-axis ``np.gradient`` against that axis' own 1-D
+coordinate array. On a curvilinear axis -- part of a joint, non-separable
+``.map(space="conf")`` block, whose grid arrays are multi-dimensional and
+have no single 1-D coordinate of their own -- the physical derivative is
+computed via the chain rule instead (``numerics.curvilinear.
+physical_gradient``): the whole block's Jacobian is inverted once and reused
+for every direction/component request that touches it.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from postgkyl.numerics import ev_ops
+import numpy as np
+
+from postgkyl.numerics import curvilinear
+
+from ._curvilinear import block_for_axis, curvilinear_blocks
 
 if TYPE_CHECKING:
   from postgkyl.gdatastate.gdatastate import GDataState
@@ -32,10 +43,12 @@ def differentiate(data: "GDataState", *, direction: int | None = None,
   stacks the results in the component axis (``num_comps`` becomes
   ``num_comps * num_dims``, grouped ``[d0_comp0..d0_compN, d1_comp0.., ...]``).
   With an explicit ``direction``, differentiates along that one axis only
-  (``num_comps`` unchanged). Requires a nodal (edge) grid one entry longer
-  than the value count along each differentiated axis (the same convention
-  ``numerics.ev_ops`` uses elsewhere); a mismatched axis silently returns a
-  wrong result -- a caveat inherited unchanged from the legacy tool.
+  (``num_comps`` unchanged). A separable axis requires a nodal (edge) grid
+  one entry longer than the value count along that axis; a mismatched axis
+  silently returns a wrong result -- a caveat inherited unchanged from the
+  legacy tool. A curvilinear axis (part of a joint ``.map(space="conf")``
+  block) has no such per-axis length convention of its own; its block's
+  grid arrays carry it instead.
 
   Args:
     data: the dataset to differentiate; must be NumPy-backed (call
@@ -60,12 +73,37 @@ def differentiate(data: "GDataState", *, direction: int | None = None,
   # end
   grid = data.grid
   values = data.values
+  num_dims = data.num_dims
+  nc = values.shape[-1]
+
+  blocks = curvilinear_blocks(grid, data.ctx.get("mapped_axes", {}))
+  block_grad_cache: dict = {}
+
+  def grad_along(d: int) -> np.ndarray:
+    info = block_for_axis(blocks, d)
+    if info is None:
+      zc = 0.5 * (grid[d][1:] + grid[d][:-1])  # cell centered values
+      return np.gradient(values, zc, edge_order=2, axis=d)
+    # end
+    off, dims = info
+    if off not in block_grad_cache:
+      block_coords = [grid[dd] for dd in dims]
+      block_grad_cache[off] = curvilinear.physical_gradient(
+          block_coords, values, tuple(dims))
+    # end
+    return block_grad_cache[off][..., dims.index(d)]
+  # end
+
   if direction is None:
-    out_grid, out_values = ev_ops.grad([grid], [values])
+    out_shape = list(values.shape)
+    out_shape[-1] = nc * num_dims
+    out_values = np.zeros(out_shape)
+    for d in range(num_dims):
+      out_values[..., d*nc:(d + 1)*nc] = grad_along(d)
+    # end
   # end
   else:
-    out_grid, out_values = ev_ops.grad2([None, grid], [int(direction), values])
+    out_values = grad_along(int(direction))
   # end
-  return data._result(out_grid[0], out_values[0], inplace=inplace, tag=tag,
-      label=label)
+  return data._result(grid, out_values, inplace=inplace, tag=tag, label=label)
 # end

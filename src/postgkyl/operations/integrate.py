@@ -12,6 +12,17 @@ point-value data and returns a new (reduced) dataset, like ``select``. It
 never touches raw modal coefficients — nodal/quad value_forms are
 materialized to their true point locations first (the same bridge ``plot``
 uses); modal data must be converted explicitly first.
+
+A curvilinear axis -- part of a joint, non-separable ``.map(space="conf")``
+block, whose grid arrays are multi-dimensional and carry no single 1-D
+coordinate of their own -- has no meaningful per-axis trapezoidal width, so
+it is reduced separately from the ordinary (separable) axes: the whole
+block is collapsed at once via its physical cell volume (``numerics.
+curvilinear.cell_volume``, the Jacobian-determinant change-of-variables
+weight). Requesting only part of a curvilinear block raises -- holding the
+rest of the block "fixed" while integrating one of its axes has no single
+physical answer once the block's coordinates genuinely couple (see
+``operations.select``'s analogous curvilinear guard).
 """
 
 from __future__ import annotations
@@ -20,8 +31,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from postgkyl import dg, numerics
+from postgkyl import dg
+from postgkyl.numerics import calculus, curvilinear
 
+from ._curvilinear import curvilinear_blocks
 from ._materialize import materialize_for_render
 
 if TYPE_CHECKING:
@@ -85,10 +98,55 @@ def integrate_axis(data: "GDataState", axis: int | tuple | str | None = None, *,
     input's value_form (like ``.interpolate()``'s result): stamped
     ``interpolated=True`` and cleared of any stale ``value_form`` tag so
     ``info``/``repr`` don't keep describing collapsed values as "modal".
+
+  Raises:
+    ValueError: ``axis`` selects some but not all of a curvilinear
+      (``.map(space="conf")``) block's dimensions.
   """
   data._require_operable()  # the one home for "is this point-value data"
   shadow = materialize_for_render(data)
-  grid, values = numerics.integrate(shadow.grid, shadow.values, axis)
+  grid = list(shadow.grid)
+  values = shadow.values
+  axes = calculus.parse_axis(axis, len(grid))
+
+  blocks = curvilinear_blocks(grid, data.ctx.get("mapped_axes", {}))
+  requested = set(axes)
+  curvilinear_runs = []
+  handled = set()
+  for off, dims in blocks.items():
+    overlap = requested & set(dims)
+    if not overlap:
+      continue
+    # end
+    if overlap != set(dims):
+      raise ValueError(
+          f"integrate: axis/axes {sorted(overlap)} belong to a curvilinear "
+          f"(mapped) block spanning dimensions {dims}; a partial reduction "
+          "of the block has no single physical answer -- include every "
+          "axis of the block together in the same call.")
+    # end
+    curvilinear_runs.append((off, dims))
+    handled.update(dims)
+  # end
+
+  separable_axes = tuple(a for a in axes if a not in handled)
+  if separable_axes:
+    grid, values = calculus.integrate(grid, values, separable_axes)
+  # end
+
+  for _, dims in curvilinear_runs:
+    m = len(dims)
+    block_coords = [grid[d] for d in dims]
+    vol = curvilinear.cell_volume(block_coords)
+    vol = vol.reshape(vol.shape + (1,) * (values.ndim - m))
+    moved = np.moveaxis(values, dims, range(m))
+    reduced = np.sum(moved * vol, axis=tuple(range(m)), keepdims=True)
+    values = np.moveaxis(reduced, range(m), dims)
+    for d in dims:
+      grid[d] = np.array([grid[d].mean()])
+    # end
+  # end
+
   return data._result(grid, values, inplace=inplace, tag=tag, label=label,
       interpolated=True, value_form=None)
 # end
