@@ -74,7 +74,7 @@ INSTANCE_VERBS = ["interpolate", "local_poly", "select", "plot", "save",
     "to_quad", "apply",
     "fft", "magsq", "mask", "val2coord", "extract_input", "fit",
     "differentiate", "map"]
-MODULE_VERBS = ["collect", "evaluate", "relchange", "animate"]
+MODULE_VERBS = ["collect", "evaluate", "relchange", "animate", "sort"]
 
 
 class TestMethodInventory:
@@ -189,6 +189,16 @@ class TestSubclassPropagation:
     b = _make(MyData, grid, np.full((4, 1), 3.0), time=1.0)
     out = api_verbs.collect(a, b)
     assert isinstance(out, MyData)
+  # end
+
+  def test_sort(self):
+    grid = [np.linspace(0.0, 1.0, 5)]
+    a = _make(MyData, grid, np.full((4, 1), 2.0))
+    a._file_name = "field_10.gkyl"
+    b = _make(MyData, grid, np.full((4, 1), 3.0))
+    b._file_name = "field_2.gkyl"
+    out = api_verbs.sort(a, b)
+    assert [d.file_name for d in out] == ["field_2.gkyl", "field_10.gkyl"]
   # end
 
   def test_evaluate(self):
@@ -441,5 +451,6 @@ class TestFacade:
     assert pg.evaluate is api_verbs.evaluate
     assert pg.relchange is api_verbs.relchange
     assert pg.animate is api_verbs.animate
+    assert pg.sort is api_verbs.sort
   # end
 # end

@@ -17,6 +17,7 @@ from .filters import fft_filtering, butter_filtering
 from .ev_ops import cmds as ev_cmds
 from .grid_centering import nodal_to_cell_centered_grid
 from .downsample import downsample
+from .natural_sort import natural_sort_key
 
 __all__ = [
     "idx_parser", "grids_compatible", "grid_is_prefix",
@@ -33,4 +34,5 @@ __all__ = [
     "ev_cmds",
     "nodal_to_cell_centered_grid",
     "downsample",
+    "natural_sort_key",
 ]

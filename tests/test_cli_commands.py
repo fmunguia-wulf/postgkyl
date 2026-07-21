@@ -376,6 +376,26 @@ class TestChainedPipelines:
     assert sum("inactive" not in l for l in lines) == 2
   # end
 
+  def test_sort_orders_by_natural_filename(self):
+    result = _ok([DISTF_P2_1, DISTF_P2_0, "interp", "sort", "info"])
+    assert result.output.index(DISTF_P2_0) < result.output.index(DISTF_P2_1)
+  # end
+
+  def test_sort_reverse(self):
+    result = _ok([DISTF_P2_0, DISTF_P2_1, "interp", "sort", "--reverse", "info"])
+    assert result.output.index(DISTF_P2_1) < result.output.index(DISTF_P2_0)
+  # end
+
+  def test_sort_use_filter(self):
+    result = _ok([DISTF_P2_1, DISTF_P2_0, "interp", "sort", "--use", "default"])
+    assert result.exit_code == 0
+  # end
+
+  def test_sort_no_datasets_fails_closed(self):
+    result = _run(["sort"])
+    assert result.exit_code != 0
+  # end
+
   def test_extractinput_use_filter(self):
     result = _ok([ENERGY, "extractinput", "--use", "default"])
     assert result.exit_code == 0

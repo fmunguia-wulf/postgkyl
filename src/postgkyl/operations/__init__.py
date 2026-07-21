@@ -37,6 +37,7 @@ from .magsq import magsq
 from .relchange import relchange
 from .mask import mask
 from .collect import collect
+from .sort import sort
 from .grid import grid
 from .val2coord import val2coord
 from .extract_input import extract_input
@@ -49,6 +50,6 @@ __all__ = ["interpolate", "local_poly", "select", "info", "integrate", "integrat
     "eval_at_coord_proj",
     "plot", "animate", "plotly", "plotly_animate",
     "arithmetic", "represent", "apply",
-    "fft", "magsq", "relchange", "mask", "collect", "grid", "val2coord",
+    "fft", "magsq", "relchange", "mask", "collect", "sort", "grid", "val2coord",
     "extract_input", "fit", "differentiate", "evaluate", "available_evaluate_operators",
     "map"]

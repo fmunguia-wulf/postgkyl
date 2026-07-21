@@ -10,7 +10,7 @@ owns it and simply gathered here:
 
     load, GData, GDataGroup            <- api/       (fluent surface)
     collect, evaluate, relchange,      <- api/       (module-level multi-dataset
-    animate, plotly_animate                          verbs -- no single ``self``)
+    animate, plotly_animate, sort                    verbs -- no single ``self``)
     plot                             <- render/    (multi-dataset rendering)
     info                             <- operations/ (the info verb, one-or-many)
     integrate                        <- operations/ (grid integral, via Gkeyll)
@@ -44,7 +44,7 @@ Architecture (strict, cycle-free DAG; see REFACTOR_GKEYLL_FFI.md)::
     facade     __init__    re-exports only
 """
 
-from postgkyl.gdata import GData, load, GDataGroup, animate, collect, evaluate, plotly_animate, relchange
+from postgkyl.gdata import GData, load, GDataGroup, animate, collect, evaluate, plotly_animate, relchange, sort
 from postgkyl.operations import apply, available_evaluate_operators, info, integrate, interpolate, represent, select
 from postgkyl.render import plot
 from postgkyl.io import save
@@ -55,7 +55,7 @@ __version__ = "0.1.0"
 
 __all__ = ["GData", "load", "GDataGroup", "plot", "info", "integrate",
     "interpolate", "select", "represent", "apply", "save",
-    "collect", "evaluate", "relchange", "animate", "plotly_animate",
+    "collect", "evaluate", "relchange", "animate", "plotly_animate", "sort",
     "available_evaluate_operators",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
     "__version__"]

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from . import (
     load, interpolate, local_poly, save, select, plot, info,
-    fft, magsq, relchange, mask, collect, grid, val2coord, extractinput,
+    fft, magsq, relchange, mask, collect, sort, grid, val2coord, extractinput,
     fit, growth, differentiate, evaluate, map, integrate, average,
     evalatcoordproj, animate,
     euler, tenmoment, mhd, velocity, agyro, current, energetics,
@@ -40,6 +40,7 @@ COMMANDS = [
     relchange.command,
     mask.command,
     collect.command,
+    sort.command,
     grid.command,
     val2coord.command,
     extractinput.command,
@@ -86,7 +87,7 @@ COMMAND_SECTIONS: dict[str, list[str]] = {
         "average", "collect", "dg_local_poly", "differentiate", "evalatcoordproj",
         "evaluate", "extractinput", "fft", "fit", "grid", "growth", "integrate",
         "interpolate", "load", "magsq", "map", "mask", "relchange", "select",
-        "val2coord",
+        "sort", "val2coord",
     ],
     "Diagnostics": [
         "agyro", "bparrotate", "bperprotate", "current", "energetics",

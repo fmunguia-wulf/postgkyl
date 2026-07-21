@@ -3,8 +3,9 @@
 
 ``collect``, ``evaluate``, ``relchange``, ``animate``, and ``plotly_animate``
 each combine *several* datasets into one result (or, for ``animate``/
-``plotly_animate``, into one animation), so they cannot be one dataset's
-method the way ``interpolate``/``select``/``fft``/... are on
+``plotly_animate``, into one animation); ``sort`` reorders several datasets
+rather than combining them. None of these can be one dataset's method the
+way ``interpolate``/``select``/``fft``/... are on
 :class:`~postgkyl.gdata.gdata.GData`. Each is a one-line delegation to the
 matching :mod:`postgkyl.operations` verb, so the functional spelling
 (``postgkyl.collect(a, b)``) and this module-level fluent spelling can never
@@ -34,6 +35,15 @@ def collect(*datasets: "GDataState", sumdata: bool = False,
   """
   return operations.collect(*datasets, sumdata=sumdata, period=period, offset=offset,
       chunk=chunk, tag=tag, label=label)
+# end
+
+
+def sort(*datasets: "GDataState", reverse: bool = False) -> list:
+  """Reorder datasets by the natural/numeric sort of their source filename.
+
+  See ``operations.sort``. Accepts ``sort(a, b)`` or ``sort([a, b])``.
+  """
+  return operations.sort(*datasets, reverse=reverse)
 # end
 
 

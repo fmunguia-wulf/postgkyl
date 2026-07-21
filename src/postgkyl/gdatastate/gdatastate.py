@@ -102,6 +102,13 @@ class GDataState:
 
   label = property(get_label, set_label)
 
+  @property
+  def file_name(self) -> str:
+    """Source file path this dataset was loaded from ("" if it was never
+    read from disk, e.g. a verb's freshly-computed result)."""
+    return self._file_name
+  # end
+
   # ------------------------------------------------------------- shape info
   def get_num_cells(self) -> np.ndarray:
     if self.ctx.get("cells") is not None:
