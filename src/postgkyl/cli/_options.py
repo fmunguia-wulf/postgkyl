@@ -11,7 +11,33 @@ _options.py``).
 
 from __future__ import annotations
 
+import os
+import sys
+
 import click
+
+
+def _is_headless() -> bool:
+  """True when no GUI display is reachable (e.g. an SSH session on a
+  cluster node with no X11/Wayland forwarding) -- the case where
+  ``plt.show()`` or opening a browser tab has nowhere to put a window."""
+  if sys.platform in ("darwin", "win32"):
+    return False
+  # end
+  return not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+# end
+
+
+def show_option(help: str = "Open the rendered output preview."):
+  """``--show``/``--no-show``: defaults to *off* on a headless session (no
+  DISPLAY/WAYLAND_DISPLAY on Linux), since there popping a GUI window or a
+  browser tab can't do anything useful; an explicit ``--show``/``--no-show``
+  always overrides the detected default."""
+  def decorator(f):
+    return click.option("--show/--no-show", default=not _is_headless(), help=help)(f)
+  # end
+  return decorator
+# end
 
 
 def use_option(f):

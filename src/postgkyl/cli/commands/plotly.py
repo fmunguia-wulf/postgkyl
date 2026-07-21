@@ -39,7 +39,7 @@ import numpy as np
 import postgkyl as pg
 
 from .._apply import active_datasets
-from .._options import use_option
+from .._options import show_option, use_option
 
 
 def _parse_range_option(_ctx, _param, value):
@@ -160,7 +160,7 @@ def _parse_figsize(value):
     help="Frames-per-second for rotating mp4/gif output.")
 @click.option("--showgrid/--no-showgrid", default=True, help="Show 3D axis grid planes.")
 @click.option("--hashtag", is_flag=True, default=False, help="Add '#pgkyl' annotation to the figure.")
-@click.option("--show/--no-show", default=True, help="Open the output preview in a browser.")
+@show_option("Open the output preview in a browser.")
 @click.option("--figsize", default=None,
     help="Figure size as 'width,height' (scaled to pixels for Plotly).")
 @click.option("--cmap", default=None,

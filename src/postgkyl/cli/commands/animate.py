@@ -35,7 +35,7 @@ import click
 import postgkyl as pg
 
 from .._apply import active_datasets
-from .._options import use_option
+from .._options import show_option, use_option
 
 
 def _group_by_frame(datasets: list) -> list[list]:
@@ -193,7 +193,7 @@ def _suffixed(path: str | None, suffix: str) -> str | None:
     help="Turn colormap to jet for comparison with literature.")
 @click.option("--cmap", default=None,
     help="Override default colormap with a valid matplotlib cmap.")
-@click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
+@show_option("Turn showing of the plot ON and OFF.")
 @click.option("--saveframes", default=None,
     help="Write '<prefix>_<i>.png' per frame instead of a live/saved animation.")
 @click.option("--nproc", default=1, type=int, show_default=True,

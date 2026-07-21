@@ -20,7 +20,7 @@ import numpy as np
 import postgkyl as pg
 
 from .._apply import active_datasets
-from .._options import use_option
+from .._options import show_option, use_option
 
 
 @click.command("plot")
@@ -118,7 +118,7 @@ from .._options import use_option
 @click.option("--showgrid/--no-showgrid", default=True, help="Show grid-lines.")
 @click.option("--xkcd", is_flag=True, default=False, help="Turns on the xkcd style!")
 @click.option("--hashtag", is_flag=True, default=False, help="Turns on the pgkyl hashtag!")
-@click.option("--show/--no-show", default=True, help="Turn showing of the plot ON and OFF.")
+@show_option("Turn showing of the plot ON and OFF.")
 @click.option("--figsize", default=None, help="Comma-separated values for x and y size.")
 @click.option("--saveframes", default=None,
     help="Save individual frames as PNGS instead of an opening them")
