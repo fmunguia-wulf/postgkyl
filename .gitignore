@@ -6,6 +6,9 @@ src/postgkyl/version.py
 .DS_Store
 tests/test_data/generated/
 
+# vendored Gkeyll checkout, cloned at pip install time (scripts/build_gkeyll.sh)
+/gkeyll/
+
 # scratch files at the repo root only (unanchored patterns would silently
 # ignore package sources under src/ and fixtures under tests/)
 /*.gkyl

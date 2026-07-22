@@ -250,7 +250,7 @@ src/postgkyl/
 ║                     ▼ import _gpython  (extension over gkyl_gpython.h only)  ║
 ║   gkeyll/core/zero/{gkyl_gpython.h, gpython.c} — the shim, compiled by       ║
 ║   Gkeyll's own make core INTO:      ▼ linked -lg0core                        ║
-║   libg0core.so  (gkeyll/ submodule · built by scripts/build_gkeyll.sh)       ║
+║   libg0core.so  (gkeyll/ clone · built by scripts/build_gkeyll.sh)           ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 ```
@@ -440,7 +440,7 @@ the equation module that uses it.)
   in the same tree (shim and library can never drift apart).
   `csrc/_gpythonmodule.c` wraps `gkyl_gpython.h` (opaque handles + scalars + buffers
   only) into the `_gpython` extension, built by `scripts/build_gpython.sh` against
-  the submodule's `libg0core.so` (linked + rpath-bound, not dlopened).
+  the cloned `gkeyll/`'s `libg0core.so` (linked + rpath-bound, not dlopened).
   `_lib.py` imports the extension and performs the `GPYTHON_API_VERSION`
   handshake. `array.py`'s
   `GkylArray` holds the owning capsule (its destructor releases the C array;

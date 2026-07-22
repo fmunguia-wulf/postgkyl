@@ -22,7 +22,7 @@ from pathlib import Path
 DEFAULT_EXCLUDE_DIRS = {
     ".git", ".pytest_cache", ".vscode", "__pycache__", ".venv", "venv",
     "build", "dist", "node_modules",
-    "gkeyll",  # foreign submodule, not ours to reformat
+    "gkeyll",  # vendored Gkeyll checkout, not ours to reformat
     "main",    # untracked mirror checkout, not the working tree
 }
 
