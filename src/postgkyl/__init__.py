@@ -51,7 +51,7 @@ from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
     load_gk_distf, load_gk_quantity, available_quantities as available_gk_quantities)
 
-__version__ = "0.1.0"
+__version__ = "2.0.0"
 
 __all__ = ["GData", "load", "GDataGroup", "plot", "info", "integrate",
     "interpolate", "select", "represent", "apply", "save",
