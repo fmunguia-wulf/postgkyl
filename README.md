@@ -22,7 +22,7 @@ dependencies:
 * [pytest](https://pypi.org/project/pytest/)
 
 ADIOS 2 is required for reading Gkeyll 2 `bp` output files and it is not needed
-when working only with `gkylzero`. [pytest](https://docs.pytest.org/en/stable/)
+when working only with `gkeyll`. [pytest](https://docs.pytest.org/en/stable/)
 is required only for developers.
 
 ### Setting up virtual environment (recommended)
