@@ -1,4 +1,4 @@
-"""The ``plotly_animate`` verb — terminal; hands a sequence of datasets to the
+"""The ``plotly_animate`` verb -- terminal; hands a sequence of datasets to the
 Plotly render backend's animation engine.
 
 Mirrors ``operations/animate.py``, minus the "a frame may itself be a list of

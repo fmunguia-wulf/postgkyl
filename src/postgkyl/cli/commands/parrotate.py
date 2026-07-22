@@ -1,4 +1,4 @@
-"""``parrotate`` — component of an array parallel to a rotator field."""
+"""``parrotate`` -- component of an array parallel to a rotator field."""
 
 from __future__ import annotations
 

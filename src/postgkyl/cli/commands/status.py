@@ -1,4 +1,4 @@
-"""``status`` — activate/deactivate datasets in the working set, by index."""
+"""``status`` -- activate/deactivate datasets in the working set, by index."""
 
 from __future__ import annotations
 

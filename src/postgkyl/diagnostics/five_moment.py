@@ -1,4 +1,4 @@
-"""Five-moment (Euler) diagnostics — density, velocity, pressure, temperature,
+"""Five-moment (Euler) diagnostics -- density, velocity, pressure, temperature,
 sound speed, Mach number.
 
 Fluid moment data is laid out ``[rho, rho*vx, rho*vy, rho*vz, E, ...]``: the

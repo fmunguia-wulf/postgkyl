@@ -1,10 +1,10 @@
-"""Discontinuous-Galerkin interpolation — modal coefficients -> mesh values.
+"""Discontinuous-Galerkin interpolation -- modal coefficients -> mesh values.
 
 **This is the one-way bridge between the two domains**: DG coefficients in
 (read through the container's NumPy view of the native array), plain NumPy
 values out. The interpolation matrix is built from Gkeyll's own basis
 functions (:mod:`postgkyl.gpython.basis` calls the ``eval`` pointer carried by
-``struct gkyl_basis``), then applied per cell with a NumPy ``tensordot`` —
+``struct gkyl_basis``), then applied per cell with a NumPy ``tensordot`` --
 so the result is always a *new, by-value* NumPy array, never a view of C
 memory. The vendored sympy matrix tables this replaced lived in
 ``matrices.py`` (see ``src_bak`` history).
@@ -74,7 +74,7 @@ def interpolate(values: np.ndarray, grid: list, *, poly_order: int,
     num_interp: interpolation points per cell; defaults to ``poly_order + 1``.
 
   Returns:
-    ``(grid_out, values_out)`` — the refined edge grid and a **new**
+    ``(grid_out, values_out)`` -- the refined edge grid and a **new**
     ``(refined_cells..., num_fields)`` NumPy value array.
   """
   num_dims = len(grid)
@@ -140,7 +140,7 @@ def local_poly(values: np.ndarray, grid: list, *, poly_order: int,
     npoints: evaluation points per cell, from one face to the other.
 
   Returns:
-    ``(grid_out, values_out)`` — a NaN-separated edge-grid list and value
+    ``(grid_out, values_out)`` -- a NaN-separated edge-grid list and value
     array, one entry longer per cell interface than the plain ``npoints``
     x ``num_cells`` mesh.
   """

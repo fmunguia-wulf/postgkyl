@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render._prep — the dataset -> plottable-array prep
+"""Tests for postgkyl.render._prep -- the dataset -> plottable-array prep
 shared by every render backend (formerly axis_and_grid_prep + load_plot_data)."""
 
 from __future__ import annotations

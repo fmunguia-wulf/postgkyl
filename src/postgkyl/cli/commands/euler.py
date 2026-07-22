@@ -1,4 +1,4 @@
-"""``euler`` — five-moment (Euler) primitive/derived variables."""
+"""``euler`` -- five-moment (Euler) primitive/derived variables."""
 
 from __future__ import annotations
 

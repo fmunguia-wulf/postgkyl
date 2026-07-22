@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.calculus — integrate over a nodal grid."""
+"""Tests for postgkyl.numerics.calculus -- integrate over a nodal grid."""
 
 from __future__ import annotations
 

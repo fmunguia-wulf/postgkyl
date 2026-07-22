@@ -1,4 +1,4 @@
-"""``val2coord`` — build new (x, y) datasets from columns of a DynVector."""
+"""``val2coord`` -- build new (x, y) datasets from columns of a DynVector."""
 
 from __future__ import annotations
 

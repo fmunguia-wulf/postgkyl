@@ -1,4 +1,4 @@
-"""The ``evaluate`` verb — evaluate RPN math expressions over datasets.
+"""The ``evaluate`` verb -- evaluate RPN math expressions over datasets.
 
 The numeric operators live in :mod:`postgkyl.numerics.ev_ops` (pure
 ``(grid, values)`` functions, keyed by token in ``numerics.ev_cmds``); this

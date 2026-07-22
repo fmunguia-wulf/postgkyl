@@ -3,7 +3,7 @@
 ``struct gkyl_basis`` carries the basis functions themselves; the shim
 dispatches its function pointers in compiled C (``pg0_basis_eval`` & co.), so
 the interpolation matrix is assembled by evaluating Gkeyll's own basis at the
-interpolation points — a few hundred calls, cached per basis — and NumPy
+interpolation points -- a few hundred calls, cached per basis -- and NumPy
 applies it at array speed. The matrices are therefore bit-consistent with the
 kernels the simulation used, with zero layout knowledge in Python.
 
@@ -57,13 +57,13 @@ _MAX_POLY_ORDER = {
 }
 
 # hybrid/gkhybrid are fixed-poly_order (=1) bases parameterized by
-# (cdim, vdim) rather than (ndim, poly_order) — see
+# (cdim, vdim) rather than (ndim, poly_order) -- see
 # gkeyll/core/zero/gkyl_cart_modal_{hybrid,gkhybrid}.c. A .gkyl file only
 # records the total ndim, not the cdim/vdim split, so this table recovers it
 # from the one configuration Gkeyll actually produces for each: PKPM hybrid
 # always carries a single parallel-velocity direction (vdim=1, cdim=ndim-1);
 # gyrokinetic gkhybrid always carries (vpar, mu) (vdim=2), except the 1x1v
-# case, which has no mu direction (vdim=1) — mirroring the legacy postgkyl
+# case, which has no mu direction (vdim=1) -- mirroring the legacy postgkyl
 # convention (src_bak/postgkyl/data/{dg.py,computeInterpolationMatrices.py})
 # and matching gkeyll/core/unit/ctest_basis.c's own (cdim, vdim) choices.
 # Gkeyll's gkhybrid kernel tables are indexed by ndim alone (poly_order fixed
@@ -84,7 +84,7 @@ def get_basis(basis_type: str, ndim: int, poly_order: int) -> Basis:
       ``"gkhybrid"`` (case-insensitive).
     ndim: number of dimensions. 1..6 for serendipity/tensor; the hybrid
       bases only exist for the ``(cdim, vdim)`` combinations Gkeyll actually
-      generates kernels for — see :data:`_HYBRID_CDIM_VDIM`.
+      generates kernels for -- see :data:`_HYBRID_CDIM_VDIM`.
     poly_order: polynomial order for serendipity/tensor (ceiling depends on
       ``(basis_type, ndim)``, see :data:`_MAX_POLY_ORDER`); must be ``1``
       for hybrid/gkhybrid, which have no other order.
@@ -178,7 +178,7 @@ def interpolation_points_1d(num_interp: int) -> np.ndarray:
 
 def tensor_points(pts_1d: np.ndarray, ndim: int) -> np.ndarray:
   """``(len(pts_1d)**ndim, ndim)`` tensor-product point set, dimension 0
-  fastest (Fortran multi-index order — the convention every consumer uses)."""
+  fastest (Fortran multi-index order -- the convention every consumer uses)."""
   n = len(pts_1d)
   shape = (n,) * ndim
   out = np.empty((n ** ndim, ndim))
@@ -193,7 +193,7 @@ def tensor_points(pts_1d: np.ndarray, ndim: int) -> np.ndarray:
 def eval_matrix(basis_type: str, ndim: int, poly_order: int,
     points: np.ndarray) -> np.ndarray:
   """``(npts, num_basis)`` matrix ``M[i, j] = b_j(z_i)`` at arbitrary points
-  in the reference cell [-1, 1]^ndim — built by evaluating Gkeyll's own basis
+  in the reference cell [-1, 1]^ndim -- built by evaluating Gkeyll's own basis
   through the shim. The workhorse behind every value_form change *and*
   the plotting bridge."""
   g0 = _lib.require()
@@ -222,7 +222,7 @@ def interpolation_matrix(basis_type: str, ndim: int, poly_order: int,
   """Evaluation matrix at ``num_interp`` subcell centers per dimension.
 
   Row ``i`` corresponds to the point with multi-index
-  ``np.unravel_index(i, [num_interp]*ndim, order="F")`` — dimension 0 fastest,
+  ``np.unravel_index(i, [num_interp]*ndim, order="F")`` -- dimension 0 fastest,
   matching the consumer in ``dg/interpolate.py``.
   """
   return _cached(("interpolation", basis_type, ndim, poly_order, num_interp),
@@ -261,7 +261,7 @@ def nodal_to_modal_matrix(basis_type: str, ndim: int,
 
 def modal_to_nodal_matrix(basis_type: str, ndim: int,
     poly_order: int) -> np.ndarray:
-  """Evaluation at the basis nodes — the exact inverse of ``nodal_to_modal``."""
+  """Evaluation at the basis nodes -- the exact inverse of ``nodal_to_modal``."""
   return _cached(("m2n", basis_type, ndim, poly_order),
       lambda: eval_matrix(basis_type, ndim, poly_order,
           node_coords(basis_type, ndim, poly_order)))
@@ -286,7 +286,7 @@ def gauss_quad(ndim: int, num_quad: int):
 
 def modal_to_quad_matrix(basis_type: str, ndim: int, poly_order: int,
     num_quad: int) -> np.ndarray:
-  """``(nq**ndim, num_basis)`` — evaluate the expansion at the Gauss points."""
+  """``(nq**ndim, num_basis)`` -- evaluate the expansion at the Gauss points."""
   return _cached(("m2q", basis_type, ndim, poly_order, num_quad),
       lambda: eval_matrix(basis_type, ndim, poly_order,
           gauss_quad(ndim, num_quad)[0]))

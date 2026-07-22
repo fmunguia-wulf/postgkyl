@@ -1,4 +1,4 @@
-"""``info`` — terminal verb; print a summary of each active dataset."""
+"""``info`` -- terminal verb; print a summary of each active dataset."""
 
 from __future__ import annotations
 

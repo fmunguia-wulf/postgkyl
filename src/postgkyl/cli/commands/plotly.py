@@ -1,4 +1,4 @@
-"""``plotly`` — render each active dataset with the Plotly backend.
+"""``plotly`` -- render each active dataset with the Plotly backend.
 
 A thin shell: option parsing plus the per-dataset (pool-level) bookkeeping
 that a single-dataset render call cannot know on its own -- which dataset

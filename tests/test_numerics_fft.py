@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.fft — fft/psd/iso and the polar helpers."""
+"""Tests for postgkyl.numerics.fft -- fft/psd/iso and the polar helpers."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.gpython._lib`` — the capability-switch handshake.
+"""Tests for ``postgkyl.gpython._lib`` -- the capability-switch handshake.
 
 Run:  PYTHONPATH=src pytest tests/test_gpython_lib.py -v
 """
@@ -53,7 +53,7 @@ def test_handshake_version_matches():
 def test_available_false_when_extension_absent(monkeypatch):
   """Simulate a no-library install by monkeypatching the module attributes
   (the pattern the layer instructions call out explicitly) rather than
-  reloading the real module in place — `monkeypatch` guarantees the original
+  reloading the real module in place -- `monkeypatch` guarantees the original
   ``_mod``/``_ERROR`` are restored even if an assertion below fails, so this
   can never leak a broken capability switch into the rest of the suite."""
   monkeypatch.setattr(_lib, "_mod", None)
@@ -90,7 +90,7 @@ class _patched_gpython:
   `from package import submodule` tries `getattr(package, submodule)`
   BEFORE consulting `sys.modules`, and the real `postgkyl.gpython` package
   object already carries a `_gpython` attribute (set as a side effect of the
-  real import at process start) — so patching `sys.modules` alone is not
+  real import at process start) -- so patching `sys.modules` alone is not
   enough. Both are patched here and restored unconditionally.
   """
 

@@ -1,4 +1,4 @@
-"""Matplotlib style application — the ``apply_style`` verb-adjacent helper.
+"""Matplotlib style application -- the ``apply_style`` verb-adjacent helper.
 
 The old ``utils/load_style.py`` hand-parsed an ``.mplstyle`` file line by
 line (with a special case for ``cycler(...)`` values) into a Typer context's

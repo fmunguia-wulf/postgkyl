@@ -1,9 +1,9 @@
-"""Modal (DG-coefficient) operations — thin orchestration over Gkeyll kernels.
+"""Modal (DG-coefficient) operations -- thin orchestration over Gkeyll kernels.
 
 Everything here acts on native :class:`~postgkyl.gpython.array.GkylArray` data and
 returns native data (or plain numbers for reductions): the modal domain never
 leaves Gkeyll's memory. The only logic this layer adds over ``gpython.kernels`` is
-DG bookkeeping — e.g. what "add a scalar" means for modal coefficients.
+DG bookkeeping -- e.g. what "add a scalar" means for modal coefficients.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import numpy as np
 from postgkyl import gpython
 from postgkyl.gpython.array import GkylArray
 
-# Weak algebra and coefficient linear combinations — direct kernel calls.
+# Weak algebra and coefficient linear combinations -- direct kernel calls.
 weak_mul = gpython.kernels.weak_mul
 weak_div = gpython.kernels.weak_div
 weak_inv = gpython.kernels.weak_inv

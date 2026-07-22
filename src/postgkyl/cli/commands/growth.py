@@ -1,4 +1,4 @@
-"""``growth`` — fit an exponential growth/decay rate to time-series data.
+"""``growth`` -- fit an exponential growth/decay rate to time-series data.
 
 A thin convenience wrapper over ``fit('exp2', window=True)`` -- the
 growth-rate use case documented on ``operations.fit``/``GData.fit``.

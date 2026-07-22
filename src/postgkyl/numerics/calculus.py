@@ -1,7 +1,7 @@
 """Trapezoidal-style integration over a nodal grid (pure NumPy).
 
 ``grad``/``div``/``curl`` are deliberately absent: the ``src_bak`` originals
-are unimplemented placeholders (``...`` bodies, no arguments) — there is no
+are unimplemented placeholders (``...`` bodies, no arguments) -- there is no
 real numerics to port. The vector-calculus operators that *are* implemented
 live in :mod:`postgkyl.numerics.ev_ops` (``divergence``/``curl``/``grad``),
 expressed the same way, over ``(grid, values)`` pairs.
@@ -58,7 +58,7 @@ def integrate(grid: list[np.ndarray], values: np.ndarray,
 
   Uses the NumPy dot product against the cell widths (trapezoidal for
   nodal/edge grids, exact for cell-centered-average data); works for
-  nonuniform meshes. True DG integration is not implemented here — this
+  nonuniform meshes. True DG integration is not implemented here -- this
   mirrors the legacy behaviour exactly.
 
   Args:

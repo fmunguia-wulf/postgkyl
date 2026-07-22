@@ -1,4 +1,4 @@
-"""The ``local_poly`` verb — modal DG coefficients -> a discontinuity-
+"""The ``local_poly`` verb -- modal DG coefficients -> a discontinuity-
 preserving plotting mesh (see ``dg.local_poly``)."""
 
 from __future__ import annotations

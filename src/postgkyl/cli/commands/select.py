@@ -1,4 +1,4 @@
-"""``select`` — subselect coordinates and/or components of each dataset."""
+"""``select`` -- subselect coordinates and/or components of each dataset."""
 
 from __future__ import annotations
 

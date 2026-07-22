@@ -1,9 +1,9 @@
-"""Grid mapping — evaluate a coordinate-map DG field at a target's grid points.
+"""Grid mapping -- evaluate a coordinate-map DG field at a target's grid points.
 
 See ``MAPPING.md`` for the full design. **The core semantic**: a mapping file
 is a DG field whose components hold the coefficients of the physical
 coordinates :math:`x_d(z)` of each mapped dimension ``d``; mapping a grid means
-evaluating those coefficients at the *target*'s existing grid points — there is
+evaluating those coefficients at the *target*'s existing grid points -- there is
 no resolution parameter and no alignment arithmetic, so the new grid always has
 exactly the shape of the one it replaces.
 
@@ -27,7 +27,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
   """Evaluate one coordinate's DG coefficients at arbitrary computational points.
 
   Args:
-    coeffs: ``(*cells, num_basis)`` array — the mapping's per-cell
+    coeffs: ``(*cells, num_basis)`` array -- the mapping's per-cell
       coefficients for a single physical coordinate ``x_d(z)`` over its own
       uniform grid. Modal by default; pass ``modal=False`` for a nodal-basis
       mapping file (converted through the exact ``nodal_to_modal`` matrix
@@ -44,7 +44,7 @@ def eval_at_points(coeffs: np.ndarray, lower: np.ndarray, upper: np.ndarray,
     modal: False for nodal-basis mapping coefficients.
 
   Returns:
-    ``(*shape,)`` array — ``x_d`` evaluated at every point.
+    ``(*shape,)`` array -- ``x_d`` evaluated at every point.
 
   Raises:
     ValueError: ``cells`` does not match ``coeffs.shape[:-1]``, or the last
@@ -104,7 +104,7 @@ def map_grid(map_coeffs: np.ndarray, map_ctx: dict,
   """Evaluate every mapped dimension's coordinates at the target's grid points.
 
   Args:
-    map_coeffs: ``(*cells, m * num_basis)`` array — the mapping field's raw
+    map_coeffs: ``(*cells, m * num_basis)`` array -- the mapping field's raw
       coefficients (``GDataState.get_values()``); components
       ``d*num_basis:(d+1)*num_basis`` are the coefficients of ``x_d(z)``.
     map_ctx: the mapping dataset's ``ctx`` dict; reads ``lower``, ``upper``,
@@ -160,7 +160,7 @@ def map_grid_separable(map_coeffs: np.ndarray, map_ctx: dict,
   already carries the full set of values.
 
   Args:
-    map_coeffs: ``(*cells, m * num_basis)`` array — ``GDataState.get_values()``,
+    map_coeffs: ``(*cells, m * num_basis)`` array -- ``GDataState.get_values()``,
       ``num_basis`` being the 1-D basis size for ``basis_type``/``poly_order``.
     map_ctx: the mapping dataset's ``ctx`` dict; reads ``lower``, ``upper``,
       ``cells``, ``basis_type``, ``poly_order``, and ``value_form`` (default

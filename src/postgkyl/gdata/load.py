@@ -1,4 +1,4 @@
-"""``pg.load`` — the entry point that returns a fluent :class:`GData`."""
+"""``pg.load`` -- the entry point that returns a fluent :class:`GData`."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""``mhd`` — ideal-MHD primitive/derived variables."""
+"""``mhd`` -- ideal-MHD primitive/derived variables."""
 
 from __future__ import annotations
 

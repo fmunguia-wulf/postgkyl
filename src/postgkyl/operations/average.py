@@ -1,4 +1,4 @@
-"""The ``average`` verb — weighted (or plain) average of a native DG field
+"""The ``average`` verb -- weighted (or plain) average of a native DG field
 over a subset of dimensions, via Gkeyll's ``gkyl_array_average``.
 
 Terminal-adjacent (like ``represent``): unlike ``integrate`` (whose whole-grid

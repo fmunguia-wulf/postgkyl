@@ -1,4 +1,4 @@
-"""``evaluate`` — evaluate an RPN math expression over the active datasets."""
+"""``evaluate`` -- evaluate an RPN math expression over the active datasets."""
 
 from __future__ import annotations
 

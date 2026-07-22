@@ -1,4 +1,4 @@
-"""``gkyl_pkpm`` — load, interpolate, and frame-transform Gkeyll PKPM data."""
+"""``gkyl_pkpm`` -- load, interpolate, and frame-transform Gkeyll PKPM data."""
 
 from __future__ import annotations
 

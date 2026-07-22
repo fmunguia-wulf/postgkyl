@@ -23,7 +23,7 @@ import numpy as np
 _RNG = np.random.default_rng(42)
 _SQRT3 = np.sqrt(3)
 
-# Component counts per basis — mirrors the tables in src/postgkyl/data/dg.py
+# Component counts per basis -- mirrors the tables in src/postgkyl/data/dg.py
 # serendipity: indexed as [ndim-1][poly_order]   (p=0 → 1 component)
 _COMPS_SER = [
     [1, 2, 3, 4, 5],    # 1D
@@ -190,8 +190,8 @@ _FIELD_CONFIGS: list[tuple] = [
 
 # C2P mapping files.
 # (stem, kind, cells, poly_order, basis_type, extra...)
-#   kind="stretch":  extra = (phys_lo, phys_hi)          — comp domain [0,1]^n
-#   kind="rotation": extra = (angle,)                     — comp domain [0,1]^2
+#   kind="stretch":  extra = (phys_lo, phys_hi)          -- comp domain [0,1]^n
+#   kind="rotation": extra = (angle,)                     -- comp domain [0,1]^2
 _C2P_CONFIGS: list[tuple] = [
     # Linear stretch: physical x∈[0,2], y∈[0,3]; paired with 2d_ms_p1.gkyl
     ("2d_c2p_stretch_ms_p1", "stretch", [8, 8], 1, "serendipity",

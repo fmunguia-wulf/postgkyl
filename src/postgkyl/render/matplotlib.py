@@ -1,4 +1,4 @@
-"""Matplotlib rendering backend — a faithful port of main's plotting engine.
+"""Matplotlib rendering backend -- a faithful port of main's plotting engine.
 
 This is main's ``commands/plot.py`` + ``output/plot.py`` (the CLI's per-dataset
 render call) ported onto ``GDataState`` in place of the old ``GData``/tuple

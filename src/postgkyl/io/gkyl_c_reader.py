@@ -1,7 +1,7 @@
 """``.gkyl`` reading through Gkeyll itself (the primary read path).
 
-``GkylCReader`` delegates the whole read — header, grid, allocation, payload,
-multi-range stitching — to ``libg0core.so`` via :mod:`postgkyl.gpython.rio` and
+``GkylCReader`` delegates the whole read -- header, grid, allocation, payload,
+multi-range stitching -- to ``libg0core.so`` via :mod:`postgkyl.gpython.rio` and
 returns the data as a **native** :class:`~postgkyl.gpython.array.GkylArray`, so
 modal datasets start life in the modal domain. Python's only jobs are decoding
 the msgpack metadata blob into ``ctx`` (same key policy as the pure-Python
@@ -9,7 +9,7 @@ reader) and building the NumPy edge grid.
 
 It declines (``is_compatible() -> False``) when the FFI is unavailable, the
 file is not a field file (types 1/3), or a partial load (``axes=``/``comp=``)
-was requested — those fall through to the pure-Python :class:`GkylReader`.
+was requested -- those fall through to the pure-Python :class:`GkylReader`.
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ class GkylCReader:
     if arr.size != int(np.prod(cells)):
       raise IOError(
           f"'{self.file_name}': stored cells {arr.size} do not match the "
-          f"domain {tuple(cells)} (ghost-cell layout?) — not supported by "
+          f"domain {tuple(cells)} (ghost-cell layout?) -- not supported by "
           "the Gkeyll read path yet")
     # end
     edges = mapping.uniform_grid(grid["lower"], grid["upper"], cells)

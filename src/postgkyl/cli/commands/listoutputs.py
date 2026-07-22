@@ -1,4 +1,4 @@
-"""``listoutputs`` — list Gkeyll filename stems found in a directory."""
+"""``listoutputs`` -- list Gkeyll filename stems found in a directory."""
 
 from __future__ import annotations
 

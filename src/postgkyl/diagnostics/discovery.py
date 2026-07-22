@@ -1,4 +1,4 @@
-"""Equation-blind output discovery — Gkeyll's file-naming convention.
+"""Equation-blind output discovery -- Gkeyll's file-naming convention.
 
 The ONE home for "what outputs does this directory hold" (CLAUDE.md,
 diagnostics layer). Every equation loader in ``gyrokinetics/`` and every

@@ -1,4 +1,4 @@
-"""``gk_distf`` — build a gyrokinetic distribution function from saved Jf data."""
+"""``gk_distf`` -- build a gyrokinetic distribution function from saved Jf data."""
 
 from __future__ import annotations
 

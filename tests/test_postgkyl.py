@@ -113,7 +113,7 @@ def test_load_lands_in_the_modal_domain():
 def test_shim_handshake():
   """The compiled gpython shim pairs with this postgkyl (GKEYLL_C_SHIM.md).
 
-  There are no struct layouts to guard anymore — the C compiler checked the
+  There are no struct layouts to guard anymore -- the C compiler checked the
   whole contract when gpython.c built. What remains testable at runtime is the
   version handshake plus a behavioral probe through the shim."""
   g0 = gpython.require()
@@ -154,7 +154,7 @@ def test_interpolation_matrix_matches_analytic_basis():
 
 @needs_gkeyll
 def test_weak_algebra_identities():
-  """div(mul(a, b), b) == a — Gkeyll's weak kernels are exact inverses."""
+  """div(mul(a, b), b) == a -- Gkeyll's weak kernels are exact inverses."""
   a, b = pg.load(F1), pg.load(F1)
   back = (a * b / b).interpolate().values
   ref = a.interpolate().values
@@ -180,7 +180,7 @@ def test_modal_linear_ops_commute_with_interpolate():
 
 
 def _make_modal(grid, cells, basis_type, poly_order, coeffs):
-  """A bare modal GData, built in-memory rather than from a file — for
+  """A bare modal GData, built in-memory rather than from a file -- for
   exercising the conf x phase cross-multiply path with grids we control."""
   d = pg.GData()
   d.ctx.update(basis_type=basis_type, poly_order=poly_order, value_form="modal",
@@ -193,7 +193,7 @@ def _make_modal(grid, cells, basis_type, poly_order, coeffs):
 @needs_gkeyll
 def test_conf_phase_mul_is_automatic_and_commutative():
   """``conf * phase`` and ``phase * conf`` both dispatch to the cross-basis
-  gkyl_dg_mul_conf_phase_op_range path with no separate method needed — the
+  gkyl_dg_mul_conf_phase_op_range path with no separate method needed -- the
   API picks the lower-dimensional operand as the conf side automatically.
   Multiplying by a spatially-uniform conf field of true value 1 is an exact
   identity on the phase side (no weak-projection truncation), so this is a
@@ -326,7 +326,7 @@ def test_pointwise_numpy_on_point_values():
   assert np.allclose((q * q).values, np.asarray(q.values) ** 2)
   # pointwise-at-quad then one projection == the weak kernel (p1 exactness)
   assert _relerr((q * q).to_modal().values, (a * a).values) < 1e-13
-  # chain at the points, project once — identical to the one-shot .apply()
+  # chain at the points, project once -- identical to the one-shot .apply()
   fn = lambda v: np.sqrt(np.abs(v))
   assert _relerr(np.sqrt(np.abs(q)).to_modal().values, a.apply(fn).values) < 1e-15
   assert np.asarray(n).shape == (24, 6)          # __array__ allowed on points
@@ -555,7 +555,7 @@ def _build_edges(pkg_root=None):
 
 
 def test_facade_is_pure_reexport():
-  """__init__.py must define no functions/classes — only re-export names."""
+  """__init__.py must define no functions/classes -- only re-export names."""
   facade = os.path.join(SRC, "postgkyl", "__init__.py")
   tree = ast.parse(open(facade).read(), facade)
   defs = [n.name for n in tree.body
@@ -607,7 +607,7 @@ def _foreign_floor_offenders(pkg_root):
 
 def test_foreign_floor_confined_to_gpython():
   """The foreign world is the compiled ``_gpython`` extension, importable only
-  under gpython/ — and ctypes appears nowhere at all: the C contract is enforced
+  under gpython/ -- and ctypes appears nowhere at all: the C contract is enforced
   by the compiler when the gpython shim builds, never re-declared in Python
   (GKEYLL_C_SHIM.md)."""
   pkg_root = os.path.join(SRC, "postgkyl")

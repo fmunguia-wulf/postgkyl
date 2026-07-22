@@ -1,4 +1,4 @@
-"""Tests for the ``evaluate`` verb — the RPN expression evaluator over datasets."""
+"""Tests for the ``evaluate`` verb -- the RPN expression evaluator over datasets."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""The ``grid`` verb — turn a dataset's grid into a dataset of coordinates."""
+"""The ``grid`` verb -- turn a dataset's grid into a dataset of coordinates."""
 
 from __future__ import annotations
 

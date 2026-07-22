@@ -1,4 +1,4 @@
-"""``tenmoment`` — ten-moment primitive/derived variables."""
+"""``tenmoment`` -- ten-moment primitive/derived variables."""
 
 from __future__ import annotations
 

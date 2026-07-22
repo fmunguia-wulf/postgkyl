@@ -1,4 +1,4 @@
-"""Equation-specific physics — the COMPOSITION tier, one module per equation
+"""Equation-specific physics -- the COMPOSITION tier, one module per equation
 model.
 
 Folds together the old ``models`` (array math) and ``operations`` physics-verb

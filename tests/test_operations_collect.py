@@ -1,4 +1,4 @@
-"""Tests for the ``collect`` verb — stacking many datasets onto a time axis."""
+"""Tests for the ``collect`` verb -- stacking many datasets onto a time axis."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Ten-moment diagnostics — the five-moment set (fixed to 10-moment data)
+"""Ten-moment diagnostics -- the five-moment set (fixed to 10-moment data)
 plus the pressure tensor, field-aligned pressure, and agyrotropy.
 
 10-moment fluid data is laid out ``[rho, mx, my, mz, Pxx, Pxy, Pxz, Pyy, Pyz,

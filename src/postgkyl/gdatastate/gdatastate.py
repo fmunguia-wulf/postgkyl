@@ -1,20 +1,20 @@
-"""``GDataState`` — the verb-less data container (the CONTAINER layer).
+"""``GDataState`` -- the verb-less data container (the CONTAINER layer).
 
 Holds a Gkeyll dataset: a nodal ``grid`` (list of 1-D edge arrays) plus values
-in one of **two backends** — the two-domain lifecycle of REFACTOR_GKEYLL_FFI.md:
+in one of **two backends** -- the two-domain lifecycle of REFACTOR_GKEYLL_FFI.md:
 
 - ``backend == "gkyl"``: modal DG coefficients held as a native
   :class:`~postgkyl.gpython.array.GkylArray`. Gkeyll owns the memory and all math
   on it (weak ops, coefficient lin-combs, integrate). ``values`` exposes a
   read-only NumPy *view* for inspection; ``__array__`` refuses (interpolate first).
 - ``backend == "numpy"``: post-``interpolate`` (or never-modal) values as a plain
-  ``np.ndarray`` — the field domain, where all NumPy math applies.
+  ``np.ndarray`` -- the field domain, where all NumPy math applies.
 
 It constructs itself by delegating to the :mod:`postgkyl.io` leaf and exposes
 only *state*. Crucially it imports **nothing upward** (no ``operations``/``render``/
 ``api``). The fluent verb methods and the computing operators live on the
 :class:`postgkyl.gdata.gdata.GData` subclass, one layer up. That is what keeps
-the dependency graph a strict, cycle-free DAG — see HIERARCHY_2.md / HIERARCHY_3.md.
+the dependency graph a strict, cycle-free DAG -- see HIERARCHY_2.md / HIERARCHY_3.md.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from typing import Tuple
 
 import numpy as np
 
-from postgkyl import io   # leaf layer (below); top-level import — never a cycle
+from postgkyl import io   # leaf layer (below); top-level import -- never a cycle
 from postgkyl import gpython  # foreign floor (below): GkylArray backend type
 
 
@@ -261,7 +261,7 @@ class GDataState:
 
     Every verb funnels its computed ``(grid, values)`` through here. Because
     ``copy`` uses ``type(self)``, the result is the *same* (sub)class as the
-    input — so ``operations`` can be typed on ``GDataState`` yet return a fluent
+    input -- so ``operations`` can be typed on ``GDataState`` yet return a fluent
     ``GData`` at runtime.
     """
     target = self if inplace else self.clone(data=False)
@@ -296,7 +296,7 @@ class GDataState:
   def _require_operable(self) -> None:
     """Pointwise math is allowed exactly where the data are point values:
     the NumPy field domain, or the nodal/quad value forms. Modal
-    coefficients refuse — a pointwise operation has no basis-space meaning.
+    coefficients refuse -- a pointwise operation has no basis-space meaning.
     ``value_form`` applies uniformly regardless of ``backend`` -- it is the
     one fact for "what do these values mean", set once at load time."""
     if self._values is None:
@@ -319,7 +319,7 @@ class GDataState:
 
     This is a pure *reader* (no ``operations``), so it lives on the container; the
     computing operators (``__add__``, ``__array_ufunc__``) live on the fluent
-    subclass — see HIERARCHY_3.md. Nodal/quad data expose their point values;
+    subclass -- see HIERARCHY_3.md. Nodal/quad data expose their point values;
     native *modal* data refuses: silently handing out DG coefficients as if
     they were point values is a correctness trap."""
     if isinstance(self._values, gpython.GkylArray):

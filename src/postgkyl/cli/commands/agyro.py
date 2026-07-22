@@ -1,4 +1,4 @@
-"""``agyro`` — agyrotropy of a pressure tensor relative to a magnetic field."""
+"""``agyro`` -- agyrotropy of a pressure tensor relative to a magnetic field."""
 
 from __future__ import annotations
 

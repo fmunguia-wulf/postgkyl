@@ -2,7 +2,7 @@
 # Builds the _gpython CPython extension into src/postgkyl/gpython/_gpython.so
 # (GKEYLL_C_SHIM.md). The gpython shim itself lives in the gkeyll repo
 # (core/zero/gkyl_gpython.h + core/zero/gpython.c) and is compiled INTO
-# libg0core.so by gkeyll's own build — that compile step is the contract
+# libg0core.so by gkeyll's own build -- that compile step is the contract
 # check: any core API drift fails there, at the producer. This script only
 # compiles the extension against gkyl_gpython.h (opaque handles + scalars) and
 # links the shim symbols from libg0core.so; a stale header/library pairing

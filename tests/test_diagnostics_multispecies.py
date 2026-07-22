@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.multispecies — energy decomposition and
+"""Tests for postgkyl.diagnostics.multispecies -- energy decomposition and
 current accumulation, folding the array-math analytic tests (formerly
 tests_models_energetics.py) with the verb-level guard/inplace tests
 (formerly part of tests_ops_physics.py)."""

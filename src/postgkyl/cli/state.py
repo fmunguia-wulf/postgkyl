@@ -1,4 +1,4 @@
-"""Shared CLI state — the chained pipeline's scratch space (``ctx.obj``)."""
+"""Shared CLI state -- the chained pipeline's scratch space (``ctx.obj``)."""
 
 from __future__ import annotations
 

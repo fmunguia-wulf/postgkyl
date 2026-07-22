@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.gpython.rio`` — file I/O through Gkeyll's ``gkyl_array_rio``.
+"""Tests for ``postgkyl.gpython.rio`` -- file I/O through Gkeyll's ``gkyl_array_rio``.
 
 Run:  PYTHONPATH=src pytest tests/test_gpython_rio.py -v
 """

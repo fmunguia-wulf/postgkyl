@@ -1,17 +1,17 @@
-"""``gpython/`` — the foreign floor: the compiled bridge to Gkeyll.
+"""``gpython/`` -- the foreign floor: the compiled bridge to Gkeyll.
 
 A bottom leaf (imports nothing internal). This package is the **only** place
 in postgkyl that touches the foreign world, and it does so through a compiled
 contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
 
-- ``csrc/``    ``_gpythonmodule.c`` — the CPython extension over
+- ``csrc/``    ``_gpythonmodule.c`` -- the CPython extension over
                ``gkyl_gpython.h``; the gpython shim itself lives in the
                gkeyll repo (``core/zero/{gkyl_gpython.h, gpython.c}``,
                compiled into ``libg0core.so`` by Gkeyll's own build)
-- ``_gpython``  the built extension module — opaque handles in, ndarrays out
+- ``_gpython``  the built extension module -- opaque handles in, ndarrays out
 - ``_lib``     loads ``_gpython`` + the ``GPYTHON_API_VERSION`` handshake;
                ``available()`` is the single capability switch
-- ``array``    :class:`GkylArray` — Python owner of a native ``gkyl_array``
+- ``array``    :class:`GkylArray` -- Python owner of a native ``gkyl_array``
 - ``basis``    cached Gkeyll basis objects + interpolation/nodal/quad matrices
                built by evaluating Gkeyll's own basis through the shim
 - ``rio``      file loading through ``gkyl_array_rio``
@@ -19,7 +19,7 @@ contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
                integrate
 
 Representation changes (modal · nodal · quad) are orchestration over this
-floor's public functions, not floor primitives themselves — they live in
+floor's public functions, not floor primitives themselves -- they live in
 ``dg/rep.py`` (see CLAUDE.md's "Engine layers" section).
 
 No struct layout, signature, or calling convention exists in Python: the C

@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.gpython.basis`` — Gkeyll basis objects + matrices.
+"""Tests for ``postgkyl.gpython.basis`` -- Gkeyll basis objects + matrices.
 
 Run:  PYTHONPATH=src pytest tests/test_gpython_basis.py -v
 """
@@ -94,7 +94,7 @@ def test_basis_repr():
 ])
 def test_unsupported_combinations_raise_cleanly(basis_type, ndim, poly_order):
   """These would abort the process or read out-of-bounds C tables if the
-  Python-side guard were missing (see basis.py's _MAX_POLY_ORDER comment) —
+  Python-side guard were missing (see basis.py's _MAX_POLY_ORDER comment) --
   a clean ValueError, not a crash, is exactly what is being tested here."""
   with pytest.raises(ValueError):
     fb.get_basis(basis_type, ndim, poly_order)
@@ -161,7 +161,7 @@ def test_modal_quad_round_trip_exact_for_in_degree_polynomials():
   q2m projection integrates b_j(z)*f(z), degree <= 2p, and an n-point
   Gauss rule is exact to degree 2n-1, so 2*num_quad-1 >= 2p needs
   num_quad >= p+1 (not merely p, as a naive reading of "degree <= p" would
-  suggest — this is exactly why the num_quad choice matters here)."""
+  suggest -- this is exactly why the num_quad choice matters here)."""
   basis_type, ndim, p, num_quad = "serendipity", 1, 2, 3
   rng = np.random.default_rng(42)
   nb = fb.num_basis(basis_type, ndim, p)

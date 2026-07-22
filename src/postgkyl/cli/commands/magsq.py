@@ -1,4 +1,4 @@
-"""``magsq`` — magnitude squared of a vector field."""
+"""``magsq`` -- magnitude squared of a vector field."""
 
 from __future__ import annotations
 

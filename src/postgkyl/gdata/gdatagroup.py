@@ -1,4 +1,4 @@
-"""``GDataGroup`` — the fluent group container over
+"""``GDataGroup`` -- the fluent group container over
 ``gdatastate.GDataStateGroup``.
 
 Mirrors how :class:`~postgkyl.gdata.gdata.GData` adds the fluent verb methods

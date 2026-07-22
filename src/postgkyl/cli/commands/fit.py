@@ -1,4 +1,4 @@
-"""``fit`` — fit a model (or RPN expression) to data and print its parameters."""
+"""``fit`` -- fit a model (or RPN expression) to data and print its parameters."""
 
 from __future__ import annotations
 

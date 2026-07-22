@@ -1,4 +1,4 @@
-"""``evalatcoordproj`` — evaluate a native DG field at coordinates and
+"""``evalatcoordproj`` -- evaluate a native DG field at coordinates and
 project onto the lower-dimensional target basis for the surviving dims."""
 
 from __future__ import annotations

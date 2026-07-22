@@ -6,7 +6,7 @@ basis descriptor and calls one shim entry point; the per-field loop for
 (``gkyl_dg_bin_op_mem``, integrate updaters) live inside the compiled shim.
 
 Python-side capability guards mirror Gkeyll's own limits (which are C
-``assert``s — letting them fire would abort the process).
+``assert``s -- letting them fire would abort the process).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ INTEGRATE_OPS = {"none": 0, "abs": 1, "sq": 2}
 
 # Weak mul/div kernel tables (gkyl_dg_bin_ops_priv.h ser_mul_list/ten_mul_list/
 # ser_div_set_list/ten_div_set_list) are fixed-size [ndim][poly_order] arrays
-# covering ONLY ndim 1..3 — narrower than the basis module's own eval range.
+# covering ONLY ndim 1..3 -- narrower than the basis module's own eval range.
 # ndim >= 4 hits `assert(dim < 4)` in choose_ser_mul_kern (a process abort);
 # an out-of-table poly_order for tensor (p3 at ndim 2-3) returns a NULL
 # kernel pointer that gkyl_dg_mul_op/div_op call with NO null check at all
@@ -276,7 +276,7 @@ def reduce(a: GkylArray, op: int) -> np.ndarray:
   """Per-component MIN/MAX/SUM over all cells (gkyl_array_reduce).
 
   This reduces the raw DG **coefficients**: exact for ``"sum"`` (the sum of
-  coefficients over cells is linear), but NOT the field's true min/max — a
+  coefficients over cells is linear), but NOT the field's true min/max -- a
   DG expansion can exceed its coefficient values between nodes. Use
   :func:`dg_reduce` for the field-aware version.
   """
@@ -289,7 +289,7 @@ def dg_reduce(basis_type: str, ndim: int, poly_order: int, a: GkylArray,
   """MIN/MAX/SUM of the field ``comp`` actually represents (gkyl_array_dg_reducec).
 
   Evaluates the DG expansion at each cell's Gauss-Legendre quadrature nodes
-  and reduces those values — the true min/max/sum of the represented field,
+  and reduces those values -- the true min/max/sum of the represented field,
   exact for ``"sum"`` and correct (not merely coefficient-bounded) for
   ``"min"``/``"max"`` to quadrature precision (exact for polynomials the
   quadrature integrates exactly, i.e. always for a basis's own degree).
@@ -380,11 +380,11 @@ def array_average(grid: dict, basis_type: str, poly_order: int, ndim_avg: int,
 
 def integrate(grid: dict, basis_type: str, poly_order: int, a: GkylArray,
     op: str = "none", factor: float = 1.0) -> np.ndarray:
-  """``int dx op(f)`` per field via ``gkyl_array_integrate`` — one value per field.
+  """``int dx op(f)`` per field via ``gkyl_array_integrate`` -- one value per field.
 
   ``grid`` is the dict from ``rio`` (ndim/lower/upper/cells). Guarded to the
   kernel set compiled into libg0core (serendipity p1-p2, ndim 1-3, for
-  none/abs/sq) — ``gkyl_array_integrate_choose_kernel`` indexes its kernel
+  none/abs/sq) -- ``gkyl_array_integrate_choose_kernel`` indexes its kernel
   table by ``ndim-1``/``poly_order-1`` with no bound past an
   ``assert(up->kernel)`` that a genuinely out-of-table ndim can dodge (an
   out-of-bounds array read that happens to be non-NULL), so ndim is checked

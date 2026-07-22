@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.five_moment — the 5-/10-moment primitive
+"""Tests for postgkyl.diagnostics.five_moment -- the 5-/10-moment primitive
 variable family (density, velocity, pressure, temperature, sound, Mach),
 folding the array-math analytic tests (formerly tests_models_five_moment.py)
 with the verb-level guard/inplace/tag/label/VARIABLES tests (formerly part of

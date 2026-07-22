@@ -1,11 +1,11 @@
-"""Representation changes within the native domain — modal · nodal · quad.
+"""Representation changes within the native domain -- modal · nodal · quad.
 
 One DG field, three per-cell representations (REFACTOR_GKEYLL_FFI.md §3b):
 modal coefficients, values at the basis nodes, values at Gauss–Legendre
 quadrature points. Conversions are per-cell matrix applications built from
 Gkeyll's basis function pointers (:mod:`postgkyl.gpython.basis`); data enters and
 leaves as a native :class:`~postgkyl.gpython.array.GkylArray`, so the field never
-leaves the native domain. **Nothing here converts implicitly** — these are the
+leaves the native domain. **Nothing here converts implicitly** -- these are the
 backends of the explicit ``.to_nodal()/.to_modal()/.to_quad()/.apply()`` verbs.
 
 Exactness: nodal↔modal is an exact N×N change of basis; a quad round-trip is
@@ -90,7 +90,7 @@ def _tensor_point_layout(basis_type: str, ndim: int, poly_order: int,
   Returns ``(pts_1d_per_dim, perm)`` where ``values[..., perm]`` reorders a
   cell's point values into F-order tensor indexing (dimension 0 fastest).
   Quadrature points are a tensor product by construction; nodal sets are
-  checked — non-tensor node sets (e.g. serendipity p2 in 2-D+) raise.
+  checked -- non-tensor node sets (e.g. serendipity p2 in 2-D+) raise.
   """
   if rep == "quad":
     nq = int(num_quad) if num_quad else poly_order + 1
@@ -140,7 +140,7 @@ def _edges_from_points(pts: np.ndarray, lo: float, hi: float) -> np.ndarray:
 def materialize(basis_type: str, ndim: int, poly_order: int, arr: GkylArray,
     grid: list, rep: str, num_quad: int | None = None):
   """Point-value data -> ``(nonuniform edge grid, ndarray)`` at the TRUE
-  physical point locations — the render path for nodal/quad datasets.
+  physical point locations -- the render path for nodal/quad datasets.
 
   Unlike ``interpolate`` (which evaluates modal data on an equispaced mesh),
   this performs no basis math at all: the values *are* the field at their

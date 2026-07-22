@@ -1,4 +1,4 @@
-"""``fft`` — Fourier transform / power spectral density of the working set."""
+"""``fft`` -- Fourier transform / power spectral density of the working set."""
 
 from __future__ import annotations
 

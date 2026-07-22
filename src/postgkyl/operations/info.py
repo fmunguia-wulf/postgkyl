@@ -1,4 +1,4 @@
-"""The ``info`` verb — print/return summaries for one or more datasets."""
+"""The ``info`` verb -- print/return summaries for one or more datasets."""
 
 from __future__ import annotations
 

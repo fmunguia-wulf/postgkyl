@@ -1,4 +1,4 @@
-"""PKPM diagnostics — distribution-function reconstruction from Laguerre
+"""PKPM diagnostics -- distribution-function reconstruction from Laguerre
 moments.
 
 Composes the full distribution function ``f(x, v_par, v_perp)`` out of the

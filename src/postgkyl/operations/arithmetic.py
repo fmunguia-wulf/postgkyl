@@ -1,6 +1,6 @@
 """Arithmetic / NumPy-ufunc backend for the fluent operators.
 
-Defined here (in ``operations``) — not on the container — so the computing operators
+Defined here (in ``operations``) -- not on the container -- so the computing operators
 follow the same one-way layering as every other verb (HIERARCHY_3.md).
 
 Dispatch is on the container's ``backend`` (the two-domain lifecycle of
@@ -13,7 +13,7 @@ REFACTOR_GKEYLL_FFI.md):
   powers are repeated weak multiplies. Results stay modal (gkyl-backed).
   Two modal operands of *different* dimensionality (e.g. a conf-space density
   times a phase-space distribution) automatically route ``*`` through
-  ``gkyl_dg_mul_conf_phase_op_range`` instead — whichever operand has fewer
+  ``gkyl_dg_mul_conf_phase_op_range`` instead -- whichever operand has fewer
   dimensions is the conf side, independent of call order.
 - **numpy-backed operands** take the unchanged NumPy path.
 - **Mixing the domains** in one expression is an error naming the fix.
@@ -71,7 +71,7 @@ def _numpy_binary(op, a, b, pa, pb):
 
 # --------------------------------------------------------------- modal domain
 def _basis_of(data: GDataState):
-  """(basis_type, ndim, poly_order) from ctx — the modal ops' dispatch key."""
+  """(basis_type, ndim, poly_order) from ctx -- the modal ops' dispatch key."""
   basis_type = data.ctx.get("basis_type")
   poly_order = data.ctx.get("poly_order")
   if basis_type is None or poly_order is None:
@@ -131,7 +131,7 @@ def _modal_dataset_pair(op, pa: GDataState, pb: GDataState):
     out = dg.modal.lincomb(1.0, A, -1.0, B)
   # end
   elif rep != "modal":
-    # Point values (nodal/quad): every pointwise operation is exact — compute
+    # Point values (nodal/quad): every pointwise operation is exact -- compute
     # with NumPy on the views, wrap back native, stay in-value_form.
     out = dg.rep.wrap(op(np.asarray(pa.values), np.asarray(pb.values)))
   # end
@@ -218,7 +218,7 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
         np.asarray(data.values), s)
     out = dg.rep.wrap(op(*args))
   # end
-  elif op is operator.truediv:                 # s / f — weak reciprocal
+  elif op is operator.truediv:                 # s / f -- weak reciprocal
     out = dg.modal.scale(dg.modal.weak_inv(*basis, A), s)
   # end
   elif op is operator.pow and not scalar_first:
@@ -235,7 +235,7 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
 
 # ------------------------------------------------------------------- ufuncs
 def apply_ufunc(ufunc, method, *inputs, **kwargs):
-  """Backend for ``GData.__array_ufunc__`` — keeps the result a dataset.
+  """Backend for ``GData.__array_ufunc__`` -- keeps the result a dataset.
 
   Ufuncs are pointwise, so they are valid wherever the data are point values:
   the NumPy field domain, and the nodal/quad value_forms (computed on the

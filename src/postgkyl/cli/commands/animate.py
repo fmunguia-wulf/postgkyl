@@ -1,4 +1,4 @@
-"""``animate`` — animate the active datasets, one frame per dataset.
+"""``animate`` -- animate the active datasets, one frame per dataset.
 
 A thin shell, mirroring ``plot.py``: option parsing plus the pool-level
 bookkeeping a single call to ``render.animate`` cannot know on its own (which

@@ -2,7 +2,7 @@
 
 This is the numeric core behind the ``ev`` expression evaluator. Each
 operator is a pure function ``f(in_grid, in_values) -> ([out_grid], [out_values])``
-over plain Python lists / NumPy arrays — no ``GData`` dependency. The
+over plain Python lists / NumPy arrays -- no ``GData`` dependency. The
 ``cmds`` table maps each RPN token to its arity (``num_in``/``num_out``)
 and function; the stack machine that drives them lives in the ``operations``
 layer's ``ev`` verb (layer 07), which can consume this table unchanged.
@@ -395,7 +395,7 @@ def curl(in_grid, in_values):
 def scale_comp(in_grid, in_values):
   """Scale specific components of the data.
 
-  RPN stack order: ``f comp_spec scale_factor scale_comp`` — usage
+  RPN stack order: ``f comp_spec scale_factor scale_comp`` -- usage
   ``f 2:4 1000 scale_comp`` scales components 2 and 3 by 1000.
 
   Args:
@@ -439,7 +439,7 @@ def scale_comp(in_grid, in_values):
 def scale_zi_axis(in_grid, in_values):
   """Scale the ``z_i`` axis of the grid.
 
-  RPN stack order: ``f axis scale_factor scale_zi_axis`` — usage
+  RPN stack order: ``f axis scale_factor scale_zi_axis`` -- usage
   ``f 0 1000 scale_zi_axis`` scales the x-axis (axis 0) by 1000.
 
   Args:

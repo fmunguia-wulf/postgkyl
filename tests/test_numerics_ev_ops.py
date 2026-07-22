@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.ev_ops — the RPN operator registry.
+"""Tests for postgkyl.numerics.ev_ops -- the RPN operator registry.
 
 Every operator is ``f(in_grid, in_values) -> ([out_grid], [out_values])``
 over plain lists / NumPy arrays. ``cmds`` maps each RPN token to its

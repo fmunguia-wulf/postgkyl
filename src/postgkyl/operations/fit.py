@@ -1,4 +1,4 @@
-"""The ``fit`` verb — fit a model to data and return the fitted curve.
+"""The ``fit`` verb -- fit a model to data and return the fitted curve.
 
 The result holds the fitted values on the data's grid; the per-component fit
 parameters, 1-sigma uncertainties, and R^2 are stored in

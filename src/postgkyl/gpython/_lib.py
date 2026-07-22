@@ -1,7 +1,7 @@
-"""Load the compiled ``_gpython`` extension — the single capability switch.
+"""Load the compiled ``_gpython`` extension -- the single capability switch.
 
 The foreign floor is the CPython extension ``postgkyl.gpython._gpython``, built by
-``scripts/build_gpython.sh`` against ``gkyl_gpython.h`` — the gpython shim, which lives
+``scripts/build_gpython.sh`` against ``gkyl_gpython.h`` -- the gpython shim, which lives
 in the gkeyll repo (``core/zero/gpython.c``) and is compiled INTO
 ``libg0core.so`` by Gkeyll's own build (GKEYLL_C_SHIM.md). There are no
 runtime signature declarations and no struct mirrors here: the contract is

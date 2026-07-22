@@ -1,10 +1,10 @@
-"""Tests for ``postgkyl.dg.map`` — grid mapping by evaluation at target points.
+"""Tests for ``postgkyl.dg.map`` -- grid mapping by evaluation at target points.
 
 See ``MAPPING.md`` for the design. Test fixtures build modal (or nodal)
 coefficients for the mapping field synthetically with ``gpython.basis`` matrices
 (no mapc2p file is required, per the layer instructions), by exactly
 projecting a chosen physical-coordinate function onto the basis's own node
-points, per cell — this guarantees the coefficients exactly represent the
+points, per cell -- this guarantees the coefficients exactly represent the
 chosen function, so the expected result can be computed independently
 (directly from the function), never from the code under test.
 

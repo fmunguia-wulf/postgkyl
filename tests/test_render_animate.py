@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.animate — FuncAnimation / saved frames / movie
+"""Tests for postgkyl.render.animate -- FuncAnimation / saved frames / movie
 compile.
 
 Builds frames directly as ``GDataState`` (no shim dependency needed for the

@@ -1,4 +1,4 @@
-"""``perprotate`` — component of an array perpendicular to a rotator field."""
+"""``perprotate`` -- component of an array perpendicular to a rotator field."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""The ``select`` verb — subselect coordinates and components."""
+"""The ``select`` verb -- subselect coordinates and components."""
 
 from __future__ import annotations
 

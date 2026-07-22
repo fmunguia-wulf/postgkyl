@@ -4,7 +4,7 @@ Private to ``render/``: this is the one concern the old tree split across
 ``utils/load_plot_data.py`` (dataset -> grid/values/dimensionality) and
 ``utils/axis_and_grid_prep.py`` (squeeze collapsed axes, resolve axis/colorbar
 label defaults). Here it collapses to a single function over
-:class:`~postgkyl.gdatastate.gdatastate.GDataState` — the new container already exposes
+:class:`~postgkyl.gdatastate.gdatastate.GDataState` -- the new container already exposes
 ``grid``/``values``/``num_dims`` uniformly, so there is no dual "GData or
 tuple" input to dispatch on (contrast the old ``load_plot_data``).
 """

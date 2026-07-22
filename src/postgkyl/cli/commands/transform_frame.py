@@ -1,4 +1,4 @@
-"""``transform_frame`` — shift a distribution function to the bulk-velocity frame."""
+"""``transform_frame`` -- shift a distribution function to the bulk-velocity frame."""
 
 from __future__ import annotations
 

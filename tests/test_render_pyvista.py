@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.pyvista — 3-D volume/isosurface rendering.
+"""Tests for postgkyl.render.pyvista -- 3-D volume/isosurface rendering.
 
 ``pyvista`` is a hard dependency (pyproject.toml) but needs a working
 (possibly software/off-screen) OpenGL context; every test here renders

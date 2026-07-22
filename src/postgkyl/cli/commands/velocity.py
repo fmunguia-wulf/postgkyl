@@ -1,4 +1,4 @@
-"""``velocity`` — velocity from separate density and momentum moments."""
+"""``velocity`` -- velocity from separate density and momentum moments."""
 
 from __future__ import annotations
 

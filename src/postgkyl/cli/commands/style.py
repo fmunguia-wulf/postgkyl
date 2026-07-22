@@ -1,4 +1,4 @@
-"""``style`` — probe and control the Matplotlib plotting style."""
+"""``style`` -- probe and control the Matplotlib plotting style."""
 
 from __future__ import annotations
 

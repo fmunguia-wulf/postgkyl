@@ -1,4 +1,4 @@
-"""``save`` — terminal verb; save each active dataset to disk."""
+"""``save`` -- terminal verb; save each active dataset to disk."""
 
 from __future__ import annotations
 

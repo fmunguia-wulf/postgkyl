@@ -1,4 +1,4 @@
-"""``GkQuantity`` — a registered gyrokinetic quantity, and its registry.
+"""``GkQuantity`` -- a registered gyrokinetic quantity, and its registry.
 
 Ported from ``src_bak/postgkyl/gk/gk_quantities/gkquantity.py``. A quantity
 names one or more *source combinations* (files and/or other, already-

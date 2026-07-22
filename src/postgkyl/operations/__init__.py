@@ -1,4 +1,4 @@
-"""The verb library — one function per operation (the single seam).
+"""The verb library -- one function per operation (the single seam).
 
 Every verb takes a dataset first and returns a dataset (via ``_result``), so the
 fluent ``GData`` methods, the operators, and any CLI all delegate here and can

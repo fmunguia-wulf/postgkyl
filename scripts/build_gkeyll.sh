@@ -53,6 +53,6 @@ echo "# Built ${SO_PATH}"
 
 # Build the _gpython extension against gkyl_gpython.h + libg0core.so. The
 # gpython shim itself (core/zero/gpython.c) was just compiled INTO
-# libg0core.so above — that step is the compile-time contract check
+# libg0core.so above -- that step is the compile-time contract check
 # (GKEYLL_C_SHIM.md).
 sh "${SCRIPT_DIR}/build_gpython.sh"

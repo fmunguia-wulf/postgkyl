@@ -1,4 +1,4 @@
-"""``print`` — print the values (or grid) of the active datasets."""
+"""``print`` -- print the values (or grid) of the active datasets."""
 
 from __future__ import annotations
 

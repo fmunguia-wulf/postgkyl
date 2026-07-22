@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.style — apply_style."""
+"""Tests for postgkyl.render.style -- apply_style."""
 
 from __future__ import annotations
 

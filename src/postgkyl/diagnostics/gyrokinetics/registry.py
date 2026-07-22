@@ -1,4 +1,4 @@
-"""The gyrokinetic quantity registry — populated from ``quantities.py``.
+"""The gyrokinetic quantity registry -- populated from ``quantities.py``.
 
 Ported from ``src_bak/postgkyl/gk/gk_quantities/registry.py``. Each entry
 names its preferred source combinations (in order) and the fetch function

@@ -1,4 +1,4 @@
-"""``current`` — accumulate a species' contribution to the current."""
+"""``current`` -- accumulate a species' contribution to the current."""
 
 from __future__ import annotations
 

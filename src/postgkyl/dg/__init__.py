@@ -1,17 +1,17 @@
-"""Discontinuous-Galerkin layer — orchestrates Gkeyll's compiled DG engine.
+"""Discontinuous-Galerkin layer -- orchestrates Gkeyll's compiled DG engine.
 
 Four modules, one per domain boundary:
 
-- :mod:`.interpolate` — the one-way modal -> NumPy bridge (matrix from
+- :mod:`.interpolate` -- the one-way modal -> NumPy bridge (matrix from
   Gkeyll's basis functions, applied with NumPy); also ``local_poly``, the
   same bridge evaluated at whole-cell points with NaN-separated interfaces
   (the discontinuity-preserving plotting mesh).
-- :mod:`.modal` — operations that stay in the modal domain (weak algebra,
+- :mod:`.modal` -- operations that stay in the modal domain (weak algebra,
   coefficient linear combinations, integration), all executed by Gkeyll
   kernels on native arrays.
-- :mod:`.rep` — explicit value_form changes (modal · nodal · quad) and
+- :mod:`.rep` -- explicit value_form changes (modal · nodal · quad) and
   pointwise functions via quadrature; the field never leaves the native domain.
-- :mod:`.map` — grid mapping: evaluate a coordinate-map field's coefficients
+- :mod:`.map` -- grid mapping: evaluate a coordinate-map field's coefficients
   at a target's own grid points (see ``MAPPING.md``).
 """
 

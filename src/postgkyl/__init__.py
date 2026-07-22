@@ -1,11 +1,11 @@
-"""postgkyl — a small, layered post-processing library for Gkeyll data.
+"""postgkyl -- a small, layered post-processing library for Gkeyll data.
 
 Public surface (the facade). The golden script::
 
     import postgkyl as pg
     pg.load('elc_M0_0.gkyl').interpolate().select(z0=0.0).plot()
 
-The facade is **pure re-export** — every public name is defined in the layer that
+The facade is **pure re-export** -- every public name is defined in the layer that
 owns it and simply gathered here:
 
     load, GData, GDataGroup            <- api/       (fluent surface)
@@ -22,7 +22,7 @@ owns it and simply gathered here:
     load_gk_distf, available_gk_quantities        (equation-internal loaders)
 
 Every fluent ``GData`` method delegates to one of these ``operations`` functions, so
-``pg.select(a, z0=0.0)`` and ``a.select(z0=0.0)`` are the same call — the
+``pg.select(a, z0=0.0)`` and ``a.select(z0=0.0)`` are the same call -- the
 functional and fluent spellings can never drift apart. The rest of the
 equation-blind ``operations`` verb inventory (``fft``, ``magsq``, ``mask``,
 ``val2coord``, ``extract_input``, ``fit``, ``differentiate``, ``integrate_axis``,

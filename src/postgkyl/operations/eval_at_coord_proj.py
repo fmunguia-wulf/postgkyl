@@ -1,4 +1,4 @@
-"""The ``eval_at_coord_proj`` verb — evaluate a native DG field at physical
+"""The ``eval_at_coord_proj`` verb -- evaluate a native DG field at physical
 coordinates in a subset of directions, projecting onto the lower-dimensional
 target basis for the survivors, via Gkeyll's ``gkyl_dg_eval_at_coord_proj``.
 

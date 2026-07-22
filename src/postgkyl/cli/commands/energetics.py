@@ -1,4 +1,4 @@
-"""``energetics`` — decompose energy for a two-species plasma."""
+"""``energetics`` -- decompose energy for a two-species plasma."""
 
 from __future__ import annotations
 

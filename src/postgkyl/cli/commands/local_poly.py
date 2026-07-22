@@ -1,4 +1,4 @@
-"""``dg_local_poly`` — evaluate the DG polynomial onto a discontinuity-
+"""``dg_local_poly`` -- evaluate the DG polynomial onto a discontinuity-
 preserving plotting mesh (NaN-separated at every cell interface)."""
 
 from __future__ import annotations

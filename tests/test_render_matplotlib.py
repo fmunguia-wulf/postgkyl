@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.matplotlib — multi-panel figures, the pgkyl
+"""Tests for postgkyl.render.matplotlib -- multi-panel figures, the pgkyl
 colorbar, log axes, vmin/vmax, aspect, and mapped (curvilinear) grids.
 
 ``render.plot``'s basic single/multi-dataset 1-D and 2-D behaviour is already

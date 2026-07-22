@@ -1,4 +1,4 @@
-"""``load`` — drain queued file globs into the working set (bare-filename dispatch).
+"""``load`` -- drain queued file globs into the working set (bare-filename dispatch).
 
 Basis, polynomial order, and value_form are properties of the data itself
 (HIERARCHY docs / CLAUDE.md): this is the one place the CLI lets a caller

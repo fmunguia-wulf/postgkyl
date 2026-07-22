@@ -1,4 +1,4 @@
-"""``bparrotate`` — component of an array parallel to the magnetic field."""
+"""``bparrotate`` -- component of an array parallel to the magnetic field."""
 
 from __future__ import annotations
 

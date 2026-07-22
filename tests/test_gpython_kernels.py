@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.gpython.kernels`` — weak algebra, lincomb, reduce, integrate.
+"""Tests for ``postgkyl.gpython.kernels`` -- weak algebra, lincomb, reduce, integrate.
 
 Run:  PYTHONPATH=src pytest tests/test_gpython_kernels.py -v
 """
@@ -322,7 +322,7 @@ def test_dg_reduce_of_constant_field_min_max_match_the_constant():
 
 def test_dg_reduce_sum_scales_with_cell_count():
   """`sum` totals the per-node field values across every cell (not divided
-  by node count), so doubling identical cells must exactly double it —
+  by node count), so doubling identical cells must exactly double it --
   a cell-count-independent way to check the "sum over the field" semantics
   without needing to know the kernel's internal Gauss-node count."""
   basis_type, ndim, p = "serendipity", 1, 1
@@ -343,7 +343,7 @@ def test_dg_reduce_sum_scales_with_cell_count():
 
 def test_dg_reduce_min_max_at_the_gauss_legendre_nodes_for_a_linear_field():
   """min/max are evaluated at the basis's Gauss-Legendre quadrature NODES
-  (interior points), not the cell edges — so for f(z) = 3 + 2z they equal f
+  (interior points), not the cell edges -- so for f(z) = 3 + 2z they equal f
   at the nodes nearest each end, not the true f(-1)/f(1) domain extrema.
   Serendipity p=1 in 1D uses the 2-point rule at z = +-1/sqrt(3)."""
   basis_type, ndim, p = "serendipity", 1, 1

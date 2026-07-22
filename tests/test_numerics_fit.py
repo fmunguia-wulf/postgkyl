@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.fit — model functions, RPN parser, fit/auto_guess.
+"""Tests for postgkyl.numerics.fit -- model functions, RPN parser, fit/auto_guess.
 
 Ports the array-only subset of ``tests_bak/test_fit.py``: the model
 functions, ``fit``/``fit_evaluate``, and the RPN expression machinery.

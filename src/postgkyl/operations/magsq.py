@@ -1,4 +1,4 @@
-"""The ``magsq`` verb — magnitude squared of a vector field."""
+"""The ``magsq`` verb -- magnitude squared of a vector field."""
 
 from __future__ import annotations
 

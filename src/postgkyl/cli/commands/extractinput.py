@@ -1,4 +1,4 @@
-"""``extractinput`` — print any input file embedded in compatible BP files."""
+"""``extractinput`` -- print any input file embedded in compatible BP files."""
 
 from __future__ import annotations
 

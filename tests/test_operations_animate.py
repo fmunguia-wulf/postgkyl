@@ -1,4 +1,4 @@
-"""Tests for the ``animate`` verb — modal-bridging + delegation to
+"""Tests for the ``animate`` verb -- modal-bridging + delegation to
 ``render.animate.animate`` (mirrors ``tests/test_coverage_leaf.py``'s
 treatment of ``operations.plot``)."""
 

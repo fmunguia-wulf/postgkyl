@@ -1,4 +1,4 @@
-"""``pyvista`` — render each active dataset as a 3D PyVista scalar field."""
+"""``pyvista`` -- render each active dataset as a 3D PyVista scalar field."""
 
 from __future__ import annotations
 

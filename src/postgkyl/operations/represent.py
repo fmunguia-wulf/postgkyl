@@ -1,4 +1,4 @@
-"""The value_form verbs — explicit modal · nodal · quad changes + ``apply``.
+"""The value_form verbs -- explicit modal · nodal · quad changes + ``apply``.
 
 Conversions are **never implicit** (REFACTOR_GKEYLL_FFI.md §3b): these verbs are
 the only way a dataset changes value_form, and each one stamps
@@ -92,7 +92,7 @@ def apply(data: "GDataState", fn, *, num_quad: int | None = None,
   ``d.apply(np.sqrt)``): evaluate at ``num_quad`` (default ``p+1``) Gauss
   points, apply ``fn`` to the values, project back onto the basis. The result
   stays modal and gkyl-native; the projection is exact when ``fn(f)·b_j`` has
-  degree ≤ 2·num_quad−1 — raise ``num_quad`` to de-alias.
+  degree ≤ 2·num_quad−1 -- raise ``num_quad`` to de-alias.
   """
   basis_type, ndim, poly_order = _native_basis(data)
   if data.ctx.get("value_form", "modal") != "modal":

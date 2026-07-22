@@ -1,9 +1,9 @@
-"""File loading through Gkeyll's ``gkyl_array_rio`` — the C read path.
+"""File loading through Gkeyll's ``gkyl_array_rio`` -- the C read path.
 
 ``read_field`` performs the whole read (grid + allocate + fill, including
 multi-range stitching for file_type 3) inside Gkeyll; ``read_header`` returns
 the grid and the raw msgpack metadata blob without touching the payload.
-Decoding the msgpack bytes is left to the caller (``io/``) — metadata policy
+Decoding the msgpack bytes is left to the caller (``io/``) -- metadata policy
 is an io concern, bytes are a floor concern.
 """
 

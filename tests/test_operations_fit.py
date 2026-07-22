@@ -1,4 +1,4 @@
-"""Tests for the ``fit`` verb — model fitting on a dataset's grid."""
+"""Tests for the ``fit`` verb -- model fitting on a dataset's grid."""
 
 from __future__ import annotations
 

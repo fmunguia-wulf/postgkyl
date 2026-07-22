@@ -1,4 +1,4 @@
-"""``grid`` — turn each dataset's grid into a dataset of coordinate values."""
+"""``grid`` -- turn each dataset's grid into a dataset of coordinate values."""
 
 from __future__ import annotations
 

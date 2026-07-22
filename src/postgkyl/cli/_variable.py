@@ -2,7 +2,7 @@
 
 ``euler``/``tenmoment``/``mhd`` each expose a table of named variables
 (``diagnostics.<module>.VARIABLES``) whose functions take different optional
-keyword arguments (``gas_gamma``, ``num_moms``, ``mu_0`` — see each module's
+keyword arguments (``gas_gamma``, ``num_moms``, ``mu_0`` -- see each module's
 ``VARIABLES`` table). Rather than hand-writing a branch per variable in every
 one of the three CLI shells, :func:`call_variable` calls the resolved
 function with only the keyword arguments it actually declares.

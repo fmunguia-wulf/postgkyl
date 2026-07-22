@@ -1,4 +1,4 @@
-"""The ``plot`` verb — terminal; hands the dataset to the render backend.
+"""The ``plot`` verb -- terminal; hands the dataset to the render backend.
 
 Point-value forms (nodal/quad) plot **directly**: their values are
 materialized at the true physical point locations (a non-uniform mesh whose

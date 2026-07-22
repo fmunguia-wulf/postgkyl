@@ -1,4 +1,4 @@
-"""The ``animate`` verb — terminal; hands a sequence of datasets to the
+"""The ``animate`` verb -- terminal; hands a sequence of datasets to the
 render backend's animation engine.
 
 Mirrors ``operations/plot.py``: each modal dataset in the sequence is bridged

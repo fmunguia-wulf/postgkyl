@@ -1,4 +1,4 @@
-"""``map`` — deform the grid onto non-uniform mapped coordinates."""
+"""``map`` -- deform the grid onto non-uniform mapped coordinates."""
 
 from __future__ import annotations
 

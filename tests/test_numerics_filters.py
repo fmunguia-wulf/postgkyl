@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.filters — fft_filtering and butter_filtering."""
+"""Tests for postgkyl.numerics.filters -- fft_filtering and butter_filtering."""
 
 from __future__ import annotations
 

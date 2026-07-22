@@ -1,4 +1,4 @@
-"""The ``collect`` verb — combine many datasets into one along a new time axis."""
+"""The ``collect`` verb -- combine many datasets into one along a new time axis."""
 
 from __future__ import annotations
 

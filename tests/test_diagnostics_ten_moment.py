@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.ten_moment — 10-moment pressure tensor,
+"""Tests for postgkyl.diagnostics.ten_moment -- 10-moment pressure tensor,
 field-aligned pressure diagnostics (p_par, p_perp, agyrotropy), folding the
 array-math analytic tests (formerly tests_models_ten_moment.py) with the
 verb-level guard/inplace/VARIABLES tests (formerly part of

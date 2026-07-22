@@ -1,6 +1,6 @@
-/* _gpythonmodule.c — the CPython extension over gkyl_gpython.h (GKEYLL_C_SHIM.md).
+/* _gpythonmodule.c -- the CPython extension over gkyl_gpython.h (GKEYLL_C_SHIM.md).
  *
- * Knows Python objects, NumPy arrays, and the pg0 contract — and nothing
+ * Knows Python objects, NumPy arrays, and the pg0 contract -- and nothing
  * else about Gkeyll: gkyl_gpython.h (the gpython shim, which lives in the gkeyll
  * repo and is compiled into libg0core.so) exposes only opaque handles,
  * scalars, and buffers, so no layout or calling convention exists on this
@@ -920,7 +920,7 @@ py_dynvec_write(PyObject *self, PyObject *args)
   }
   /* pg0_dynvec_write (gkeyll/core/zero/dynvec.c) returns raw errno from its
    * fopen/fwrite calls, which is only set on failure and never cleared on
-   * success — so a stale errno from an earlier, unrelated failed syscall in
+   * success -- so a stale errno from an earlier, unrelated failed syscall in
    * this process would otherwise be misread as this write having failed. */
   errno = 0;
   int status = pg0_dynvec_write(fname, (size_t)ncomp, (size_t)n,

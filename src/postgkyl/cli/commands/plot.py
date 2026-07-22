@@ -1,4 +1,4 @@
-"""``plot`` — terminal verb; render the active datasets.
+"""``plot`` -- terminal verb; render the active datasets.
 
 A faithful port of main's ``commands/plot.py``: every option, and the exact
 per-dataset loop (default: a fresh figure per dataset; ``--figure``/

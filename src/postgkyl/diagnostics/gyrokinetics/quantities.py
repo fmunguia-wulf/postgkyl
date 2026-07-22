@@ -1,4 +1,4 @@
-"""Gyrokinetic derived-quantity physics — the ``fetch_*`` functions behind the
+"""Gyrokinetic derived-quantity physics -- the ``fetch_*`` functions behind the
 quantity registry.
 
 Ported from ``src_bak/postgkyl/gk/gk_quantities/fetch_funcs.py``. Every

@@ -1,13 +1,13 @@
-"""``GDataStateGroup`` — an ordered, verb-less collection of datasets.
+"""``GDataStateGroup`` -- an ordered, verb-less collection of datasets.
 
 The container counterpart of :class:`~postgkyl.gdatastate.gdatastate.GDataState`: a group
-holds several datasets and offers only *state*-reading operations —
+holds several datasets and offers only *state*-reading operations --
 construction/flattening, the sequence protocol, combining, and a summary
 ``repr``. Like ``GDataState`` it knows nothing about verbs: no ``operations`` call,
 no matplotlib, ever, and it imports only downward (``collection``/``state``,
 both in ``gdatastate``). The fluent group that *broadcasts* verbs over its members
 (``interpolate``, ``select``, ``plot``, ``info``, ...) is layer 10's job, one layer up
-— exactly the way :class:`postgkyl.gdata.gdata.GData` adds verb methods on top
+-- exactly the way :class:`postgkyl.gdata.gdata.GData` adds verb methods on top
 of ``GDataState`` without ``gdatastate`` ever importing ``api`` (see
 :class:`postgkyl.gdata.gdatagroup.GDataGroup`).
 """

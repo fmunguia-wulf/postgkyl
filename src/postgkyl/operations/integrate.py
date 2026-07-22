@@ -1,15 +1,15 @@
-"""The ``integrate`` verb family — grid integrals, two domains.
+"""The ``integrate`` verb family -- grid integrals, two domains.
 
 ``integrate`` is a *terminal* verb (like ``info``): it returns numbers, not a
 dataset. The integral runs entirely inside Gkeyll (``gkyl_array_integrate``)
-on the native DG coefficients — no interpolation involved, and exact for the
+on the native DG coefficients -- no interpolation involved, and exact for the
 basis.
 
 ``integrate_axis`` is the NumPy trapezoidal counterpart (``postgkyl.tools.
 calculus.integrate`` in the legacy tree, ported verbatim to ``numerics.
 calculus.integrate`` and wired here): it collapses one or more axes of
 point-value data and returns a new (reduced) dataset, like ``select``. It
-never touches raw modal coefficients — nodal/quad value_forms are
+never touches raw modal coefficients -- nodal/quad value_forms are
 materialized to their true point locations first (the same bridge ``plot``
 uses); modal data must be converted explicitly first.
 

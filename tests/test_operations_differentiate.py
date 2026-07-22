@@ -1,4 +1,4 @@
-"""Tests for the ``differentiate`` verb — numerical gradient of field data.
+"""Tests for the ``differentiate`` verb -- numerical gradient of field data.
 
 Per the layer-03 differentiate-decision note, this is a post-``.interpolate()``
 verb: it takes NumPy field values and refuses native modal (gkyl-backed)

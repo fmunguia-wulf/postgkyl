@@ -1,4 +1,4 @@
-"""Tests for postgkyl.numerics.grid_centering — nodal_to_cell_centered_grid."""
+"""Tests for postgkyl.numerics.grid_centering -- nodal_to_cell_centered_grid."""
 
 from __future__ import annotations
 

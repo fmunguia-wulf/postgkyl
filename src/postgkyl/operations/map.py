@@ -1,4 +1,4 @@
-"""The ``map`` verb — deform a dataset's grid by evaluating a coordinate map.
+"""The ``map`` verb -- deform a dataset's grid by evaluating a coordinate map.
 
 See ``MAPPING.md`` for the full design. A mapping file is a DG field whose
 components hold the coefficients of the physical coordinates of each mapped

@@ -1,4 +1,4 @@
-"""The ``relchange`` verb — relative change between two datasets."""
+"""The ``relchange`` verb -- relative change between two datasets."""
 
 from __future__ import annotations
 

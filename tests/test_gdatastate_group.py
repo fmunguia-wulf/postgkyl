@@ -1,10 +1,10 @@
-"""Tests for postgkyl.gdatastate.gdatastategroup.GDataStateGroup — the verb-less container.
+"""Tests for postgkyl.gdatastate.gdatastategroup.GDataStateGroup -- the verb-less container.
 
 Ported from tests_bak/test_group.py: only the state-concerned tests survive
 (construction, flattening, indexing, iteration, combining, repr). Tests that
 exercised broadcasting (``__getattr__`` dispatch to member verbs) or terminal
 verbs (``plot``/``info``/``animate``/``plotly_animate``/``collect``/``evaluate``) are
-dropped here — those methods are deferred to the layer-10 fluent group; see
+dropped here -- those methods are deferred to the layer-10 fluent group; see
 that layer's worklist.
 """
 

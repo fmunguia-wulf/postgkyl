@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.io.writer`` — the vtk format and series-file behavior.
+"""Tests for ``postgkyl.io.writer`` -- the vtk format and series-file behavior.
 
 npy/txt/gkyl round trips and error paths are covered in
 ``tests/test_coverage_io.py``; this file focuses on what layer 04 adds: the

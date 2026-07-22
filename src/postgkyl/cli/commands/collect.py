@@ -1,4 +1,4 @@
-"""``collect`` — combine the working set into one dataset along a time axis."""
+"""``collect`` -- combine the working set into one dataset along a time axis."""
 
 from __future__ import annotations
 

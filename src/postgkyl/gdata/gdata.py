@@ -1,9 +1,9 @@
-"""``GData`` — the fluent surface (the FLUENT API layer).
+"""``GData`` -- the fluent surface (the FLUENT API layer).
 
 A thin subclass of the verb-less :class:`~postgkyl.gdatastate.gdatastate.GDataState`
 container that adds the fluent verb methods and the computing operators. Because
 this module sits *above* ``operations``/``render``/``io``, it imports them with plain
-top-level imports — there is **no import cycle and no lazy import anywhere**.
+top-level imports -- there is **no import cycle and no lazy import anywhere**.
 
 Inherited from the container (pure state readers): ``info``, ``__array__``,
 ``__repr__``/``__str__``, all shape properties, ``copy``/``_result``.
@@ -80,12 +80,12 @@ class GData(GDataState):
   # Explicit spellings of the weak algebra (the * and / operators dispatch to
   # the same Gkeyll kernels when both operands are modal).
   def mul(self, other) -> "GData":
-    """Weak (DG) multiply — runs inside Gkeyll on modal data."""
+    """Weak (DG) multiply -- runs inside Gkeyll on modal data."""
     return operations.arithmetic.binary(operator.mul, self, other)
   # end
 
   def div(self, other) -> "GData":
-    """Weak (DG) divide — runs inside Gkeyll on modal data."""
+    """Weak (DG) divide -- runs inside Gkeyll on modal data."""
     return operations.arithmetic.binary(operator.truediv, self, other)
   # end
 
@@ -142,7 +142,7 @@ class GData(GDataState):
   # end
 
   # --------------------------------------------- value_form changes (explicit)
-  # Conversions never happen implicitly — these verbs are the only doorway
+  # Conversions never happen implicitly -- these verbs are the only doorway
   # between the modal / nodal / quadrature value_forms (all gkyl-native).
   def to_modal(self, **kwargs) -> "GData":
     """Convert to modal coefficients (exact from nodal; projection from quad)."""

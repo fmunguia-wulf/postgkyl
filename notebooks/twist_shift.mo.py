@@ -3,7 +3,7 @@ import marimo
 __generated_with = "0.21.1"
 app = marimo.App(width="full")
 
-# Cell: utility functions — defines the q-profile and low-pass filter used in the notebook.
+# Cell: utility functions -- defines the q-profile and low-pass filter used in the notebook.
 @app.cell
 def _():
     import numpy as np
@@ -75,7 +75,7 @@ def _():
                 w = np.ones(n)
             elif filter_type == "triangle":
                 # Convolution of two box filters: all-positive, squared-sinc frequency
-                # response — better Nyquist attenuation (~0.41) than box with no ringing.
+                # response -- better Nyquist attenuation (~0.41) than box with no ringing.
                 box = np.ones(n)
                 w = np.convolve(box, box)  # length 2n-1
             elif filter_type == "gaussian":
@@ -131,7 +131,7 @@ def _():
 
 
 
-# Cell: introductory markdown — explains the twist-and-shift boundary condition and what the notebook does.
+# Cell: introductory markdown -- explains the twist-and-shift boundary condition and what the notebook does.
 # @app.cell
 # def _(mo):
 #     mo.md(
@@ -153,28 +153,28 @@ def _():
 #     return
 
 
-# Cell: imports — loads marimo (reactive UI) and numpy.
+# Cell: imports -- loads marimo (reactive UI) and numpy.
 @app.cell
 def _():
     import marimo as mo
     return mo
 
 
-# Cell: imports — loads matplotlib for all plotting.
+# Cell: imports -- loads matplotlib for all plotting.
 @app.cell
 def _():
     import matplotlib.pyplot as plt
     return plt
 
 
-# Cell: grid-size sliders — lets the user choose the number of grid points Nx and Ny.
+# Cell: grid-size sliders -- lets the user choose the number of grid points Nx and Ny.
 @app.cell
 def _(mo):
     Nx_slider = mo.ui.slider(value=32, start=4, stop=256, step=4, label="Nx (grid points in x)")
     Ny_slider = mo.ui.slider(value=32, start=4, stop=256, step=4, label="Ny (grid points in y)")
     return Nx_slider, Ny_slider
 
-# Cell: wave-parameter sliders — selects the field mode (plane wave or Gaussian packet) and
+# Cell: wave-parameter sliders -- selects the field mode (plane wave or Gaussian packet) and
 #   the integer mode numbers kx_mode, ky_mode, plus the Gaussian envelope widths sigma_x/y.
 @app.cell
 def _(mo):
@@ -195,14 +195,14 @@ def _(mo):
     ky2_mode_slider = mo.ui.slider(value=5, start=0, stop=8, step=1, label="ky2 mode number (integer)")
     return field_mode, kx_mode_slider, ky_mode_slider, sigma_x_slider, sigma_y_slider, add_mode2, kx2_mode_slider, ky2_mode_slider
 
-# Cell: magnetic-shear slider — sets the normalised shear ŝ that governs the twist-and-shift offset.
+# Cell: magnetic-shear slider -- sets the normalised shear ŝ that governs the twist-and-shift offset.
 @app.cell
 def _(mo):
     shat_slider = mo.ui.slider(value=2.5, start=0.0, stop=5.0, step=0.5, label="ŝ (magnetic shear)")
     q0_slider = mo.ui.slider(value=2.1, start=1.0, stop=5.0, step=0.1, label="q0 (safety factor)")
     return shat_slider, q0_slider
 
-# Cell: visualisation-control widgets — colormap picker and oversampling factors for the shift.
+# Cell: visualisation-control widgets -- colormap picker and oversampling factors for the shift.
 @app.cell
 def _(mo):
     cmap_dropdown = mo.ui.dropdown(options=["seismic", "viridis", "twilight"], value="seismic", label="Colormap")
@@ -218,7 +218,7 @@ def _(mo):
     return cmap_dropdown, nint_x_slider, nint_y_slider, apply_filter, filter_dropdown, lanczos_a_slider, gaussian_sigma_slider
 
 
-# Cell: core computation — builds the grid, constructs the test field phi(x,y), applies the
+# Cell: core computation -- builds the grid, constructs the test field phi(x,y), applies the
 #   twist-and-shift via spectral y-shifts, and optionally low-pass filters both fields.
 @app.cell
 def _(field_mode,nint_x_slider,nint_y_slider,apply_filter,filter_dropdown,lanczos_a_slider,gaussian_sigma_slider,
@@ -345,7 +345,7 @@ def _(field_mode,nint_x_slider,nint_y_slider,apply_filter,filter_dropdown,lanczo
             X_fine, Y_fine, phi_fine, phi_shifted_fine,
             q_profile, shat, sigma_x_slider, sigma_y_slider, x, x_local, y)
 
-# Cell: fine-grid field plots — pcolormesh of phi and phi_shifted on the oversampled mesh.
+# Cell: fine-grid field plots -- pcolormesh of phi and phi_shifted on the oversampled mesh.
 @app.cell
 def _(X_fine, Y_fine, cmap_dropdown, np, phi_fine, phi_shifted_fine, plt):
     _cmap = cmap_dropdown.value
@@ -370,7 +370,7 @@ def _(X_fine, Y_fine, cmap_dropdown, np, phi_fine, phi_shifted_fine, plt):
     return fig_fine,
 
 
-# Cell: real-space field plots — side-by-side pcolormesh of the original and twist-shifted phi(x,y).
+# Cell: real-space field plots -- side-by-side pcolormesh of the original and twist-shifted phi(x,y).
 @app.cell
 def _( X, Y, cmap_dropdown, mo, np, phi, phi_shifted, plt):
     # Side-by-side pcolormesh plots of the original and/or twist-shifted field.
@@ -414,7 +414,7 @@ def _( X, Y, cmap_dropdown, mo, np, phi, phi_shifted, plt):
     return fig_realspace,
 
 
-# Cell: 2-D Fourier spectra — pcolormesh of |φ̂(kx,ky)| for the original and shifted fields,
+# Cell: 2-D Fourier spectra -- pcolormesh of |φ̂(kx,ky)| for the original and shifted fields,
 #   showing how the twist-and-shift mixes Fourier modes.
 @app.cell
 def _(Lx, Ly, Nx, Ny, np, phi, phi_shifted, plt):
@@ -449,7 +449,7 @@ def _(Lx, Ly, Nx, Ny, np, phi, phi_shifted, plt):
     return fig_fourier,
 
 
-# Cell: safety-factor and shear profiles — plots q(x) and the local normalised shear ŝ(x),
+# Cell: safety-factor and shear profiles -- plots q(x) and the local normalised shear ŝ(x),
 #   letting the user verify how the linear q-model behaves across the radial box.
 @app.cell
 def _(np, plt, q_profile, shat, x_local):
@@ -478,7 +478,7 @@ def _(np, plt, q_profile, shat, x_local):
     plt.close(fig_profiles)
     return fig_profiles,
 
-# Cell: main layout — parameters on the left, plots on the right.
+# Cell: main layout -- parameters on the left, plots on the right.
 @app.cell
 def _(
     Nx_slider, Ny_slider,

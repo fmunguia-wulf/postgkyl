@@ -1,4 +1,4 @@
-"""Distribution-function frame transform — shift a particle distribution
+"""Distribution-function frame transform -- shift a particle distribution
 function's velocity grid by a bulk velocity."""
 
 from __future__ import annotations

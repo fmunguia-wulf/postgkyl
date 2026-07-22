@@ -1,4 +1,4 @@
-"""``differentiate`` — numerical gradient of interpolated (field-domain) data."""
+"""``differentiate`` -- numerical gradient of interpolated (field-domain) data."""
 
 from __future__ import annotations
 

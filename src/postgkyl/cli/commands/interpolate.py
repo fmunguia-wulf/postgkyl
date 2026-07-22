@@ -1,4 +1,4 @@
-"""``interpolate`` — DG-interpolate each active dataset onto a uniform mesh."""
+"""``interpolate`` -- DG-interpolate each active dataset onto a uniform mesh."""
 
 from __future__ import annotations
 

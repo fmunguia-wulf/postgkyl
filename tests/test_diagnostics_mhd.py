@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.mhd — MHD B-field, pressure, temperature,
+"""Tests for postgkyl.diagnostics.mhd -- MHD B-field, pressure, temperature,
 sound speed, Mach number, folding the array-math analytic tests (formerly
 tests_models_mhd.py) with the verb-level guard/VARIABLES tests (formerly
 part of tests_ops_moments.py)."""

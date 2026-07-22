@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.discovery — the equation-blind
+"""Tests for postgkyl.diagnostics.discovery -- the equation-blind
 output-stem/frame discovery shared by every equation loader.
 
 No dedicated ``find_output_stems``/``.outputs()`` tests exist in

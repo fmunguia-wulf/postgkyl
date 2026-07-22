@@ -1,4 +1,4 @@
-"""CLI layer — a chained Click pipeline over the public API (top SURFACES layer)."""
+"""CLI layer -- a chained Click pipeline over the public API (top SURFACES layer)."""
 
 from .app import cli
 

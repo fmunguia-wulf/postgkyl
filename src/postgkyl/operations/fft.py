@@ -1,4 +1,4 @@
-"""The ``fft`` verb — Fourier transform / power spectral density."""
+"""The ``fft`` verb -- Fourier transform / power spectral density."""
 
 from __future__ import annotations
 

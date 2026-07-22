@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.plasma — plasma-parameter GData verbs
+"""Tests for postgkyl.diagnostics.plasma -- plasma-parameter GData verbs
 (magB, vt, vA, omegaC, omegaP, d, lambdaD, rho, beta), porting the analytic
 array-math assertions of tests_models_plasma_params.py onto the new
 GData-facing wrappers -- these functions never had a verb layer before this

@@ -1,4 +1,4 @@
-"""The ``extract_input`` verb — decode the input file embedded in ``ctx``.
+"""The ``extract_input`` verb -- decode the input file embedded in ``ctx``.
 
 Gkeyll output files may carry the original simulation input file as a
 base64-encoded string, stashed by the reader under ``ctx['input_file']``.

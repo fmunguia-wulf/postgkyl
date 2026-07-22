@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.dg.rep`` — modal · nodal · quad representation changes.
+"""Tests for ``postgkyl.dg.rep`` -- modal · nodal · quad representation changes.
 
 This is the module's dedicated home post-relocation (``gpython/rep.py`` ->
 ``dg/rep.py``, layer 03-dg job 1); defensive/edge-case branches for the same

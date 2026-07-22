@@ -1,4 +1,4 @@
-"""``GkylArray`` — the Python owner of a native ``gkyl_array``.
+"""``GkylArray`` -- the Python owner of a native ``gkyl_array``.
 
 The handle is a ``PyCapsule`` produced by the ``_gpython`` extension; its
 destructor releases the C array, and zero-copy constructions pin the backing
@@ -29,7 +29,7 @@ class GkylArray:
     Raises:
       ValueError: ``ncomp`` or ``size`` is not positive. Gkeyll's own
         allocator asserts on a zero-byte buffer at *release* time (an abort,
-        not a Python exception) — refusing here turns a process crash into a
+        not a Python exception) -- refusing here turns a process crash into a
         clean, early error.
     """
     if ncomp <= 0 or size <= 0:
@@ -49,7 +49,7 @@ class GkylArray:
 
     Raises:
       ValueError: ``values`` has fewer than 1 dimension, or is empty (see
-        :meth:`alloc` — an empty buffer crashes Gkeyll's allocator on
+        :meth:`alloc` -- an empty buffer crashes Gkeyll's allocator on
         release rather than raising).
     """
     buf = np.ascontiguousarray(values, dtype=np.float64)
@@ -85,7 +85,7 @@ class GkylArray:
     """Read-only NumPy view of the C buffer, shaped ``(*cells, ncomp)``.
 
     The view's ``base`` chain holds the owning capsule, so
-    ``dataset.values.copy()`` on a temporary dataset is safe — the memory
+    ``dataset.values.copy()`` on a temporary dataset is safe -- the memory
     cannot be released while any view is reachable. Mutation must go through
     the kernels, never the view.
     """

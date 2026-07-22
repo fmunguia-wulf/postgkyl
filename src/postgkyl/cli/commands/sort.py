@@ -1,4 +1,4 @@
-"""``sort`` — natural/numeric-order the working set by source filename."""
+"""``sort`` -- natural/numeric-order the working set by source filename."""
 
 from __future__ import annotations
 

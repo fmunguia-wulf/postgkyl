@@ -1,4 +1,4 @@
-"""``relchange`` — relative change of each dataset with respect to a baseline."""
+"""``relchange`` -- relative change of each dataset with respect to a baseline."""
 
 from __future__ import annotations
 

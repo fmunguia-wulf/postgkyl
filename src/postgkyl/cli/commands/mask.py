@@ -1,4 +1,4 @@
-"""``mask`` — mask data with a Gkeyll mask file or numeric thresholds."""
+"""``mask`` -- mask data with a Gkeyll mask file or numeric thresholds."""
 
 from __future__ import annotations
 

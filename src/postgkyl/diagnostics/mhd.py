@@ -1,4 +1,4 @@
-"""Ideal-MHD diagnostics — the five-moment set (density/velocity) plus the
+"""Ideal-MHD diagnostics -- the five-moment set (density/velocity) plus the
 magnetic field, magnetic pressure, thermal pressure, temperature, sound
 speed, and Mach number.
 

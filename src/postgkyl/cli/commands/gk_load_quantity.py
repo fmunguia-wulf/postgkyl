@@ -1,4 +1,4 @@
-"""``gk_load_quantity`` — load a pre-named gyrokinetic quantity by name."""
+"""``gk_load_quantity`` -- load a pre-named gyrokinetic quantity by name."""
 
 from __future__ import annotations
 

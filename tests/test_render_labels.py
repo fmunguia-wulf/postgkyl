@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.labels — latex_to_unicode / latex_to_html."""
+"""Tests for postgkyl.render.labels -- latex_to_unicode / latex_to_html."""
 
 from __future__ import annotations
 

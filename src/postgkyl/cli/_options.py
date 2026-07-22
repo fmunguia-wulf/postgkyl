@@ -1,4 +1,4 @@
-"""Shared Click option decorators — the repeated option groups.
+"""Shared Click option decorators -- the repeated option groups.
 
 The ``--use``/``--tag``/``--label`` triad appears on almost every transform
 command (``fft``, ``magsq``, ``differentiate``, ...): ``--use`` filters which

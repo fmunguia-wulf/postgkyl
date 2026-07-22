@@ -1,4 +1,4 @@
-"""Module-level fluent verbs — the multi-dataset verbs that have no single
+"""Module-level fluent verbs -- the multi-dataset verbs that have no single
 ``self``.
 
 ``collect``, ``evaluate``, ``relchange``, ``animate``, and ``plotly_animate``

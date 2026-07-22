@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.rotations — parrotate/perprotate, folding
+"""Tests for postgkyl.diagnostics.rotations -- parrotate/perprotate, folding
 the array-math analytic tests (formerly tests_models_rotations.py) with the
 verb-level guard/inplace tests (formerly part of tests_ops_physics.py)."""
 

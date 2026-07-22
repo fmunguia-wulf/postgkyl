@@ -1,4 +1,4 @@
-"""The ``sort`` verb — natural/numeric-order datasets by source filename."""
+"""The ``sort`` verb -- natural/numeric-order datasets by source filename."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def sort(*datasets, reverse: bool = False) -> list[GDataState]:
   ``numerics.natural_sort_key``).
 
   Accepts ``sort(a, b)`` or ``sort([a, b])`` (flattened via
-  ``gdatastate.flatten_datasets``). No dataset is copied or mutated — only
+  ``gdatastate.flatten_datasets``). No dataset is copied or mutated -- only
   the returned list's order differs from the input.
 
   Args:

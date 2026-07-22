@@ -24,7 +24,7 @@ imports) can run:
 Session fixture
 ---------------
 ``generated_test_data`` runs once per pytest session and writes synthetic
-.gkyl files to ``tests/test_data/generated/`` (gitignored — every test that
+.gkyl files to ``tests/test_data/generated/`` (gitignored -- every test that
 reads from that directory depends on this fixture via autouse). Without it,
 a clean checkout (e.g. CI) has no fixtures to read; only a machine where
 someone has run ``python tests/generate_test_data.py`` (or a prior pytest

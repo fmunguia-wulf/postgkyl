@@ -1,4 +1,4 @@
-"""``plotly_animate`` — animate the active datasets with Plotly frames.
+"""``plotly_animate`` -- animate the active datasets with Plotly frames.
 
 A thin shell, mirroring ``plotly.py``: option parsing plus the pool-level
 bookkeeping a single call to ``render.plotly_animate`` cannot know on its

@@ -1,4 +1,4 @@
-"""Tests for ``postgkyl.gpython.array.GkylArray`` — the capsule-owning array.
+"""Tests for ``postgkyl.gpython.array.GkylArray`` -- the capsule-owning array.
 
 Run:  PYTHONPATH=src pytest tests/test_gpython_array.py -v
 """
@@ -103,7 +103,7 @@ def test_from_numpy_promotes_0d_to_a_single_cell():
   """`np.ascontiguousarray` upgrades a 0-d scalar to shape (1,) before the
   extension ever sees it, so this is a valid single-component, single-cell
   array, not the `ndim < 1` refusal (which is defensive/unreachable through
-  this public constructor — see the C source comment in _gpythonmodule.c)."""
+  this public constructor -- see the C source comment in _gpythonmodule.c)."""
   a = GkylArray.from_numpy(np.array(5.0))
   assert (a.ncomp, a.size) == (1, 1)
   assert a.view()[0, 0] == 5.0

@@ -1,4 +1,4 @@
-"""``pgkyl`` command-line entry point — a chained pipeline on pure Click.
+"""``pgkyl`` command-line entry point -- a chained pipeline on pure Click.
 
 The chained syntax mirrors the fluent script API 1:1::
 

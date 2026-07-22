@@ -151,7 +151,7 @@ def _compile_run(mo, re, subprocess, Path,
   # Warn if symlink
   if _c_path.is_symlink():
     mo.callout(
-      mo.md(f"⚠️ `{_c_path.name}` is a symlink — edits will also modify the original file."),
+      mo.md(f" `{_c_path.name}` is a symlink -- edits will also modify the original file."),
       kind="warn",
     )
 
@@ -490,7 +490,7 @@ def _ts_plot(mo, ctypes, ts_lib, result, species, quantity, comp_ui, boundary, p
   _up_ext = (ctypes.c_int * 3)(_Nx + 1, _Ny + 1, _Nz + 1)
   _local_ext = _lc.gkyl_range_new(ctypes.c_int(3), _lo_ext, _up_ext)
 
-  # bc_range: sub-range [1,Nx]x[1,Ny]x[0,Nz+1] — x/y interior only, z includes ghosts.
+  # bc_range: sub-range [1,Nx]x[1,Ny]x[0,Nz+1] -- x/y interior only, z includes ghosts.
   # Allocate via gkyl_range_new (opaque pointer), then let gkyl_sub_range_init overwrite
   # its fields in-place so it inherits _local_ext's linearizer (correct buffer strides).
   _lo_sub = (ctypes.c_int * 3)(1, 1, 0)
@@ -545,7 +545,7 @@ def _ts_plot(mo, ctypes, ts_lib, result, species, quantity, comp_ui, boundary, p
   _ax.set_ylabel('y  (m)', fontsize=12)
   _bnd_label = "lower" if _bnd == "lower" else "upper"
   _ax.set_title(
-    f'Ghost after twist-shift — {species.value} {quantity.value},  '
+    f'Ghost after twist-shift -- {species.value} {quantity.value},  '
     f'comp {_comp},  z {_bnd_label}',
     fontsize=10,
   )

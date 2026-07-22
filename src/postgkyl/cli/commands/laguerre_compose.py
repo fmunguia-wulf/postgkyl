@@ -1,4 +1,4 @@
-"""``laguerre_compose`` — compose PKPM Laguerre coefficients together."""
+"""``laguerre_compose`` -- compose PKPM Laguerre coefficients together."""
 
 from __future__ import annotations
 

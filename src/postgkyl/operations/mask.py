@@ -1,4 +1,4 @@
-"""The ``mask`` verb — mask out values by a mask dataset or by thresholds."""
+"""The ``mask`` verb -- mask out values by a mask dataset or by thresholds."""
 
 from __future__ import annotations
 

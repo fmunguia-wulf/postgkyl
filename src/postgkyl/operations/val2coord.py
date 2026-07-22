@@ -1,4 +1,4 @@
-"""The ``val2coord`` verb — build new datasets from columns of a DynVector."""
+"""The ``val2coord`` verb -- build new datasets from columns of a DynVector."""
 
 from __future__ import annotations
 

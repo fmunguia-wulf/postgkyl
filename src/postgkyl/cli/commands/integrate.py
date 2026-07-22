@@ -1,4 +1,4 @@
-"""``integrate`` — grid integral, two modes: whole-grid modal, or per-axis."""
+"""``integrate`` -- grid integral, two modes: whole-grid modal, or per-axis."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""``bperprotate`` — component of an array perpendicular to the magnetic field."""
+"""``bperprotate`` -- component of an array perpendicular to the magnetic field."""
 
 from __future__ import annotations
 

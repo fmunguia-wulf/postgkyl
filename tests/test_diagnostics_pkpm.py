@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.pkpm — PKPM Laguerre-moment composition,
+"""Tests for postgkyl.diagnostics.pkpm -- PKPM Laguerre-moment composition,
 folding the array-math analytic tests (formerly tests_models_laguerre.py)
 with the verb-level guard/inplace tests (formerly part of
 tests_ops_physics.py)."""

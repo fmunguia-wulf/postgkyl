@@ -1,4 +1,4 @@
-"""``average`` — weighted (or plain) average of a native DG field over dims."""
+"""``average`` -- weighted (or plain) average of a native DG field over dims."""
 
 from __future__ import annotations
 

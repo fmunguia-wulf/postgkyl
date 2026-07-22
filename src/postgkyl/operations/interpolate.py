@@ -1,4 +1,4 @@
-"""The ``interpolate`` verb — DG coefficients -> values on a uniform mesh."""
+"""The ``interpolate`` verb -- DG coefficients -> values on a uniform mesh."""
 
 from __future__ import annotations
 

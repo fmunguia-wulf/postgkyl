@@ -1,4 +1,4 @@
-"""Tests for postgkyl.diagnostics.kinetic — distribution-function frame
+"""Tests for postgkyl.diagnostics.kinetic -- distribution-function frame
 transform, folding the array-math analytic tests (formerly
 tests_models_frame.py) with the verb-level guard/inplace tests (formerly
 part of tests_ops_physics.py)."""

@@ -1,4 +1,4 @@
-"""Tests for postgkyl.render.plotly — 2-D surfaces, 3-D volumes/scatter,
+"""Tests for postgkyl.render.plotly -- 2-D surfaces, 3-D volumes/scatter,
 animation, and rotating-figure export.
 
 Adapted from ``tests_bak/test_plot.py``'s ``plotly`` cases: the old tests fed
