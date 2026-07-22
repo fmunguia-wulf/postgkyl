@@ -33,6 +33,16 @@ PY_INCLUDES=$("${PYTHON}" -c "import sysconfig; print(sysconfig.get_path('includ
 NUMPY_INCLUDE=$("${PYTHON}" -c "import numpy; print(numpy.get_include())")
 
 CC="${CC:-clang}"
+
+# CPython extension modules must leave the Py* symbols unresolved at link
+# time; the interpreter provides them at import. Linux's -shared does this
+# by default, macOS needs -undefined dynamic_lookup (same flag setuptools
+# passes on Darwin).
+EXT_LDFLAGS=""
+if [ "$(uname -s)" = "Darwin" ]; then
+    EXT_LDFLAGS="-Wl,-undefined,dynamic_lookup"
+fi
+
 echo "# Building _gpython extension (CC=${CC}) -> ${OUT}"
 "${CC}" -O2 -g -fPIC -shared \
     "${CSRC_DIR}/_gpythonmodule.c" \
@@ -40,5 +50,6 @@ echo "# Building _gpython extension (CC=${CC}) -> ${OUT}"
     -I "${PY_INCLUDES}" \
     -I "${NUMPY_INCLUDE}" \
     -L "${LIB_DIR}" -lg0core -Wl,-rpath,"${LIB_DIR}" \
+    ${EXT_LDFLAGS} \
     -o "${OUT}"
 echo "# Built ${OUT}"
