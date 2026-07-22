@@ -97,15 +97,51 @@ Note that ADIOS2 is not available on PyPI for Mac OSX; therefore, Mac users who
 want to use it need to install the dependency from elsewhere, for example, using
 the above-mentioned `mamba` and then do *not* use the `adios` tag with `pip`.
 
-#### Optional path to Gkeyll
+#### The Gkeyll bridge (native `.gkyl` reading, `interpolate`, weak algebra)
 
-Some features require telling postgkyl the location of the `core` library
-of [Gkeyll](https://github.com/ammarhakim/gkeyll). After installing postgkyl you
-can optionally write a postgkyl `config` file storing the location of Gkeyll's
-`gkylsoft/` installation library by invoking the postgkyl config command, e.g.
+Postgkyl talks to Gkeyll through a small compiled bridge (`gpython`), not a path you configure. **This is
+built automatically** as part of `pip install`/`pip install -e .`. `setup.py` runs
+`scripts/build_gkeyll.sh`, which:
+
+1. clones [Gkeyll](https://github.com/ammarhakim/gkeyll) into `./gkeyll/`
+   (a sparse, blobless, depth-1 clone of just the `core/` app — a few tens
+   of MB, not a submodule),
+2. `./configure`s and `make core`s it into `gkeyll/build/core/libg0core.so`
+   with no external dependencies (`--use-lapack-lite=yes`, so no
+   MPI/CUDA/SuperLU/Lua/system LAPACK are required), then
+3. compiles postgkyl's `_gpython` CPython extension
+   (`src/postgkyl/gpython/csrc/_gpythonmodule.c`) against it.
+
+This step needs **network access** (to clone Gkeyll) and **a C compiler**.
+It defaults to `clang`; if your system doesn't have `clang` (common on
+plain-gcc Linux setups), set `CC=gcc` (or any compiler you have) before
+installing:
+```bash
+CC=gcc pip install -e .[adios,test]
 ```
-pgkyl config -g <path_to_gkylsoft>/gkylsoft/ -c ~/.postgkyl/gkylsoft_path
+
+If this step fails or is skipped, Postgkyl still imports and works — reading
+files falls back to a pure-Python reader, and anything that needs the
+compiled bridge (`.interpolate()`, weak `* /` on modal data, native `.gkyl`
+reading, `.integrate()`, …) raises a `RuntimeError` naming the missing piece
+instead of the pipeline silently doing the wrong thing. Check whether the
+bridge is active with:
+```bash
+python -c "from postgkyl import gpython; print(gpython.available())"
 ```
+
+To rebuild by hand (e.g. after pulling a Postgkyl or Gkeyll update, or after
+fixing a compiler issue), re-run either script from the repo root — both are
+safe to re-run:
+```bash
+scripts/build_gkeyll.sh   # full: re-clone/build libg0core.so, then the extension
+scripts/build_gpython.sh  # just the extension, if libg0core.so is already built
+```
+
+If `gpython.available()` is `False`, the printed error explains which of the
+two prerequisites (compiler, or the clone) is missing, or whether the built
+extension is stale relative to the shim header — the fix in that last case
+is always `scripts/build_gpython.sh`.
 
 ## Testing
 

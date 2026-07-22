@@ -306,9 +306,21 @@ read `ctx["basis_type"]`/`ctx["poly_order"]`/`ctx["value_form"]` off the
 dataset and raise a clear error if a required one is missing; none of them
 take a `basis`/`poly_order` override argument. Loading a dataset that has a
 spatial grid (`ctx["cells"]`) without `basis_type`/`poly_order`/`value_form`
-resolvable (neither in the file header nor given explicitly) warns rather
-than silently guessing wrong; a dynvector/diagnostic file has no spatial grid
-and thus no DG basis to speak of, so it is exempt from this warning.
+resolvable (neither in the file header nor given explicitly) warns and
+defaults to `basis_type="serendipity"`, `poly_order=0`, `value_form="nodal"`
+— the trivial one-point-per-cell basis, since there is no modal structure to
+assume otherwise. When `value_form` is defaulted this way, the grid is
+re-expressed as cell centers (p0 nodal's one point per cell) instead of the
+reader's raw cell-edge grid, so it lines up one-to-one with `values`. A
+dynvector/diagnostic file has no spatial grid and thus no DG basis to speak
+of, so it is exempt from this defaulting. This is distinct from the readers'
+own narrower default (`gkyl_c_reader.py`/`gkyl_reader.py`: `basis_type`
+resolved but no `value_form` tag in the file -> assume `"modal"`, silently,
+no warning) — there the data is *known* to be real DG output (the header
+has a basis), so the stored numbers are almost certainly modal coefficients
+already, not point values; that assumption is safe enough not to warn about.
+The `gdatastate.py`-level default above only fires when nothing about a
+basis was found at all.
 
 ### `gdatastate/` — the container (`gdatastate/state.py`)
 `GDataState` holds one dataset: a nodal `grid` (list of 1-D edge arrays), values in

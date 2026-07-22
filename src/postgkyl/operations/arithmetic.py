@@ -191,8 +191,13 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
   basis = _basis_of(data)
   rep = _rep_of(data)
   A = data.native
-  # In point-value forms (nodal/quad) a scalar shift moves every
-  # component; in modal it moves only the mean coefficient.
+  # Adding/subtracting a *scalar* only shifts the mean (constant) DG
+  # coefficient -- a constant has no projection onto the higher-order basis
+  # functions, so gkyl_array_shiftc touches just coefficient 0 (shift_mean,
+  # dg/modal.py). This is unrelated to array + array (lincomb, above), which
+  # runs Gkeyll's own accumulate over every coefficient, higher orders
+  # included. In point-value forms (nodal/quad) there's no separate mean
+  # coefficient to single out, so a scalar shift moves every component.
   shift = (dg.modal.shift_all if rep != "modal"
            else lambda a, v: dg.modal.shift_mean(*basis, a, v))
   if op is operator.mul:                       # linear: valid in any rep
