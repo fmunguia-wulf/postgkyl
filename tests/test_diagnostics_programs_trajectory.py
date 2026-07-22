@@ -6,12 +6,13 @@ per recorded sample (``io/gkyl_reader.py``'s ``_read_t2_v1``: ``grid[0]``
 has the same length as ``values.shape[0]``) -- unlike a *field* file's
 ``num_cells + 1`` edge convention. ``postgkyl.io.write`` only emits
 file_type == 1 (field) ``.gkyl`` files, so a real write -> reload round trip
-does not reproduce the dynvector grid convention (it would come back with
-one extra "edge" time stamp); most trajectory fixtures here build the
-``GDataState`` directly (the same technique
-``tests/test_io_writer.py``'s ``_make_state`` uses) to get the true
-convention, and one test explicitly exercises the ``io.write`` round trip to
-document that mismatch rather than silently assume it away.
+reads back through a field file with no basis metadata; ``GDataState``
+defaults that case to p0 serendipity/nodal and re-expresses the grid as
+cell centers, which lines back up with the dynvector convention (one point
+per sample). Most trajectory fixtures here still build the ``GDataState``
+directly (the same technique ``tests/test_io_writer.py``'s ``_make_state``
+uses); one test explicitly exercises the ``io.write`` round trip to confirm
+the convention matches after reload.
 
 Run: PYTHONPATH=src pytest tests/test_diagnostics_programs_trajectory.py -v
 """
@@ -175,10 +176,12 @@ class TestTrajectorySynthetic:
 
 
 class TestTrajectoryViaIoWriter:
-  """Exercises the ``io.write`` round trip the instruction file suggests --
-  documents that it produces a *field*-convention grid (``num_cells + 1``
-  edges), not the dynvector convention, so ``len(grid[0]) != values.shape[0]``
-  for data written this way.
+  """Exercises the ``io.write`` round trip the instruction file suggests.
+
+  The written file is a field file with no basis metadata, so on reload
+  ``GDataState`` defaults it to p0 serendipity/nodal and re-expresses the
+  ``num_cells + 1`` edge grid as cell centers -- which lines back up
+  one-to-one with the dynvector convention (``len(grid[0]) == values.shape[0]``).
 
   Single-component only: the compiled reader (``gpython.rio.read_field``, tried
   first whenever the shim is available) fails on *any* multi-component
@@ -193,10 +196,6 @@ class TestTrajectoryViaIoWriter:
   3-component trajectory is exercised directly (no disk I/O) by
   ``TestTrajectorySynthetic`` instead."""
 
-  @pytest.mark.filterwarnings(
-      "ignore:(?s).*loaded without basis_type and poly_order metadata.*:UserWarning")
-  @pytest.mark.filterwarnings(
-      "ignore:(?s).*no value_form metadata found or specified.*:UserWarning")
   def test_single_component_trajectory_round_trips_and_animates(self, tmp_path):
     num_pos = 6
     time_edges = np.linspace(0.0, 1.0, num_pos + 1)
@@ -208,7 +207,9 @@ class TestTrajectoryViaIoWriter:
     out = io.save(d, out_name=str(tmp_path / "traj.gkyl"), extension="gkyl")
 
     from postgkyl.gdata import GData
-    reloaded = GData(out)
+    with pytest.warns(UserWarning, match="not resolvable"):
+      reloaded = GData(out)
+    # end
     assert reloaded.grid[0].shape[0] == num_pos + 1  # field convention: N+1 edges
     assert reloaded.values.shape[0] == num_pos
   # end

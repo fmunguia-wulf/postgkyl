@@ -55,25 +55,30 @@ class GDataState:
       # A dynvector/diagnostic file (no "cells" in ctx: no reader ever stamps
       # one without a spatial grid, e.g. a dynvector time series) has no DG
       # basis to speak of -- basis_type/poly_order/value_form genuinely don't
-      # apply, so warning about their absence would be noise, not signal.
+      # apply, so no defaulting is needed here.
       if self.ctx.get("cells") is not None:
-        missing = [key for key in ("basis_type", "poly_order")
-            if self.ctx.get(key) is None]
-        if missing:
-          warnings.warn(
-              f"{self._file_name}:\n"
-              f"loaded without {' and '.join(missing)} "
-              "metadata (not present in the file header); pass it explicitly "
-              f"({', '.join(f'{key}=...' for key in missing)}) if the data is "
-              "DG/modal, or downstream verbs that need it (e.g. interpolate) "
-              "will fail.", stacklevel=2)
+        defaulted = []
+        if self.ctx.get("basis_type") is None:
+          self.ctx["basis_type"] = "serendipity"
+          defaulted.append("basis_type")
+        # end
+        if self.ctx.get("poly_order") is None:
+          self.ctx["poly_order"] = 0
+          defaulted.append("poly_order")
         # end
         if "value_form" not in self.ctx:
+          self.ctx["value_form"] = "nodal"
+          defaulted.append("value_form")
+        # end
+        if defaulted:
           warnings.warn(
               f"{self._file_name}:\n"
-              "no value_form metadata found or specified; defaulting to "
-              "'modal'. Pass value_form=... (--value-form/-v) explicitly if "
-              "this is wrong.", stacklevel=2)
+              f"{', '.join(defaulted)} not resolvable (not present in the "
+              "file header, and not given explicitly); defaulting to "
+              "basis_type='serendipity', poly_order=0, value_form='nodal' "
+              "(p0 -- one point per cell, at the cell center). Pass "
+              "basis_type=/poly_order=/value_form=... explicitly if this "
+              "is wrong.", stacklevel=2)
         # end
       # end
   # end
