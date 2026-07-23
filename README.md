@@ -113,8 +113,7 @@ built automatically** as part of `pip install`/`pip install -e .`. `setup.py` ru
    (`src/postgkyl/gpython/csrc/_gpythonmodule.c`) against it.
 
 This step needs **network access** (to clone Gkeyll) and **a C compiler**.
-It defaults to `clang`; if your system doesn't have `clang` (common on
-plain-gcc Linux setups), set `CC=gcc` (or any compiler you have) before
+It defaults to `cc`; if your system doesn't have `cc`, set `CC=gcc` (or any compiler you have) before
 installing:
 ```bash
 CC=gcc pip install -e .[adios,test]

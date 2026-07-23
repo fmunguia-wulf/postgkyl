@@ -35,6 +35,31 @@ from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
+
+def _has_gl_context() -> bool:
+  # Mirrors test_render_pyvista.py's guard: on a GLX-only VTK build (no
+  # OSMesa/EGL fallback), rendering without a real or virtual X server hits a
+  # fatal, unrecoverable "Fatal Python error: Aborted" rather than a
+  # catchable exception, so check for a display before touching pyvista/VTK.
+  if not os.environ.get("DISPLAY"):
+    return False
+  # end
+  try:
+    import pyvista as pv
+    pl = pv.Plotter(off_screen=True)
+    pl.add_mesh(pv.Sphere())
+    pl.screenshot()
+    pl.close()
+    return True
+  # end
+  except Exception:
+    return False
+# end
+
+
+needs_gl = pytest.mark.skipif(not _has_gl_context(),
+    reason="no working (off-screen) OpenGL context on this host")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "tests", "test_data")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
@@ -955,6 +980,7 @@ class TestPlotly:
 class TestPyvista:
   GK_3D = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-elc_250.gkyl")
 
+  @needs_gl
   def test_pyvista_saves_a_png(self, tmp_path):
     out = tmp_path / "pv.png"
     _ok(["--batch-mode", self.GK_3D, "interp", "pyvista", "--no-show",
@@ -967,6 +993,7 @@ class TestPyvista:
     assert result.exit_code != 0
   # end
 
+  @needs_gl
   def test_pyvista_use_filter(self, tmp_path):
     out = tmp_path / "pv.png"
     _ok([self.GK_3D, "interp", "pyvista", "--use", "default", "--no-show",
@@ -974,6 +1001,7 @@ class TestPyvista:
     assert out.exists()
   # end
 
+  @needs_gl
   def test_pyvista_batch_mode_default_png(self, tmp_path):
     prefix = str(tmp_path / "pv")
     _ok(["--batch-mode", "--saveframes-prefix", prefix, self.GK_3D, "interp",
