@@ -8,6 +8,8 @@ available on the host, per the layer instructions.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
@@ -18,6 +20,15 @@ from postgkyl.render.pyvista import pyvista
 
 
 def _has_gl_context() -> bool:
+  # This host's VTK build reports "vtkXOpenGLRenderWindow" -- GLX-only, no
+  # OSMesa/EGL fallback -- so without a real or virtual (Xvfb) X server to
+  # connect to, VTK doesn't raise a catchable exception: it hits a fatal,
+  # unrecoverable "Fatal Python error: Aborted" that takes the whole pytest
+  # process down. Check for a display *before* touching pyvista/VTK at all,
+  # so a truly headless host skips instead of aborting the run.
+  if not os.environ.get("DISPLAY"):
+    return False
+  # end
   try:
     pl = pv.Plotter(off_screen=True)
     pl.add_mesh(pv.Sphere())
