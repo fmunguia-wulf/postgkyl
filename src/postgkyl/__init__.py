@@ -20,6 +20,8 @@ owns it and simply gathered here:
     save                             <- io/        (file output)
     load_gk_quantity,                <- diagnostics/gyrokinetics/
     load_gk_distf, available_gk_quantities        (equation-internal loaders)
+    version_report                    <- _version.py  (``pgkyl --version``'s
+                                                      commit/build-info report)
 
 Every fluent ``GData`` method delegates to one of these ``operations`` functions, so
 ``pg.select(a, z0=0.0)`` and ``a.select(z0=0.0)`` are the same call -- the
@@ -50,6 +52,7 @@ from postgkyl.render import plot
 from postgkyl.io import save
 from postgkyl.diagnostics.gyrokinetics import (
     load_gk_distf, load_gk_quantity, available_quantities as available_gk_quantities)
+from postgkyl._version import version_report
 
 __version__ = "2.0.0"
 
@@ -58,4 +61,4 @@ __all__ = ["GData", "load", "GDataGroup", "plot", "info", "integrate",
     "collect", "evaluate", "relchange", "animate", "plotly_animate", "sort",
     "available_evaluate_operators",
     "load_gk_quantity", "load_gk_distf", "available_gk_quantities",
-    "__version__"]
+    "__version__", "version_report"]

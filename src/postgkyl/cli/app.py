@@ -18,7 +18,7 @@ from glob import glob
 
 import click
 
-from postgkyl import __version__
+from postgkyl import __version__, version_report
 from postgkyl.cli.state import DataSpace
 from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
 
@@ -80,9 +80,20 @@ class PgkylGroup(click.Group):
     # end
 
 
+def _print_version(ctx, param, value) -> None:
+  if not value or ctx.resilient_parsing:
+    return
+  # end
+  click.echo(version_report(__version__))
+  ctx.exit()
+# end
+
+
 @click.group(cls=PgkylGroup, chain=True,
     context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(__version__, "--version", prog_name="pgkyl")
+@click.option("--version", is_flag=True, expose_value=False, is_eager=True,
+    callback=_print_version,
+    help="Show version, commit, Gkeyll build info, and exit.")
 @click.option("--batch-mode", "-b", is_flag=True, help="Do not show plots; save them instead.")
 @click.option("--saveframes-prefix", default="pgkyl", help="Output prefix used in batch mode.")
 @click.option("--value-form", "-v", default=None,

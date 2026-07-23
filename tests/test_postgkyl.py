@@ -483,12 +483,21 @@ _ALLOWED = {
                                                       # so this cannot create a cycle whether
                                                       # or not the edge is ever exercised
     "gdata":  {"gdatastate", "operations", "io"},
-    "":       {"gdata", "operations", "render", "io", "diagnostics"}, # facade: pure re-export of
-                                                      # public names; "diagnostics" added by
+    "":       {"gdata", "operations", "render", "io", "diagnostics", "gpython", "_version"}, # facade:
+                                                      # pure re-export of public names;
+                                                      # "diagnostics" added by
                                                       # 12-diagnostics-loaders.md, which
                                                       # explicitly authorizes the facade
                                                       # re-exporting load_gk_quantity etc. so
-                                                      # pg.load_gk_quantity(...) keeps working
+                                                      # pg.load_gk_quantity(...) keeps working;
+                                                      # "_version" is __init__.py's own import
+                                                      # of _version.py's version_report (`pgkyl
+                                                      # --version`'s commit/build-info report),
+                                                      # re-exported like any other facade name;
+                                                      # "gpython" is _version.py's own edge (it
+                                                      # reads gpython.available()/build_info())
+                                                      # -- both source files sit in the same ""
+                                                      # layer, so both edges are checked here
     "cli":    {""},                                   # top surface: pure consumer of the facade
 }
 _LAYERS = set(_ALLOWED)

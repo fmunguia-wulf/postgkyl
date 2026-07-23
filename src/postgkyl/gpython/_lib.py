@@ -53,3 +53,25 @@ def lib_path() -> pathlib.Path | None:
   """Path of the loaded extension (which is rpath-bound to its libg0core)."""
   return pathlib.Path(_mod.__file__) if _mod is not None else None
 # end
+
+
+def build_info() -> dict[str, str] | None:
+  """Metadata about the vendored Gkeyll build this bridge was compiled from.
+
+  None when the bridge has never been built (scripts/build_gkeyll.sh never
+  ran): ``_build_info`` is a generated build artifact, not part of the
+  source tree (see scripts/build_gpython.sh, .gitignore).
+  """
+  try:
+    from . import _build_info as _bi
+  except ImportError:
+    return None
+  # end
+  return {"gkeyll_commit": _bi.GKEYLL_COMMIT,
+      "gkeyll_commit_date": _bi.GKEYLL_COMMIT_DATE,
+      "gkeyll_branch": _bi.GKEYLL_BRANCH,
+      "postgkyl_build_commit": _bi.POSTGKYL_BUILD_COMMIT,
+      "build_date": _bi.BUILD_DATE,
+      "build_cc": _bi.BUILD_CC,
+      "build_arch_flags": _bi.BUILD_ARCH_FLAGS}
+# end

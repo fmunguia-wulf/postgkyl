@@ -10,7 +10,10 @@ contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
                compiled into ``libg0core.so`` by Gkeyll's own build)
 - ``_gpython``  the built extension module -- opaque handles in, ndarrays out
 - ``_lib``     loads ``_gpython`` + the ``GPYTHON_API_VERSION`` handshake;
-               ``available()`` is the single capability switch
+               ``available()`` is the single capability switch;
+               ``build_info()`` reads the generated ``_build_info`` (the
+               vendored Gkeyll commit + build date, written by
+               ``scripts/build_gpython.sh``) for ``pgkyl --version``
 - ``array``    :class:`GkylArray` -- Python owner of a native ``gkyl_array``
 - ``basis``    cached Gkeyll basis objects + interpolation/nodal/quad matrices
                built by evaluating Gkeyll's own basis through the shim
@@ -30,9 +33,9 @@ If the extension is missing, importing still succeeds; ``available()``
 returns False and every entry point raises with build guidance.
 """
 
-from ._lib import available, lib_path, require
+from ._lib import available, build_info, lib_path, require
 from .array import GkylArray
 from . import basis, kernels, rio
 
-__all__ = ["available", "lib_path", "require", "GkylArray", "basis",
-    "kernels", "rio"]
+__all__ = ["available", "build_info", "lib_path", "require", "GkylArray",
+    "basis", "kernels", "rio"]
