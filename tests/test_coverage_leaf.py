@@ -403,7 +403,14 @@ def test_plot_rejects_more_than_two_dimensions():
 
 
 @needs_gkeyll
-def test_plot_show_true_does_not_error_with_agg_backend():
+def test_plot_show_true_does_not_error_with_agg_backend(monkeypatch):
+  # matplotlib's own FigureCanvasBase.show() silently no-ops (no warning) on
+  # a genuinely headless Linux host (no DISPLAY) -- a deliberate
+  # headless-friendliness special case, not something this test is about.
+  # Force a DISPLAY so the assertion below exercises the actual behavior
+  # under test (Agg backend + show=True -> warn, don't raise) regardless of
+  # whether this host has a real display.
+  monkeypatch.setenv("DISPLAY", ":0")
   a = pg.load(F1).interpolate().select(comp=0)
   with pytest.warns(UserWarning, match="non-interactive"):
     fig = a.plot(show=True)

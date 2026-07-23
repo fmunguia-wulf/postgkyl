@@ -946,7 +946,10 @@ class TestPlotly:
     # (resolved against that submodule's own globals) actually sees it.
     monkeypatch.setattr(sys.modules["postgkyl.render.plotly"], "open_preview",
         lambda path: calls.append(path))
-    _ok([DISTF_P2_0, "interp", "plotly"])
+    # --show is explicit: show_option defaults to off on a headless host (no
+    # DISPLAY/WAYLAND_DISPLAY), and this test is about the preview call, not
+    # about that default-detection logic.
+    _ok([DISTF_P2_0, "interp", "plotly", "--show"])
     assert len(calls) == 1
   # end
 
@@ -971,7 +974,10 @@ class TestPlotly:
     # (resolved against that submodule's own globals) actually sees it.
     monkeypatch.setattr(sys.modules["postgkyl.render.plotly"], "open_preview",
         lambda path: calls.append(path))
-    _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate"])
+    # --show is explicit: show_option defaults to off on a headless host (no
+    # DISPLAY/WAYLAND_DISPLAY), and this test is about the preview call, not
+    # about that default-detection logic.
+    _ok([DISTF_P2_0, DISTF_P2_1, "interp", "plotly_animate", "--show"])
     assert len(calls) == 1
   # end
 # end
