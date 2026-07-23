@@ -36,6 +36,24 @@ needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None,
     reason="ffmpeg not found on PATH")
 
 
+def _chrome_available() -> bool:
+  # Kaleido v1+ needs a real Chrome/Chromium binary (its own download via
+  # `kaleido_get_chrome` or a system install) -- without one,
+  # start_sync_server()'s background thread dies and to_image() hangs
+  # forever waiting on a server that never came up, rather than raising.
+  try:
+    from choreographer.browsers.chromium import Chromium
+    return Chromium.find_browser(skip_local=False) is not None
+  except Exception:
+    return False
+  # end
+# end
+
+
+needs_chrome = pytest.mark.skipif(not _chrome_available(),
+    reason="no Chrome/Chromium found for kaleido")
+
+
 def _state(grid, values) -> GDataState:
   d = GDataState()
   d.push(list(grid), values)
@@ -525,6 +543,7 @@ class TestSaveRotatingPlotlyFigure:
   # end
 
   @needs_ffmpeg
+  @needs_chrome
   def test_gif_export_end_to_end(self, tmp_path):
     # fps * rotation_period = 2 -- the minimum frame count that still
     # exercises the multi-frame rotation loop (fewer, and the `max(2, ...)`
@@ -538,6 +557,7 @@ class TestSaveRotatingPlotlyFigure:
   # end
 
   @needs_ffmpeg
+  @needs_chrome
   def test_mp4_export_end_to_end(self, tmp_path):
     out = tmp_path / "out.mp4"
     save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 2, 1.0, 1.0)
