@@ -37,7 +37,7 @@ else
      git -C "${GKEYLL_DIR}" sparse-checkout set ${SPARSE_DIRS})
 fi
 
-CC="${CC:-clang}"
+CC="${CC:-cc}"
 echo "# Configuring gkeyll core (CC=${CC}, lapack-lite, app=core)"
 (cd "${GKEYLL_DIR}" && ./configure "CC=${CC}" --use-lapack-lite=yes --app=core)
 

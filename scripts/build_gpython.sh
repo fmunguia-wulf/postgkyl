@@ -32,7 +32,7 @@ PYTHON="${PYTHON:-python3}"
 PY_INCLUDES=$("${PYTHON}" -c "import sysconfig; print(sysconfig.get_path('include'))")
 NUMPY_INCLUDE=$("${PYTHON}" -c "import numpy; print(numpy.get_include())")
 
-CC="${CC:-clang}"
+CC="${CC:-cc}"
 
 # CPython extension modules must leave the Py* symbols unresolved at link
 # time; the interpreter provides them at import. Linux's -shared does this
