@@ -38,48 +38,15 @@ else
 fi
 
 CC="${CC:-cc}"
+echo "# Configuring gkeyll core (CC=${CC}, lapack-lite, app=core)"
+(cd "${GKEYLL_DIR}" && ./configure "CC=${CC}" --use-lapack-lite=yes --app=core)
 
-# gkeyll's own ./configure defaults ARCH_FLAGS to `-march=native`, baking
-# in whatever ISA extensions the BUILD machine happens to expose. On
-# x86_64 that can select AVX-512 codegen, and GCC (verified on 13 and 14,
-# independent of -O level or -ffast-math -- clang is unaffected) has a real
-# auto-vectorization bug that silently miscomputes at least one Gkeyll DG
-# kernel (ker/bin_op/binop_cross_mul_*_gkhyb_p1.c) when targeting AVX-512.
-# Because CI runners (and contributors' own machines) are whatever hardware
-# they happen to be, `-march=native` turns this into a silent,
-# host-dependent correctness bug rather than a build failure: some hosts
-# expose AVX-512 and miscompile, others don't and are fine -- indistinguishable
-# from flakiness.
-#
-# Fix: pin to a portable, standardized microarchitecture level instead of
-# auto-detecting. `x86-64-v3` (AVX2 + FMA + BMI2, no AVX-512) is universally
-# available on any x86_64 CPU from the last decade-plus, avoids the buggy
-# code path entirely on every compiler, and -- unlike `-march=native` --
-# produces the same binary regardless of which machine builds it. There is
-# no equivalent portable-level spec on other architectures and no evidence
-# of an equivalent bug there, so non-x86_64 hosts are left on the
-# compiler's own default (empty ARCH_FLAGS) rather than guessing.
-#
-# Anyone who wants maximum-performance native codegen (and accepts the
-# tradeoff) can still get it with `ARCH_FLAGS=-march=native ./setup.py ...`
-# or `ARCH_FLAGS=-march=native scripts/build_gkeyll.sh` -- this default only
-# applies when the caller hasn't set ARCH_FLAGS themselves.
-if [ -z "${ARCH_FLAGS+set}" ]; then
-    case "$(uname -m)" in
-        x86_64|amd64)
-            ARCH_FLAGS="-march=x86-64-v3"
-            ;;
-        *)
-            ARCH_FLAGS=""
-            ;;
-    esac
-fi
+ARCH_FLAGS="${ARCH_FLAGS:-}"
+export ARCH_FLAGS
 
-echo "# Configuring gkeyll core (CC=${CC}, ARCH_FLAGS=${ARCH_FLAGS:-<compiler default>}, lapack-lite, app=core)"
-(cd "${GKEYLL_DIR}" && ./configure "CC=${CC}" "ARCH_FLAGS=${ARCH_FLAGS}" --use-lapack-lite=yes --app=core)
-
-echo "# Building libg0core.so"
-(cd "${GKEYLL_DIR}" && make core -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)")
+echo "# Building libg0core.so (ARCH_FLAGS=${ARCH_FLAGS:-<none -- compiler default>})"
+(cd "${GKEYLL_DIR}" && make core "ARCH_FLAGS=${ARCH_FLAGS}" \
+    -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)")
 
 SO_PATH="${GKEYLL_DIR}/build/core/libg0core.so"
 if [ ! -f "${SO_PATH}" ]; then
