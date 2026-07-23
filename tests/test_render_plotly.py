@@ -521,7 +521,8 @@ class TestSaveRotatingPlotlyFigure:
     save_rotating_plotly_figure(self._scene_fig(), str(out), 45.0, 10,
         60.0, 2.0)
     assert out.exists()
-    assert "PGKYL" in out.read_text() or len(out.read_text()) > 0
+    text = out.read_text(encoding="utf-8")
+    assert "PGKYL" in text or len(text) > 0
   # end
 
   def test_html_export_zero_rotation_period_omits_script(self, tmp_path):
@@ -539,7 +540,7 @@ class TestSaveRotatingPlotlyFigure:
         starting_azimuthal_angle=0.0, fps=10, polar_angle=60.0,
         rotation_period=math.inf, radius=2.0)
     assert out.exists()
-    assert "recomputeRotationParams" not in out.read_text()
+    assert "recomputeRotationParams" not in out.read_text(encoding="utf-8")
   # end
 
   @needs_ffmpeg

@@ -537,7 +537,7 @@ def _build_edges(pkg_root=None):
       # end
       p = os.path.join(dp, f)
       src = _layer(p, pkg_root)
-      for node in ast.walk(ast.parse(open(p).read(), p)):
+      for node in ast.walk(ast.parse(open(p, encoding="utf-8").read(), p)):
         for tgt in _import_targets(node):
           if tgt == src:
             continue
@@ -579,7 +579,7 @@ def _foreign_floor_offenders(pkg_root):
       # end
       p = os.path.join(dp, f)
       in_gpython = _layer(p, pkg_root) == "gpython"
-      for node in ast.walk(ast.parse(open(p).read(), p)):
+      for node in ast.walk(ast.parse(open(p, encoding="utf-8").read(), p)):
         names = []
         if isinstance(node, ast.Import):
           names = [n.name for n in node.names]
