@@ -1,7 +1,7 @@
 """Gkeyll basis objects + evaluation matrices, through the gpython shim.
 
 ``struct gkyl_basis`` carries the basis functions themselves; the shim
-dispatches its function pointers in compiled C (``pg0_basis_eval`` & co.), so
+dispatches its function pointers in compiled C (``gpython_basis_eval`` & co.), so
 the interpolation matrix is assembled by evaluating Gkeyll's own basis at the
 interpolation points -- a few hundred calls, cached per basis -- and NumPy
 applies it at array speed. The matrices are therefore bit-consistent with the

@@ -188,7 +188,7 @@ class TestTrajectoryViaIoWriter:
   ``.gkyl`` field this writer produces --
   ``PYTHONPATH=src python -c`` reproduction:
   ``io.write(state_with_ncomp_2_or_more, ...)`` then re-reading it raises
-  ``OSError: pg0_read_field failed`` (reproduces even for pre-existing,
+  ``OSError: gpython_read_field failed`` (reproduces even for pre-existing,
   layer-agnostic data, e.g. any ``GDataState`` pushed with
   ``values.shape[-1] >= 2``; single-component data round-trips fine). That
   is a pre-existing limitation in ``gpython``/``io`` (outside this layer's

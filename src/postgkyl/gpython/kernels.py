@@ -492,7 +492,7 @@ _EVAL_AT_COORD_PROJ_MAX_POLY_ORDER = {
 }
 
 # gkyl_basis_type ordinals (gkeyll/core/zero/gkyl_basis.h) -- the target
-# basis pg0_eval_at_coord_proj reports can differ in TYPE from the donor
+# basis gpython_eval_at_coord_proj reports can differ in TYPE from the donor
 # (e.g. eliminating a gkhybrid velocity direction can yield a plain
 # serendipity target), so its ordinal must be translated back to postgkyl's
 # string vocabulary here.

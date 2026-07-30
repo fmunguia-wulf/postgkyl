@@ -167,7 +167,7 @@ class TestLaguerreCompose:
 # writer (io/writer.py) does not reproduce the "multi-range" (file_type 3)
 # structure the *compiled* reader (GkylCReader, tried first whenever the
 # shim is available) expects for a real Gkeyll file -- so a naively
-# write-then-load'ed synthetic file bounces off ``pg0_read_field`` before
+# write-then-load'ed synthetic file bounces off ``gpython_read_field`` before
 # ``load_pkpm`` ever sees it. Following the same technique
 # ``tests_bak/test_gk_load_quantity.py`` used for the (equally ctypes-only)
 # old gk_quantities registry, the synthetic PKPM/pkpm_vars datasets are
