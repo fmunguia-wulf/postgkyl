@@ -32,6 +32,28 @@ PYTHON="${PYTHON:-python3}"
 PY_INCLUDES=$("${PYTHON}" -c "import sysconfig; print(sysconfig.get_path('include'))")
 NUMPY_INCLUDE=$("${PYTHON}" -c "import numpy; print(numpy.get_include())")
 
+# _gpythonmodule.c targets NPY_2_2_API_VERSION (pyproject.toml's numpy>=2.2.6
+# floor) so it is ABI-compatible with any NumPy >=2.2 that later imports it --
+# but that only holds if the NumPy compiled against is itself >=2.2. Under
+# pip's default build isolation, this ${PYTHON} is a throwaway environment
+# that resolves build-system.requires' numpy independently of whatever NumPy
+# ends up installed for running postgkyl, so a stale/mismatched NumPy here
+# (e.g. an ambient `python3` found ahead of the intended venv on PATH) would
+# otherwise silently bake a broken extension instead of failing at build time.
+NUMPY_OK=$("${PYTHON}" -c "
+import sys
+import numpy
+major, minor = (int(p) for p in numpy.__version__.split('.')[:2])
+sys.stdout.write('yes' if (major, minor) >= (2, 2) else 'no')
+")
+if [ "${NUMPY_OK}" != "yes" ]; then
+    NUMPY_VERSION=$("${PYTHON}" -c "import numpy; print(numpy.__version__)")
+    echo "error: building _gpython against NumPy ${NUMPY_VERSION} (via ${PYTHON}), but postgkyl requires numpy>=2.2.6 (pyproject.toml)." >&2
+    echo "       This usually means '${PYTHON}' resolved to a different environment than the one postgkyl is being installed into." >&2
+    echo "       Reinstall with: pip install -e . --no-build-isolation" >&2
+    exit 1
+fi
+
 CC="${CC:-cc}"
 
 # CPython extension modules must leave the Py* symbols unresolved at link

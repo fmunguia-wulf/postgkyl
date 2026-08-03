@@ -81,13 +81,15 @@ have the most up-to-date version should install Postgkyl from the source code:
 ```bash
 git clone https://github.com/ammarhakim/postgkyl.git
 cd postgkyl
-pip install -e .[test]
+pip install numpy setuptools
+pip install -e .[test] --no-build-isolation
 ```
 
 Alternatively, Postgkyl can be installed directly from [PyPI](https://pypi.org/project/postgkyl/):
 
 ```bash
-pip install -e postgkyl[test]
+pip install numpy setuptools
+pip install -e postgkyl[test] --no-build-isolation
 ```
 
 #### The Gkeyll bridge (native `.gkyl` reading, `interpolate`, weak algebra)
@@ -109,7 +111,7 @@ This step needs **network access** (to clone Gkeyll) and **a C compiler**.
 It defaults to `cc`; if your system doesn't have `cc`, set `CC=gcc` (or any compiler you have) before
 installing:
 ```bash
-CC=gcc pip install -e .[test]
+CC=gcc pip install -e .[test] --no-build-isolation
 ```
 
 If this step fails or is skipped, Postgkyl still imports and works — reading

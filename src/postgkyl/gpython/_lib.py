@@ -11,6 +11,13 @@ paired with a newer shim header (or vice versa).
 
 If the extension is missing, :func:`available` returns False and
 :func:`require` raises with build guidance; importing postgkyl never fails.
+
+A NumPy ABI mismatch (`_gpython.so` compiled against a different NumPy than
+the one installed -- e.g. pip's isolated build environment resolving a
+different NumPy than the target environment did) surfaces as a ``ValueError``
+from NumPy's own ``import_array()`` check, not an ``ImportError``; it is
+caught alongside the missing-extension case for the same reason -- a broken
+bridge must degrade to "unavailable", never take down ``import postgkyl``.
 """
 
 from __future__ import annotations
@@ -27,10 +34,15 @@ try:
   # end
   _ERROR = None
 # end
-except ImportError as exc:
+except (ImportError, ValueError) as exc:
   _mod = None
   _ERROR = (f"{exc}\nBuild the compiled bridge with scripts/build_gkeyll.sh "
-            "(or scripts/build_gpython.sh if libg0core.so already exists).")
+            "(or scripts/build_gpython.sh if libg0core.so already exists). "
+            "A 'numpy.dtype size changed' error means _gpython.so was "
+            "compiled against a different NumPy than the one installed here "
+            "-- reinstall with `pip install -e . --no-build-isolation` so "
+            "the build step and the installed environment use the same "
+            "NumPy, then rebuild the bridge.")
 # end
 
 

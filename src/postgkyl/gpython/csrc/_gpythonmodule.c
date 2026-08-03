@@ -16,6 +16,18 @@
 #include <Python.h>
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+/* Pin the NumPy ABI this extension targets to postgkyl's own declared floor
+ * (numpy>=2.2.6 in pyproject.toml). Without this, NumPy's headers default
+ * PyArray_Descr et al. to whatever the *compiling* NumPy's minor version
+ * happens to be, so a `_gpython.so` built against e.g. NumPy 2.5 headers can
+ * fail NumPy's own import_array() ABI check ("numpy.dtype size changed")
+ * against a NumPy 2.2 runtime -- a real hazard here because pip's isolated
+ * build environment resolves build-system.requires' numpy independently
+ * from the numpy actually installed into the target environment. Targeting
+ * the floor makes the compiled extension ABI-compatible with that floor and
+ * every NumPy 2.x after it, regardless of which one built it.
+ */
+#define NPY_TARGET_VERSION NPY_2_2_API_VERSION
 #include <numpy/arrayobject.h>
 
 #include <errno.h>
