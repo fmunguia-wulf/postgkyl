@@ -23,9 +23,6 @@ import postgkyl.output.plot
     "multiple 2D datasets).")
 @click.option("--alpha", type=click.FLOAT, default=None,
     help="Surface transparency (0-1); useful when overlaying surfaces.")
-@click.option("--no-multi2d", "no_multi2d", is_flag=True,
-    help="Disable the automatic switch to surface/contour when overlaying "
-    "multiple 2D datasets (keep overlapping pcolormesh).")
 @click.option("--clevels", type=click.STRING,
     help="Specify levels for contours: comma-separated level values or start:end:nlevels.")
 @click.option("--cnlevels", type=click.INT, help="Specify the number of levels for contours.")
