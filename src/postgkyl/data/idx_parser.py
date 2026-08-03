@@ -22,10 +22,34 @@ def _find_cell_index(array, value):
   return int(idx)
 
 
+def _is_int_str(value: str) -> bool:
+  """Whether the string represents an integer (e.g. '2' or '-1'), not a float."""
+  try:
+    int(value)
+    return True
+  except ValueError:
+    return False
+  # end
+
+
+def _resolve_negative_index(idx: int, array: np.ndarray | None, nodal: bool) -> int:
+  """Translate a Python-style negative index into a positive one.
+
+  '-1' refers to the last cell, '-2' to the one before, etc. The number
+  of cells is the length of the grid array for nodal data and one less
+  for cell-centered data (where the grid stores cell edges).
+  """
+  if idx < 0 and array is not None:
+    num_cells = len(array) if nodal else len(array) - 1
+    idx += num_cells
+  # end
+  return idx
+
+
 def _string_to_index(value: str, array: np.ndarray, nodal: bool = False) -> int:
   if isinstance(value, str):
-    if value.isdigit():
-      return int(value)
+    if _is_int_str(value):
+      return _resolve_negative_index(int(value), array, nodal)
     else:
       if nodal:
         return _find_cell_index(array, float(value))
@@ -42,7 +66,7 @@ def idx_parser(value: int | float | str, array: np.ndarray | None = None,
     nodal: bool = False) -> int | slice:
   idx = None
   if isinstance(value, int):
-    idx = value
+    idx = _resolve_negative_index(value, array, nodal)
   elif isinstance(value, float):
     if nodal:
       idx = _find_cell_index(array, value)

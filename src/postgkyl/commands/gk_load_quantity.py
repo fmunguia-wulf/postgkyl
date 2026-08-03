@@ -1,3 +1,5 @@
+import os
+
 import click
 
 from postgkyl.utils.gk_quantities.registry import gk_quant_registry
@@ -92,6 +94,10 @@ def gk_load_quantity(ctx, **kwargs):
 
       # Load required datasets (sources) and compute the quantity.
       out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
+
+      # stamp a filename so that commands such as gk-rz can locate sibling files (e.g. the geometry) from the stack.
+      tail = f"{species}_{gkquant.name}" if species else gkquant.name
+      out._file_name = os.path.join(path, f"{kwargs['name']}-{tail}_{frame}.gkyl")
 
       # Set label.
       default_label = gkquant.get_label(species=species, direction=user_extra.get("dir", None))
