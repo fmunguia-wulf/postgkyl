@@ -903,7 +903,7 @@ energy.
     return self._run(_cmd("growth"), use=use, guess=guess, minn=minn, dataset=dataset, instantaneous=instantaneous, dir=dir, tag=tag, label=label)
 
   def gui(self,
-      path: str = '/Users/ahoffman/postgkyl/tests/test_data'):
+      path: str = '/home/ah1032/postgkyl/tests/test_data'):
     """Launch the postgkyl marimo GUI on a data directory.
 
     Args:
