@@ -1,3 +1,5 @@
+import re
+
 import os
 
 import click
@@ -24,7 +26,9 @@ from postgkyl.utils import verb_print
 @click.option("--label", "-l", default=None, type=click.STRING,
   help="Label override for the output dataset.")
 @click.option("--extra", "-e", default=None, type=click.STRING,
-  help="Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.")
+  help="Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. "
+       "A key may be given one value per species as a comma-separated array, e.g. "
+       "mass=me,mi1,mi2 alongside --species elc,ion1,ion2. Purpose depends on -q.")
 @click.pass_context
 def gk_load_quantity(ctx, **kwargs):
   """
@@ -63,18 +67,23 @@ def gk_load_quantity(ctx, **kwargs):
   # Parse --extra into a dict, auto-converting numeric values.
   user_extra = {}
   if kwargs.get('extra'):
-    for pair in kwargs['extra'].split(","):
+    for pair in re.split(r"[,\s]+(?=[^\s,=]+=)", kwargs['extra'].strip()):
       key, _, val = pair.partition("=")
-      key = key.strip()
-      val = val.strip()
-      try:
-        val = int(val)
-      except ValueError:
+      vals = []
+      for v in val.split(","):
+        v = v.strip()
+        if not v:
+          continue
         try:
-          val = float(val)
+          v = int(v)
         except ValueError:
-          pass
-      user_extra[key] = val
+          try:
+            v = float(v)
+          except ValueError:
+            pass
+        vals.append(v)
+      # A single value stays a scalar and applies to every species.
+      user_extra[key.strip()] = vals[0] if len(vals) == 1 else vals
 
   path = kwargs['path'].rstrip("/") + "/"
 
@@ -84,16 +93,47 @@ def gk_load_quantity(ctx, **kwargs):
 
   verb_print(ctx, f"Species: {species_list}")
 
-  for species in species_list:
+  if gkquant.is_multi_species:
+    # Combine every species into a single dataset (e.g. the sound speed), so it is fetched 
+    # once for the whole species list instead of once per species.
+    if species_list == [None]:
+      raise ValueError(f"Quantity '{gkquant.name}' combines several species, so it needs "
+                       f"a species list, e.g. --species elc,ion.")
+
+    src_combo_idx, frames = gkquant.get_avail_source_multi(path, kwargs['name'], species_list, kwargs['frame'])
+
+    verb_print(ctx, f"  {species_list}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
+
+    for frame in frames:
+      # Load required datasets (sources) for every species and compute the quantity.
+      out = gkquant.fetch_multi(path, kwargs['name'], species_list, frame, src_combo_idx, **user_extra)
+
+      out_label = kwargs['label'] if kwargs['label'] is not None else gkquant.get_label()
+      if len(frames) > 1:
+        out_label += f" f{frame}"
+
+      out.set_label(out_label)
+      out.set_tag(kwargs['tag'])
+
+      data.add(out) # Push data to stack.
+
+    verb_print(ctx, f"Finished loading '{gkquant.name}'")
+    return
+  
+  for species_idx, species in enumerate(species_list):
     # Determine which source combination and frames to use for this species.
     src_combo_idx, frames = gkquant.get_avail_source(path, kwargs['name'], species, kwargs['frame'])
 
     verb_print(ctx, f"  {species}: will compute {gkquant.name} using source {src_combo_idx}, frames {frames}")
 
+    # Tells the fetch functions which entry of a per-species '--extra' array
+    # (e.g. 'mass=1,2,3') applies to the species being computed.
+    species_extra = dict(user_extra, species_idx=species_idx)
+
     for frame in frames:
 
       # Load required datasets (sources) and compute the quantity.
-      out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **user_extra)
+      out = gkquant.fetch(path, kwargs['name'], species, frame, src_combo_idx, **species_extra)
 
       # stamp a filename so that commands such as gk-rz can locate sibling files (e.g. the geometry) from the stack.
       tail = f"{species}_{gkquant.name}" if species else gkquant.name
