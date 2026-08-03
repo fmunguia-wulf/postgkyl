@@ -15,15 +15,12 @@ Full documentation of the Gkeyll project is available at
 
 Postgkyl requires the packages listed in pyproject.toml
 
-Postgkyl requires NumPy >= 2.2.6. In addition, there are two optional
-dependencies:
+Postgkyl requires NumPy >= 2.2.6. In addition, there is one optional
+dependency:
 
-* [adios2](https://pypi.org/project/adios2/)
 * [pytest](https://pypi.org/project/pytest/)
 
-ADIOS 2 is required for reading Gkeyll 2 `bp` output files and it is not needed
-when working only with `gkeyll`. [pytest](https://docs.pytest.org/en/stable/)
-is required only for developers.
+[pytest](https://docs.pytest.org/en/stable/) is required only for developers.
 
 ### Setting up virtual environment (recommended)
 
@@ -84,18 +81,14 @@ have the most up-to-date version should install Postgkyl from the source code:
 ```bash
 git clone https://github.com/ammarhakim/postgkyl.git
 cd postgkyl
-pip install -e .[adios,test]
+pip install -e .[test]
 ```
 
 Alternatively, Postgkyl can be installed directly from [PyPI](https://pypi.org/project/postgkyl/):
 
 ```bash
-pip install -e postgkyl[adios,test]
+pip install -e postgkyl[test]
 ```
-
-Note that ADIOS2 is not available on PyPI for Mac OSX; therefore, Mac users who
-want to use it need to install the dependency from elsewhere, for example, using
-the above-mentioned `mamba` and then do *not* use the `adios` tag with `pip`.
 
 #### The Gkeyll bridge (native `.gkyl` reading, `interpolate`, weak algebra)
 
@@ -116,7 +109,7 @@ This step needs **network access** (to clone Gkeyll) and **a C compiler**.
 It defaults to `cc`; if your system doesn't have `cc`, set `CC=gcc` (or any compiler you have) before
 installing:
 ```bash
-CC=gcc pip install -e .[adios,test]
+CC=gcc pip install -e .[test]
 ```
 
 If this step fails or is skipped, Postgkyl still imports and works — reading

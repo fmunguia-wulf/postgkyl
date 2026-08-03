@@ -10,9 +10,9 @@ Fixes three bugs present in ``src_bak`` (doctrine #21: fix an unambiguous
 bug rather than silently port it forward):
 
   - the per-frame file name inside the sweep loop was built as
-    ``f"root_file_name{c:d}.bp"`` -- a literal string containing the
+    ``f"root_file_name{c:d}.gkyl"`` -- a literal string containing the
     parameter's *name*, not an f-string interpolating its *value*
-    (``f"{root_file_name}{c:d}.bp"``); only the *first* frame, read once
+    (``f"{root_file_name}{c:d}.gkyl"``); only the *first* frame, read once
     before the loop to get the grid spacing, used the correct spelling;
   - ``dEk = ke`` aliased the very array the kinetic-energy trace was
     written into (instead of allocating its own array), so writing the
@@ -79,7 +79,7 @@ def ke_dke(
     init_time: float,
     final_time: float,
     *,
-    extension: str = "bp",
+    extension: str = "gkyl",
 ) -> KineticEnergyTraces:
   """Sweep a frame family and compute the kinetic energy and dissipation rate.
 
@@ -93,9 +93,8 @@ def ke_dke(
     init_time: Simulation start time.
     final_time: Simulation end time; used with ``init_time`` to derive a
       uniform ``dt`` for the dissipation-rate estimate.
-    extension: File extension of the frame files (``"bp"`` matches
-      ``src_bak``'s legacy ADIOS format; pass ``"gkyl"`` for the native
-      format).
+    extension: File extension of the frame files (defaults to the native
+      ``gkyl`` format).
 
   Returns:
     :class:`KineticEnergyTraces`.

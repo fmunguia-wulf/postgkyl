@@ -51,6 +51,6 @@ pytest tests/test_examples.py -v
 ```
 
 Both halves need a compiled Gkeyll (`libg0core.so`) to run -- every fixture
-here is a native `.gkyl`/`.bp` file, so the tests are skipped (not failed)
+here is a native `.gkyl` file, so the tests are skipped (not failed)
 when `postgkyl.gpython.available()` is `False`, matching the rest of the
 test suite's `needs_gkeyll` convention.

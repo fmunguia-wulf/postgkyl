@@ -36,9 +36,9 @@ class TestFindOutputStems:
   # end
 
   def test_multiple_extensions(self, tmp_path):
-    _touch(tmp_path, "elc_M0_0.gkyl", "elc_M0_0.bp")
-    out = discovery.find_output_stems("bp,gkyl", str(tmp_path))
-    assert out == {"bp": ["elc_M0"], "gkyl": ["elc_M0"]}
+    _touch(tmp_path, "elc_M0_0.gkyl", "elc_M0_0.h5")
+    out = discovery.find_output_stems("h5,gkyl", str(tmp_path))
+    assert out == {"h5": ["elc_M0"], "gkyl": ["elc_M0"]}
   # end
 
   def test_strips_restart_suffix(self, tmp_path):
@@ -59,10 +59,10 @@ class TestFindOutputStems:
   # end
 
   def test_default_extensions_and_path(self, tmp_path, monkeypatch):
-    _touch(tmp_path, "a_0.gkyl", "a_0.bp")
+    _touch(tmp_path, "a_0.gkyl")
     monkeypatch.chdir(tmp_path)
     out = discovery.find_output_stems()
-    assert out == {"bp": ["a"], "gkyl": ["a"]}
+    assert out == {"gkyl": ["a"]}
   # end
 # end
 

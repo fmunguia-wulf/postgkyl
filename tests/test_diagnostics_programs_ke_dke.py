@@ -93,8 +93,8 @@ class TestKeDkeSweep:
 
     out = kd.ke_dke("sim-fluid_", 0, 3, dim=3, vol=1.0, init_time=0.0, final_time=3.0)
     # First frame read twice (once for grid spacing, once in the sweep).
-    assert calls == ["sim-fluid_0.bp", "sim-fluid_0.bp", "sim-fluid_1.bp",
-        "sim-fluid_2.bp", "sim-fluid_3.bp"]
+    assert calls == ["sim-fluid_0.gkyl", "sim-fluid_0.gkyl", "sim-fluid_1.gkyl",
+        "sim-fluid_2.gkyl", "sim-fluid_3.gkyl"]
     assert out.ke.shape == (4,)
     assert out.dke.shape == (3,)
     # u=v=w=1 (rho=1, px=py=pz=1/rho=... wait: px=py=pz=rho=1 -> u=v=w=1)
@@ -114,7 +114,7 @@ class TestKeDkeSweep:
 
   def test_uses_own_root_file_name_not_a_literal_string(self, monkeypatch):
     """Regression test for the src_bak bug where the per-frame file name was
-    built as f"root_file_name{c:d}.bp" -- a literal string containing the
+    built as f"root_file_name{c:d}.gkyl" -- a literal string containing the
     parameter's *name* -- instead of interpolating its value."""
     calls = []
 

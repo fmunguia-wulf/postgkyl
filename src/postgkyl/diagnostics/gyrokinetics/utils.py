@@ -32,7 +32,7 @@ def read_gfile(file_name: str) -> tuple[list[np.ndarray], np.ndarray, GData]:
   """Read a Gkeyll file, squeezing singleton axes out of the grid and values.
 
   Args:
-    file_name: Path to the ``.gkyl``/``.bp`` file.
+    file_name: Path to the ``.gkyl`` file.
 
   Returns:
     ``(grid, values, gdata)``: the squeezed grid (a list of squeezed

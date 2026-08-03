@@ -28,7 +28,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install postgkyl
       run: |
-        pip install -e .[adios,test]
+        pip install -e .[test]
     - uses: pyvista/setup-headless-display-action@v4
     - name: Test with pytest
       run: |

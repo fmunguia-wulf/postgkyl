@@ -46,7 +46,6 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-adios = ["adios2>=2.12.1.1001"]
 test = ["pytest>=9.0.3"]
 
 [project.urls]

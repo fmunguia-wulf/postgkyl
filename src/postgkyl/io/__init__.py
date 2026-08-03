@@ -12,7 +12,6 @@ import os.path
 from . import mapping
 from .gkyl_c_reader import GkylCReader
 from .gkyl_reader import GkylReader
-from .gkyl_adios_reader import GkylAdiosReader
 from .gkyl_h5_reader import GkylH5Reader
 from .flash_h5_reader import FlashH5Reader
 from .writer import save
@@ -24,22 +23,19 @@ from .writer import save
 #                  check is exact and returns modal data as a GkylArray.
 #   2. "gkyl"    -- pure-Python .gkyl fallback (no libg0core, partial loads,
 #                  dynvectors); same exact magic-byte check as gkyl_c.
-#   3. "adios"   -- legacy ADIOS2 .bp output; is_compatible() actually opens
-#                  the file with adios2, so a non-.bp file (including a
-#                  .gkyl/.h5 file) reliably fails to parse and returns False.
-#   4. "h5"      -- legacy pre-ADIOS Gkeyll HDF5 output; is_compatible()
-#                  requires the Gkeyll-specific "/StructGridField" or
-#                  "/DataStruct/data" node, so a FLASH .h5 file (no such
-#                  nodes) is correctly declined and falls through to "flash".
-#   5. "flash"   -- FLASH code HDF5 output; is_compatible() requires a
+#   3. "h5"      -- legacy Gkeyll HDF5 output (predates the native .gkyl
+#                  binary format); is_compatible() requires the Gkeyll-specific
+#                  "/StructGridField" or "/DataStruct/data" node, so a FLASH
+#                  .h5 file (no such nodes) is correctly declined and falls
+#                  through to "flash".
+#   4. "flash"   -- FLASH code HDF5 output; is_compatible() requires a
 #                  "coordinates" node, disjoint from the Gkeyll h5 layout.
-# Because 1-2 are checked with the same fast magic-byte test before 3-5 ever
-# touch the (slower) adios2/tables importers, a .gkyl file never reaches an
-# h5/adios reader, and vice versa.
+# Because 1-2 are checked with the same fast magic-byte test before 3-4 ever
+# touch the (slower) tables importer, a .gkyl file never reaches an h5
+# reader, and vice versa.
 _READERS = {
     "gkyl_c": GkylCReader,
     "gkyl": GkylReader,
-    "adios": GkylAdiosReader,
     "h5": GkylH5Reader,
     "flash": FlashH5Reader,
 }
@@ -72,4 +68,4 @@ def read(file_name: str, ctx: dict | None = None, **kwargs):
 
 
 __all__ = ["read", "save", "mapping", "GkylCReader", "GkylReader",
-    "GkylAdiosReader", "GkylH5Reader", "FlashH5Reader"]
+    "GkylH5Reader", "FlashH5Reader"]

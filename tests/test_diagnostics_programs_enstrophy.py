@@ -8,8 +8,8 @@ components, so ``np.gradient(..., edge_order=2)`` on a uniform grid
 reproduces the analytic derivative exactly); the frame-sweep wiring
 (``enstrophy``) is exercised against a synthetic multi-frame file family
 stubbed through ``postgkyl.diagnostics.enstrophy.GData`` -- the repo ships
-no multi-frame 3-D five-moment ``.bp``/``.gkyl`` fixture family for this
-tool, so no real-fixture path is attempted (see this layer's report).
+no multi-frame 3-D five-moment ``.gkyl`` fixture family for this tool, so no
+real-fixture path is attempted (see this layer's report).
 
 Run: PYTHONPATH=src pytest tests/test_diagnostics_programs_enstrophy.py -v
 """
@@ -96,11 +96,11 @@ class TestEnstrophySweep:
 
     monkeypatch.setattr(ens, "GData", fake_gdata)
 
-    out = ens.enstrophy("sim-fluid_", 2, 4, extension="bp")
+    out = ens.enstrophy("sim-fluid_", 2, 4, extension="dat")
     # The first frame is read twice: once up front for the grid spacing,
     # then again inside the sweep loop.
-    assert calls == ["sim-fluid_2.bp", "sim-fluid_2.bp", "sim-fluid_3.bp",
-        "sim-fluid_4.bp"]
+    assert calls == ["sim-fluid_2.dat", "sim-fluid_2.dat", "sim-fluid_3.dat",
+        "sim-fluid_4.dat"]
     assert out.enstrophy.shape == (3,)
     assert out.incompressible_enstrophy.shape == (3,)
     # u = v = w = px/rho = 1 (constant) -> zero curl and zero gradient.

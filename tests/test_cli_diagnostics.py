@@ -107,7 +107,8 @@ class TestEuler:
     from postgkyl.cli.app import cli
 
     result = CliRunner().invoke(cli, [
-        "tests/test_data/twostream-field-energy.bp", "euler", "-v", "bogus"])
+        "tests/test_data/rt_gk_tcv_iwl_1x2v_p1-geo_int_jacobtot_inv.gkyl",
+        "euler", "-v", "bogus"])
     assert result.exit_code != 0
   # end
 # end

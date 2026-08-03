@@ -95,7 +95,7 @@ def enstrophy(
     init_frame: int,
     final_frame: int,
     *,
-    extension: str = "bp",
+    extension: str = "gkyl",
 ) -> EnstrophyTraces:
   """Sweep a frame family and compute the enstrophy in 2 forms.
 
@@ -103,9 +103,8 @@ def enstrophy(
     stem: File-name stem before the frame number, e.g. ``"sim-fluid_"``.
     init_frame: First frame (inclusive).
     final_frame: Last frame (inclusive).
-    extension: File extension of the frame files (``"bp"`` matches
-      ``src_bak``'s legacy ADIOS format; pass ``"gkyl"`` for the native
-      format).
+    extension: File extension of the frame files (defaults to the native
+      ``gkyl`` format).
 
   Returns:
     :class:`EnstrophyTraces`, one entry per swept frame.

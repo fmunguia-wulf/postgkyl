@@ -1,13 +1,17 @@
 # `pgkyl` CLI tutorial
 
-Every command below is real: it runs against the fixture files already
-committed under `tests/test_data/`, and `tests/test_examples.py` replays each
-one (via `click.testing.CliRunner`, from the repository root) as a
-regression check. If the CLI's surface ever changes in a way that breaks one
-of these commands, that test fails -- this file cannot silently drift out of
-date the way a hand-maintained tutorial can.
+Every command below is real: it runs against fixture files under
+`tests/test_data/` -- most committed directly, a few under
+`tests/test_data/generated/` and synthesized by `tests/generate_test_data.py`
+(run once, or on the first `pytest` invocation, which does it automatically)
+-- and `tests/test_examples.py` replays each one (via `click.testing.CliRunner`,
+from the repository root) as a regression check. If the CLI's surface ever
+changes in a way that breaks one of these commands, that test fails -- this
+file cannot silently drift out of date the way a hand-maintained tutorial can.
 
-Run any line yourself from the repository root, after `pip install -e .[test]`.
+Run any line yourself from the repository root, after `pip install -e .[test]`
+and (for the `tests/test_data/generated/` fixtures) `python
+tests/generate_test_data.py`.
 
 ## 1. Inspect a file
 
@@ -48,20 +52,19 @@ smoothing over them -- useful for shocks or anything with jumps at cell
 boundaries.
 
 ```bash
-pgkyl --batch-mode tests/test_data/twostream-f-p2_0.bp \
+pgkyl --batch-mode tests/test_data/generated/distf_p2_0.gkyl \
     dg_local_poly select --z1 0.0 --z2 0.0 plot --saveas out.png
 ```
 
 ## 4. DynVector utilities: `print` and `fit`
 
-`.bp` files without a spatial grid (diagnostics like a field-energy history)
+`.gkyl` files without a spatial grid (diagnostics like a field-energy history)
 are DynVectors: `print` dumps the raw array, and `fit` fits a model to it
-(here, a straight line to `log(field energy)` vs. time -- the growth-rate
-use case).
+(here, a straight line to the series vs. time -- the growth-rate use case).
 
 ```bash
-pgkyl tests/test_data/twostream-field-energy.bp print
-pgkyl tests/test_data/twostream-field-energy.bp fit linear
+pgkyl tests/test_data/generated/energy_dynvec.gkyl print
+pgkyl tests/test_data/generated/energy_dynvec.gkyl fit linear
 ```
 
 ## 5. Combining datasets: `evaluate`
@@ -75,7 +78,7 @@ indexing datasets themselves -- there is no `f[N]` form.) Data must be
 `interpolate`d first, same as `select`/`plot`.
 
 ```bash
-pgkyl --batch-mode tests/test_data/twostream-f-p2_0.bp tests/test_data/twostream-f-p2_1.bp \
+pgkyl --batch-mode tests/test_data/generated/distf_p2_0.gkyl tests/test_data/generated/distf_p2_1.gkyl \
     interpolate evaluate "f0 f1 -" info
 ```
 
@@ -107,7 +110,7 @@ pgkyl gk_distf -n tests/test_data/rt_gk_tcv_iwl_1x2v_p1 -s elc -f 250 \
 `save` writes the active dataset(s) out as `gkyl`/`txt`/`npy`/`vtk`.
 
 ```bash
-pgkyl tests/test_data/twostream-f-p2_0.bp save --out distf --format npy
+pgkyl tests/test_data/generated/distf_p2_0.gkyl save --out distf --format npy
 ```
 
 ## 8. The working set: `status`

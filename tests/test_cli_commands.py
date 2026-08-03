@@ -4,7 +4,7 @@ and utility shells, plus the chaining/abbreviation infrastructure.
 Ported behaviorally from ``tests_bak/test_commands.py`` (74 cases against the
 old Click-based ``cmd.<verb>(ctx, ...)`` API) and
 ``tests_bak/cli/test_cli_integration.py``, adapted to the new chained
-``click.testing.CliRunner`` surface: real ``.bp``/``.gkyl`` fixtures under
+``click.testing.CliRunner`` surface: real/synthetic ``.gkyl`` fixtures under
 ``tests/test_data`` drive end-to-end chains; the equation-specific
 diagnostics shells (multi-tagged-input commands) are ported in
 ``test_cli_diagnostics.py`` instead, since they need synthetic in-memory
@@ -62,14 +62,14 @@ needs_gl = pytest.mark.skipif(not _has_gl_context(),
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "tests", "test_data")
+GEN = os.path.join(DATA, "generated")
 F1 = os.path.join(DATA, "rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl")
-ENERGY = os.path.join(DATA, "twostream-field-energy.bp")
-DISTF_P2_0 = os.path.join(DATA, "twostream-f-p2_0.bp")
-DISTF_P2_1 = os.path.join(DATA, "twostream-f-p2_1.bp")
+ENERGY = os.path.join(GEN, "energy_dynvec.gkyl")
+DISTF_P2_0 = os.path.join(GEN, "distf_p2_0.gkyl")
+DISTF_P2_1 = os.path.join(GEN, "distf_p2_1.gkyl")
 GK_NAME = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1")
 GK_JACOBTOT_INV = os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-geo_int_jacobtot_inv.gkyl")
-F1D = os.path.join(DATA, "generated", "1d_ms_p1.gkyl")
-GEN = os.path.join(DATA, "generated")
+F1D = os.path.join(GEN, "1d_ms_p1.gkyl")
 F2D = os.path.join(GEN, "2d_ms_p1.gkyl")
 F2D_MAPC2P = os.path.join(GEN, "2d_c2p_stretch_ms_p1.gkyl")
 
@@ -870,9 +870,9 @@ class TestPlotOptionCoverage:
     # (joined by "_"). Needs plain relative file names: the naming logic
     # does ``src.split(".")[0]`` on the raw source path with no dirname
     # handling, so an absolute-path source breaks it (see report).
-    shutil.copy(ENERGY, tmp_path / "energy.bp")
+    shutil.copy(ENERGY, tmp_path / "energy.gkyl")
     monkeypatch.chdir(tmp_path)
-    _ok(["energy.bp", "energy.bp", "plot", "--figure", "0", "--save"])
+    _ok(["energy.gkyl", "energy.gkyl", "plot", "--figure", "0", "--save"])
     assert (tmp_path / "energy_energy.png").exists()
   # end
 
@@ -887,7 +887,7 @@ class TestPlotOptionCoverage:
     # source's absolute directory.
     monkeypatch.chdir(tmp_path)
     _ok([ENERGY, ENERGY, "plot", "--figure", "0", "--save"])
-    assert (tmp_path / "twostream-field-energy_twostream-field-energy.png").exists()
+    assert (tmp_path / "energy_dynvec_energy_dynvec.png").exists()
   # end
 # end
 

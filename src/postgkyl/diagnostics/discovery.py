@@ -19,7 +19,7 @@ import os
 import re
 
 
-def find_output_stems(extensions: str = "bp,gkyl", path: str = ".") -> dict:
+def find_output_stems(extensions: str = "gkyl", path: str = ".") -> dict:
   """Map each extension to the sorted unique Gkeyll filename stems in ``path``.
 
   Frame indices and a trailing ``_restart`` are stripped from each stem.

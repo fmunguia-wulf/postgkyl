@@ -1,4 +1,4 @@
-"""Reader for legacy (pre-ADIOS) Gkeyll HDF5 output.
+"""Reader for legacy Gkeyll HDF5 output (predates the native .gkyl binary format).
 
 ``tables`` (PyTables) is a hard dependency (see ``pyproject.toml``), so this
 reader needs no optional-import guard.

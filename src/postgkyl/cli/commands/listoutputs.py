@@ -8,7 +8,7 @@ import postgkyl as pg
 
 
 @click.command("listoutputs")
-@click.option("--extensions", "-e", default="bp,gkyl",
+@click.option("--extensions", "-e", default="gkyl",
     help="Comma-separated output file extension(s).")
 @click.option("--path", "-p", default=".", help="Directory to search for outputs.")
 @click.pass_context

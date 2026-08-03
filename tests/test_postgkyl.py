@@ -437,10 +437,9 @@ _ALLOWED = {
     "numerics": set(),
     "dg":     {"gpython"},                              # interpolation bridge + modal ops -> kernels
     "io":     {"gpython", "numerics"},                  # C-native reader -> gkyl_array_rio;
-                                                      # readers/writer reuse the pure-math
-                                                      # leaf (idx_parser for ADIOS partial-load
-                                                      # slicing, nodal_to_cell_centered_grid for
-                                                      # the vtk writer) instead of duplicating
+                                                      # writer reuses the pure-math leaf
+                                                      # (nodal_to_cell_centered_grid for the
+                                                      # vtk writer) instead of duplicating
                                                       # it -- numerics has 0 internal imports,
                                                       # so this cannot create a cycle (layer 04-io)
     "gdatastate": {"io", "gpython"},                    # container holds a GkylArray backend

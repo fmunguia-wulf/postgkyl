@@ -13,6 +13,9 @@ transformations.  The basis is inferred by GData from num_comps/ndim via
 _get_basis_p().  Two mapping types are provided:
   - "stretch": linear map (comp domain [0,1]^n → physical domain phys_bounds)
   - "rotation": 2D rotation by angle α about the origin
+
+Dynvector files (file_type=2, a bare time series with no spatial grid --
+e.g. a field-energy history) are written by ``write_gkyl_dynvector``.
 """
 import struct
 from pathlib import Path
@@ -99,6 +102,30 @@ def write_gkyl_field(
         f.write(struct.pack("<q", esznc))
         f.write(struct.pack("<q", size))
         f.write(values.astype("<f8").tobytes()) # C-order, little-endian float64
+
+
+def write_gkyl_dynvector(path: Path, time: np.ndarray, values: np.ndarray) -> None:
+    """Write a minimal valid .gkyl v1 binary dynvector (file_type=2) file.
+
+    A dynvector has no spatial grid -- just a time series of ``num_comps``
+    values per sample (e.g. a field-energy history). Layout per
+    ``gkyl_reader.py``'s ``_read_t2_v1``: header, real_type, esznc, size,
+    then all of TIME_DATA followed by all of DATA (C-order).
+    """
+    nc = values.shape[-1]
+    size = len(time)
+
+    with open(path, "wb") as f:
+        f.write(b"gkyl0")
+        f.write(struct.pack("<q", 1))            # version
+        f.write(struct.pack("<q", 2))            # file_type = 2 (dynvec)
+        f.write(struct.pack("<q", 0))             # meta_size = 0 (no meta)
+        f.write(struct.pack("<q", 2))             # real_type = 2 -> float64
+        esznc = nc * 8                            # element_size * num_comps (bytes)
+        f.write(struct.pack("<q", esznc))
+        f.write(struct.pack("<q", size))
+        f.write(time.astype("<f8").tobytes())
+        f.write(values.astype("<f8").tobytes())   # C-order, little-endian float64
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +272,35 @@ def generate_all(out_dir: Path | str) -> None:
             poly_order=poly_order,
             basis_type=basis_type,
         )
+
+    # --- two-frame distribution-like family (shared grid, one file per frame) ---
+    distf_cells = [64, 32]
+    distf_nc = num_comps("serendipity", 2, 2)
+    for frame in (0, 1):
+        values = _RNG.standard_normal((*distf_cells, distf_nc))
+        write_gkyl_field(
+            out_dir / f"distf_p2_{frame}.gkyl",
+            distf_cells, [0.0, 0.0], [1.0, 1.0], values,
+            poly_order=2,
+            basis_type="serendipity",
+            time=0.1 * frame,
+            frame=frame,
+        )
+
+    # --- dynvector (bare time series, e.g. a field-energy history) ---
+    # Two components, each a smooth logistic growth-then-saturate curve (one
+    # slower-rising than the other) -- long enough (>15700 points) to
+    # exercise the CLI's fit/growth leading-window scan, strictly positive
+    # throughout (exp2's log-linear auto-guess needs y > 0), and with a
+    # second component so column-selecting verbs (e.g. val2coord) have
+    # something to select.
+    n_energy = 15714
+    t = np.linspace(0.0, 100.0, n_energy)
+    y0, y_plateau, t_mid, k = 1e-6, 1.0, 30.0, 0.5
+    energy0 = y0 + (y_plateau - y0) / (1.0 + np.exp(-k * (t - t_mid)))
+    energy1 = y0 + (y_plateau - y0) / (1.0 + np.exp(-0.5 * k * (t - 1.5 * t_mid)))
+    write_gkyl_dynvector(
+        out_dir / "energy_dynvec.gkyl", t, np.stack([energy0, energy1], axis=-1))
 
 
 if __name__ == "__main__":

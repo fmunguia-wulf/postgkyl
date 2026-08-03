@@ -1,4 +1,4 @@
-"""``extractinput`` -- print any input file embedded in compatible BP files."""
+"""``extractinput`` -- print any input file embedded in a compatible dataset."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .._options import use_option
 @use_option
 @click.pass_context
 def command(ctx, use) -> None:
-  """Extract and print the embedded input file from compatible BP files."""
+  """Extract and print the embedded input file from a compatible dataset."""
   pool = active_datasets(ctx)
   if use is not None:
     pool = [d for d in pool if d.tag == use]

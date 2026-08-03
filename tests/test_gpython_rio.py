@@ -25,7 +25,14 @@ needs_gkeyll = pytest.mark.skipif(not gpython.available(),
 
 DATA = os.path.join(ROOT, "tests", "test_data")
 FIELD_FILES = sorted(glob.glob(os.path.join(DATA, "rt_gk_tcv_iwl_1x2v_p1-*.gkyl")))
-GENERATED_FILES = sorted(glob.glob(os.path.join(DATA, "generated", "*.gkyl")))
+# Excludes the generated dynvector fixture (energy_dynvec.gkyl): this module's
+# cross-checks are specifically about *field* files -- a dynvector already has
+# its own coverage elsewhere in this module
+# (test_file_type_of_a_dynvec_file_is_not_a_field_type, via a purpose-built
+# temp fixture), so it never belongs in this parametrization.
+GENERATED_FILES = sorted(
+    f for f in glob.glob(os.path.join(DATA, "generated", "*.gkyl"))
+    if not os.path.basename(f).endswith("_dynvec.gkyl"))
 
 pytestmark = needs_gkeyll
 

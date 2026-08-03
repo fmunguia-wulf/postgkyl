@@ -5,11 +5,9 @@ base64-encoded string, stashed by the reader under ``ctx['input_file']``.
 This verb is *terminal*: unlike every other verb in this module it returns
 a plain ``str``, not a dataset (matching the legacy contract).
 
-No current :mod:`postgkyl.io` reader populates ``ctx['input_file']`` (the
-ADIOS2 attribute it would come from, ``inputfile``, is not read by
-``io.gkyl_adios_reader`` -- see the layer-07 report); this verb decodes it
-whenever a reader does provide it, and returns ``""`` otherwise, exactly as
-the legacy code did when no input file was embedded.
+No current :mod:`postgkyl.io` reader populates ``ctx['input_file']``; this
+verb decodes it whenever a reader does provide it, and returns ``""``
+otherwise, exactly as the legacy code did when no input file was embedded.
 """
 
 from __future__ import annotations
