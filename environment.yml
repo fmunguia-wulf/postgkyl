@@ -11,7 +11,6 @@ dependencies:
   - pytest>=7.4.0
   - python>=3.11
   - scipy>=1.10.1
-  - sympy>=1.12
   - plotly>=6.6.0
   - python-kaleido>=1.2.0
   - pyvista>=0.48.0
