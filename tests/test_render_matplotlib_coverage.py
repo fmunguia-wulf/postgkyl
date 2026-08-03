@@ -105,8 +105,18 @@ class TestRcParamNovelties:
 
   def test_xkcd_flag_invokes_xkcd_mode(self):
     with mpl.rc_context():
+      fig = backend.plot(_line(), show=False, xkcd=True)
+      line = fig.axes[0].lines[0]
+      assert line.get_sketch_params() is not None
+    # end
+  # end
+
+  def test_xkcd_flag_does_not_leak_into_global_rcparams(self):
+    # A past bug: `plt.xkcd()` called without a `with` block never reverted,
+    # contaminating every plot drawn afterwards.
+    with mpl.rc_context():
       backend.plot(_line(), show=False, xkcd=True)
-      assert mpl.rcParams["path.sketch"] is not None
+      assert mpl.rcParams["path.sketch"] is None
     # end
   # end
 

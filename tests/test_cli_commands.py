@@ -889,6 +889,35 @@ class TestPlotOptionCoverage:
     _ok([ENERGY, ENERGY, "plot", "--figure", "0", "--save"])
     assert (tmp_path / "energy_dynvec_energy_dynvec.png").exists()
   # end
+
+  def test_surface_option_makes_3d_axes(self):
+    plt.close("all")
+    _ok([DISTF_P2_0, "interp", "plot", "--surface"])
+    assert plt.gcf().axes[0].name == "3d"
+  # end
+
+  def test_colormap_alias_and_cval_color_1d_lines(self):
+    _ok([ENERGY, "plot", "--colormap", "viridis", "--cval", "0.2"])
+  # end
+
+  def test_multiple_2d_datasets_on_one_figure_auto_switches_to_contour(self):
+    # Overlaying >1 2D dataset onto one explicit figure with neither
+    # --surface nor --contour requested switches to contour automatically,
+    # and (given per-dataset labels) gives each dataset its own comparison
+    # color + legend entry.
+    plt.close("all")
+    _ok([DISTF_P2_0, DISTF_P2_0, "interp", "plot", "--figure", "0",
+        "--legend", "a,b"])
+    ax = plt.gcf().axes[0]
+    assert ax.get_legend() is not None
+    assert len(ax.get_legend().legend_handles) == 2
+  # end
+
+  def test_explicit_surface_and_figure_skips_the_contour_auto_switch(self):
+    plt.close("all")
+    _ok([DISTF_P2_0, DISTF_P2_0, "interp", "plot", "--figure", "0", "--surface"])
+    assert plt.gcf().axes[0].name == "3d"
+  # end
 # end
 
 

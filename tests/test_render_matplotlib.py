@@ -312,3 +312,79 @@ class TestMappedGrids:
     np.testing.assert_allclose(x_plotted, 0.5 * (edges[:-1] + edges[1:]))
   # end
 # end
+
+
+# --------------------------------------------------------------------------
+# surface plots
+# --------------------------------------------------------------------------
+
+class TestSurface:
+  def test_surface_uses_3d_axes(self):
+    fig = backend.plot(_field_2d(), show=False, surface=True)
+    assert fig.axes[0].name == "3d"
+  # end
+
+  def test_surface_without_comparison_gets_a_colorbar(self):
+    fig = backend.plot(_field_2d(), show=False, surface=True)
+    assert len(fig.axes) == 2  # the 3D panel + its colorbar
+  # end
+
+  def test_surface_alpha_is_applied(self):
+    fig = backend.plot(_field_2d(), show=False, surface=True, alpha=0.3)
+    poly3d = fig.axes[0].collections[0]
+    assert poly3d.get_alpha() == pytest.approx(0.3)
+  # end
+# end
+
+
+# --------------------------------------------------------------------------
+# multi-dataset 2D overlay comparison (surface/contour)
+# --------------------------------------------------------------------------
+
+class TestComparisonOverlay:
+  def test_contour_comparison_gives_each_dataset_its_own_color_and_legend(self):
+    fig = backend.plot(_field_2d(), _field_2d(), show=False,
+        contour=True, comparison=True, labels=["a", "b"])
+    ax = fig.axes[0]
+    assert ax.get_legend() is not None
+    handles = ax.get_legend().legend_handles
+    assert len(handles) == 2
+    assert handles[0].get_facecolor() != handles[1].get_facecolor()
+  # end
+
+  def test_surface_comparison_gives_each_dataset_its_own_color_and_legend(self):
+    fig = backend.plot(_field_2d(), _field_2d(), show=False,
+        surface=True, comparison=True, labels=["a", "b"])
+    ax = fig.axes[0]
+    assert ax.get_legend() is not None
+    assert len(ax.get_legend().legend_handles) == 2
+  # end
+# end
+
+
+# --------------------------------------------------------------------------
+# cval-based colormap coloring for 1D lines
+# --------------------------------------------------------------------------
+
+class TestCvalColoring:
+  def test_line_colored_by_cval(self):
+    fig = backend.plot(_line(), show=False, cmap="viridis",
+        cval=0.0, cval_min=0.0, cval_max=1.0)
+    assert fig.axes[0].lines[0].get_color() == plt.get_cmap("viridis")(0.0)
+  # end
+
+  def test_second_call_into_the_same_figure_uses_its_own_cval(self):
+    fig = backend.plot(_line(), show=False, cmap="viridis",
+        cval=0.0, cval_min=0.0, cval_max=1.0)
+    backend.plot(_line(offset=1), figure=fig, show=False, cmap="viridis",
+        cval=1.0, cval_min=0.0, cval_max=1.0)
+    colors = [line.get_color() for line in fig.axes[0].lines]
+    assert colors[0] == plt.get_cmap("viridis")(0.0)
+    assert colors[1] == plt.get_cmap("viridis")(1.0)
+  # end
+
+  def test_cval_without_cmap_is_ignored(self):
+    fig = backend.plot(_line(), show=False, cval=0.5, color="red")
+    assert fig.axes[0].lines[0].get_color() == "red"
+  # end
+# end

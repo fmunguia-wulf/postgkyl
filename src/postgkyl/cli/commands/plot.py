@@ -39,6 +39,11 @@ from .._options import show_option, use_option
 # --arrowstyle: accepted for CLI compatibility but unused -- main never wired
 # it into its render engine (a dead option there too).
 @click.option("-c", "--contour", is_flag=True, default=False, help="Make contour plot.")
+@click.option("--surface", "--surf", "surface", is_flag=True, default=False,
+    help="Make a 3D surface plot for 2D data (auto-enabled when overlaying "
+    "multiple 2D datasets).")
+@click.option("--alpha", type=float, default=None,
+    help="Surface transparency (0-1); useful when overlaying surfaces.")
 @click.option("--clevels", default=None,
     help="Specify levels for contours: comma-separated level values or start:end:nlevels.")
 @click.option("--cnlevels", type=int, default=None,
@@ -124,20 +129,24 @@ from .._options import show_option, use_option
     help="Save individual frames as PNGS instead of an opening them")
 @click.option("--jet", is_flag=True, default=False,
     help="Turn colormap to jet for comparison with literature.")
-@click.option("--cmap", default=None,
+@click.option("--cmap", "--colormap", "cmap", default=None,
     help="Override default colormap with a valid matplotlib cmap.")
+@click.option("--cval", default=None,
+    help="For 1D plots, comma-separated values mapping each curve onto the "
+    "colormap (e.g. '1e-6,2e-6'). Requires --cmap; defaults to the dataset "
+    "index if omitted.")
 @click.option("-m", "--multiblock", is_flag=True, default=False,
     help="Put all blocks (datasets) on the same figure.")
 @click.pass_context
 def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_col,
-    transpose, contour, clevels, cnlevels, cont_label, quiver, streamline,
+    transpose, contour, surface, alpha, clevels, cnlevels, cont_label, quiver, streamline,
     sdensity, arrowstyle, lineouts, scatter, markersize, linewidth, linestyle,
     style, diverging, arg, fixaspect, aspect, logx, logy, logz, xshift, yshift,
     zshift, xscale, yscale, zscale, xmax, xmin, ymax, ymin, zmax, zmin,
     xlim, ylim, zlim, relax, globalrange, cutoffglobalrange, legend, no_legend,
     forcelegend, color, xlabel, ylabel, clabel, title, subplot_titles,
     subplot_xlabels, subplot_ylabels, save, saveas, dpi, edgecolors, showgrid,
-    xkcd, hashtag, show, figsize, saveframes, jet, cmap, multiblock) -> None:
+    xkcd, hashtag, show, figsize, saveframes, jet, cmap, cval, multiblock) -> None:
   """Plot active datasets, optionally displaying the plot and/or saving it to PNG files.
 
   Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) signs.
@@ -191,6 +200,22 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     raise click.UsageError("plot: no datasets to plot; load a file first")
   # end
 
+  # When several 2D datasets are drawn into the same figure we switch to
+  # contour mode by default, and give each overlay its own color + legend
+  # entry (rather than letting them obscure one another).
+  first_cells = pool[0].num_cells
+  is_2d = (len(first_cells) - int(np.sum(first_cells <= 1))) == 2
+  overlay_2d = (
+      is_2d and len(pool) > 1 and not dataset_fignum
+      and figure is not None
+      and not subplots and lineouts is None
+      and not quiver and not streamline
+  )
+  if overlay_2d and not surface and not contour:
+    contour = True
+  # end
+  comparison = overlay_2d and (surface or contour)
+
   if globalrange or cutoffglobalrange:
     vmin, vmax = float("inf"), float("-inf")
     v_extrema = np.array([])
@@ -225,6 +250,17 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
     legend_labels = [s.strip() for s in legend.split(",")]
   # end
   show_legend = not no_legend
+
+  # Colormap-based line coloring for 1D plots.
+  cval_list = None
+  if cval:
+    cval_list = [float(v) for v in cval.split(",")]
+  # end
+  elif cmap:
+    cval_list = list(range(len(pool)))
+  # end
+  cval_min = min(cval_list) if cval_list else None
+  cval_max = max(cval_list) if cval_list else None
 
   num_axes = None
   start_axes = 0
@@ -271,12 +307,15 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
       label = ""
     # end
 
+    cval_value = cval_list[i] if cval_list is not None and i < len(cval_list) else None
+
     pg.plot(d, args=arg, figure=fig_target, squeeze=squeeze,
         transpose=transpose, num_axes=num_axes, start_axes=start_axes,
         num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col,
         streamline=streamline, sdensity=sdensity, quiver=quiver,
         contour=contour, clevels=clevels, cnlevels=cnlevels,
-        cont_label=cont_label, diverging=diverging, lineouts=lineouts,
+        cont_label=cont_label, surface=surface, comparison=comparison,
+        alpha=alpha, diverging=diverging, lineouts=lineouts,
         xmin=xmin, xmax=xmax, xscale=xscale, xshift=xshift,
         ymin=ymin, ymax=ymax, yscale=yscale, yshift=yshift,
         zmin=zmin, zmax=zmax, zscale=zscale, zshift=zshift,
@@ -288,7 +327,8 @@ def command(ctx, use, figure, squeeze, subplots, num_subplot_row, num_subplot_co
         fixaspect=fixaspect, aspect=aspect, edgecolors=edgecolors,
         showgrid=showgrid, hashtag=hashtag, xkcd=xkcd, color=color,
         markersize=markersize, linewidth=linewidth, linestyle=linestyle,
-        figsize=parsed_figsize, jet=jet, cmap=cmap, show=False)
+        figsize=parsed_figsize, jet=jet, cmap=cmap,
+        cval=cval_value, cval_min=cval_min, cval_max=cval_max, show=False)
 
     if subplots:
       start_axes += d.num_comps
