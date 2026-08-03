@@ -1085,8 +1085,6 @@ agyrotropic pressure tensor.
       contour: bool = False,
       surface: bool = False,
       alpha: float | None = None,
-      multi2d_mode: Literal['surface', 'contour'] = 'surface',
-      no_multi2d: bool = False,
       clevels: str | None = None,
       cnlevels: int | None = None,
       cont_label: bool = False,
@@ -1164,8 +1162,6 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       contour: (-c, --contour) Make contour plot.
       surface: (--surface, --surf) Make a 3D surface plot for 2D data (auto-enabled when overlaying multiple 2D datasets).
       alpha: (--alpha) Surface transparency (0-1); useful when overlaying surfaces.
-      multi2d_mode: (--multi2d-mode) Mode to switch to when overlaying multiple 2D datasets for comparison.
-      no_multi2d: (--no-multi2d) Disable the automatic switch to surface/contour when overlaying multiple 2D datasets (keep overlapping pcolormesh).
       clevels: (--clevels) Specify levels for contours: comma-separated level values or start:end:nlevels.
       cnlevels: (--cnlevels) Specify the number of levels for contours.
       cont_label: (--contlabel) Add labels to contours
@@ -1226,10 +1222,10 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       saveframes: (--saveframes) Save individual frames as PNGS instead of an opening them
       jet: (--jet) Turn colormap to jet for comparison with literature.
       cmap: (--cmap, --colormap) Override default colormap with a valid matplotlib cmap.
-      cval: (--cval) For 1D plots, comma-separated values mapping each curve onto the colormap (e.g. '0,1'). Requires --cmap; defaults to the dataset index if omitted.
+      cval: (--cval) For 1D plots, comma-separated values mapping each curve onto the colormap (e.g. '1e-6,2e-6'). Requires --cmap; defaults to the dataset index if omitted.
       multiblock: (-m, --multiblock)
     """
-    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, surface=surface, alpha=alpha, multi2d_mode=multi2d_mode, no_multi2d=no_multi2d, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
+    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, surface=surface, alpha=alpha, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
 
   def pr(self,
       use: str | None = None,
