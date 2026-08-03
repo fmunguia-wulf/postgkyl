@@ -10,7 +10,6 @@ cleanly when it is not on ``PATH``.
 from __future__ import annotations
 
 import os
-import shutil
 
 import matplotlib
 matplotlib.use("Agg")
@@ -19,10 +18,11 @@ import numpy as np
 import pytest
 
 from postgkyl.gdatastate.gdatastate import GDataState
+from postgkyl.render import _ffmpeg
 from postgkyl.render import animate as anim_mod
 
-needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None,
-    reason="ffmpeg not found on PATH")
+needs_ffmpeg = pytest.mark.skipif(_ffmpeg.resolve_ffmpeg() is None,
+    reason="ffmpeg not found on PATH or via imageio-ffmpeg")
 
 
 def _line_frame(offset: float) -> GDataState:
@@ -234,18 +234,9 @@ class TestCompileMovie:
     assert len(result) == 3
   # end
 
-  @needs_ffmpeg
-  def test_video_extension_without_ffmpeg_raises_when_missing(self, tmp_path,
-      monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda _name: None)
-    with pytest.raises(RuntimeError, match="ffmpeg"):
-      anim_mod._require_ffmpeg()
-    # end
-  # end
-
   def test_video_extension_raises_clearly_without_ffmpeg(self, monkeypatch,
       tmp_path):
-    monkeypatch.setattr(anim_mod.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(_ffmpeg, "resolve_ffmpeg", lambda: None)
     prefix = str(tmp_path / "frame")
     paths = anim_mod.animate(_three_frames(), saveframes=prefix, show=False)
     with pytest.raises(RuntimeError, match="ffmpeg"):

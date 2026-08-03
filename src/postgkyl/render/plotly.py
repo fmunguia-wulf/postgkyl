@@ -37,6 +37,7 @@ from plotly.subplots import make_subplots
 
 from postgkyl.numerics import downsample, nodal_to_cell_centered_grid
 
+from ._ffmpeg import require_ffmpeg
 from ._prep import resolve_axis_labels, squeeze_collapsed_axes, subplot_grid
 from .labels import latex_to_html
 from .style import DEFAULT_STYLE, apply_style
@@ -353,12 +354,13 @@ def save_rotating_plotly_figure(fig, file_name: str,
       kaleido.stop_sync_server(silence_warnings=True)
     # end
 
+    ffmpeg_exe = require_ffmpeg("plotly_animate")
     if ext == ".mp4":
-      ffmpeg_cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
+      ffmpeg_cmd = [ffmpeg_exe, "-y", "-framerate", str(fps), "-i", frame_pattern,
           "-pix_fmt", "yuv420p", file_name]
     # end
     else:
-      ffmpeg_cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
+      ffmpeg_cmd = [ffmpeg_exe, "-y", "-framerate", str(fps), "-i", frame_pattern,
           "-vf", "split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", file_name]
     # end
     subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE,

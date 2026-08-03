@@ -81,15 +81,13 @@ have the most up-to-date version should install Postgkyl from the source code:
 ```bash
 git clone https://github.com/ammarhakim/postgkyl.git
 cd postgkyl
-pip install numpy setuptools
-pip install -e .[test] --no-build-isolation
+pip install -e .[test]
 ```
 
 Alternatively, Postgkyl can be installed directly from [PyPI](https://pypi.org/project/postgkyl/):
 
 ```bash
-pip install numpy setuptools
-pip install -e postgkyl[test] --no-build-isolation
+pip install -e postgkyl[test]
 ```
 
 #### The Gkeyll bridge (native `.gkyl` reading, `interpolate`, weak algebra)
@@ -111,8 +109,17 @@ This step needs **network access** (to clone Gkeyll) and **a C compiler**.
 It defaults to `cc`; if your system doesn't have `cc`, set `CC=gcc` (or any compiler you have) before
 installing:
 ```bash
-CC=gcc pip install -e .[test] --no-build-isolation
+CC=gcc pip install -e .[test]
 ```
+
+The extension targets NumPy's `>=2.2` ABI explicitly (matching the `numpy>=2.2.6`
+floor above), so it stays loadable even though `pip` may build it against a
+different NumPy release than the one that ends up installed (its isolated
+build environment resolves `numpy` independently). If you ever see a `numpy.dtype
+size changed` error on import, that means the NumPy actually installed is
+below this floor; reinstalling with `pip install -e .[test] --no-build-isolation`
+forces the build to reuse your already-installed NumPy and sidesteps that
+resolution entirely.
 
 If this step fails or is skipped, Postgkyl still imports and works — reading
 files falls back to a pure-Python reader, and anything that needs the

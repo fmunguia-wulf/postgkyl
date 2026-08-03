@@ -2,15 +2,14 @@
 
 Isolated from ``matplotlib.py`` because it owns the one external-process
 dependency in this layer -- ``ffmpeg`` -- reached through Matplotlib's
-``FFMpegWriter``/``Animation.save``. Every entry point that needs it probes
-``shutil.which("ffmpeg")`` up front and raises a clear ``RuntimeError``
-instead of failing deep inside the writer.
+``FFMpegWriter``/``Animation.save``. Every entry point that needs it resolves
+a binary via ``_ffmpeg.require_ffmpeg`` up front and raises a clear
+``RuntimeError`` instead of failing deep inside the writer.
 """
 
 from __future__ import annotations
 
 import os.path
-import shutil
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -18,6 +17,7 @@ import numpy as np
 from postgkyl.gdatastate.gdatastate import GDataState
 
 from . import matplotlib as backend
+from ._ffmpeg import require_ffmpeg
 
 if TYPE_CHECKING:
   from matplotlib.figure import Figure
@@ -25,16 +25,6 @@ if TYPE_CHECKING:
 
 # Formats written through ffmpeg; PIL handles the rest (gif/webp/apng).
 _VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
-
-
-def _require_ffmpeg() -> None:
-  if shutil.which("ffmpeg") is None:
-    raise RuntimeError(
-        "animate: saving to a video container requires ffmpeg on PATH "
-        "(not found). Install ffmpeg, or pass 'saveframes' to write PNGs "
-        "without compiling a movie.")
-# end
-  # end
 
 
 def _normalize_frames(data) -> list[list["GDataState"]]:
@@ -189,10 +179,11 @@ def _compile_movie(frame_files: list[str], output_file: str, *,
     return
   # end
   if ext in _VIDEO_EXTS:
-    _require_ffmpeg()
+    import matplotlib as mpl
     import matplotlib.pyplot as plt
     from matplotlib.animation import FFMpegWriter
 
+    mpl.rcParams["animation.ffmpeg_path"] = require_ffmpeg("animate")
     movie_fps = fps if fps else 1.0e3 / duration
     writer = FFMpegWriter(fps=movie_fps)
     first = Image.open(frame_files[0])
@@ -318,7 +309,9 @@ def animate(data, *, interval: int = 100, fixed_range: bool = True,
   anim = FuncAnimation(fig, _render_frame, num_frames,
       fargs=(frames, fig, plot_kwargs), interval=interval, blit=False)
   if save or saveas:
-    _require_ffmpeg()
+    import matplotlib as mpl
+
+    mpl.rcParams["animation.ffmpeg_path"] = require_ffmpeg("animate")
     anim.save(out_file, writer="ffmpeg", fps=fps, dpi=dpi)
   # end
   if show:

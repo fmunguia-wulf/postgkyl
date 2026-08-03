@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - click>=8.1.7
+  - ffmpeg
   - matplotlib>=3.7.0
   - msgpack-python>=1.0.3
   - numpy>=1.24.4,<2

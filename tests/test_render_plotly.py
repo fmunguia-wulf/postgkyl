@@ -10,8 +10,6 @@ case below builds one via ``GDataState().push(...)``.
 
 from __future__ import annotations
 
-import shutil
-
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib as mpl
@@ -20,6 +18,7 @@ import plotly.graph_objects as go
 import pytest
 
 from postgkyl.gdatastate.gdatastate import GDataState
+from postgkyl.render import _ffmpeg
 from postgkyl.render.plotly import (
     plotly,
     plotly_animate,
@@ -32,8 +31,8 @@ from postgkyl.render.plotly import (
     _prepare_3d_coordinates,
 )
 
-needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None,
-    reason="ffmpeg not found on PATH")
+needs_ffmpeg = pytest.mark.skipif(_ffmpeg.resolve_ffmpeg() is None,
+    reason="ffmpeg not found on PATH or via imageio-ffmpeg")
 
 
 def _chrome_available() -> bool:
