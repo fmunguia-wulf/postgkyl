@@ -532,6 +532,59 @@ def fetch_vt(gdatas, **kwargs):
 
   return _powsqrt_dg(temp_over_m, 1.0)
 
+def fetch_larmor_radius(gdatas, **kwargs):
+  """
+  Species Larmor (gyro-)radius: rho = sqrt(m*T)/(|q|*B). gdatas has:
+    1. temp: temperature (in Joules).
+    2. Bmag: magnetic field magnitude (bmag).
+  """
+  temp, bmag = gdatas
+  mass = _get_ctx_val(temp, "mass", **kwargs)
+  charge = abs(_get_ctx_val(temp, "charge", **kwargs))
+
+  mT = _empty_gdata_from_gdata(temp)
+  mT.set_values(temp.get_values() * mass)
+  sqrt_mT = _powsqrt_dg(mT, 1.0)
+
+  qB = _empty_gdata_from_gdata(bmag)
+  qB.set_values(bmag.get_values() * charge)
+
+  dgops = GkeyllDGops()
+
+  qB_inv = _empty_gdata_from_gdata(bmag)
+  dgops.invert(0, qB_inv, 0, qB)
+
+  out = _empty_gdata_from_gdata(bmag)
+  dgops.multiply(0, out, 0, sqrt_mT, 0, qB_inv)
+
+  return out
+
+def fetch_debye_length(gdatas, **kwargs):
+  """
+  Species-wise Debye length: lambda_D = sqrt(eps0*T/(n*q^2)). gdatas has:
+    1. temp: temperature (in Joules).
+    2. M0: zeroth moment (density).
+  """
+  temp, m0 = gdatas
+  charge = _get_ctx_val(temp, "charge", **kwargs)
+  eps0 = gkc.GKYL_EPSILON0
+
+  eps0T = _empty_gdata_from_gdata(temp)
+  eps0T.set_values(temp.get_values() * eps0)
+
+  nq2 = _empty_gdata_from_gdata(m0)
+  nq2.set_values(m0.get_values() * charge**2)
+
+  dgops = GkeyllDGops()
+
+  nq2_inv = _empty_gdata_from_gdata(m0)
+  dgops.invert(0, nq2_inv, 0, nq2)
+
+  sq = _empty_gdata_from_gdata(temp)
+  dgops.multiply(0, sq, 0, eps0T, 0, nq2_inv)
+
+  return _powsqrt_dg(sq, 1.0)
+
 def _split_elc_ions(gdatas, quantity: str, **kwargs):
   """
   Split the per-species sources of a multi-species quantity into the electron
@@ -816,3 +869,79 @@ def load_distf(gdatas, **kwargs) -> GData:
     block_idx=extra.get("block", None),
     interp=0,  # registry distf always works with non-interpolated DG data
   )
+
+def _make_fetch_q_norm(name: str):
+  """
+  Return a fetch function for a heat flux normalized by the free-streaming
+  estimate n*T*c_s:
+    q_norm = q / (n*T*c_s).
+  gdatas has (in this order):
+    1. q: the heat flux to normalize (in W/m^2).
+    2. M0: zeroth moment (density).
+    3. temp: temperature (in Joules).
+    4. c_s: sound speed (in m/s).
+  """
+  def fetch(gdatas, **kwargs):
+    q, m0, temp, c_s = gdatas
+
+    dgops = GkeyllDGops()
+
+    # n*T*c_s.
+    denom = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, denom, 0, m0, 0, temp)
+    dgops.multiply(0, denom, 0, denom, 0, c_s)
+
+    denom_inv = _empty_gdata_from_gdata(m0)
+    dgops.invert(0, denom_inv, 0, denom)
+
+    out = _empty_gdata_from_gdata(m0)
+    dgops.multiply(0, out, 0, q, 0, denom_inv)
+    return out
+
+  fetch.__name__ = f"fetch_q{name}_norm"
+  return fetch
+
+fetch_qpar_norm = _make_fetch_q_norm("par")
+fetch_qperp_norm = _make_fetch_q_norm("perp")
+
+
+def fetch_rho_over_lambda(gdatas, **kwargs):
+  """
+  Ratio of the species Larmor radius to its Debye length: rho/lambda_D.
+  gdatas has:
+    1. rho: Larmor radius (m).
+    2. lambda_D: Debye length (m).
+  """
+  rho, lambda_d = gdatas
+
+  dgops = GkeyllDGops()
+
+  lambda_d_inv = _empty_gdata_from_gdata(lambda_d)
+  dgops.invert(0, lambda_d_inv, 0, lambda_d)
+
+  out = _empty_gdata_from_gdata(rho)
+  dgops.multiply(0, out, 0, rho, 0, lambda_d_inv)
+
+  return out
+
+def fetch_phi_norm(gdatas, **kwargs):
+  """
+  Normalized electrostatic potential.
+  phi_norm = e*phi/T_e. Gdatas has:
+    1. phi: electrostatic potential (phi).
+    2. temp: temperature (temp).
+  """
+  phi, temp = gdatas
+  e = gkc.GKYL_ELEMENTARY_CHARGE
+
+  dgops = GkeyllDGops()
+
+  temp_inv = _empty_gdata_from_gdata(temp)
+  dgops.invert(0, temp_inv, 0, temp)
+
+  out = _empty_gdata_from_gdata(phi)
+  dgops.multiply(0, out, 0, phi, 0, temp_inv)
+
+  out.set_values(out.get_values() * e)
+
+  return out

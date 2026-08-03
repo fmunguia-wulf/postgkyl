@@ -225,8 +225,7 @@ def gk_rz(ctx, **kwargs):
       "Could not find a geometry file; pass it with -N/--nodes or -n/--mapc2p.")
 
   if first_data.get_num_dims() == 2:
-    # ---- 2D: direct map onto R-Z using mapc2p. ----
-
+    # Direct map onto R-Z using mapc2p.
     verb_print(ctx, "Mapping stack data to R-Z using " + geo_path)
     geo_coords, majorR, vertZ, _ = geo_reader(geo_path)
     vertZ = vertZ + kwargs["z_axis"]
@@ -249,7 +248,7 @@ def gk_rz(ctx, **kwargs):
     verb_print(ctx, "Finishing R-Z mapping.")
     return
 
-  # ---- 3D: project onto the poloidal plane at phi_tor. ----
+  # 3D: project onto the poloidal plane at phi_tor.
   phi_tor = kwargs["phi_tor"]
   nz_interp = max(1, kwargs["nz_interp"])
 
