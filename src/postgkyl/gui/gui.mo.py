@@ -458,7 +458,6 @@ def _(mo):
     logx = mo.ui.checkbox(label="logx")
     logy = mo.ui.checkbox(label="logy")
     logz = mo.ui.checkbox(label="logz")
-    xkcd = mo.ui.checkbox(label="xkcd")
     legend = mo.ui.checkbox(label="legend")  # off by default
 
     cmap = mo.ui.dropdown(
@@ -493,7 +492,7 @@ def _(mo):
 
     plot_options = mo.vstack([
         mo.hstack(
-            [surface, contour, fixaspect, showgrid, logx, logy, logz, xkcd, legend],
+            [surface, contour, fixaspect, showgrid, logx, logy, logz, legend],
             justify="start", gap=0.75, wrap=True,
         ),
         cmap,
@@ -507,7 +506,7 @@ def _(mo):
     ], gap=0.4)
     return (
         clabel, cmap, cmax_t, cmin_t, contour, fixaspect, legend, logx, logy,
-        logz, plot_options, showgrid, surface, title, xkcd, xlabel, xmax_t,
+        logz, plot_options, showgrid, surface, title, xlabel, xmax_t,
         xmin_t, xscale_t, xshift_t, ylabel, ymax_t, ymin_t, yscale_t, yshift_t,
         zscale_t, zshift_t,
     )
@@ -559,7 +558,6 @@ def _(
     title,
     traceback,
     transform,
-    xkcd,
     xlabel,
     xmax_t,
     xmin_t,
@@ -674,7 +672,6 @@ def _(
             logx=logx.value,
             logy=logy.value,
             logz=logz.value,
-            xkcd=xkcd.value,
             cmap=None if cmap.value == "(default)" else cmap.value,
             xlabel='',
             ylabel='',
