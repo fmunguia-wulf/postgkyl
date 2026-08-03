@@ -356,7 +356,7 @@ class GData(object):
       "grid_info" : ["lower","upper","cells","grid_type"],
       "basis_info" : ["poly_order","basis_type","is_modal","num_comps"],
       "build_info" : ["changeset","builddate"], 
-      "geometry_info": ["geometry_type", "geqdsk_sign_convention"],
+      "geometry_info": ["geometry_type", "geqdsk_sign_convention", "is_multib", "topo_file", "half_domain", "geqdsk_file"],
       "species_info": ["mass","charge","adiabatic_gamma","vdim"],
     }
 
@@ -440,9 +440,33 @@ class GData(object):
         printed_keys.append("geometry_type")
         output += f"\n│  ├─ Type: {gkenums.gkyl_geometry_id[self.ctx['geometry_type']]:s}"
       # end
+      if "geqdsk_file" in self.ctx.keys():
+        printed_keys.append("geqdsk_file")
+        output += f"\n│  ├─ GEQDSK file: {self.ctx['geqdsk_file']:s}"
+      # end
       if "geqdsk_sign_convention" in self.ctx.keys():
         printed_keys.append("geqdsk_sign_convention")
         output += f"\n│  ├─ GEQDSK sign convention: {self.ctx['geqdsk_sign_convention']:d}"
+      # end
+      if "is_multib" in self.ctx.keys():
+        printed_keys.append("is_multib")
+        if self.ctx['is_multib'] == 1:
+          output += f"\n│  ├─ Multiblock: yes"
+        else:
+          output += f"\n│  ├─ Multiblock: no"
+        # end
+      # end
+      if "topo_file" in self.ctx.keys():
+        printed_keys.append("topo_file")
+        output += f"\n│  ├─ Block topology file: {self.ctx['topo_file']:s}"
+      # end
+      if "half_domain" in self.ctx.keys():
+        printed_keys.append("half_domain")
+        if self.ctx['half_domain'] == 1:
+          output += f"\n│  ├─ Half domain: yes"
+        else:
+          output += f"\n│  ├─ Half domain: no"
+        # end
       # end
     # end
       
