@@ -345,6 +345,17 @@ _larmor_radius : GkQuantity = GkQuantity(
 )
 gk_quant_registry.register(_larmor_radius)
 
+# Debye length.
+_debye_length : GkQuantity = GkQuantity(
+  name = "debye_length",
+  source = [[_temp, _M0],],
+  fetch_func = [ff.fetch_debye_length],
+  label = r"$\lambda_{D,%s}$ (m)",
+  is_time_dep = True,
+  is_species_dep = True,
+)
+gk_quant_registry.register(_debye_length)
+
 # Sound speed.
 _c_s : GkQuantity = GkQuantity(
   name = "c_s",
@@ -415,16 +426,16 @@ gk_quant_registry.register(_distf)
 # --- Normalized quantities ---
 # -----------------------------
 
-# Electron larmor radius over Debye length.
-_rho_e_over_lambda_d : GkQuantity = GkQuantity(
-  name = "rho_e_over_lambda_d",
-  source = [[_geo_int_bmag, _M0],],
-  fetch_func = [ff.fetch_rho_e_over_lambda_d],
-  label = r"$\rho_e/\lambda_d$",
+# Ratio of the Larmor radius to the Debye length.
+_rho_over_lambda : GkQuantity = GkQuantity(
+  name = "rho_over_lambda",
+  source = [[_larmor_radius, _debye_length],],
+  fetch_func = [ff.fetch_rho_over_lambda],
+  label = r"$(\rho/\lambda_D)_{%s}$",
   is_time_dep = True,
-  is_species_dep = False,
+  is_species_dep = True,
 )
-gk_quant_registry.register(_rho_e_over_lambda_d)
+gk_quant_registry.register(_rho_over_lambda)
 
 # Normalized elctrostatic potential.
 _phi_norm : GkQuantity = GkQuantity(

@@ -559,6 +559,32 @@ def fetch_larmor_radius(gdatas, **kwargs):
 
   return out
 
+def fetch_debye_length(gdatas, **kwargs):
+  """
+  Species-wise Debye length: lambda_D = sqrt(eps0*T/(n*q^2)). gdatas has:
+    1. temp: temperature (in Joules).
+    2. M0: zeroth moment (density).
+  """
+  temp, m0 = gdatas
+  charge = _get_ctx_val(temp, "charge", **kwargs)
+  eps0 = gkc.GKYL_EPSILON0
+
+  eps0T = _empty_gdata_from_gdata(temp)
+  eps0T.set_values(temp.get_values() * eps0)
+
+  nq2 = _empty_gdata_from_gdata(m0)
+  nq2.set_values(m0.get_values() * charge**2)
+
+  dgops = GkeyllDGops()
+
+  nq2_inv = _empty_gdata_from_gdata(m0)
+  dgops.invert(0, nq2_inv, 0, nq2)
+
+  sq = _empty_gdata_from_gdata(temp)
+  dgops.multiply(0, sq, 0, eps0T, 0, nq2_inv)
+
+  return _powsqrt_dg(sq, 1.0)
+
 def _split_elc_ions(gdatas, quantity: str, **kwargs):
   """
   Split the per-species sources of a multi-species quantity into the electron
@@ -879,30 +905,24 @@ fetch_qpar_norm = _make_fetch_q_norm("par")
 fetch_qperp_norm = _make_fetch_q_norm("perp")
 
 
-def fetch_rho_e_over_lambda_d(gdatas, **kwargs):
+def fetch_rho_over_lambda(gdatas, **kwargs):
   """
-  Electron larmor radius over Debye length, gamma parameter in GYRAZE (see eq. 9 of https://arxiv.org/2508.09067).
-  rho_e/lambda_d = sqrt(1/B^2 (m_e n_e/ eps0)). Gdatas has:
-    1. Bmag: magnetic field magnitude (bmag).
-    2. M0: zeroth moment (density).
+  Ratio of the species Larmor radius to its Debye length: rho/lambda_D.
+  gdatas has:
+    1. rho: Larmor radius (m).
+    2. lambda_D: Debye length (m).
   """
-  bmag, m0 = gdatas
-  me = gkc.GKYL_ELECTRON_MASS
-  eps0 = gkc.GKYL_EPSILON0
+  rho, lambda_d = gdatas
 
   dgops = GkeyllDGops()
 
-  bmag_sq = _empty_gdata_from_gdata(bmag)
-  dgops.multiply(0, bmag_sq, 0, bmag, 0, bmag)
+  lambda_d_inv = _empty_gdata_from_gdata(lambda_d)
+  dgops.invert(0, lambda_d_inv, 0, lambda_d)
 
-  bmag_inv_sq = _empty_gdata_from_gdata(bmag)
-  dgops.invert(0, bmag_inv_sq, 0, bmag_sq)
+  out = _empty_gdata_from_gdata(rho)
+  dgops.multiply(0, out, 0, rho, 0, lambda_d_inv)
 
-  sq = _empty_gdata_from_gdata(bmag)
-  dgops.multiply(0, sq, 0, bmag_inv_sq, 0, m0)
-  sq.set_values(sq.get_values() * me / eps0)
-
-  return _powsqrt_dg(sq, 1.0)
+  return out
 
 def fetch_phi_norm(gdatas, **kwargs):
   """
