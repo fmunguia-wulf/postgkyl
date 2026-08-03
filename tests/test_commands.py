@@ -207,3 +207,23 @@ class TestCommands:
     assert values is not None
     assert values.shape[-1] == 1
     assert len(grid) == 2
+
+  def test_gk_fluxsurf(self):
+    # gk-fluxsurf operates on data already loaded onto the stack and locates the
+    # geometry from the loaded file's prefix (here '<prefix>-geo_int_mapc2p.gkyl').
+    saved_strings = self.ctx.obj["in_data_strings"]
+    self.ctx.obj["in_data_strings"] = [f"{self.dir_path:s}/rt_gk_tcv_nt_iwl_3x2v_p1-elc_M0_5.gkyl"]
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.invoke(cmd.load)
+    self.ctx.invoke(cmd.gk_fluxsurf, x_idx=0, nphi=4, nz_interp=1)
+    data = self.ctx.obj['data'].get_dataset(0, tag='fluxsurf')
+    values = data.values
+    grid = data.grid
+    self.ctx.obj['data'].clean()
+    self.ctx.obj["in_data_strings"] = saved_strings
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    # The 2D field is mapped onto the theta-phi plane: theta and phi grids plus a single
+    # component dimension.
+    assert values is not None
+    assert values.shape[-1] == 1
+    assert len(grid) == 2
