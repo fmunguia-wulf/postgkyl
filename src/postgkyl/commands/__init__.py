@@ -38,6 +38,8 @@ from postgkyl.commands.gk_distf import gk_distf
 from postgkyl.commands.dg_local_poly import dg_local_poly
 from postgkyl.commands.gk_load_quantity import gk_load_quantity
 from postgkyl.commands.gk_particle_balance import gk_particle_balance
+from postgkyl.commands.gk_rz import gk_rz
+from postgkyl.commands.gk_fluxsurf import gk_fluxsurf
 from postgkyl.commands.perprotate import perprotate
 from postgkyl.commands.plot import plot
 from postgkyl.commands.pr import pr

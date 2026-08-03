@@ -186,3 +186,44 @@ class TestCommands:
     np.testing.assert_array_equal(values_shape, (65, 33, 2))
     np.testing.assert_approx_equal(np.max(data.values[...,0]), 6.283185)
     np.testing.assert_approx_equal(np.max(data.values[...,1]), 6)
+
+
+  def test_gk_rz(self):
+    # gk-rz operates on data already loaded onto the stack and locates the
+    # geometry from the loaded file's prefix (here '<prefix>-geo_int_mapc2p.gkyl').
+    saved_strings = self.ctx.obj["in_data_strings"]
+    self.ctx.obj["in_data_strings"] = [f"{self.dir_path:s}/gk_ltx_iwl_2x2v_p1-elc_M2par_10.gkyl"]
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.invoke(cmd.load)
+    self.ctx.invoke(cmd.gk_rz)
+    data = self.ctx.obj['data'].get_dataset(0, tag='rz')
+    values = data.values
+    grid = data.grid
+    self.ctx.obj['data'].clean()
+    self.ctx.obj["in_data_strings"] = saved_strings
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    # The 2D field is mapped onto the R-Z plane: R and Z grids plus a single
+    # component dimension.
+    assert values is not None
+    assert values.shape[-1] == 1
+    assert len(grid) == 2
+
+  def test_gk_fluxsurf(self):
+    # gk-fluxsurf operates on data already loaded onto the stack and locates the
+    # geometry from the loaded file's prefix (here '<prefix>-geo_int_mapc2p.gkyl').
+    saved_strings = self.ctx.obj["in_data_strings"]
+    self.ctx.obj["in_data_strings"] = [f"{self.dir_path:s}/rt_gk_tcv_nt_iwl_3x2v_p1-elc_M0_5.gkyl"]
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    self.ctx.invoke(cmd.load)
+    self.ctx.invoke(cmd.gk_fluxsurf, x_idx=0, nphi=4, nz_interp=1)
+    data = self.ctx.obj['data'].get_dataset(0, tag='fluxsurf')
+    values = data.values
+    grid = data.grid
+    self.ctx.obj['data'].clean()
+    self.ctx.obj["in_data_strings"] = saved_strings
+    self.ctx.obj["in_data_strings_loaded"] = 0
+    # The 2D field is mapped onto the theta-phi plane: theta and phi grids plus a single
+    # component dimension.
+    assert values is not None
+    assert values.shape[-1] == 1
+    assert len(grid) == 2
