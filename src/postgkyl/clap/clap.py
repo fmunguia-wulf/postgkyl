@@ -621,6 +621,34 @@ NOTE: this command cannot be combined with other postgkyl commands.
     """
     return self._run(_cmd("gk-energy-balance"), name=name, species=species, path=path, relative_error=relative_error, multib=multib, field_dot_file=field_dot_file, apar_dot_file=apar_dot_file, fdot_file=fdot_file, source_file=source_file, bflux_xlower_file=bflux_xlower_file, bflux_ylower_file=bflux_ylower_file, bflux_zlower_file=bflux_zlower_file, bflux_xupper_file=bflux_xupper_file, bflux_yupper_file=bflux_yupper_file, bflux_zupper_file=bflux_zupper_file, f_file=f_file, field_file=field_file, apar_file=apar_file, dt_file=dt_file, logy=logy, absy=absy, xlabel=xlabel, ylabel=ylabel, title=title, indent_left=indent_left, add_width=add_width, saveas=saveas)
 
+  def gk_fluxsurf(self,
+      mapc2p: str | None = None,
+      nodes: str | None = None,
+      x_idx: int = 0,
+      nphi: int = 128,
+      nz_interp: int = 8,
+      use: str | None = None,
+      tag: str = 'fluxsurf',
+      label: str | None = None):
+    """Gyrokinetics: Extract a 2D theta-phi flux surface.
+
+This command extracts data along a specific radial flux surface (constant x)
+for 3D field-aligned data. It achieves this by performing a binormal
+projection over a scan of toroidal angles (phi), creating a 2D grid of
+phi vs z (where z maps along the poloidal/theta direction).
+
+    Args:
+      mapc2p: (--mapc2p, -m) Use a modal mapc2p file as the geometry source instead of the default nodes file.
+      nodes: (--nodes, -n) Path to a nodal geometry file, overriding the default lookup.
+      x_idx: (--x-idx, -x) The cell index in the radial (x) direction representing the flux surface. Default 0.
+      nphi: (--nphi) Number of toroidal angle (phi) slices. Increased default to 128 for smoother diagonal field lines.
+      nz_interp: (--nz-interp) Parallel (z) up-sampling factor used to smooth the projected 3D surfaces. Default 8.
+      use: (--use, -u) Specify tag of datasets to process from the stack.
+      tag: (--tag, -t) Tag for output datasets.
+      label: (--label, -l) Custom label for the result.
+    """
+    return self._run(_cmd("gk-fluxsurf"), mapc2p=mapc2p, nodes=nodes, x_idx=x_idx, nphi=nphi, nz_interp=nz_interp, use=use, tag=tag, label=label)
+
   def gk_load_quantity(self,
       quantity: str | None = None,
       qlist: bool = False,
@@ -655,7 +683,7 @@ Script example:
       path: (--path, -p) Directory containing the simulation files.
       tag: (--tag, -t) Tag for the output dataset.
       label: (--label, -l) Label override for the output dataset.
-      extra: (--extra, -e) Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. Purpose depends on -q.
+      extra: (--extra, -e) Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. A key may be given one value per species as a comma-separated array, e.g. mass=me,mi1,mi2 alongside --species elc,ion1,ion2. Purpose depends on -q.
     """
     return self._run(_cmd("gk-load-quantity"), quantity=quantity, qlist=qlist, name=name, species=species, frame=frame, path=path, tag=tag, label=label, extra=extra)
 
@@ -795,6 +823,43 @@ NOTE: this command cannot be combined with other postgkyl commands.
       saveas: (--saveas) Name of figure file.
     """
     return self._run(_cmd("gk-particle-balance"), name=name, species=species, path=path, relative_error=relative_error, multib=multib, fdot_file=fdot_file, source_file=source_file, bflux_xlower_file=bflux_xlower_file, bflux_ylower_file=bflux_ylower_file, bflux_zlower_file=bflux_zlower_file, bflux_xupper_file=bflux_xupper_file, bflux_yupper_file=bflux_yupper_file, bflux_zupper_file=bflux_zupper_file, f_file=f_file, dt_file=dt_file, logy=logy, absy=absy, xlabel=xlabel, ylabel=ylabel, title=title, indent_left=indent_left, add_width=add_width, saveas=saveas)
+
+  def gk_rz(self,
+      mapc2p: str | None = None,
+      nodes: str | None = None,
+      z_axis: float = 0.0,
+      use: str | None = None,
+      tag: str = 'rz',
+      label: str | None = None,
+      phi_tor: float = 0.0,
+      nz_interp: int = 8):
+    """
+Gyrokinetics: Interpolate DG dataset(s) and map them to the R-Z plane.
+Assumes DG data (not yet interpolated) has been loaded onto the stack by a
+preceding command.
+
+The geometry is automatically found from the prefix of the first processed
+dataset: the pointwise '<prefix>-geo_int_nodes.gkyl' is preferred (exact node
+coordinates, robust at coarse z resolution), falling back to the modal
+'<prefix>-geo_int_mapc2p.gkyl'. Use '-n path' to point at a specific nodes
+file, '-m path' at a specific mapc2p file, or "-m ''" to force the default
+mapc2p lookup.
+
+For 3D (field-aligned) data the field is reconstructed on the poloidal plane at
+toroidal angle --phi-tor (default 0) by interpolating along the binormal
+direction, up-sampled in z (--nz-interp) for smooth surfaces.
+
+    Args:
+      mapc2p: (--mapc2p, -m) Use a modal mapc2p file as the geometry source instead of the default nodes file; pass '' to look up '<prefix>-geo_int_mapc2p.gkyl' from the first processed dataset's prefix.
+      nodes: (--nodes, -n) Path to a nodal geometry file, overriding the default '<prefix>-geo_int_nodes.gkyl' lookup.
+      z_axis: (--z-axis, -z) Vertical position of the magnetic axis (m), added to the geometry Z.mapc2p files store Z relative to the axis; pass Z_axis from the simulation input file to plot in machine coordinates. Default 0.
+      use: (--use, -u) Specify tag of datasets to process from the stack.
+      tag: (--tag, -t) Tag for output datasets.
+      label: (--label, -l) Custom label for the result.
+      phi_tor: (--phi-tor, -p) Toroidal angle (radians) of the poloidal plane to project 3D data onto. Default 0.
+      nz_interp: (--nz-interp) Parallel (z) up-sampling factor used to smooth the projected 3D surfaces. Default 8.
+    """
+    return self._run(_cmd("gk-rz"), mapc2p=mapc2p, nodes=nodes, z_axis=z_axis, use=use, tag=tag, label=label, phi_tor=phi_tor, nz_interp=nz_interp)
 
   def grid(self,
       use: str | None = None,
@@ -1007,6 +1072,8 @@ agyrotropic pressure tensor.
       num_subplot_col: int | None = None,
       transpose: bool = False,
       contour: bool = False,
+      surface: bool = False,
+      alpha: float | None = None,
       clevels: str | None = None,
       cnlevels: int | None = None,
       cont_label: bool = False,
@@ -1061,13 +1128,13 @@ agyrotropic pressure tensor.
       dpi: int = 200,
       edgecolors: str | None = None,
       showgrid: bool = True,
-      xkcd: bool = False,
       hashtag: bool = False,
       show: bool = True,
       figsize: str | None = None,
       saveframes: str | None = None,
       jet: bool = False,
       cmap: str | None = None,
+      cval: str | None = None,
       multiblock: bool = False):
     """Plot active datasets, optionally displaying the plot and/or saving it to PNG files.
 
@@ -1082,6 +1149,8 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       num_subplot_col: (--nsubplotcol) Manually set the number of columns for subplots.
       transpose: (--transpose) Transpose axes.
       contour: (-c, --contour) Make contour plot.
+      surface: (--surface, --surf) Make a 3D surface plot for 2D data (auto-enabled when overlaying multiple 2D datasets).
+      alpha: (--alpha) Surface transparency (0-1); useful when overlaying surfaces.
       clevels: (--clevels) Specify levels for contours: comma-separated level values or start:end:nlevels.
       cnlevels: (--cnlevels) Specify the number of levels for contours.
       cont_label: (--contlabel) Add labels to contours
@@ -1136,16 +1205,16 @@ Plot labels can use a sub-set of LaTeX math commands placed between dollar ($) s
       dpi: (--dpi) DPI (resolution) for output.
       edgecolors: (-e, --edgecolors) Set color for cell edges to show grid outline.
       showgrid: (--showgrid) Show grid-lines.
-      xkcd: (--xkcd) Turns on the xkcd style!
       hashtag: (--hashtag) Turns on the pgkyl hashtag!
       show: (--show) Turn showing of the plot ON and OFF.
       figsize: (--figsize) Comma-separated values for x and y size.
       saveframes: (--saveframes) Save individual frames as PNGS instead of an opening them
       jet: (--jet) Turn colormap to jet for comparison with literature.
-      cmap: (--cmap) Override default colormap with a valid matplotlib cmap.
+      cmap: (--cmap, --colormap) Override default colormap with a valid matplotlib cmap.
+      cval: (--cval) For 1D plots, comma-separated values mapping each curve onto the colormap (e.g. '1e-6,2e-6'). Requires --cmap; defaults to the dataset index if omitted.
       multiblock: (-m, --multiblock)
     """
-    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, xkcd=xkcd, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, multiblock=multiblock)
+    return self._run(_cmd("plot"), use=use, figure=figure, squeeze=squeeze, subplots=subplots, num_subplot_row=num_subplot_row, num_subplot_col=num_subplot_col, transpose=transpose, contour=contour, surface=surface, alpha=alpha, clevels=clevels, cnlevels=cnlevels, cont_label=cont_label, quiver=quiver, streamline=streamline, sdensity=sdensity, arrowstyle=arrowstyle, lineouts=lineouts, scatter=scatter, markersize=markersize, linewidth=linewidth, linestyle=linestyle, style=style, diverging=diverging, arg=arg, fixaspect=fixaspect, aspect=aspect, logx=logx, logy=logy, logz=logz, xshift=xshift, yshift=yshift, zshift=zshift, xscale=xscale, yscale=yscale, zscale=zscale, xmax=xmax, xmin=xmin, ymax=ymax, ymin=ymin, zmax=zmax, zmin=zmin, xlim=xlim, ylim=ylim, zlim=zlim, relax=relax, globalrange=globalrange, cutoffglobalrange=cutoffglobalrange, legend=legend, no_legend=no_legend, forcelegend=forcelegend, color=color, xlabel=xlabel, ylabel=ylabel, clabel=clabel, title=title, subplot_titles=subplot_titles, subplot_xlabels=subplot_xlabels, subplot_ylabels=subplot_ylabels, save=save, saveas=saveas, dpi=dpi, edgecolors=edgecolors, showgrid=showgrid, hashtag=hashtag, show=show, figsize=figsize, saveframes=saveframes, jet=jet, cmap=cmap, cval=cval, multiblock=multiblock)
 
   def pr(self,
       use: str | None = None,
