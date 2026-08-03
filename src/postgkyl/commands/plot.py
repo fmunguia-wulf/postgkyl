@@ -178,12 +178,13 @@ def plot(ctx, **kwargs):
     kwargs["globalrange"] = True
   # end
 
-  # When several 2D datasets are drawn into the same figure we switch to a 3D surface (default).
+  # When several 2D datasets are drawn into the same figure we switch to contour mode.
   num_datasets = sum(1 for _ in ctx.obj["data"].iterator(kwargs["use"]))
   first_dat = next(ctx.obj["data"].iterator(kwargs["use"]), None)
   is_2d = first_dat is not None and first_dat.get_num_dims(squeeze=True) == 2
   overlay_2d = (
       is_2d and num_datasets > 1 and not dataset_fignum
+      and kwargs["figure"] is not None
       and not kwargs["subplots"] and kwargs["lineouts"] is None
       and not kwargs["quiver"] and not kwargs["streamline"]
   )
@@ -191,10 +192,6 @@ def plot(ctx, **kwargs):
     kwargs["contour"] = True
   # end
   kwargs["comparison"] = overlay_2d and (kwargs["surface"] or kwargs["contour"])
-  # Overlaying requires a shared figure; default to figure 0 when switching modes.
-  if kwargs["comparison"] and kwargs["figure"] is None:
-    kwargs["figure"] = 0
-  # end
 
   if kwargs["globalrange"] or kwargs["cutoffglobalrange"]:
     vmin = float("inf")
