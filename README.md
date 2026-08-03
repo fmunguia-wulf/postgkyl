@@ -81,14 +81,14 @@ have the most up-to-date version should install Postgkyl from the source code:
 ```bash
 git clone https://github.com/ammarhakim/postgkyl.git
 cd postgkyl
-pip install numpy setuptools
+pip install --upgrade numpy setuptools wheel
 pip install -e .[test] --no-build-isolation
 ```
 
 Alternatively, Postgkyl can be installed directly from [PyPI](https://pypi.org/project/postgkyl/):
 
 ```bash
-pip install numpy setuptools
+pip install --upgrade numpy setuptools wheel
 pip install -e postgkyl[test] --no-build-isolation
 ```
 
