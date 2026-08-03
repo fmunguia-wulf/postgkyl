@@ -705,6 +705,41 @@ fail:
   return NULL;
 }
 
+/* --------------------------------------------------------- pow(sqrt) */
+static PyObject *
+py_powsqrt(PyObject *self, PyObject *args)
+{
+  PyObject *bcap, *ncobj, *ocap, *acap;
+  int num_quad;
+  double exponent;
+  if (!PyArg_ParseTuple(args, "OidOOO", &bcap, &num_quad, &exponent, &ncobj,
+          &ocap, &acap))
+    return NULL;
+  gpython_basis *b = basis_arg(bcap);
+  gpython_array *out = array_arg(ocap), *a = array_arg(acap);
+  if (!b || !out || !a)
+    return NULL;
+  PyArrayObject *nc = (PyArrayObject *)PyArray_FROM_OTF(
+      ncobj, NPY_INT32, NPY_ARRAY_IN_ARRAY);
+  if (!nc)
+    return NULL;
+  int ndim = (int)PyArray_SIZE(nc);
+  if (ndim < 1 || ndim > gpython_MAX_DIM) {
+    Py_DECREF(nc);
+    PyErr_SetString(PyExc_ValueError, "powsqrt: cells must have 1 to 7 entries");
+    return NULL;
+  }
+  int status = gpython_powsqrt(b, num_quad, exponent, ndim, PyArray_DATA(nc),
+      out, a);
+  Py_DECREF(nc);
+  if (status != 0) {
+    PyErr_SetString(PyExc_ValueError,
+        "powsqrt: operand shapes incompatible with the basis/grid");
+    return NULL;
+  }
+  Py_RETURN_NONE;
+}
+
 /* ------------------------------------------------------------- writing */
 static PyObject *
 py_write_field(PyObject *self, PyObject *args)
@@ -978,6 +1013,8 @@ static PyMethodDef gpython_methods[] = {
     "int dx op(f) per field" },
   { "array_average", py_array_average, METH_VARARGS,
     "weighted (or plain) average over the flagged dims (single field)" },
+  { "powsqrt", py_powsqrt, METH_VARARGS,
+    "pow(sqrt(a), exponent) via gkyl_proj_powsqrt_on_basis (single field)" },
   { "dg_differentiate", py_dg_differentiate, METH_VARARGS,
     "local DG derivative (per field, no inter-cell stencil)" },
   { "eval_at_coord_proj", py_eval_at_coord_proj, METH_VARARGS,

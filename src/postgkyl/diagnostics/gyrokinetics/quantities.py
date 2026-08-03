@@ -42,16 +42,45 @@ if TYPE_CHECKING:
 
 
 def _get_ctx_val(gdata: "GDataState", key: str, **kwargs):
-  """``gdata.ctx[key]``, falling back to ``kwargs[key]``, else raise."""
-  if key in gdata.ctx:
-    return gdata.ctx[key]
-  # end
+  """A value (or one value per species) for ``key``: ``kwargs[key]``
+  (an explicit ``--extra`` override) wins over ``gdata.ctx[key]`` (the
+  file's own attribute), which wins over raising.
+
+  ``kwargs[key]`` may be a single value (applies to every species) or a
+  list/tuple with one entry per species, indexed by ``kwargs
+  ['species_idx']`` -- the position :meth:`~postgkyl.diagnostics.
+  gyrokinetics.quantity.GkQuantity.fetch_multi`/``load_gk_quantity`` stamp
+  onto ``extra`` for the species currently being resolved.
+  """
   if key in kwargs:
-    return kwargs[key]
+    val = kwargs[key]
+    if not isinstance(val, (list, tuple)):
+      return val
+    # end
+    species_idx = kwargs.get("species_idx")
+    if species_idx is None:
+      raise KeyError(
+          f"fetch function: '--extra {key}=' was given {len(val)} values "
+          "but this quantity is not resolved per species here, so there is "
+          "no way to tell which one to use. Pass a single value instead.")
+    # end
+    if species_idx >= len(val):
+      species = kwargs.get("species")
+      raise ValueError(
+          f"fetch function: '--extra {key}=' was given only {len(val)} "
+          f"values but species #{species_idx}"
+          f"{f' ({species})' if species else ''} was requested. Give one "
+          "value per species, in the order of '--species'.")
+    # end
+    return val[species_idx]
+  # end
+  if gdata.ctx.get(key) is not None:
+    return gdata.ctx[key]
   # end
   raise KeyError(
       f"fetch function: context key '{key}' not found in the dataset; "
-      f"pass it as an extra keyword argument (e.g. {key}=<value>).")
+      f"pass it as '--extra {key}=<value>', or as one value per species "
+      f"with '--extra {key}=<value1>,<value2>,...'.")
 # end
 
 
@@ -202,6 +231,232 @@ def fetch_press_p(gdatas, **kwargs):
   """Perpendicular/parallel pressure in J/m^3: ``p_p = n * T_p``."""
   m0, Tp = (_ensure_interpolated(g) for g in gdatas)
   return m0._result(m0.grid, m0.values * Tp.values)
+# end
+
+
+def _make_fetch_q(name: str):
+  """Return a fetch function for the lab-frame parallel flux of the
+  parallel (``name='par'``) or perpendicular (``name='perp'``) kinetic
+  energy::
+
+    q_par  = (m/2)*M3par  = (m/2) int(vpar^3 f) dv,
+    q_perp = (m/2)*M3perp = (m/2) int(vpar*vperp^2 f) dv,
+
+  so that ``q_par + q_perp`` is the parallel flux of the total kinetic
+  energy. Both are in W/m^2 (kg/s^3). ``gdatas``: ``[M3par]`` or
+  ``[M3perp]``.
+  """
+  def fetch(gdatas, **kwargs):
+    m3 = _ensure_interpolated(gdatas[0])
+    mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
+    return m3._result(m3.grid, 0.5 * mass * m3.values)
+  # end
+  fetch.__name__ = f"fetch_q{name}"
+  return fetch
+# end
+
+
+fetch_qpar = _make_fetch_q("par")
+fetch_qperp = _make_fetch_q("perp")
+
+
+def _make_fetch_q_fluid(name: str):
+  """Return a fetch function for the parallel/perpendicular heat flux in
+  the fluid (drift) frame -- the energy carried by the random part of the
+  motion, ``u = M1/M0`` being the parallel drift speed::
+
+    q_par  = (m/2) int (vpar-u)^3 f dv
+           = (m/2) [M3par - 3*u*M2par + 3*u^2*M1 - u^3*M0]
+           = (m/2) [M3par - 3*u*M2par + 2*u^2*M1],
+    q_perp = (m/2) int (vpar-u)*vperp^2 f dv
+           = (m/2) [M3perp - u*M2perp].
+
+  ``gdatas`` (in this order): ``[M0, M1, M2par, M3par]`` or
+  ``[M0, M1, M2perp, M3perp]``.
+  """
+  is_par = name == "par"
+
+  def fetch(gdatas, **kwargs):
+    m0, m1, m2, m3 = (_ensure_interpolated(g) for g in gdatas)
+    mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
+
+    upar = m1.values / m0.values
+    u_m2 = upar * m2.values
+
+    if is_par:
+      values = m3.values - 3.0 * u_m2 + 2.0 * upar ** 2 * m1.values
+    # end
+    else:
+      values = m3.values - u_m2
+    # end
+
+    return m0._result(m0.grid, 0.5 * mass * values)
+  # end
+  fetch.__name__ = f"fetch_q{name}_fluid"
+  return fetch
+# end
+
+
+fetch_qpar_fluid = _make_fetch_q_fluid("par")
+fetch_qperp_fluid = _make_fetch_q_fluid("perp")
+
+
+def fetch_vt(gdatas, **kwargs):
+  """Thermal speed ``vt = sqrt(T/m)`` (m/s), ``m`` the requested species'
+  mass. ``gdatas``: ``[temp]`` (temperature, in Joules)."""
+  temp = _ensure_interpolated(gdatas[0])
+  mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
+  return temp._result(temp.grid, np.sqrt(temp.values / mass))
+# end
+
+
+def fetch_larmor_radius(gdatas, **kwargs):
+  """Species Larmor (gyro-)radius: ``rho = sqrt(m*T)/(|q|*B)``. ``gdatas``:
+  ``[temp, bmag]``."""
+  temp, bmag = (_ensure_interpolated(g) for g in gdatas)
+  mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
+  charge = abs(_get_ctx_val(gdatas[0], "charge", **kwargs))
+  values = np.sqrt(mass * temp.values) / (charge * bmag.values)
+  return temp._result(temp.grid, values)
+# end
+
+
+def fetch_debye_length(gdatas, **kwargs):
+  """Species-wise Debye length: ``lambda_D = sqrt(eps0*T/(n*q^2))``.
+  ``gdatas``: ``[temp, M0]``."""
+  temp, m0 = (_ensure_interpolated(g) for g in gdatas)
+  charge = _get_ctx_val(gdatas[0], "charge", **kwargs)
+  values = np.sqrt(constants.epsilon_0 * temp.values / (m0.values * charge ** 2))
+  return temp._result(temp.grid, values)
+# end
+
+
+def _split_elc_ions(gdatas, quantity: str, **kwargs):
+  """Split the per-species sources of a multi-species quantity into the
+  electron entry and the ion entries, by the sign of each species' charge.
+
+  ``gdatas[i]`` is species ``i``'s resolved source list (as
+  :meth:`~postgkyl.diagnostics.gyrokinetics.quantity.GkQuantity.fetch_multi`
+  hands it to an ``is_multi_species`` fetch function); each entry's
+  ``mass``/``charge`` is resolved with ``species_idx=i`` so a per-species
+  ``--extra`` array picks the right one.
+  """
+  species_names = kwargs.get("species", [])
+  if len(species_names) != len(gdatas):
+    species_names = [f"#{i}" for i in range(len(gdatas))]
+  # end
+
+  elcs, ions = [], []
+  for species_idx, (name, srcs) in enumerate(zip(species_names, gdatas)):
+    species_kwargs = dict(kwargs, species_idx=species_idx, species=name)
+    entry = {
+        "name": name,
+        "srcs": [_ensure_interpolated(s) for s in srcs],
+        "mass": _get_ctx_val(srcs[0], "mass", **species_kwargs),
+        "charge": _get_ctx_val(srcs[0], "charge", **species_kwargs),
+    }
+    (elcs if entry["charge"] < 0.0 else ions).append(entry)
+  # end
+
+  if len(elcs) != 1:
+    raise ValueError(
+        f"{quantity}: expected exactly one negatively charged (electron) "
+        f"species but found {len(elcs)} in {list(species_names)}.")
+  # end
+  if not ions:
+    raise ValueError(
+        f"{quantity}: found no positively charged (ion) species in "
+        f"{list(species_names)}.")
+  # end
+  return elcs[0], ions
+# end
+
+
+def _weighted_sum(entries, weights, comp: int) -> "GDataState":
+  """Sum the ``comp``-th (already-interpolated) source of each species,
+  each scaled by a scalar weight."""
+  base = entries[0]["srcs"][comp]
+  total = sum(w * e["srcs"][comp].values for e, w in zip(entries, weights))
+  return base._result(base.grid, total)
+# end
+
+
+def _fetch_c_s_ion_acoustic(gdatas, **kwargs):
+  """Ion-acoustic sound speed (wave perspective), for the Bohm criterion
+  and sheath/presheath matching::
+
+    c_s = sqrt( T_e * sum_j(n_j*Z_j^2/m_j) / sum_j(n_j*Z_j) )
+
+  summing over the ion species ``j``, with ``Z_j = q_j/e`` the ion charge
+  state.
+  """
+  elc, ions = _split_elc_ions(gdatas, "fetch_c_s(kind=ion_acoustic)", **kwargs)
+
+  e = constants.elementary_charge
+  charge_states = [ion["charge"] / e for ion in ions]
+
+  numer = _weighted_sum(
+      ions, [z ** 2 / ion["mass"] for z, ion in zip(charge_states, ions)], 0)
+  denom = _weighted_sum(ions, charge_states, 0)
+
+  temp_e = elc["srcs"][1]
+  values = np.sqrt(temp_e.values * numer.values / denom.values)
+  return temp_e._result(temp_e.grid, values)
+# end
+
+
+def _fetch_c_s_thermo(gdatas, **kwargs):
+  """Thermodynamic sound speed (bulk fluid perspective), for Mach numbers
+  and acoustic propagation in the core/SOL::
+
+    c_s = sqrt( (gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j)) / sum_j(n_j*m_j) )
+
+  summing over the ion species ``j``. Default ``gamma_e=1``, ``gamma_i=3``,
+  overridable via ``--extra``.
+  """
+  elc, ions = _split_elc_ions(gdatas, "fetch_c_s(kind=thermo)", **kwargs)
+
+  gamma_e = float(kwargs.get("gamma_e", 1.0))
+  gamma_i = float(kwargs.get("gamma_i", 3.0))
+
+  m0_e, temp_e = elc["srcs"]
+  numer_vals = gamma_e * m0_e.values * temp_e.values
+  for ion in ions:
+    m0_i, temp_i = ion["srcs"]
+    numer_vals = numer_vals + gamma_i * m0_i.values * temp_i.values
+  # end
+
+  denom = _weighted_sum(ions, [ion["mass"] for ion in ions], 0)
+  values = np.sqrt(numer_vals / denom.values)
+  return temp_e._result(temp_e.grid, values)
+# end
+
+
+def fetch_c_s(gdatas, **kwargs):
+  """Sound speed (m/s), combining the electrons and every ion species.
+  ``gdatas`` has one ``[M0, temp]`` source list per species, in the order
+  requested, e.g. ``pgkyl gk_load_quantity -q c_s -s elc,ion1,ion2 ...``.
+  Electrons and ions are told apart by the sign of each species' charge
+  attribute, so the species may be named anything.
+
+  Two definitions are available through ``--extra kind=<kind>``:
+    ``ion_acoustic``: the wave/Bohm-criterion sound speed,
+      ``c_s = sqrt(T_e*sum_j(n_j*Z_j^2/m_j)/sum_j(n_j*Z_j))``.
+    ``thermo`` (default): the bulk-fluid sound speed,
+      ``c_s = sqrt((gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j))/sum_j(n_j*m_j))``,
+      with ``gamma_e``/``gamma_i`` settable via ``--extra`` (default 1, 3).
+  """
+  c_s_kinds = {
+      "ion_acoustic": _fetch_c_s_ion_acoustic,
+      "thermo": _fetch_c_s_thermo,
+  }
+  kind = str(kwargs.get("kind", "thermo"))
+  if kind not in c_s_kinds:
+    raise ValueError(
+        f"fetch_c_s: unknown kind '{kind}'. Select one with '--extra "
+        f"kind=<kind>' from: {', '.join(sorted(c_s_kinds))}.")
+  # end
+  return c_s_kinds[kind](gdatas, **kwargs)
 # end
 
 
@@ -362,4 +617,41 @@ def load_distf(gdatas, **kwargs):
       block_idx=extra.get("block", None),
       num_interp=0,
   )
+# end
+
+
+# ----------------------------------------------------- normalized quantities
+def _make_fetch_q_norm(name: str):
+  """Return a fetch function for a heat flux normalized by the
+  free-streaming estimate ``n*T*c_s``: ``q_norm = q / (n*T*c_s)``.
+  ``gdatas`` (in this order): ``[q, M0, temp, c_s]``.
+  """
+  def fetch(gdatas, **kwargs):
+    q, m0, temp, c_s = (_ensure_interpolated(g) for g in gdatas)
+    values = q.values / (m0.values * temp.values * c_s.values)
+    return q._result(q.grid, values)
+  # end
+  fetch.__name__ = f"fetch_q{name}_norm"
+  return fetch
+# end
+
+
+fetch_qpar_norm = _make_fetch_q_norm("par")
+fetch_qperp_norm = _make_fetch_q_norm("perp")
+
+
+def fetch_rho_over_lambda(gdatas, **kwargs):
+  """Ratio of the species Larmor radius to its Debye length:
+  ``rho/lambda_D``. ``gdatas``: ``[rho, lambda_D]``."""
+  rho, lambda_d = (_ensure_interpolated(g) for g in gdatas)
+  return rho._result(rho.grid, rho.values / lambda_d.values)
+# end
+
+
+def fetch_phi_norm(gdatas, **kwargs):
+  """Normalized electrostatic potential: ``phi_norm = e*phi/T_e``.
+  ``gdatas``: ``[phi, temp]``."""
+  phi, temp = (_ensure_interpolated(g) for g in gdatas)
+  values = constants.elementary_charge * phi.values / temp.values
+  return phi._result(phi.grid, values)
 # end

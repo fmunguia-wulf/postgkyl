@@ -1094,6 +1094,33 @@ class TestLoaders:
     assert result.exit_code != 0
   # end
 
+  def test_parse_extra_comma_or_space_separated_pairs(self):
+    from postgkyl.cli.commands.gk_load_quantity import _parse_extra
+
+    for extra in ("mass=1,2,dir=0", "mass=1,2 dir=0", "mass=1,2  dir=0"):
+      assert _parse_extra(extra) == {"mass": [1, 2], "dir": 0}
+    # end
+  # end
+
+  def test_parse_extra_per_species_array_stays_a_list(self):
+    from postgkyl.cli.commands.gk_load_quantity import _parse_extra
+
+    assert _parse_extra("mass=1.0,2.0,4.0") == {"mass": [1.0, 2.0, 4.0]}
+  # end
+
+  def test_parse_extra_single_value_stays_a_scalar(self):
+    from postgkyl.cli.commands.gk_load_quantity import _parse_extra
+
+    assert _parse_extra("mass=2.0") == {"mass": 2.0}
+  # end
+
+  def test_parse_extra_empty_input(self):
+    from postgkyl.cli.commands.gk_load_quantity import _parse_extra
+
+    assert _parse_extra(None) == {}
+    assert _parse_extra("") == {}
+  # end
+
   def test_gkyl_pkpm_wiring(self, monkeypatch):
     """No PKPM fixture is staged; monkeypatch the loader (mirrors
     tests_bak/test_diagnostics_pkpm.py's technique) to check CLI wiring."""

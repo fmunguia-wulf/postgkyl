@@ -367,6 +367,269 @@ class TestFetchPhysics:
 # end
 
 
+class TestGetCtxVal:
+  """Resolution of species attributes: an explicit '--extra' override wins
+  over the file's own context, which wins over raising; an '--extra' value
+  may be a single scalar (every species) or one entry per species."""
+
+  def test_extra_overrides_the_context(self):
+    d = _field(np.full((2, 1), 1.0), mass=5.0)
+    assert ff._get_ctx_val(d, "mass", mass=999.0) == 999.0
+  # end
+
+  def test_context_is_used_when_extra_does_not_carry_the_key(self):
+    d = _field(np.full((2, 1), 1.0), mass=5.0)
+    assert ff._get_ctx_val(d, "mass") == 5.0
+    assert ff._get_ctx_val(d, "mass", charge=1.0) == 5.0
+  # end
+
+  def test_scalar_extra_applies_to_every_species(self):
+    d = _field(np.full((2, 1), 1.0))
+    for species_idx in range(3):
+      assert ff._get_ctx_val(d, "mass", mass=7.0, species_idx=species_idx) == 7.0
+    # end
+  # end
+
+  def test_per_species_array_is_picked_by_species_index(self):
+    d = _field(np.full((2, 1), 1.0))
+    for species_idx, expected in enumerate([1.0, 2.0, 3.0]):
+      got = ff._get_ctx_val(d, "mass", mass=[1.0, 2.0, 3.0],
+          species_idx=species_idx)
+      assert got == expected
+    # end
+  # end
+
+  def test_array_without_a_species_index_is_an_error(self):
+    d = _field(np.full((2, 1), 1.0))
+    with pytest.raises(KeyError, match="not resolved per species"):
+      ff._get_ctx_val(d, "mass", mass=[1.0, 2.0])
+    # end
+  # end
+
+  def test_too_short_an_array_is_an_error(self):
+    d = _field(np.full((2, 1), 1.0))
+    with pytest.raises(ValueError, match="only 2 values"):
+      ff._get_ctx_val(d, "mass", mass=[1.0, 2.0], species_idx=2, species="ion2")
+    # end
+  # end
+
+  def test_missing_everywhere_is_an_error(self):
+    d = _field(np.full((2, 1), 1.0))
+    with pytest.raises(KeyError, match="mass"):
+      ff._get_ctx_val(d, "mass")
+    # end
+  # end
+# end
+
+
+class TestHeatFluxes:
+  """Lab-frame energy fluxes and fluid-frame heat fluxes."""
+
+  def test_qpar_lab_frame(self):
+    m3par = _field(np.full((2, 1), 4.0), mass=2.0)
+    out = ff.fetch_qpar([m3par])
+    np.testing.assert_allclose(out.values[..., 0], 0.5 * 2.0 * 4.0)
+  # end
+
+  def test_qperp_lab_frame(self):
+    m3perp = _field(np.full((2, 1), 6.0), mass=3.0)
+    out = ff.fetch_qperp([m3perp])
+    np.testing.assert_allclose(out.values[..., 0], 0.5 * 3.0 * 6.0)
+  # end
+
+  def test_qpar_fluid_matches_the_hand_derived_formula(self):
+    m0 = _field(np.full((2, 1), 2.0), mass=5.0)
+    m1 = _field(np.full((2, 1), 6.0))
+    m2par = _field(np.full((2, 1), 10.0))
+    m3par = _field(np.full((2, 1), 40.0))
+    out = ff.fetch_qpar_fluid([m0, m1, m2par, m3par])
+    upar = 6.0 / 2.0
+    expected = 0.5 * 5.0 * (40.0 - 3.0 * upar * 10.0 + 2.0 * upar ** 2 * 6.0)
+    np.testing.assert_allclose(out.values[..., 0], expected)
+  # end
+
+  def test_qperp_fluid_matches_the_hand_derived_formula(self):
+    m0 = _field(np.full((2, 1), 2.0), mass=5.0)
+    m1 = _field(np.full((2, 1), 6.0))
+    m2perp = _field(np.full((2, 1), 8.0))
+    m3perp = _field(np.full((2, 1), 20.0))
+    out = ff.fetch_qperp_fluid([m0, m1, m2perp, m3perp])
+    upar = 6.0 / 2.0
+    expected = 0.5 * 5.0 * (20.0 - upar * 8.0)
+    np.testing.assert_allclose(out.values[..., 0], expected)
+  # end
+
+  def test_qpar_fluid_vanishes_for_a_maxwellian(self):
+    """A Maxwellian carries no parallel heat flux in the fluid frame: the
+    three terms of ``(m/2)*[M3par - 3*u*M2par + 2*u^2*M1]`` cancel exactly
+    for ``M1=n*u``, ``M2par=n*(u^2+T/m)``, ``M3par=n*(u^3+3*u*T/m)``, so the
+    residual is compared against the size of an individual term rather
+    than an absolute zero."""
+    n, u, T, m = 2.7e19, 1.3e4, 9.5e-18, 3.343e-27
+    vt_sq = T / m
+    m0 = _field(np.full((2, 1), n), mass=m)
+    m1 = _field(np.full((2, 1), n * u))
+    m2par = _field(np.full((2, 1), n * (u ** 2 + vt_sq)))
+    m3par = _field(np.full((2, 1), n * (u ** 3 + 3.0 * u * vt_sq)))
+    out = ff.fetch_qpar_fluid([m0, m1, m2par, m3par])
+    term_scale = 0.5 * m * n * abs(u) ** 3
+    assert np.all(np.abs(out.values[..., 0]) / term_scale < 1e-9)
+  # end
+# end
+
+
+class TestThermalSpeedAndLengths:
+  """``vt``/Larmor-radius/Debye-length -- plain ``np.sqrt`` on interpolated
+  data (this layer never touches ``dg``/``gpython``; see the module
+  docstring in ``quantities.py``)."""
+
+  def test_vt(self):
+    temp = _field(np.full((2, 1), 8.0), mass=2.0)
+    out = ff.fetch_vt([temp])
+    np.testing.assert_allclose(out.values[..., 0], np.sqrt(4.0))
+  # end
+
+  def test_larmor_radius(self):
+    temp = _field(np.full((2, 1), 4.0), mass=9.0, charge=-2.0)
+    bmag = _field(np.full((2, 1), 3.0))
+    out = ff.fetch_larmor_radius([temp, bmag])
+    expected = np.sqrt(9.0 * 4.0) / (2.0 * 3.0)
+    np.testing.assert_allclose(out.values[..., 0], expected)
+  # end
+
+  def test_debye_length(self):
+    from scipy import constants
+    temp = _field(np.full((2, 1), 5.0), charge=2.0)
+    m0 = _field(np.full((2, 1), 7.0))
+    out = ff.fetch_debye_length([temp, m0])
+    expected = np.sqrt(constants.epsilon_0 * 5.0 / (7.0 * 4.0))
+    np.testing.assert_allclose(out.values[..., 0], expected)
+  # end
+# end
+
+
+class TestSoundSpeed:
+  """The multi-species sound speeds, dispatched by '--extra kind='.
+
+  ``fetch_c_s`` is an ``is_multi_species`` fetch function: it receives one
+  ``[M0, temp]`` source list per species (as
+  ``GkQuantity.fetch_multi``/``load_gk_quantity`` would hand it), not a
+  flat list.
+  """
+
+  @staticmethod
+  def _species(dens, temp, mass, charge):
+    return [_field(np.full((2, 1), dens), mass=mass, charge=charge),
+            _field(np.full((2, 1), temp), mass=mass, charge=charge)]
+  # end
+
+  def test_ion_acoustic_single_ion_species(self):
+    """With one Z=1 ion species the formula collapses to sqrt(Te/mi)."""
+    from scipy import constants
+    e = constants.elementary_charge
+    m_e, T_e = constants.electron_mass, 9.5e-18
+    n_i, T_i, m_i, z_i = 2.7e19, 6.1e-18, 3.343e-27, 1.0
+    n_e = n_i * z_i
+
+    out = ff.fetch_c_s(
+        [self._species(n_e, T_e, m_e, -e), self._species(n_i, T_i, m_i, z_i * e)],
+        species=["elc", "ion"], kind="ion_acoustic")
+    np.testing.assert_allclose(out.values[..., 0], np.sqrt(T_e / m_i), rtol=1e-10)
+  # end
+
+  def test_thermo_defaults_are_gamma_e_1_gamma_i_3(self):
+    from scipy import constants
+    e = constants.elementary_charge
+    m_e, T_e = constants.electron_mass, 9.5e-18
+    n_i, T_i, m_i, z_i = 2.7e19, 6.1e-18, 3.343e-27, 1.0
+    n_e = n_i * z_i
+
+    gdatas = [self._species(n_e, T_e, m_e, -e), self._species(n_i, T_i, m_i, z_i * e)]
+    default = ff.fetch_c_s(gdatas, species=["elc", "ion"], kind="thermo")
+    explicit = ff.fetch_c_s(gdatas, species=["elc", "ion"], kind="thermo",
+        gamma_e=1.0, gamma_i=3.0)
+    np.testing.assert_allclose(default.values, explicit.values, rtol=1e-12)
+
+    expected = np.sqrt((1.0 * n_e * T_e + 3.0 * n_i * T_i) / (n_i * m_i))
+    np.testing.assert_allclose(default.values[..., 0], expected, rtol=1e-10)
+  # end
+
+  def test_species_order_does_not_matter(self):
+    """Species are identified by charge sign, so the order is irrelevant."""
+    elc = self._species(1.0e19, 5.0e-18, 9.1e-31, -1.6e-19)
+    ion = self._species(1.0e19, 3.0e-18, 3.3e-27, 1.6e-19)
+    forward = ff.fetch_c_s([elc, ion], species=["elc", "ion"], kind="ion_acoustic")
+    shuffled = ff.fetch_c_s([ion, elc], species=["ion", "elc"], kind="ion_acoustic")
+    np.testing.assert_allclose(forward.values, shuffled.values, rtol=1e-12)
+  # end
+
+  def test_no_electron_species_is_an_error(self):
+    ion = self._species(1.0, 1.0, 1.0, 1.0)
+    with pytest.raises(ValueError, match="exactly one negatively charged"):
+      ff.fetch_c_s([ion], species=["ion"])
+    # end
+  # end
+
+  def test_no_ion_species_is_an_error(self):
+    elc = self._species(1.0, 1.0, 1.0, -1.0)
+    with pytest.raises(ValueError, match="no positively charged"):
+      ff.fetch_c_s([elc], species=["elc"])
+    # end
+  # end
+
+  def test_unknown_kind_is_an_error(self):
+    elc = self._species(1.0, 1.0, 1.0, -1.0)
+    ion = self._species(1.0, 1.0, 1.0, 1.0)
+    with pytest.raises(ValueError, match="unknown kind"):
+      ff.fetch_c_s([elc, ion], species=["elc", "ion"], kind="bogus")
+    # end
+  # end
+
+  def test_per_species_extra_arrays_reach_nested_sources(self):
+    """'--extra mass=1,2,charge=-1,1' must give each species its own entry,
+    threaded through even though these sources carry no mass/charge in
+    their own ctx -- the whole point of ``species_idx`` reaching
+    ``get_src_gdata``/``_split_elc_ions``."""
+    bare = lambda dens, temp: [_field(np.full((2, 1), dens)),
+                               _field(np.full((2, 1), temp))]
+    out = ff.fetch_c_s([bare(2.0, 8.0), bare(2.0, 8.0)],
+        species=["elc", "ion"], kind="thermo",
+        mass=[1.0, 2.0], charge=[-1.0, 1.0])
+    # n=2, T=8 for both species; gamma_e=1, gamma_i=3 (defaults).
+    expected = np.sqrt((1.0 * 2.0 * 8.0 + 3.0 * 2.0 * 8.0) / (2.0 * 2.0))
+    np.testing.assert_allclose(out.values[..., 0], expected, rtol=1e-10)
+  # end
+# end
+
+
+class TestNormalizedQuantities:
+  def test_rho_over_lambda(self):
+    rho = _field(np.full((2, 1), 6.0))
+    lambda_d = _field(np.full((2, 1), 3.0))
+    out = ff.fetch_rho_over_lambda([rho, lambda_d])
+    np.testing.assert_allclose(out.values[..., 0], 2.0)
+  # end
+
+  def test_phi_norm(self):
+    from scipy import constants
+    phi = _field(np.full((2, 1), 5.0))
+    temp = _field(np.full((2, 1), 2.0))
+    out = ff.fetch_phi_norm([phi, temp])
+    np.testing.assert_allclose(out.values[..., 0],
+        constants.elementary_charge * 5.0 / 2.0)
+  # end
+
+  def test_qpar_norm(self):
+    q = _field(np.full((2, 1), 12.0))
+    m0 = _field(np.full((2, 1), 2.0))
+    temp = _field(np.full((2, 1), 3.0))
+    c_s = _field(np.full((2, 1), 2.0))
+    out = ff.fetch_qpar_norm([q, m0, temp, c_s])
+    np.testing.assert_allclose(out.values[..., 0], 12.0 / (2.0 * 3.0 * 2.0))
+  # end
+# end
+
+
 class TestDriftVelocities:
   """``fetch_gradB_vel``/``fetch_diamag_vel`` and the remaining
   ``_b_cross_grad_div_b_component`` branches (comp 1/2, cdim 1/2/3)."""
@@ -563,7 +826,13 @@ class _SyntheticSource:
   """Serves a small, self-consistent constant-valued synthetic DG dataset
   for every source file a quantity asks for -- ported from
   tests_bak/test_gk_load_quantity.py's ``_make_synthetic_gdata``, adapted to
-  push through the new ``GDataState``/``.interpolate()`` (no ``ctypes``)."""
+  push through the new ``GDataState``/``.interpolate()`` (no ``ctypes``).
+
+  Every source is served the same synthetic values; only the charge is read
+  back out of the file name (negative for an ``elc`` species, per
+  ``_ELC_SPECIES``), so multi-species quantities -- which tell electrons
+  from ions by the sign of the charge -- see a genuine electron species.
+  """
 
   POLY_ORDER = 1
   BASIS_TYPE = "serendipity"
@@ -576,13 +845,22 @@ class _SyntheticSource:
     for comp in range(self.NUM_PHYS_COMPS):
       values[:, comp * self.NUM_BASIS] = (comp + 2) * np.sqrt(2.0)
     # end
+    file_name = str(args[0]) if args else ""
+    charge = -1.0 if f"-{_ELC_SPECIES}_" in file_name else 1.0
     grid = [np.linspace(0.0, 1.0, self.NUM_CELLS + 1)]
     d = GDataState(ctx={"poly_order": self.POLY_ORDER, "basis_type": self.BASIS_TYPE,
-        "mass": 1.0, "charge": 1.0})
+        "mass": 1.0, "charge": charge})
     d.push(grid, values)
     return d
   # end
 # end
+
+
+# Species names used to drive a genuine electron/ion split in the synthetic
+# smoke tests: multi-species quantities (e.g. the sound speed) tell them
+# apart by the sign of the charge, which _SyntheticSource keys off this name.
+_ELC_SPECIES = "elc"
+_ION_SPECIES = "ion"
 
 
 def _collect_source_files(quant, path, name, species, frame) -> set:
@@ -625,11 +903,17 @@ def test_every_registered_quantity_produces_a_dataset(quantity, tmp_path, monkey
   # end
 
   quant = gk_quant_registry.get(quantity)
-  name, species, frame = "gktest", "ion", 0
+  name, frame = "gktest", 0
   path = str(tmp_path)
+  # A multi-species quantity (e.g. the sound speed) needs an electron and
+  # an ion species to combine; every other quantity is fine with just one.
+  species = (f"{_ELC_SPECIES},{_ION_SPECIES}" if quant.is_multi_species
+             else _ION_SPECIES)
 
-  for file_name in _collect_source_files(quant, path, name, species, frame):
-    open(file_name, "w").close()
+  for species_name in species.split(","):
+    for file_name in _collect_source_files(quant, path, name, species_name, frame):
+      open(file_name, "w").close()
+    # end
   # end
 
   monkeypatch.setattr(qmod, "GData", _SyntheticSource())
@@ -738,6 +1022,38 @@ class TestLoadQuantityMultiSpeciesMultiFrame:
     out = load_gk_quantity("M0", "ion", name, None, path=path)
     assert len(out) == 3
     assert all(" f" in d.get_label() for d in out)
+  # end
+
+  def test_multi_species_quantity_yields_a_single_dataset(self, tmp_path, monkeypatch):
+    """A multi-species quantity (the sound speed) combines its species into
+    one dataset, unlike a per-species quantity (M0), which still produces
+    one dataset per species."""
+    name = "gktest"
+    path = str(tmp_path)
+    for species in (_ELC_SPECIES, _ION_SPECIES):
+      for file_name in _collect_source_files(
+          gk_quant_registry.get("c_s"), path, name, species, 0):
+        open(file_name, "w").close()
+      # end
+      for file_name in _collect_source_files(
+          gk_quant_registry.get("M0"), path, name, species, 0):
+        open(file_name, "w").close()
+      # end
+    # end
+    monkeypatch.setattr(qmod, "GData", _SyntheticSource())
+
+    species = f"{_ELC_SPECIES},{_ION_SPECIES}"
+    out = load_gk_quantity("c_s", species, name, "0", path=path)
+    assert len(out) == 1
+
+    out = load_gk_quantity("M0", species, name, "0", path=path)
+    assert len(out) == 2
+  # end
+
+  def test_multi_species_quantity_needs_a_species_list(self, tmp_path):
+    with pytest.raises(ValueError, match="needs a species list"):
+      load_gk_quantity("c_s", None, "gktest", "0", path=str(tmp_path))
+    # end
   # end
 # end
 

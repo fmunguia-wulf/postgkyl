@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import click
 
 import postgkyl as pg
@@ -21,7 +23,8 @@ from .._options import label_option, tag_option
 @click.option("--path", "-p", default="./", help="Directory containing the simulation files.")
 @click.option("--extra", "-e", default=None,
     help="Extra comma-separated key=value pairs of extra commands, e.g. dir=1,mass=0.1. "
-         "Purpose depends on -q.")
+         "A key may be given one value per species as a comma-separated array, e.g. "
+         "mass=me,mi1,mi2 alongside --species elc,ion1,ion2. Purpose depends on -q.")
 @tag_option(default="default")
 @label_option()
 @click.pass_context
@@ -44,21 +47,38 @@ def command(ctx, quantity, qlist, name, species, frame, path, extra, tag, label)
 
 
 def _parse_extra(extra: str | None) -> dict:
-  """Parse ``--extra``'s ``key=value,...`` syntax, coercing numeric values."""
+  """Parse ``--extra``'s ``key=value,...`` syntax, coercing numeric values.
+
+  Pairs may be separated by commas or whitespace (``mass=1,2 dir=0`` and
+  ``mass=1,2,dir=0`` both work -- needed since a value itself may be a
+  comma-separated array). A value with more than one comma-separated entry
+  is kept as a list, one entry per species in ``--species`` order; a
+  single value stays a scalar and applies to every species.
+  """
   parsed = {}
-  for pair in (extra.split(",") if extra else []):
+  if not extra:
+    return parsed
+  # end
+  for pair in re.split(r"[,\s]+(?=[^\s,=]+=)", extra.strip()):
     key, _, val = pair.partition("=")
-    key, val = key.strip(), val.strip()
-    try:
-      val = int(val)
-    except ValueError:
-      try:
-        val = float(val)
-      except ValueError:
-        pass
+    vals = []
+    for v in val.split(","):
+      v = v.strip()
+      if not v:
+        continue
       # end
+      try:
+        v = int(v)
+      except ValueError:
+        try:
+          v = float(v)
+        except ValueError:
+          pass
+        # end
+      # end
+      vals.append(v)
     # end
-    parsed[key] = val
+    parsed[key.strip()] = vals[0] if len(vals) == 1 else vals
   # end
   return parsed
 # end

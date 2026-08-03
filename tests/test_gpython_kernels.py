@@ -671,3 +671,75 @@ def test_eval_at_coord_proj_rejects_eval_dirs_coords_length_mismatch():
         [1], a)
   # end
 # end
+
+
+# ------------------------------------------------------------------ powsqrt
+def test_powsqrt_of_a_constant_field_is_exact():
+  basis_type, ndim, p, cells = "serendipity", 1, 1, 4
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  b0 = 2.0 ** (-ndim / 2.0)
+  coeffs = np.zeros((cells, nb))
+  coeffs[:, 0] = 4.0 / b0  # constant field value 4.0
+  a = GkylArray.from_numpy(coeffs)
+  out = k.powsqrt(basis_type, ndim, p, [cells], a, 1.0)
+  np.testing.assert_allclose(out.view()[:, 0] * b0, 2.0, atol=1e-12)
+# end
+
+
+@pytest.mark.parametrize("exponent", [1.0, -1.0, 3.0])
+def test_powsqrt_matches_the_apply_pointwise_quadrature_path(exponent):
+  """``gkyl_proj_powsqrt_on_basis`` and ``dg.rep.apply_pointwise`` both
+  project through the same modal<->quadrature matrices (``basis.py``'s
+  Gauss-Legendre rule), so they must agree to quadrature precision on a
+  genuinely varying (non-constant) field -- this is the cross-check
+  ``REFACTOR_GKEYLL_FFI.md``'s ``.apply()`` verb already exercises,
+  independent of the compiled kernel."""
+  from postgkyl import dg
+
+  basis_type, ndim, p, cells = "serendipity", 1, 1, 4
+  rng = np.random.default_rng(3)
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  coeffs = rng.normal(scale=0.05, size=(cells, nb))
+  coeffs[:, 0] += 4.0  # shifted positive so pow(sqrt(.), .) stays well-defined
+  a = GkylArray.from_numpy(coeffs)
+  num_quad = p + 1
+
+  out = k.powsqrt(basis_type, ndim, p, [cells], a, exponent, num_quad=num_quad)
+  expect = dg.rep.apply_pointwise(basis_type, ndim, p, a,
+      lambda v: np.power(np.sqrt(np.where(v < 0, 1e-40, v)), exponent),
+      num_quad)
+  np.testing.assert_allclose(out.view(), expect.view(), atol=1e-10)
+# end
+
+
+def test_powsqrt_rejects_multi_component_input():
+  """The kernel has no field-index argument, so a multi-component (vector)
+  field must be refused here (looping per field is ``dg.modal.powsqrt``'s
+  job, not this thin binding's)."""
+  basis_type, ndim, p, cells = "serendipity", 1, 1, 4
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  a = GkylArray.alloc(3 * nb, cells)  # 3 physical components
+  with pytest.raises(ValueError, match="single-field only"):
+    k.powsqrt(basis_type, ndim, p, [cells], a, 1.0)
+  # end
+# end
+
+
+def test_powsqrt_rejects_num_quad_below_one():
+  basis_type, ndim, p, cells = "serendipity", 1, 1, 4
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  a = GkylArray.alloc(nb, cells)
+  with pytest.raises(ValueError, match="num_quad"):
+    k.powsqrt(basis_type, ndim, p, [cells], a, 1.0, num_quad=0)
+  # end
+# end
+
+
+def test_powsqrt_rejects_cells_not_covering_the_array():
+  basis_type, ndim, p = "serendipity", 1, 1
+  nb = gpython.basis.num_basis(basis_type, ndim, p)
+  a = GkylArray.alloc(nb, 4)
+  with pytest.raises(ValueError, match="do not cover"):
+    k.powsqrt(basis_type, ndim, p, [5], a, 1.0)
+  # end
+# end

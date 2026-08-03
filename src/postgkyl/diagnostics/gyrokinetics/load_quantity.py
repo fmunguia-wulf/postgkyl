@@ -45,7 +45,8 @@ def load_gk_quantity(quantity: str, species: str | None, name: str,
     A list of computed ``GDataState`` datasets.
 
   Raises:
-    ValueError: if ``quantity`` is not registered.
+    ValueError: if ``quantity`` is not registered, or it is an
+      ``is_multi_species`` quantity requested without a species list.
   """
   if not gk_quant_registry.has(quantity):
     valid = gk_quant_registry.list()
@@ -59,12 +60,47 @@ def load_gk_quantity(quantity: str, species: str | None, name: str,
   species_list = [s.strip() for s in species.split(",")] if species else [None]
 
   frame_inp = str(frame) if frame is not None else None
+
+  if gkquant.is_multi_species:
+    # Combine every species into a single dataset (e.g. the sound speed),
+    # so it is fetched once for the whole species list instead of once
+    # per species.
+    if species_list == [None]:
+      raise ValueError(
+          f"Quantity '{quantity}' combines several species, so it needs a "
+          "species list, e.g. --species elc,ion.")
+    # end
+
+    src_combo_idx, frames = gkquant.get_avail_source_multi(
+        path, name, species_list, frame_inp)
+
+    datasets: list["GDataState"] = []
+    for fr in frames:
+      out = gkquant.fetch_multi(path, name, species_list, fr, src_combo_idx,
+          **extra)
+
+      out_label = label if label is not None else gkquant.get_label()
+      if len(frames) > 1:
+        out_label += f" f{fr}"
+      # end
+      out.set_label(out_label)
+      out.set_tag(tag)
+
+      datasets.append(out)
+    # end
+    return datasets
+  # end
+
   datasets: list["GDataState"] = []
-  for sp in species_list:
+  for species_idx, sp in enumerate(species_list):
     src_combo_idx, frames = gkquant.get_avail_source(path, name, sp, frame_inp)
 
+    # Tells the fetch functions which entry of a per-species '--extra' array
+    # (e.g. 'mass=1,2,3') applies to the species being computed.
+    species_extra = dict(extra, species_idx=species_idx)
+
     for fr in frames:
-      out = gkquant.fetch(path, name, sp, fr, src_combo_idx, **extra)
+      out = gkquant.fetch(path, name, sp, fr, src_combo_idx, **species_extra)
 
       default_label = gkquant.get_label(species=sp, direction=extra.get("dir"))
       if label is not None:

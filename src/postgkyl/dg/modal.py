@@ -192,17 +192,57 @@ def eval_at_coord_proj(grid: dict, basis_type: str, ndim: int,
 
 
 def power(basis_type: str, ndim: int, poly_order: int,
-    a: GkylArray, exponent) -> GkylArray:
-  """``f ** n`` for a positive integer ``n``, as repeated weak multiplies."""
+    a: GkylArray, exponent, cells=None) -> GkylArray:
+  """``f ** n``.
+
+  A positive integer ``n`` takes the cheap, exact path: repeated weak
+  multiplies. Any other exponent (0, negative, or fractional) falls
+  through to :func:`powsqrt` (``f ** n == pow(sqrt(f), 2n)``), which needs
+  ``cells`` (the grid's per-dimension cell count, e.g. ``ctx["cells"]``) to
+  build Gkeyll's index range -- required whenever this fallback fires.
+  """
   n = exponent
-  if not (isinstance(n, (int, np.integer)) and n >= 1):
+  if isinstance(n, (int, np.integer)) and n >= 1:
+    out = a.clone()
+    for _ in range(int(n) - 1):
+      out = weak_mul(basis_type, ndim, poly_order, out, a)
+    # end
+    return out
+  # end
+  if cells is None:
     raise ValueError(
-        f"modal power supports positive integer exponents only, got {n!r}; "
-        "interpolate first for general powers.")
+        f"modal power with exponent {n!r} (not a positive integer) needs "
+        "cells= to build the powsqrt kernel's index range.")
   # end
-  out = a.clone()
-  for _ in range(int(n) - 1):
-    out = weak_mul(basis_type, ndim, poly_order, out, a)
+  return powsqrt(basis_type, ndim, poly_order, cells, a, 2.0 * float(n))
+# end
+
+
+def powsqrt(basis_type: str, ndim: int, poly_order: int, cells,
+    a: GkylArray, exponent: float, num_quad: int | None = None) -> GkylArray:
+  """``pow(sqrt(f), exponent)`` (i.e. ``f ** (exponent/2)``), field by field.
+
+  ``gkyl_proj_powsqrt_on_basis`` has no field-index argument (like
+  :func:`average`'s ``gkyl_array_average``), so a multi-field ``a``
+  (``ncomp == nfields * num_basis``) is split into single-field slices
+  here and processed one at a time, then reassembled.
+  """
+  nb = gpython.basis.num_basis(basis_type, ndim, poly_order)
+  if a.ncomp % nb:
+    raise ValueError(f"ncomp {a.ncomp} is not a multiple of num_basis {nb}")
   # end
-  return out
+  nfields = a.ncomp // nb
+  if nfields == 1:
+    return gpython.kernels.powsqrt(basis_type, ndim, poly_order, cells, a,
+        exponent, num_quad=num_quad)
+  # end
+  a_view = a.view().reshape(a.size, nfields, nb)
+  fields_out = []
+  for f in range(nfields):
+    a_f = GkylArray.from_numpy(np.ascontiguousarray(a_view[:, f, :]))
+    out_f = gpython.kernels.powsqrt(basis_type, ndim, poly_order, cells, a_f,
+        exponent, num_quad=num_quad)
+    fields_out.append(out_f.view())
+  # end
+  return GkylArray.from_numpy(np.concatenate(fields_out, axis=-1))
 # end

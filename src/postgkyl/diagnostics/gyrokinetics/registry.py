@@ -92,6 +92,24 @@ _M2 = GkQuantity(
     label=r"$M_{2%s}$ (m$^{-1}$/s$^2$)", is_time_dep=True, is_species_dep=True)
 gk_quant_registry.register(_M2)
 
+_M3par = GkQuantity(
+    name="M3par", source=[["M3par"]], fetch_func=[ff.fetch_s0c0],
+    label=r"$M_{3\parallel%s}$ (1/s$^3$)", is_time_dep=True,
+    is_species_dep=True)
+gk_quant_registry.register(_M3par)
+
+_M3perp = GkQuantity(
+    name="M3perp", source=[["M3perp"]], fetch_func=[ff.fetch_s0c0],
+    label=r"$M_{3\perp%s}$ (1/s$^3$)", is_time_dep=True,
+    is_species_dep=True)
+gk_quant_registry.register(_M3perp)
+
+_M3 = GkQuantity(
+    name="M3", source=[["M3"], [_M3par, _M3perp]],
+    fetch_func=[ff.fetch_s0c0, ff.fetch_s0c0_add_s1c0],
+    label=r"$M_{3%s}$ (1/s$^3$)", is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_M3)
+
 _upar = GkQuantity(
     name="upar",
     source=[["MaxwellianMoments"], ["BiMaxwellianMoments"], [_M0, _M1]],
@@ -142,6 +160,55 @@ _beta = GkQuantity(
     is_time_dep=True, is_species_dep=True)
 gk_quant_registry.register(_beta)
 
+# --------------------------------------------------------------- heat fluxes
+_qpar = GkQuantity(
+    name="qpar", source=[[_M3par]], fetch_func=[ff.fetch_qpar],
+    label=r"$q_{\parallel %s}$ (W/m$^2$)", is_time_dep=True,
+    is_species_dep=True)
+gk_quant_registry.register(_qpar)
+
+_qperp = GkQuantity(
+    name="qperp", source=[[_M3perp]], fetch_func=[ff.fetch_qperp],
+    label=r"$q_{\perp %s}$ (W/m$^2$)", is_time_dep=True,
+    is_species_dep=True)
+gk_quant_registry.register(_qperp)
+
+_qpar_fluid = GkQuantity(
+    name="qpar_fluid", source=[[_M0, _M1, _M2par, _M3par]],
+    fetch_func=[ff.fetch_qpar_fluid], label=r"$q_{\parallel %s}^{fluid}$ (W/m$^2$)",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qpar_fluid)
+
+_qperp_fluid = GkQuantity(
+    name="qperp_fluid", source=[[_M0, _M1, _M2perp, _M3perp]],
+    fetch_func=[ff.fetch_qperp_fluid], label=r"$q_{\perp %s}^{fluid}$ (W/m$^2$)",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qperp_fluid)
+
+# ------------------------------------------------ thermal speed / lengths
+_vt = GkQuantity(
+    name="vt", source=[[_temp]], fetch_func=[ff.fetch_vt],
+    label=r"$v_{t,%s}$ (m/s)", is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_vt)
+
+_larmor_radius = GkQuantity(
+    name="larmor_radius", source=[[_temp, _geo_int_bmag]],
+    fetch_func=[ff.fetch_larmor_radius], label=r"$\rho_{%s}$ (m)",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_larmor_radius)
+
+_debye_length = GkQuantity(
+    name="debye_length", source=[[_temp, _M0]],
+    fetch_func=[ff.fetch_debye_length], label=r"$\lambda_{D,%s}$ (m)",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_debye_length)
+
+_c_s = GkQuantity(
+    name="c_s", source=[[_M0, _temp]], fetch_func=[ff.fetch_c_s],
+    label=r"$c_{s}$ (m/s)", is_time_dep=True, is_species_dep=False,
+    is_multi_species=True)
+gk_quant_registry.register(_c_s)
+
 # ----------------------------------------------------------- drift speeds
 _ExB_vel = GkQuantity(
     name="ExB_vel",
@@ -169,3 +236,39 @@ _distf = GkQuantity(
     name="distf", source=[[""]], fetch_func=[ff.load_distf], label=r"$f_{%s}$",
     is_time_dep=True, is_species_dep=True)
 gk_quant_registry.register(_distf)
+
+# ----------------------------------------------------------- normalized
+_rho_over_lambda = GkQuantity(
+    name="rho_over_lambda", source=[[_larmor_radius, _debye_length]],
+    fetch_func=[ff.fetch_rho_over_lambda], label=r"$(\rho/\lambda_D)_{%s}$",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_rho_over_lambda)
+
+_phi_norm = GkQuantity(
+    name="phi_norm", source=[[_field, _temp]], fetch_func=[ff.fetch_phi_norm],
+    label=r"$e\phi/T_{%s}$", is_time_dep=True, is_species_dep=False)
+gk_quant_registry.register(_phi_norm)
+
+_qpar_norm = GkQuantity(
+    name="qpar_norm", source=[[_qpar, _M0, _temp, _vt]],
+    fetch_func=[ff.fetch_qpar_norm], label=r"$q_{\parallel %s}/(n T v_{th})$",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qpar_norm)
+
+_qperp_norm = GkQuantity(
+    name="qperp_norm", source=[[_qperp, _M0, _temp, _vt]],
+    fetch_func=[ff.fetch_qperp_norm], label=r"$q_{\perp %s}/(n T v_{th})$",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qperp_norm)
+
+_qpar_fluid_norm = GkQuantity(
+    name="qpar_fluid_norm", source=[[_qpar_fluid, _M0, _temp, _vt]],
+    fetch_func=[ff.fetch_qpar_norm], label=r"$q_{\parallel %s}^{fluid}/(n T v_{t})$",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qpar_fluid_norm)
+
+_qperp_fluid_norm = GkQuantity(
+    name="qperp_fluid_norm", source=[[_qperp_fluid, _M0, _temp, _vt]],
+    fetch_func=[ff.fetch_qperp_norm], label=r"$q_{\perp %s}^{fluid}/(n T v_{t})$",
+    is_time_dep=True, is_species_dep=True)
+gk_quant_registry.register(_qperp_fluid_norm)

@@ -46,6 +46,12 @@ class GkQuantity:
     is_integrated: Whether the quantity is a grid integral.
     is_geo: Whether the quantity is a (frame-independent) geometry
       quantity, named ``<name>-<src>.gkyl`` with no frame number.
+    is_multi_species: Whether the quantity combines several species into a
+      single dataset (e.g. the sound speed, which mixes the electrons and
+      every ion). Such a quantity is fetched once for the whole species
+      list rather than once per species (:meth:`get_avail_source_multi`/
+      :meth:`fetch_multi`), and its fetch function receives one list of
+      sources per species instead of a flat list.
   """
 
   name: str
@@ -58,6 +64,7 @@ class GkQuantity:
   is_tensor: bool = False
   is_integrated: bool = False
   is_geo: bool = False
+  is_multi_species: bool = False
 
   # ------------------------------------------------------------ internal
   def _src_stem(self, path: str, name: str, species: str, src: str) -> str:
@@ -244,6 +251,56 @@ class GkQuantity:
     gdatas = [self.get_src_gdata(src, path, name, species, frame, **extra)
               for src in combo]
     extra = dict(extra, path=path, name=name, species=species, frame=frame)
+    return fetch_func(gdatas, **extra)
+  # end
+
+  def get_avail_source_multi(self, path: str, name: str,
+      species_list: list[str], frame_inp: str | None) -> tuple[int, list]:
+    """Multi-species counterpart of :meth:`get_avail_source`: resolve the
+    source combination and frames for every species in ``species_list``,
+    keeping only the frames available for all of them (the quantity folds
+    every species into one dataset, so a frame missing for any one of them
+    can't be computed at all).
+
+    Raises:
+      FileNotFoundError: if no frame is available for every species.
+    """
+    combo_idx = 0
+    frames_common: set[int] | None = None
+    for species in species_list:
+      combo_idx, frames = self.get_avail_source(path, name, species, frame_inp)
+      frames_common = (set(frames) if frames_common is None
+                        else frames_common & set(frames))
+    # end
+    if not frames_common:
+      raise FileNotFoundError(
+          f"No frames are available for all of the requested species "
+          f"{species_list} (path={path!r}, name={name!r}).")
+    # end
+    return combo_idx, sorted(frames_common)
+  # end
+
+  def fetch_multi(self, path: str, name: str, species_list: list[str],
+      frame: int | None, combo_idx: int, **extra) -> "GDataState":
+    """Multi-species counterpart of :meth:`fetch`, for
+    ``is_multi_species`` quantities.
+
+    The fetch function is handed one list of sources per species, in the
+    order of ``species_list``: ``gdatas[i][j]`` is the ``j``-th source of
+    the ``i``-th species. Each species' sources are resolved with
+    ``extra['species_idx']`` set to that species' position, so a
+    per-species ``--extra`` array (e.g. ``mass=1,2,3``) picks the right
+    entry inside the sources too, not just at the top level. Species names
+    are passed along as ``extra['species']``.
+    """
+    combo = self.source[combo_idx]
+    fetch_func = self.fetch_func[combo_idx]
+    gdatas = [[self.get_src_gdata(src, path, name, species, frame,
+                                   **dict(extra, species_idx=species_idx))
+               for src in combo]
+              for species_idx, species in enumerate(species_list)]
+    extra = dict(extra, path=path, name=name, species=list(species_list),
+        frame=frame)
     return fetch_func(gdatas, **extra)
   # end
 # end

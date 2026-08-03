@@ -416,6 +416,49 @@ def integrate(grid: dict, basis_type: str, poly_order: int, a: GkylArray,
 # end
 
 
+# -------------------------------------------------------------------- powsqrt
+def powsqrt(basis_type: str, ndim: int, poly_order: int, cells, a: GkylArray,
+    exponent: float, num_quad: int | None = None) -> GkylArray:
+  """Single-field ``pow(sqrt(a), exponent)`` (i.e. ``a ** (exponent/2)``) via
+  ``gkyl_proj_powsqrt_on_basis`` -- a Gauss-Legendre-quadrature projection,
+  not a fixed per-(basis_type, ndim, poly_order) kernel table like every
+  other function in this module: the real updater works off the basis's own
+  ``eval`` callback, so there is no coverage guard here beyond the shape
+  check below.
+
+  A negative value at a quadrature node is clamped to ``1e-40`` by the
+  updater itself (Gkeyll's own convention), which can differ from the DG
+  coefficients' own sign between nodes -- this is not re-validated here.
+
+  ``cells`` is the grid's per-dimension cell count (e.g. ``ctx["cells"]``);
+  no physical extent is needed, only cell indexing. ``num_quad`` defaults to
+  ``poly_order + 1``, matching the gyrokinetic app's own use of this
+  updater.
+  """
+  basis = get_basis(basis_type, ndim, poly_order)
+  if a.ncomp != basis.num_basis:
+    raise ValueError(
+        f"powsqrt: a.ncomp ({a.ncomp}) must equal the basis's num_basis "
+        f"({basis.num_basis}); powsqrt is single-field only")
+  # end
+  if num_quad is None:
+    num_quad = poly_order + 1
+  # end
+  if num_quad < 1:
+    raise ValueError(f"num_quad must be >= 1, got {num_quad}")
+  # end
+  cells = np.asarray(cells, dtype=np.int32)
+  if int(np.prod(cells)) != a.size:
+    raise ValueError(f"cells {tuple(cells)} do not cover the array "
+                     f"({int(np.prod(cells))} vs {a.size} cells)")
+  # end
+  out = GkylArray.alloc(basis.num_basis, a.size)
+  _lib.require().powsqrt(basis._cap, int(num_quad), float(exponent), cells,
+      out._cap, a._cap)
+  return out
+# end
+
+
 # --------------------------------------------------------------- differentiate
 # gkyl_dg_differentiate_op_local's kernel tables (gkyl_dg_differentiate_priv.h
 # ser_differentiate_list/ten_differentiate_list) cover only serendipity and

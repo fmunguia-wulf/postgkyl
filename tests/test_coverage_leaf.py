@@ -174,10 +174,41 @@ def test_local_poly_converts_nodal_basis_data_through_nodal_to_modal():
 
 # ======================================================================= dg/modal
 @needs_gkeyll
-def test_modal_power_rejects_non_positive_integer_exponents():
+def test_modal_power_non_integer_exponent_uses_powsqrt():
+  """A fractional exponent used to raise; it now routes through
+  ``dg.modal.powsqrt`` (``gkyl_proj_powsqrt_on_basis``) instead, field by
+  field, and must match the defining identity ``f ** 1.5 == f * (f ** 0.5)``
+  (the latter computed via the same powsqrt kernel at a different exponent,
+  so this pins the exponent-doubling translation rather than just "some
+  value came out")."""
   a = pg.load(F1)
-  with pytest.raises(ValueError, match="positive integer exponents"):
-    a ** 1.5
+  cubed_half = a ** 1.5
+  half = a ** 0.5
+  expect = dg.modal.weak_mul(a.ctx["basis_type"], a.num_dims,
+      a.ctx["poly_order"], a.native, half.native)
+  np.testing.assert_allclose(cubed_half.native.view(), expect.view(), atol=1e-8)
+# end
+
+
+@needs_gkeyll
+def test_modal_power_without_cells_raises_for_non_integer_exponent():
+  """``cells`` builds the powsqrt kernel's index range; calling ``dg.modal.
+  power`` directly (bypassing ``operations.arithmetic``, which always
+  supplies it from ``ctx["cells"]``) with a non-integer exponent and no
+  ``cells`` must fail clearly rather than crash inside the kernel."""
+  a = _const_gkyl_array("serendipity", 1, 1, [4], 3.0)
+  with pytest.raises(ValueError, match="needs cells="):
+    dg.modal.power("serendipity", 1, 1, a, 0.5)
+  # end
+# end
+
+
+@needs_gkeyll
+def test_modal_powsqrt_rejects_multi_field_ncomp_mismatch():
+  """``a.ncomp`` must be a multiple of the basis's ``num_basis``."""
+  a = gpython.GkylArray.alloc(3, 4)  # 3 is not a multiple of num_basis (2)
+  with pytest.raises(ValueError, match="not a multiple"):
+    dg.modal.powsqrt("serendipity", 1, 1, [4], a, 1.0)
   # end
 # end
 

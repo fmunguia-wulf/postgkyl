@@ -9,8 +9,11 @@ REFACTOR_GKEYLL_FFI.md):
 - **gkyl-backed (modal) operands** run inside Gkeyll: ``*``/``/`` are the weak
   kernels (``gkyl_dg_mul_op``/``div_op``), ``+``/``-`` are coefficient linear
   combinations (``gkyl_array_set``/``accumulate``), scalar multiply is
-  ``gkyl_array_scale``, scalar add shifts the mean coefficient, and integer
-  powers are repeated weak multiplies. Results stay modal (gkyl-backed).
+  ``gkyl_array_scale``, scalar add shifts the mean coefficient, positive
+  integer powers are repeated weak multiplies, and any other power (0,
+  negative, or fractional) is ``gkyl_proj_powsqrt_on_basis`` (a
+  quadrature projection of ``pow(sqrt(f), 2*exponent)``). Results stay
+  modal (gkyl-backed).
   Two modal operands of *different* dimensionality (e.g. a conf-space density
   times a phase-space distribution) automatically route ``*`` through
   ``gkyl_dg_mul_conf_phase_op_range`` instead -- whichever operand has fewer
@@ -227,7 +230,8 @@ def _modal_scalar(op, data: GDataState, s: float, *, scalar_first: bool):
     out = dg.modal.scale(dg.modal.weak_inv(*basis, A), s)
   # end
   elif op is operator.pow and not scalar_first:
-    out = dg.modal.power(*basis, A, s if not float(s).is_integer() else int(s))
+    out = dg.modal.power(*basis, A, s if not float(s).is_integer() else int(s),
+        cells=data.ctx.get("cells"))
   # end
   else:
     raise ValueError(
