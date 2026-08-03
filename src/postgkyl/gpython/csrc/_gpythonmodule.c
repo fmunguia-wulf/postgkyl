@@ -23,9 +23,14 @@
  * fail NumPy's own import_array() ABI check ("numpy.dtype size changed")
  * against a NumPy 2.2 runtime -- a real hazard here because pip's isolated
  * build environment resolves build-system.requires' numpy independently
- * from the numpy actually installed into the target environment. Targeting
- * the floor makes the compiled extension ABI-compatible with that floor and
- * every NumPy 2.x after it, regardless of which one built it.
+ * from the numpy actually installed into the target environment.
+ *
+ * This is a best-effort backstop, NOT a substitute for building against the
+ * actual runtime NumPy: a build/runtime version skew has been reproduced to
+ * crash outright (segfault / heap corruption inside Gkeyll's C code, not a
+ * clean import_array() failure) even with this pin in place -- see
+ * scripts/build_gpython.sh and README.md's "--no-build-isolation" install
+ * instructions, which are the real fix.
  */
 #define NPY_TARGET_VERSION NPY_2_2_API_VERSION
 #include <numpy/arrayobject.h>

@@ -27,7 +27,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install postgkyl
       run: |
-        pip install -e .[test]
+        # --no-build-isolation: the compiled gpython bridge must be built
+        # against the same NumPy that ends up installed, not whichever NumPy
+        # pip's isolated build environment independently resolves (see
+        # README.md's "Installing Postgkyl" section) -- a mismatch here is a
+        # real ABI hazard, not just a theoretical one (it crashes the native
+        # bridge at runtime with a NumPy version skew as small as one minor
+        # release).
+        pip install numpy setuptools
+        pip install -e .[test] --no-build-isolation
     - uses: pyvista/setup-headless-display-action@v4
     - name: Test with pytest
       run: |

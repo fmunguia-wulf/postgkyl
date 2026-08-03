@@ -33,13 +33,17 @@ PY_INCLUDES=$("${PYTHON}" -c "import sysconfig; print(sysconfig.get_path('includ
 NUMPY_INCLUDE=$("${PYTHON}" -c "import numpy; print(numpy.get_include())")
 
 # _gpythonmodule.c targets NPY_2_2_API_VERSION (pyproject.toml's numpy>=2.2.6
-# floor) so it is ABI-compatible with any NumPy >=2.2 that later imports it --
-# but that only holds if the NumPy compiled against is itself >=2.2. Under
-# pip's default build isolation, this ${PYTHON} is a throwaway environment
-# that resolves build-system.requires' numpy independently of whatever NumPy
-# ends up installed for running postgkyl, so a stale/mismatched NumPy here
-# (e.g. an ambient `python3` found ahead of the intended venv on PATH) would
-# otherwise silently bake a broken extension instead of failing at build time.
+# floor) as a best-effort backstop, but a build-time/run-time NumPy version
+# skew has been reproduced to crash the extension outright (segfault / heap
+# corruption inside Gkeyll's C code) rather than fail cleanly -- the pin
+# alone does not make a mismatched build safe. Under pip's default build
+# isolation, this ${PYTHON} is a throwaway environment that resolves
+# build-system.requires' numpy independently of whatever NumPy ends up
+# installed for running postgkyl, so a stale/mismatched NumPy here (e.g. an
+# ambient `python3` found ahead of the intended venv on PATH) would otherwise
+# silently bake a broken extension instead of failing at build time. Always
+# build with `--no-build-isolation` against the NumPy you're actually going
+# to run with (see README.md).
 NUMPY_OK=$("${PYTHON}" -c "
 import sys
 import numpy
