@@ -27,7 +27,17 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install postgkyl
       run: |
-        pip install --upgrade numpy setuptools wheel
+        # Pinned, not "--upgrade numpy": floating to whatever's newest on
+        # PyPI resolves a *different* NumPy per Python version once upstream
+        # drops support for an older interpreter mid-matrix (confirmed: NumPy
+        # 2.4/2.5 already require Python >=3.11/>=3.12, so "latest" silently
+        # stops matching across 3.10/3.11/3.12 here) -- non-reproducible and
+        # untested against the rest of the scientific stack (matplotlib's
+        # contourpy dependency, pyvista/VTK, pytables) on whatever day CI
+        # happens to run. Pin to the exact floor pyproject.toml already
+        # declares (numpy>=2.2.6) so every Python version in this matrix
+        # tests the same, already-vetted NumPy release; bump both together.
+        pip install "numpy==2.2.6" setuptools wheel
         pip install -e .[test] --no-build-isolation
     - uses: pyvista/setup-headless-display-action@v4
     - name: Test with pytest
