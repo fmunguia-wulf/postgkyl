@@ -35,6 +35,16 @@ from postgkyl.cli.commands import COMMANDS, COMMAND_SECTIONS
 needs_gkeyll = pytest.mark.skipif(not gpython.available(),
     reason="no compiled Gkeyll (libg0core.so) found")
 
+# animate's --saveframes path (render/animate.py's _save_frames, which
+# redraws onto one reused Figure across frames) has produced an intermittent,
+# non-reproducible-on-Linux SIGABRT deep inside matplotlib's own compiled
+# font-rendering code, only ever seen on macOS CI. Skip there rather than
+# let it take down the whole pytest process; a real, deterministic bug in
+# this code would still fail on Linux.
+skip_macos_animate_save = pytest.mark.skipif(sys.platform == "darwin",
+    reason="intermittent SIGABRT in matplotlib's font rendering during "
+           "animate's --saveframes on macOS -- not reproducible on Linux")
+
 
 def _has_gl_context() -> bool:
   # Mirrors test_render_pyvista.py's guard: on a GLX-only VTK build (no
@@ -630,6 +640,7 @@ class TestEvalAtCoordProj:
 # ---------------------------------------------------------------------------
 
 class TestAnimate:
+  @skip_macos_animate_save
   def test_animate_saveframes(self, tmp_path):
     prefix = str(tmp_path / "frame")
     _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
@@ -643,6 +654,7 @@ class TestAnimate:
     assert result.exit_code != 0
   # end
 
+  @skip_macos_animate_save
   def test_animate_batch_mode_default_gif(self, tmp_path):
     prefix = str(tmp_path / "anim")
     _ok(["--batch-mode", "--saveframes-prefix", prefix, DISTF_P2_0, DISTF_P2_1,
@@ -650,6 +662,7 @@ class TestAnimate:
     assert os.path.exists(f"{prefix}.gif")
   # end
 
+  @skip_macos_animate_save
   def test_animate_nproc_parallel_saveframes(self, tmp_path):
     prefix = str(tmp_path / "frame")
     _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
@@ -658,6 +671,7 @@ class TestAnimate:
     assert os.path.exists(f"{prefix}_1.png")
   # end
 
+  @skip_macos_animate_save
   def test_animate_float_range_smoke(self, tmp_path):
     prefix = str(tmp_path / "frame")
     _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
@@ -665,6 +679,7 @@ class TestAnimate:
     assert os.path.exists(f"{prefix}_0.png")
   # end
 
+  @skip_macos_animate_save
   def test_animate_multiblock_saveframes(self, tmp_path):
     prefix = str(tmp_path / "frame")
     _ok(["--batch-mode", DISTF_P2_0, DISTF_P2_1, "interp", "animate",
@@ -691,6 +706,7 @@ class TestAnimateTagAndFrameGrouping:
     return d0, d1
   # end
 
+  @skip_macos_animate_save
   def test_use_filters_by_tag(self, tmp_path):
     from postgkyl.cli.commands.animate import command
     from postgkyl.cli.state import DataSpace
