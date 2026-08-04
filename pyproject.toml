@@ -47,7 +47,14 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=9.0.3"]
+test = [
+    "pytest>=9.0.3",
+    # macOS CI only: isolates each test in its own forked process (see
+    # .github/workflows/test.yml's --forked flag) so a native-library abort
+    # deep in a compiled dependency (matplotlib/FreeType, VTK, ...) fails
+    # just that one test instead of taking down the whole session.
+    "pytest-forked>=1.6.0; sys_platform == 'darwin'",
+]
 
 [project.urls]
 Documentation = "https://gkeyll.readthedocs.io/"

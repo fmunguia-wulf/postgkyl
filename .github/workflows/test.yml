@@ -42,4 +42,15 @@ jobs:
     - uses: pyvista/setup-headless-display-action@v4
     - name: Test with pytest
       run: |
-        pytest
+        # macOS only: --forked (pytest-forked, installed via pyproject.toml's
+        # sys_platform=='darwin' marker) runs each test in its own forked
+        # process, so a native-library abort in a compiled dependency
+        # (matplotlib/FreeType, VTK, ...) -- observed repeatedly on macOS CI
+        # and never on Linux -- fails just that one test instead of taking
+        # down the whole 1700-test session. Skipped on Linux: unneeded there,
+        # and forking every test adds real overhead.
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          pytest --forked
+        else
+          pytest
+        fi

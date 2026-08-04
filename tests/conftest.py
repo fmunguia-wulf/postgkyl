@@ -21,14 +21,17 @@ imports) can run:
   this fixture is the backstop for any call (present or future) that forgets
   to pass ``show=False`` explicitly.
 
-Session fixture
----------------
-``generated_test_data`` runs once per pytest session and writes synthetic
-.gkyl files to ``tests/test_data/generated/`` (gitignored -- every test that
-reads from that directory depends on this fixture via autouse). Without it,
-a clean checkout (e.g. CI) has no fixtures to read; only a machine where
-someone has run ``python tests/generate_test_data.py`` (or a prior pytest
-session) before would happen to have them already on disk.
+Test data generation
+--------------------
+``pytest_configure`` writes synthetic .gkyl files to
+``tests/test_data/generated/`` (gitignored -- every test that reads from
+that directory depends on this running first). It is a hook, not a
+session-scoped autouse fixture, specifically so it runs exactly once in the
+true parent process before collection or any forking begins -- see its own
+comment for why a fixture is the wrong tool once macOS CI's --forked is in
+play. Without it, a clean checkout (e.g. CI) has no fixtures to read; only a
+machine where someone has run ``python tests/generate_test_data.py`` (or a
+prior pytest session) before would happen to have them already on disk.
 """
 from __future__ import annotations
 
@@ -109,9 +112,14 @@ def _block_gui_popups():
 # end
 
 
-@pytest.fixture(scope="session", autouse=True)
-def generated_test_data():
-  """Write synthetic .gkyl test files before any test runs."""
+def pytest_configure(config: pytest.Config) -> None:
+  # A session-scoped autouse *fixture* only actually runs on first request,
+  # which lands inside whichever test forks first under macOS CI's --forked
+  # (see test.yml) -- pytest's "already cached" bookkeeping then lives in
+  # that child's forked copy of the session, never propagating back to the
+  # parent, so every subsequent forked test re-triggers it too (measured:
+  # 40 re-generations for 40 tests instead of one). pytest_configure runs
+  # exactly once, in the true parent process, before collection or any
+  # forking begins, so this is immune to that regardless of --forked.
   generate_all(GEN_DIR)
-  return GEN_DIR
 # end
