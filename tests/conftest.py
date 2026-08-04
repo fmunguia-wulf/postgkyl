@@ -32,6 +32,8 @@ session) before would happen to have them already on disk.
 """
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -42,6 +44,36 @@ import pytest
 from generate_test_data import generate_all
 
 GEN_DIR = Path(__file__).parent / "test_data" / "generated"
+
+# macOS-only escape hatch: ``postgkyl``'s facade (__init__.py -> render ->
+# render.pyvista) unconditionally imports PyVista's VTK bindings, so every
+# test process here loads the full native VTK stack regardless of whether
+# any PyVista test runs. On macOS CI (observed on Python 3.10, 3.11, and
+# 3.12 alike -- not Python-version-specific, so not the intermittent
+# matplotlib font-rendering issue tracked elsewhere in this suite) VTK's own
+# C++ global/static destructors reproducibly SIGSEGV during CPython's
+# interpreter finalization, always *after* pytest has already run every
+# test and printed its full (passing) summary. Nothing of value happens in
+# that teardown window, so once pytest has reported its result, exit the
+# process immediately via ``os._exit`` -- bypassing the interpreter
+# finalization that walks into VTK's broken destructors -- instead of
+# letting a native-library crash overwrite an already-successful result
+# with a misleading CI failure.
+_exit_status: list[int] = []
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+  _exit_status.append(int(exitstatus))
+# end
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+  if sys.platform == "darwin" and _exit_status:
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(_exit_status[0])
+  # end
+# end
 
 
 @pytest.fixture(scope="session", autouse=True)
