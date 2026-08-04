@@ -10,6 +10,8 @@ case below builds one via ``GDataState().push(...)``.
 
 from __future__ import annotations
 
+import sys
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib as mpl
@@ -51,6 +53,18 @@ def _chrome_available() -> bool:
 
 needs_chrome = pytest.mark.skipif(not _chrome_available(),
     reason="no Chrome/Chromium found for kaleido")
+
+# kaleido's Chrome subprocess (managed by the `choreographer` library under
+# start_sync_server()/stop_sync_server()) has produced an intermittent,
+# non-reproducible-on-Linux segfault during CPython's own interpreter
+# finalization -- well after the whole pytest session has already passed --
+# only ever seen on macOS CI. Skip there rather than let it take down the
+# whole pytest process; see skip_macos_animate_save in test_cli_commands.py
+# for the same pattern applied to an analogous matplotlib/macOS crash.
+skip_macos_chrome = pytest.mark.skipif(sys.platform == "darwin",
+    reason="intermittent segfault during kaleido's Chrome subprocess "
+           "teardown at interpreter shutdown on macOS -- not reproducible "
+           "on Linux")
 
 
 def _state(grid, values) -> GDataState:
@@ -544,6 +558,7 @@ class TestSaveRotatingPlotlyFigure:
 
   @needs_ffmpeg
   @needs_chrome
+  @skip_macos_chrome
   def test_gif_export_end_to_end(self, tmp_path):
     # fps * rotation_period = 2 -- the minimum frame count that still
     # exercises the multi-frame rotation loop (fewer, and the `max(2, ...)`
@@ -558,6 +573,7 @@ class TestSaveRotatingPlotlyFigure:
 
   @needs_ffmpeg
   @needs_chrome
+  @skip_macos_chrome
   def test_mp4_export_end_to_end(self, tmp_path):
     out = tmp_path / "out.mp4"
     save_rotating_plotly_figure(self._scene_fig(), str(out), 0.0, 2, 1.0, 1.0)
