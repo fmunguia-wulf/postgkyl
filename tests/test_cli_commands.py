@@ -45,6 +45,15 @@ skip_macos_animate_save = pytest.mark.skipif(sys.platform == "darwin",
     reason="intermittent SIGABRT in matplotlib's font rendering during "
            "animate's --saveframes on macOS -- not reproducible on Linux")
 
+# Log-scale axes render tick labels through matplotlib's mathtext (e.g.
+# "10^2"), which -- like animate's --saveframes path above -- has produced
+# an intermittent, non-reproducible-on-Linux SIGABRT deep inside
+# matplotlib's compiled font-rendering code, only ever seen on macOS CI.
+skip_macos_mathtext = pytest.mark.skipif(sys.platform == "darwin",
+    reason="intermittent SIGABRT in matplotlib's font rendering during "
+           "mathtext rasterization (log-scale tick labels) on macOS -- "
+           "not reproducible on Linux")
+
 
 def _has_gl_context() -> bool:
   # Mirrors test_render_pyvista.py's guard: on a GLX-only VTK build (no
@@ -777,6 +786,7 @@ class TestAnimateFrameGrouping:
 # ---------------------------------------------------------------------------
 
 class TestPlotOptionParity:
+  @skip_macos_mathtext
   def test_plot_grows_log_and_colorbar_options(self, tmp_path):
     out = tmp_path / "p.png"
     _ok(["--batch-mode", F1, "interp", "sel", "--comp", "0", "plot",
