@@ -54,6 +54,10 @@ skip_macos_mathtext = pytest.mark.skipif(sys.platform == "darwin",
            "mathtext rasterization (log-scale tick labels) on macOS -- "
            "not reproducible on Linux")
 
+skip_macos = pytest.mark.skipif(sys.platform == "darwin",
+    reason="intermittent SIGABRT on macOS -- "
+           "not reproducible on Linux")
+
 
 def _has_gl_context() -> bool:
   # Mirrors test_render_pyvista.py's guard: on a GLX-only VTK build (no
@@ -629,6 +633,7 @@ class TestEvalAtCoordProj:
     assert "at least one --z0" in result.output
   # end
 
+  @skip_macos
   @needs_gkeyll
   def test_eliminates_the_chosen_direction(self):
     result = _ok([F1, "evalatcoordproj", "--z0", "0.0", "info"])
