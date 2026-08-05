@@ -22,7 +22,7 @@ from . import (
     parrotate, perprotate, bparrotate, bperprotate, transform_frame,
     laguerre_compose,
     plotly, plotly_animate, pyvista, style,
-    gk_distf, gk_load_quantity, gkyl_pkpm,
+    gk_distf, gk_energy_balance, gk_load_quantity, gkyl_pkpm,
     listoutputs, status,
 )
 from . import print as _print
@@ -71,6 +71,7 @@ COMMANDS = [
     pyvista.command,
     style.command,
     gk_distf.command,
+    gk_energy_balance.command,
     gk_load_quantity.command,
     gkyl_pkpm.command,
     listoutputs.command,
@@ -91,7 +92,7 @@ COMMAND_SECTIONS: dict[str, list[str]] = {
     ],
     "Diagnostics": [
         "agyro", "bparrotate", "bperprotate", "current", "energetics",
-        "euler", "gk_distf", "gk_load_quantity", "gkyl_pkpm", "laguerre_compose",
+        "euler", "gk_distf", "gk_energy_balance", "gk_load_quantity", "gkyl_pkpm", "laguerre_compose",
         "mhd", "parrotate", "perprotate", "tenmoment", "transform_frame",
         "velocity",
     ],
