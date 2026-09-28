@@ -68,8 +68,11 @@ Integration and cuts
 ----------------------
 
 Integrating a modal field uses the DG representation directly.
-``average`` and partial ``integrate`` can reduce dimensionality while keeping
-a modal dataset for further operations. ``eval_at_coord_proj`` evaluates at
+Partial ``average`` and ``integrate`` reduce dimensionality while keeping
+a modal dataset for further operations. Averaging or integrating every axis
+returns a physical scalar (one field) or an array (multiple fields); the CLI
+prints these values directly. For example, ``average --dims 0 --dims 1``
+returns the genuine mean of a 2D field, not its expansion coefficient. ``eval_at_coord_proj`` evaluates at
 specified coordinates and projects into the basis of the surviving directions.
 
 After interpolation, ``select(comp=...)`` selects components and

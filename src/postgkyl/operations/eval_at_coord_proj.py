@@ -2,7 +2,7 @@
 coordinates in a subset of directions, projecting onto the lower-dimensional
 target basis for the survivors, via Gkeyll's ``gkyl_dg_eval_at_coord_proj``.
 
-Terminal-adjacent (like ``average``): produces a new, lower-dimensional
+Produces a new, lower-dimensional
 dataset -- still modal and gkyl-native -- so it composes with further
 ``.represent(to='nodal')``/``.interpolate()``/``.eval_at_coord_proj()`` calls.
 """

@@ -234,6 +234,55 @@ def test_weighted_average_preserves_analytic_dependence(case, removed):
   np.testing.assert_allclose(result.values, expected, **ROUND_OFF)
 
 
+@pytest.mark.parametrize("weighted", [False, True])
+def test_full_average_returns_physical_mean(integrable_case, weighted):
+  data, factors, grid = integrable_case
+  weight = data.select(comp=1) if weighted else None
+  expected = np.array([
+      np.prod([
+          _integral(p * factors[1][d], edges) /
+          _integral(factors[1][d], edges) if weighted else _integral(p, edges) /
+          (edges[-1] - edges[0])
+          for d, (p, edges) in enumerate(zip(field, grid))
+      ]) for field in factors
+  ])
+  result = data.average(range(data.num_dims), weight=weight)
+  np.testing.assert_allclose(result, expected, **ROUND_OFF)
+  single = data.select(comp=0).average(range(data.num_dims), weight=weight)
+  assert isinstance(single, float)
+  np.testing.assert_allclose(single, expected[0], **ROUND_OFF)
+
+
+def test_cli_full_average_prints_genuine_mean():
+  process = subprocess.run([
+      "pgkyl",
+      str(GEN / "polynomial_2d_ms_p1.gkyl"), "average", "--dims", "0", "--dims",
+      "1"
+  ],
+                           capture_output=True,
+                           text=True,
+                           timeout=30)
+  assert process.returncode == 0, process.stderr
+  values = np.fromstring(process.stdout.strip().strip("[]"), sep=" ")
+  # Exact means over [-1,2] x [1/4,9/4], from antiderivatives.
+  np.testing.assert_allclose(values, [11.25, 13.078125], **ROUND_OFF)
+
+
+@pytest.mark.parametrize("options", [{
+    "inplace": True
+}, {
+    "tag": "mean"
+}, {
+    "label": "mean"
+}])
+def test_full_average_rejects_dataset_options(options):
+  data = pg.load(GEN / "polynomial_2d_ms_p1.gkyl")
+  before = data.values.copy()
+  with pytest.raises(ValueError, match="only to partial averaging"):
+    data.average([0, 1], **options)
+  np.testing.assert_array_equal(data.values, before)
+
+
 def _coordinate_projection(data, directions, coordinates, tmp_path):
   output = tmp_path / "projection.npz"
   # Regression protection: an output-stride bug used to corrupt native memory.

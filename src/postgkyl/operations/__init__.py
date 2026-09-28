@@ -76,8 +76,8 @@ _TERM_ALL = CommandSpec(Section.UTILITY,
                         Execution.TERMINAL_ALL,
                         result=ResultPolicy.VALUE)
 
-for _function in (interpolate, local_poly, select, average, eval_at_coord_proj,
-                  fft, magsq, grid, differentiate, map, map_to_rz,
+for _function in (interpolate, local_poly, select, eval_at_coord_proj, fft,
+                  magsq, grid, differentiate, map, map_to_rz,
                   extract_flux_surface):
   command(_MAP)(_function)
 command(_APPEND)(val2coord)
@@ -97,10 +97,11 @@ command(
     CommandSpec(Section.UTILITY,
                 Execution.TERMINAL_ALL,
                 result=ResultPolicy.SILENT))(print)
-command(
-    CommandSpec(Section.VERBS,
-                Execution.MAP_OR_TERMINAL_EACH,
-                result=ResultPolicy.VALUE))(integrate)
+for _function in (integrate, average):
+  command(
+      CommandSpec(Section.VERBS,
+                  Execution.MAP_OR_TERMINAL_EACH,
+                  result=ResultPolicy.VALUE))(_function)
 command(_TERM_EACH)(extract_input)
 command(_MAP)(represent)
 

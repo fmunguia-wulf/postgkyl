@@ -84,9 +84,9 @@ def test_rpn_addition_of_independent_loads_has_analytic_values():
 def test_weighted_average_checks_collocation_and_accepts_one_weight_field():
   data = pg.load(GEN / "polynomial_1d_ms_p1.gkyl")
   weight = data.select(comp=0)
-  result = data.average([0], weight=weight).interpolate()
+  result = data.average([0], weight=weight)
   # int(f^2)=21, int(f*g)=28.5, int(f)=7.5.
-  np.testing.assert_allclose(result.values, [[2.8, 3.8]] * 2, **ROUND_OFF)
+  np.testing.assert_allclose(result, [2.8, 3.8], **ROUND_OFF)
   shifted = weight.clone()
   shifted.grid = [shifted.grid[0] + 10]
   with pytest.raises(ValueError, match="different grids"):
@@ -134,9 +134,9 @@ def test_native_uniform_grid_accepts_coordinate_roundoff_at_large_origin():
   # reconstructed from its bounds. In xi=x-1e9, f=1+3*xi, g=4.25-0.75*xi.
   assert np.ptp(np.diff(data.grid[0])) > 1e-8
   np.testing.assert_allclose(data.integrate(), [2.5, 3.875], **ROUND_OFF)
-  average = data.average([0], weight=data.select(comp=0)).interpolate()
+  average = data.average([0], weight=data.select(comp=0))
   # int(f*f)/int(f)=2.8; int(f*g)/int(f)=3.8, invariant under this affine map.
-  np.testing.assert_allclose(average.values, [[2.8, 3.8]] * 2, **ROUND_OFF)
+  np.testing.assert_allclose(average, [2.8, 3.8], **ROUND_OFF)
 
 
 def test_rpn_gradient_and_integral_respect_nonuniform_point_coordinates():

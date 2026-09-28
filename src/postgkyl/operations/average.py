@@ -1,10 +1,8 @@
 """The ``average`` verb -- weighted (or plain) average of a native DG field
 over a subset of dimensions, via Gkeyll's ``gkyl_array_average``.
 
-Terminal-adjacent (like ``represent``): unlike ``integrate`` (whose whole-grid
-mode returns numbers), this produces a new, lower-dimensional dataset -- still
-modal and gkyl-native -- so it composes with ``.represent(to='nodal')``,
-``.interpolate()``, and further ``.average()`` calls.
+A full average is terminal and returns one physical mean per field. Partial
+averaging preserves native modal data over the surviving dimensions.
 """
 
 from __future__ import annotations
@@ -52,26 +50,26 @@ def average(data: "GDataState",
 
   Args:
     data: gkyl-backed (native modal) dataset in the modal value_form.
-    dims: iterable of 0-based direction indices to average over (e.g. the
-      selected ``z0``-``z5`` flags at the CLI layer).
+    dims: iterable of 0-based direction indices to average over (repeat
+      ``--dims`` at the CLI, e.g. ``--dims 0 --dims 1``).
     weight: optional gkyl-backed dataset in the modal value_form, same
       ``num_dims``/``basis_type``/``poly_order`` as ``data`` and exactly one
       field (``gkyl_array_average`` takes no field-index argument) -- the
       plain average (dividing by volume) is computed when omitted.
-    inplace: Mutate and return ``data`` instead of creating a dataset.
-    tag: Optional tag for the returned dataset.
-    label: Optional label for the returned dataset.
+    inplace: Mutate and return ``data`` for partial averaging only.
+    tag: Optional tag for a partial-average dataset.
+    label: Optional label for a partial-average dataset.
 
   Returns:
-    A new dataset over the surviving dimensions -- or a single degenerate
-    dimension (``grid=[0, 1]``) when every direction is averaged out,
-    Gkeyll's own convention since there is no true 0-dimensional basis --
-    still modal and gkyl-native.
+    A float (one field) or NumPy array (multiple fields) containing the
+    physical mean when every direction is averaged out. Otherwise a native
+    modal dataset over the surviving dimensions. Dataset-only options
+    ``inplace``, ``tag``, and ``label`` apply only to partial averaging.
 
   Raises:
     ValueError: ``data`` (or ``weight``) is NumPy-backed or non-modal, is
       missing basis metadata, or ``weight``'s grid/basis doesn't match
-      ``data``'s.
+      ``data``'s, or dataset-only options are used for a full average.
   """
   basis_type, poly_order = _native_basis(data, "data")
   ndim = data.num_dims
@@ -100,10 +98,18 @@ def average(data: "GDataState",
                                                       dims,
                                                       weight=weight_native)
 
-  if keep_dirs:
-    new_grid = [np.asarray(data.grid[d]) for d in keep_dirs]
-  else:
-    new_grid = [np.array([0.0, 1.0])]
+  if not keep_dirs:
+    if inplace or tag is not None or label is not None:
+      raise ValueError(
+          "inplace, tag, and label apply only to partial averaging, which "
+          "returns a dataset")
+    # The DG layer returns a constant one-cell 1D modal field, including
+    # for weighted averages. Reconstruct its physical mean: phi0=1/sqrt(2).
+    coefficients = out_native.view().reshape(-1, poly_order + 1)
+    means = coefficients[:, 0] / np.sqrt(2.0)
+    return float(means[0]) if means.size == 1 else means
+
+  new_grid = [np.asarray(data.grid[d]) for d in keep_dirs]
 
   return data._result(new_grid,
                       out_native,

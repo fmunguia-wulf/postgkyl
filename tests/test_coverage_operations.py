@@ -345,15 +345,9 @@ def test_integrate_requires_basis_metadata():
 def test_average_full_reduction_matches_integrate_over_volume():
   a = pg.load(F1)
   avg = a.average([0])
-  assert avg.num_dims == 1
-  assert avg.ctx["cells"].tolist() == [1]
   lo, up = a.bounds
   volume = float(up[0] - lo[0])
-  integral = a.integrate()
-  b0 = 2.0**(-avg.num_dims / 2.0)
-  np.testing.assert_allclose(np.asarray(avg.native.view())[0, ::2] * b0,
-                             np.asarray(integral) / volume,
-                             rtol=1e-8)
+  np.testing.assert_allclose(avg, np.asarray(a.integrate()) / volume, rtol=1e-8)
 
 
 @needs_gkeyll
@@ -407,9 +401,7 @@ def test_average_accepts_a_compatible_weight():
     return data
 
   out = constant_state(3.0).average([0], weight=constant_state(2.0))
-  np.testing.assert_allclose(out.native.view()[0, 0] / basis_constant,
-                             3.0,
-                             atol=1e-10)
+  np.testing.assert_allclose(out, 3.0, atol=1e-10)
 
 
 @needs_gkeyll
@@ -458,17 +450,17 @@ def test_average_rejects_weight_mismatch():
 
 @needs_gkeyll
 def test_average_tag_and_label_and_inplace():
-  a = pg.load(F1)
+  a = pg.load(F3)
   out = a.average([0], tag="reduced", label="my label")
   assert out.tag == "reduced"
   assert out.label == "my label"
-  assert a.num_dims == 1 and a.ctx["cells"].tolist() != [1
-                                                         ]  # original untouched
+  assert a.num_dims == 3
+  assert out.num_dims == 2
 
-  b = pg.load(F1)
+  b = pg.load(F3)
   mutated = b.average([0], inplace=True)
   assert mutated is b
-  assert b.ctx["cells"].tolist() == [1]
+  assert b.num_dims == 2
 
 
 # ============================================================= operations.integrate
