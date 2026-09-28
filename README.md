@@ -127,7 +127,7 @@ bash scripts/update_pgkyl.sh
 ```
 
 The script pulls the current Postgkyl branch's upstream with `--ff-only`,
-fetches Gkeyll and checks out the commit pinned in `scripts/gkeyll-revision`,
+fetches and fast-forwards Gkeyll to the latest `main`,
 rebuilds Gkeyll and the `gpython` extension, and reinstalls Postgkyl. It uses the active
 `python`; set `PYTHON=/path/to/python` to choose another interpreter. Keep NumPy and
 the build tools installed as described above.
@@ -184,9 +184,9 @@ the bridge already.
 
 During a source build, `setup.py` runs `scripts/build_gkeyll.sh`, which:
 
-1. Fetches the [Gkeyll](https://github.com/ammarhakim/gkeyll) branch named in
-   `scripts/gkeyll-branch`, then checks out the immutable commit recorded in
-   `scripts/gkeyll-revision` in `gkeyll/`.
+1. Fetches the latest [Gkeyll](https://github.com/ammarhakim/gkeyll) `main`
+   (named in `scripts/gkeyll-branch`) and fast-forwards the `gkeyll/` checkout
+   to that branch tip. Every source build checks for updates; no commit is pinned.
 2. Builds its core library with the bundled LAPACK implementation. No
    separate MPI, CUDA, SuperLU, Lua, or system LAPACK installation is needed.
 3. Builds the Python extension and bundles the core library beside it, so
