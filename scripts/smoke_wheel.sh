@@ -11,8 +11,6 @@ fi
 
 PYTHON="${PYTHON:-python3}"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-ROOT_DIR=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
-SMOKE_FIELD="${ROOT_DIR}/tests/test_data/rt_gk_tcv_iwl_adapt_source_1x2v_p1-ion_HamiltonianMoments_250.gkyl"
 case "$1" in
     /*) WHEEL=$1 ;;
     *) WHEEL=$(pwd)/$1 ;;
@@ -32,32 +30,10 @@ if [ "${POSTGKYL_SMOKE_NO_DEPS:-0}" = "1" ]; then
     "${SMOKE_DIR}/venv/bin/python" -m pip install --no-deps "${WHEEL}"
 else
     "${PYTHON}" -m venv "${SMOKE_DIR}/venv"
-    "${SMOKE_DIR}/venv/bin/python" -m pip install "${WHEEL}"
+    "${SMOKE_DIR}/venv/bin/python" -m pip install "${WHEEL}[test]"
 fi
 
 cd "${SMOKE_DIR}"
-POSTGKYL_SMOKE_FIELD="${SMOKE_FIELD}" \
-    "${SMOKE_DIR}/venv/bin/python" - <<'PY'
-import os
-from pathlib import Path
-
-import postgkyl
-from postgkyl import gpython
-
-assert gpython.available(), "the wheel's compiled Gkeyll bridge did not load"
-extension = gpython.lib_path()
-assert extension is not None
-core = extension.with_name("libg0core.so")
-assert core.is_file(), f"wheel does not contain {core}"
-assert "site-packages" in str(Path(postgkyl.__file__).resolve())
-assert gpython.require().api_version() == gpython.require().GPYTHON_API_VERSION
-field = Path(os.environ["POSTGKYL_SMOKE_FIELD"])
-modal = postgkyl.load(field)
-point_values = modal.interpolate()
-assert modal.backend == "gkyl"
-assert point_values.backend == "numpy"
-print(f"loaded {extension}")
-print(f"loaded bundled {core}")
-PY
+POSTGKYL_REQUIRE_GKEYLL=1 "${SMOKE_DIR}/venv/bin/python" "${SCRIPT_DIR}/check_wheel.py"
 "${SMOKE_DIR}/venv/bin/pgkyl" --version
 "${SMOKE_DIR}/venv/bin/python" -m pip check

@@ -5,16 +5,15 @@ description: Set up Postgkyl development, format code, choose verification comma
 
 # Develop and verify
 
-Install NumPy before the extension so it builds against the runtime ABI:
+Install directly; pip supplies the isolated build dependencies:
 
 ```bash
-pip install --upgrade numpy setuptools wheel
-pip install --no-build-isolation -e '.[test]'
+python -m pip install -e '.[test]'
 ```
 
 For native source changes, follow the [local Gkeyll development workflow](../native/SKILL.md#local-gkeyll-development)
-instead of the clean installation commands above. It covers direct
-producer edits, in-place builds, and leaving changes uncommitted.
+for direct producer edits. Repeating the editable installation builds the
+existing producer checkout, including uncommitted changes, without updating it.
 
 Run focused tests for the change, then the required broader checks:
 

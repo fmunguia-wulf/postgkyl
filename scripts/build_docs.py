@@ -10,7 +10,6 @@ import argparse
 import inspect
 import json
 from pathlib import Path
-import re
 import runpy
 import shlex
 import shutil
@@ -259,19 +258,6 @@ def prepare(root: Path, output: Path) -> None:
   comparison = gallery["run_gallery"](root, figures)
   write_figure_pairs(root, output, comparison)
   shutil.copytree(root / "docs/_ext", output / "_ext")
-
-  readme = (root / "README.md").read_text()
-  installation = readme.split("## Installation\n",
-                              1)[1].split("## Documentation\n", 1)[0]
-  notes = readme.split("### Additional installation notes\n",
-                       1)[1].split("## Developing for Postgkyl\n", 1)[0]
-  installation = "# Installation\n" + installation + "## Additional notes\n" + notes
-  installation = re.sub(r"^#(#{2,} )", r"\1", installation, flags=re.MULTILINE)
-  for name in ("environment.yml", "pyproject.toml"):
-    installation = installation.replace(
-        f"]({name})",
-        f"](https://github.com/ammarhakim/postgkyl/blob/main/{name})")
-  (output / "installation.md").write_text(installation)
 
   inventory = write_reference(output)
   revision = subprocess.check_output(

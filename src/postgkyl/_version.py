@@ -3,7 +3,7 @@ computing API (only ``cli/app.py``'s ``--version`` flag reads this).
 
 Reports the postgkyl commit this checkout is at, the vendored Gkeyll commit
 it was built against (via ``gpython.build_info()``, generated at build time
-by scripts/build_gpython.sh since gkeyll/ is a build-time-only clone), and
+by setup.py since gkeyll/ is a build-time-only clone), and
 interpreter/platform/dependency versions -- everything a bug report needs
 without asking the user to gather it by hand.
 """
@@ -53,7 +53,7 @@ def _postgkyl_commit() -> str:
 def _gkeyll_info() -> str:
   build = gpython.build_info()
   if build is None:
-    return "not built (no compiled Gkeyll bridge -- see scripts/build_gkeyll.sh)"
+    return "not built (no compiled Gkeyll bridge -- reinstall Postgkyl)"
   return (f"{build['gkeyll_commit'][:12]} ({build['gkeyll_branch']}, "
           f"committed {build['gkeyll_commit_date']})")
 

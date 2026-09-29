@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "numpy>=2.2.6"]
+requires = ["setuptools>=77", "numpy>=2.2.6"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +23,7 @@ dependencies = [
   "imageio-ffmpeg>=0.6.0",
 ]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
 maintainers = [
   {name = "Petr Cagas", email = "p.cagas@hzdr.de"}
 ]
@@ -36,7 +36,6 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
@@ -56,6 +55,7 @@ docs = [
     "myst-parser>=4,<5",
 ]
 test = [
+    "setuptools>=77",
     "pre-commit==4.3.0",
     "pytest>=9.0.3",
     "pytest-cov>=7.0.0",
@@ -88,9 +88,11 @@ where = ["src/"]
 [tool.setuptools.package-data]
 "postgkyl" = ["py.typed"]
 "postgkyl.render" = ["*.mplstyle", "*.js"]
-# the compiled bridge (scripts/build_gpython.sh) + the extension source; the
-# gpython shim itself lives in the gkeyll repo (GKEYLL_C_SHIM.md)
-"postgkyl.gpython" = ["_gpython.so", "csrc/*.c"]
+"postgkyl.gpython" = ["csrc/*.c"]
+
+[tool.setuptools.exclude-package-data]
+# Native artifacts are owned by build_ext, never copied from an earlier build.
+"postgkyl.gpython" = ["*.so", "_build_info.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -140,3 +142,22 @@ extend-exclude = ["gkeyll"]
 
 [tool.ruff.lint]
 select = ["F"]
+
+[tool.cibuildwheel]
+build = "cp3{10,11,12,13,14}-*"
+skip = "*-musllinux*"
+archs = ["native"]
+test-requires = ["pytest>=9.0.3", "pytest-timeout>=2.4.0"]
+test-command = [
+    "python {project}/scripts/check_wheel.py",
+    "python -m pip install postgkyl \"numpy==2.2.6; python_version < '3.14'\" \"numpy==2.3.3; python_version >= '3.14'\"",
+    "python {project}/scripts/check_wheel.py",
+]
+environment = { POSTGKYL_REQUIRE_GKEYLL = "1", OPENBLAS_NUM_THREADS = "1", OMP_NUM_THREADS = "1" }
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "dnf install -y git mesa-libGL"
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }

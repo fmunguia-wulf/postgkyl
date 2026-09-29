@@ -7,10 +7,9 @@ If an operation reports missing Gkeyll support, run:
 
    python -c "from postgkyl import gpython; gpython.require()"
 
-Follow the bridge rebuild instructions in :doc:`installation`. NumPy must
-be installed before building the bridge, and the same NumPy ABI must be used
-at runtime. If an operation instead rejects modal coefficients, use the
-explicit representation change appropriate to the calculation; see
+Follow the bridge rebuild instructions in :doc:`installation`. If an operation
+instead rejects modal coefficients, use the explicit representation change
+appropriate to the calculation; see
 :doc:`concepts`.
 
 For a machine without a display, set ``MPLBACKEND=Agg`` and use
@@ -24,8 +23,7 @@ From a Postgkyl checkout, using Python 3.12:
 
 .. code-block:: bash
 
-   python -m pip install --upgrade numpy setuptools wheel
-   python -m pip install --no-build-isolation -e '.[docs,test]'
+   python -m pip install -e '.[docs,test]'
    POSTGKYL_REQUIRE_GKEYLL=1 MPLBACKEND=Agg python -m pytest tests/test_examples.py tests/test_documentation.py tests/test_docs_build.py
    python scripts/build_docs.py
    python -m sphinx -W --keep-going -b html -c docs build/docs/source build/docs/html

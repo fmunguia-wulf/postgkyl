@@ -53,7 +53,8 @@ def test_published_inventory_and_navigation(documentation):
     environment = pickle.load(stream)
   assert environment.toctree_includes["index"] == [
       "installation", "examples", "reference/api", "reference/cli", "concepts",
-      "migration", "reference/quantities", "contributing", "provenance"
+      "migration", "reference/quantities", "development", "contributing",
+      "provenance"
   ]
   examples = environment.toctree_includes["examples"]
   assert {"cli-tutorial", "interface-equivalence"} <= set(examples)

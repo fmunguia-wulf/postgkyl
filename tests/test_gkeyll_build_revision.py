@@ -1,4 +1,4 @@
-"""Exercise source updates against a local Git remote without compiling."""
+"""Separate native rebuilds from explicit upstream updates using a local remote."""
 
 import os
 from pathlib import Path
@@ -31,12 +31,12 @@ def checkout(tmp_path):
   workspace = tmp_path / "workspace"
   scripts = workspace / "scripts"
   scripts.mkdir(parents=True)
-  source = (ROOT / "scripts/build_gkeyll.sh").read_text()
-  (scripts / "build_gkeyll.sh").write_text(
-      source.replace("https://github.com/ammarhakim/gkeyll.git",
-                     remote.as_uri()))
+  for name in ("build_gkeyll.sh", "update_gkeyll.sh"):
+    source = (ROOT / "scripts" / name).read_text()
+    (scripts / name).write_text(
+        source.replace("https://github.com/ammarhakim/gkeyll.git",
+                       remote.as_uri()))
   shutil.copyfile(ROOT / "scripts/gkeyll-branch", scripts / "gkeyll-branch")
-  (scripts / "build_gpython.sh").write_text("#!/bin/sh\nexit 0\n")
   binary_dir = tmp_path / "bin"
   binary_dir.mkdir()
   make = binary_dir / "make"
@@ -48,9 +48,9 @@ def checkout(tmp_path):
   return workspace, remote, env
 
 
-def _build(checkout):
+def _run(checkout, script="build_gkeyll.sh"):
   workspace, _, env = checkout
-  return subprocess.run(["sh", str(workspace / "scripts/build_gkeyll.sh")],
+  return subprocess.run(["sh", str(workspace / "scripts" / script)],
                         cwd=workspace,
                         env=env,
                         text=True,
@@ -59,21 +59,25 @@ def _build(checkout):
 
 
 @pytest.mark.parametrize("existing_branch", [None, "old-feature"])
-def test_build_follows_main_as_remote_advances(checkout, existing_branch):
+def test_only_explicit_update_follows_main_as_remote_advances(
+    checkout, existing_branch):
   workspace, remote, _ = checkout
   if existing_branch is not None:
     _git(remote, "branch", existing_branch)
     _git(workspace, "clone", "--depth", "1", "--branch", existing_branch,
          remote.as_uri(), "gkeyll")
-  first = _build(checkout)
+  first = _run(checkout, "update_gkeyll.sh")
   assert first.returncode == 0, first.stderr
   producer = workspace / "gkeyll"
   initial = _git(producer, "rev-parse", "HEAD")
   _git(remote, "commit", "--allow-empty", "-m", "New upstream change")
   latest = _git(remote, "rev-parse", "HEAD")
   assert latest != initial
-  second = _build(checkout)
+  second = _run(checkout)
   assert second.returncode == 0, second.stderr
+  assert _git(producer, "rev-parse", "HEAD") == initial
+  updated = _run(checkout, "update_gkeyll.sh")
+  assert updated.returncode == 0, updated.stderr
   assert _git(producer, "rev-parse", "HEAD") == latest
   assert _git(producer, "symbolic-ref", "--short", "HEAD") == "main"
   assert _git(producer, "rev-parse", "--abbrev-ref",
@@ -81,9 +85,10 @@ def test_build_follows_main_as_remote_advances(checkout, existing_branch):
 
 
 @pytest.mark.parametrize("local_change", ["dirty", "commit"])
-def test_build_preserves_and_refuses_local_changes(checkout, local_change):
+def test_build_preserves_local_changes_and_update_refuses_them(
+    checkout, local_change):
   workspace, _, _ = checkout
-  first = _build(checkout)
+  first = _run(checkout)
   assert first.returncode == 0, first.stderr
   producer = workspace / "gkeyll"
   configure = producer / "configure"
@@ -94,9 +99,25 @@ def test_build_preserves_and_refuses_local_changes(checkout, local_change):
     _git(producer, "-c", "user.name=Build test", "-c",
          "user.email=build@example.invalid", "commit", "-m", "Local work")
   before = _git(producer, "rev-parse", "HEAD")
-  result = _build(checkout)
+  result = _run(checkout)
+  assert result.returncode == 0, result.stderr
+  result = _run(checkout, "update_gkeyll.sh")
   assert result.returncode != 0
   expected = "tracked modifications" if local_change == "dirty" else "local commits"
   assert expected in result.stderr
   assert configure.read_text() == changed
   assert _git(producer, "rev-parse", "HEAD") == before
+
+
+def test_rebuild_works_without_remote_and_keeps_local_branch(checkout):
+  workspace, remote, _ = checkout
+  first = _run(checkout)
+  assert first.returncode == 0, first.stderr
+  producer = workspace / "gkeyll"
+  _git(producer, "checkout", "-b", "native-work")
+  before = _git(producer, "rev-parse", "HEAD")
+  remote.rename(remote.with_name("unavailable"))
+  result = _run(checkout)
+  assert result.returncode == 0, result.stderr
+  assert _git(producer, "rev-parse", "HEAD") == before
+  assert _git(producer, "symbolic-ref", "--short", "HEAD") == "native-work"

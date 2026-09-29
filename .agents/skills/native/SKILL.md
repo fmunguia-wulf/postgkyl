@@ -28,21 +28,22 @@ Inspect `git status` in both repositories before editing, preserve existing
 changes, and report the native diff separately from the Postgkyl diff. Follow
 Gkeyll's own instructions and formatting configuration for its source files.
 
-For a local producer build, configure if needed and build in place:
+For local native changes, repeat the editable installation from the workspace:
 
 ```bash
-cd gkeyll
-./configure --use-lapack-lite=yes --app=core  # when configuration is needed
-make core -j2
-cd ..
-sh scripts/build_gpython.sh
+python -m pip install -e '.[test]'
 ```
 
-`scripts/build_gkeyll.sh` is the clean installation path: it fetches and
-fast-forwards the branch named in `scripts/gkeyll-branch` and refuses tracked
-modifications or commits ahead of the remote branch. Do not use it to
-build ongoing native edits or clear those edits to satisfy it. The distinction
-between release installation and local producer development is intentional.
+This is the same build path used for clean installations. Setuptools builds the
+extension and bundles the core library and JSON provenance. The core build
+script obtains Gkeyll only when absent; an existing checkout is built as-is,
+including local edits. For just the core, use `sh scripts/build_gkeyll.sh`.
+
+`sh scripts/update_gkeyll.sh` explicitly fetches and fast-forwards the branch
+named in `scripts/gkeyll-branch`; it refuses tracked edits and local commits on
+that branch. `bash scripts/update_pgkyl.sh --editable` updates both repositories
+and reinstalls. Do not use either updater to build ongoing native edits or clear
+those edits to satisfy an updater.
 
 Bundle libg0core beside the extension and retain relative `$ORIGIN`/`@loader_path`
 linking. Preserve generated build provenance; Gkeyll is needed at build time,
@@ -57,10 +58,9 @@ evaluating Gkeyll's own basis through the shim, not duplicated basis formulas.
 
 `dg/` orchestrates kernels; `io/` dispatches readers. Prefer GkylCReader for native
 field reads; retain the Python reader fallback for unavailable native libraries,
-partial loads, and dynvectors. Keep NumPy installed before building so the
-extension uses the runtime ABI. For clean installations, use
-`pip install --no-build-isolation -e '.[test]'`; rebuild local native edits
-with the in-place workflow above.
+partial loads, and dynvectors. Build isolation supplies NumPy headers; the
+extension targets the supported NumPy API floor. Wheel checks exercise both the minimum and current runtime
+NumPy. Use the editable install above for local native edits too.
 
 Verify handshake, memory lifetime, basis/interpolation, and modal algebra using
 the relevant existing tests. Report native test skips explicitly when no compiled

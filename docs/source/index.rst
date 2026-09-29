@@ -15,5 +15,6 @@ Start with a complete example, then use the reference to adapt it to your run.
    concepts
    migration
    reference/quantities
+   development
    contributing
    provenance

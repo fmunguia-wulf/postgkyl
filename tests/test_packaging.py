@@ -1,44 +1,63 @@
-"""Regression tests for the custom native packaging commands."""
+"""Contracts of the native setuptools command, independent of compilation."""
 
 import runpy
 from pathlib import Path
 
+import pytest
 import setuptools
 from setuptools.dist import Distribution
 
-ROOT_DIR = Path(__file__).parents[1]
+ROOT = Path(__file__).parents[1]
 
 
-def _build_py_command(monkeypatch, tmp_path, *, editable):
-  monkeypatch.setattr(setuptools, "setup", lambda **kwargs: None)
-  namespace = runpy.run_path(ROOT_DIR / "setup.py")
-  command_type = namespace["BuildPyWithGkeyll"]
-  native_library = tmp_path / "libg0core.so"
-  native_library.write_bytes(b"native library")
-  monkeypatch.setitem(command_type.run.__globals__, "_build_gkeyll",
-                      lambda: True)
-  monkeypatch.setitem(command_type.run.__globals__, "BUNDLED_LIB",
-                      native_library)
+@pytest.fixture
+def setup_config(monkeypatch):
+  config = {}
+  monkeypatch.setattr(setuptools, "setup",
+                      lambda **kwargs: config.update(kwargs))
+  monkeypatch.setenv("POSTGKYL_SKIP_GKEYLL_BUILD", "0")
+  namespace = runpy.run_path(ROOT / "setup.py")
+  return config, namespace
 
-  command = command_type(Distribution())
-  command.ensure_finalized()
-  command.build_lib = str(tmp_path / "missing-build")
+
+# Setuptools asks install_lib for output metadata even for PEP 660 builds.
+@pytest.mark.filterwarnings(
+    "ignore:setup.py install is deprecated:setuptools.warnings.SetuptoolsDeprecationWarning"
+)
+@pytest.mark.parametrize("editable", [False, True])
+def test_native_outputs_include_library_and_provenance(setup_config, tmp_path,
+                                                       editable):
+  config, _ = setup_config
+  distribution = Distribution({
+      **config, "packages": ["postgkyl.gpython"],
+      "package_dir": {
+          "": "src"
+      }
+  })
+  command = distribution.get_command_obj("build_ext")
+  command.build_lib = str(tmp_path / "lib")
   command.editable_mode = editable
-  return command
+  command.ensure_finalized()
+  outputs = command.get_outputs()
+  for name in ("libg0core.so", "_build_info.json"):
+    built = str(tmp_path / "lib/postgkyl/gpython" / name)
+    assert built in outputs
+    assert command.get_output_mapping()[built] == str(
+        Path("src/postgkyl/gpython") / name)
+  assert any(Path(path).name.startswith("_gpython.") for path in outputs)
+  assert distribution.has_ext_modules()
 
 
-def test_editable_build_uses_native_artifacts_in_source(monkeypatch, tmp_path):
-  command = _build_py_command(monkeypatch, tmp_path, editable=True)
+def test_skip_build_produces_pure_python_distribution(monkeypatch):
+  config = {}
+  monkeypatch.setattr(setuptools, "setup",
+                      lambda **kwargs: config.update(kwargs))
+  monkeypatch.setenv("POSTGKYL_SKIP_GKEYLL_BUILD", "1")
+  runpy.run_path(ROOT / "setup.py")
+  assert not Distribution(config).has_ext_modules()
 
-  command.run()
 
-  assert not Path(command.build_lib).exists()
-
-
-def test_wheel_build_creates_native_library_destination(monkeypatch, tmp_path):
-  command = _build_py_command(monkeypatch, tmp_path, editable=False)
-
-  command.run()
-
-  bundled = Path(command.build_lib) / "postgkyl/gpython/libg0core.so"
-  assert bundled.read_bytes() == b"native library"
+def test_skip_build_rejects_misspelled_value(monkeypatch):
+  monkeypatch.setenv("POSTGKYL_SKIP_GKEYLL_BUILD", "true")
+  with pytest.raises(ValueError, match="must be 0 or 1"):
+    runpy.run_path(ROOT / "setup.py")

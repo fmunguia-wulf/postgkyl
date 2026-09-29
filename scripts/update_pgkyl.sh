@@ -7,7 +7,7 @@ ROOT_DIR=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
 GKEYLL_DIR="${ROOT_DIR}/gkeyll"
 PYTHON="${PYTHON:-python}"
 
-INSTALL_OPTIONS=(--no-build-isolation)
+INSTALL_OPTIONS=()
 if [[ "$#" -eq 1 && "$1" == "--editable" ]]; then
     INSTALL_OPTIONS+=(--editable)
 elif [[ "$#" -ne 0 ]]; then
@@ -28,8 +28,8 @@ fi
 echo "# Updating Postgkyl from the current branch's upstream"
 git -C "${ROOT_DIR}" pull --ff-only
 
-# setup.py fetches the configured Gkeyll revision and builds core and gpython
-# using this same interpreter.
+# Fetch explicitly; ordinary installs only build the existing producer.
+sh "${SCRIPT_DIR}/update_gkeyll.sh"
 echo "# Rebuilding Gkeyll and gpython, and reinstalling Postgkyl"
 POSTGKYL_SKIP_GKEYLL_BUILD=0 "${PYTHON}" -m pip install \
     "${INSTALL_OPTIONS[@]}" "${ROOT_DIR}"

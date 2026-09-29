@@ -40,8 +40,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libgl1-mesa-dri
-          python -m pip install --upgrade numpy setuptools wheel
-          python -m pip install --no-build-isolation -e '.[docs,test]'
+          python -m pip install -e '.[docs,test]'
       - name: Test documentation contracts and downloadable examples
         # Keep tests sharing the expensive documentation fixture on one worker.
         run: >-

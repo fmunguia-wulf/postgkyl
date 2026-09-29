@@ -13,7 +13,7 @@ contract (GKEYLL_C_SHIM.md) rather than runtime declarations:
                ``available()`` is the single capability switch;
                ``build_info()`` reads the generated ``_build_info`` (the
                vendored Gkeyll commit + build date, written by
-               ``scripts/build_gpython.sh``) for ``pgkyl --version``
+               ``setup.py``) for ``pgkyl --version``
 - ``array``    :class:`GkylArray` -- Python owner of a native ``gkyl_array``
 - ``basis``    cached Gkeyll basis objects + interpolation/nodal/quad matrices
                built by evaluating Gkeyll's own basis through the shim

@@ -1,0 +1,119 @@
+# Installation
+
+Postgkyl requires Python 3.10 or newer. These commands use bash or zsh on
+Linux or macOS; on Windows use [Ubuntu in WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+## Install from source
+
+Install Git, Make, a C compiler, and Python development headers first:
+
+- Ubuntu/Debian: `sudo apt install git build-essential python3-venv python3-dev`.
+- macOS: `xcode-select --install`.
+- Other Linux distributions: install the equivalent development packages.
+
+```bash
+git clone https://github.com/ammarhakim/postgkyl.git
+cd postgkyl
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+pgkyl --version
+pgkyl --help
+```
+
+pip installs build dependencies in an isolated environment and runtime dependencies
+in your active environment. No separate NumPy installation is required.
+Dependency versions live in
+[pyproject.toml](https://github.com/ammarhakim/postgkyl/blob/main/pyproject.toml).
+For an editable developer installation, replace `python -m pip install .` with
+`python -m pip install -e '.[test]'`; see [Development](development.md).
+
+The first native build downloads the Gkeyll branch named in
+[scripts/gkeyll-branch](https://github.com/ammarhakim/postgkyl/blob/main/scripts/gkeyll-branch)
+(currently `main`). Later builds reuse the existing checkout without fetching,
+switching branches, or discarding local edits. The core uses bundled LAPACK;
+MPI, CUDA, SuperLU, Lua, and system LAPACK are not required.
+The installed package includes the core library and needs no Gkeyll checkout
+at runtime. `pgkyl --version` reports its build provenance.
+
+Activate the environment again in each terminal with `source .venv/bin/activate`.
+Run `deactivate` to leave it. Installation does not require `PYTHONPATH` changes;
+remove old Postgkyl entries if they shadow the installed package.
+
+## Published releases
+
+In an active environment:
+
+```bash
+python -m pip install postgkyl
+```
+
+A compatible wheel installs without a compiler or Gkeyll checkout. When no
+compatible wheel is available, pip builds from source and needs the development
+tools and network access listed above.
+
+## Alternative environments
+
+An existing Python environment works too; use the same pip installation command.
+
+For mamba or conda, from the checkout:
+
+```bash
+mamba env create -f environment.yml
+mamba activate pgkyl
+python -m pip install .
+```
+
+Use `conda` in place of `mamba` if preferred. Install
+[Miniforge](https://github.com/conda-forge/miniforge#install) if needed.
+`environment.yml` supplies Python and pip; project dependencies remain in
+`pyproject.toml`.
+
+If you use [pyenv](https://github.com/pyenv/pyenv#installation), select your Python
+version before creating the venv, for example `pyenv install 3.12` and
+`pyenv local 3.12`. Follow pyenv's prerequisites and shell setup first.
+
+## Updating and rebuilding
+
+Update both repositories and reinstall:
+
+```bash
+bash scripts/update_pgkyl.sh
+# Developer installation:
+bash scripts/update_pgkyl.sh --editable
+```
+
+Updates use fast-forward-only Git operations and refuse tracked Gkeyll edits
+or local commits on the branch being updated. Set `PYTHON=/path/to/python`
+to select an interpreter explicitly.
+
+To rebuild local native changes, including uncommitted Gkeyll changes, simply
+repeat the editable installation:
+
+```bash
+python -m pip install -e '.[test]'
+```
+
+This uses the same build path as a regular installation. For just the producer
+core, run `sh scripts/build_gkeyll.sh`. To explicitly update only the producer,
+run `sh scripts/update_gkeyll.sh`, then reinstall Postgkyl.
+Use `CC=gcc` to select a compiler or `BUILD_JOBS=2` to limit parallel compilation.
+`ARCH_FLAGS` defaults to empty for portable binaries; developers may opt into
+machine-specific flags for local use.
+
+## Troubleshooting
+
+To diagnose an unavailable native bridge:
+
+```bash
+python -c "from postgkyl import gpython; gpython.require()"
+```
+
+A source build failure stops installation. An unavailable bridge still permits
+some Python readers; operations requiring native kernels report an error.
+Reinstall in the active environment after changing Python or encountering an
+incompatible native dependency.
+
+For an offline rebuild, obtain the Gkeyll checkout and install all build/runtime
+dependencies in advance. Then use `python -m pip install --no-build-isolation .`.
+This optional advanced mode uses the active environment's build dependencies.

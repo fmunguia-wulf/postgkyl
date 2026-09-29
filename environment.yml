@@ -7,4 +7,3 @@ dependencies:
   # Runtime and test dependency versions have one authoritative home in
   # pyproject.toml. Install the project after activating this environment.
   - pip
-  - setuptools>=61.0

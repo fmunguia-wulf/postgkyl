@@ -1,7 +1,7 @@
 """Load the compiled ``_gpython`` extension -- the single capability switch.
 
 The foreign floor is the CPython extension ``postgkyl.gpython._gpython``, built by
-``scripts/build_gpython.sh`` against ``gkyl_gpython.h`` -- the gpython shim, which lives
+setuptools against ``gkyl_gpython.h`` -- the gpython shim, which lives
 in the gkeyll repo (``core/zero/gpython.c``) and is compiled INTO
 ``libg0core.so`` by Gkeyll's own build (GKEYLL_C_SHIM.md). There are no
 runtime signature declarations and no struct mirrors here: the contract is
@@ -12,16 +12,13 @@ paired with a newer shim header (or vice versa).
 If the extension is missing, :func:`available` returns False and
 :func:`require` raises with build guidance; importing postgkyl never fails.
 
-A NumPy ABI mismatch (`_gpython.so` compiled against a different NumPy than
-the one installed -- e.g. pip's isolated build environment resolving a
-different NumPy than the target environment did) surfaces as a ``ValueError``
-from NumPy's own ``import_array()`` check, not an ``ImportError``; it is
-caught alongside the missing-extension case for the same reason -- a broken
-bridge must degrade to "unavailable", never take down ``import postgkyl``.
+An incompatible NumPy ABI can raise ``ValueError`` during import, so it is
+caught alongside ``ImportError`` and reported by :func:`require`.
 """
 
 from __future__ import annotations
 
+import json
 import pathlib
 
 try:
@@ -30,17 +27,13 @@ try:
     raise ImportError(
         f"gpython shim version mismatch: _gpython.so was built for API "
         f"{_mod.api_version()}, postgkyl expects {_mod.GPYTHON_API_VERSION}; "
-        "rebuild with scripts/build_gpython.sh")
+        "rebuild with python -m pip install -e .")
   _ERROR = None
 except (ImportError, ValueError) as exc:
   _mod = None
-  _ERROR = (f"{exc}\nBuild the compiled bridge with scripts/build_gkeyll.sh "
-            "(or scripts/build_gpython.sh if libg0core.so already exists). "
-            "A 'numpy.dtype size changed' error means _gpython.so was "
-            "compiled against a different NumPy than the one installed here "
-            "-- reinstall with `pip install -e . --no-build-isolation` so "
-            "the build step and the installed environment use the same "
-            "NumPy, then rebuild the bridge.")
+  _ERROR = (f"{exc}\nBuild the compiled bridge from a Postgkyl checkout with "
+            "`python -m pip install -e .`. If NumPy reports an incompatible "
+            "ABI, reinstall Postgkyl in the active Python environment.")
 
 
 def available() -> bool:
@@ -61,22 +54,8 @@ def lib_path() -> pathlib.Path | None:
 
 
 def build_info() -> dict[str, str] | None:
-  """Metadata about the vendored Gkeyll build this bridge was compiled from.
-
-  None when the bridge has never been built (scripts/build_gkeyll.sh never
-  ran): ``_build_info`` is a generated build artifact, not part of the
-  source tree (see scripts/build_gpython.sh, .gitignore).
-  """
-  try:
-    from . import _build_info as _bi
-  except ImportError:
+  """Build provenance bundled beside the extension, or None if absent."""
+  path = pathlib.Path(__file__).with_name("_build_info.json")
+  if not path.is_file():
     return None
-  return {
-      "gkeyll_commit": _bi.GKEYLL_COMMIT,
-      "gkeyll_commit_date": _bi.GKEYLL_COMMIT_DATE,
-      "gkeyll_branch": _bi.GKEYLL_BRANCH,
-      "postgkyl_build_commit": _bi.POSTGKYL_BUILD_COMMIT,
-      "build_date": _bi.BUILD_DATE,
-      "build_cc": _bi.BUILD_CC,
-      "build_arch_flags": _bi.BUILD_ARCH_FLAGS
-  }
+  return json.loads(path.read_text())

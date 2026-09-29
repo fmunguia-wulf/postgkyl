@@ -17,12 +17,13 @@ tests/test_data/generated/
 /*.py
 !/setup.py
 /*.json
-# built gpython/_gpython extension (scripts/build_gpython.sh)
-src/postgkyl/gpython/_gpython.so
+# built gpython/_gpython extension (setup.py)
+src/postgkyl/gpython/_gpython*.so
 # bundled native library copied beside the extension
 src/postgkyl/gpython/libg0core.so
-# generated Gkeyll commit/build-date metadata (scripts/build_gpython.sh)
+# generated Gkeyll commit/build-date metadata (setup.py)
 src/postgkyl/gpython/_build_info.py
+src/postgkyl/gpython/_build_info.json
 
 # scratch output from running examples/scripts/*.py directly
 examples/scripts/output/
