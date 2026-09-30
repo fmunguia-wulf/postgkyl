@@ -60,6 +60,7 @@ If you use [pyenv](https://github.com/pyenv/pyenv#installation), select your Pyt
 version before creating the venv, for example `pyenv install 3.12` and
 `pyenv local 3.12`. Follow pyenv's prerequisites and shell setup first.
 
+(developer-installation)=
 ## Developer installation
 
 After creating and activating an environment from the source checkout, install
@@ -131,6 +132,7 @@ The `ffmpeg` Python package does not supply an executable. GIF, WebP, and APNG
 require no ffmpeg installation. See [Animation](animation.rst) for encoder
 selection and [PyVista](pyvista.rst) for rendering examples.
 
+(updating-and-rebuilding)=
 ## Updating and rebuilding
 
 With the environment active, update both Postgkyl and Gkeyll, rebuild, and
