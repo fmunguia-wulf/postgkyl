@@ -1,7 +1,7 @@
 # Installation
 
 Postgkyl requires Python 3.10 or newer. These commands use bash or zsh on
-Linux or macOS; on Windows use [Ubuntu in WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+Linux or macOS.
 
 ## Install from source
 
@@ -25,10 +25,9 @@ pip installs build dependencies in an isolated environment and runtime dependenc
 in your active environment. No separate NumPy installation is required.
 Dependency versions live in
 [pyproject.toml](https://github.com/ammarhakim/postgkyl/blob/main/pyproject.toml).
-For an editable developer installation, replace `python -m pip install .` with
-`python -m pip install -e '.[test]'`; see [Development](development.md).
+For an editable checkout, follow [Developer installation](#developer-installation).
 
-The first native build downloads the Gkeyll branch named in
+The first native build may take several minutes and downloads the Gkeyll branch named in
 [scripts/gkeyll-branch](https://github.com/ammarhakim/postgkyl/blob/main/scripts/gkeyll-branch)
 (currently `main`). Later builds reuse the existing checkout without fetching,
 switching branches, or discarding local edits. The core uses bundled LAPACK;
@@ -39,18 +38,6 @@ at runtime. `pgkyl --version` reports its build provenance.
 Activate the environment again in each terminal with `source .venv/bin/activate`.
 Run `deactivate` to leave it. Installation does not require `PYTHONPATH` changes;
 remove old Postgkyl entries if they shadow the installed package.
-
-## Published releases
-
-In an active environment:
-
-```bash
-python -m pip install postgkyl
-```
-
-A compatible wheel installs without a compiler or Gkeyll checkout. When no
-compatible wheel is available, pip builds from source and needs the development
-tools and network access listed above.
 
 ## Alternative environments
 
@@ -73,9 +60,81 @@ If you use [pyenv](https://github.com/pyenv/pyenv#installation), select your Pyt
 version before creating the venv, for example `pyenv install 3.12` and
 `pyenv local 3.12`. Follow pyenv's prerequisites and shell setup first.
 
+## Developer installation
+
+After creating and activating an environment from the source checkout, install
+in editable mode with the test and development tools:
+
+```bash
+python -m pip install -e '.[test]'
+pre-commit install
+```
+
+Python edits take effect immediately. After native changes, follow
+[Updating and rebuilding](#updating-and-rebuilding). See the
+[development guide](development.md) for tests, formatting, and release workflows.
+
+For documentation development, use Python 3.12 and include the documentation
+extra:
+
+```bash
+python -m pip install -e '.[docs,test]'
+```
+
+Then follow the [documentation build guide](contributing.rst).
+
+For pure-Python compatibility testing, use a fresh checkout:
+
+```bash
+POSTGKYL_SKIP_GKEYLL_BUILD=1 python -m pip install -e '.[test]'
+```
+
+This switch skips compilation; it does not remove native artifacts from an
+existing editable checkout. Normal installations build the bridge. Run the
+`compatibility` test subset as described in the development guide.
+
+For local portable Linux wheel builds, make Docker available and install
+cibuildwheel before following the development guide's release workflow:
+
+```bash
+python -m pip install cibuildwheel
+```
+
+## Notebooks
+
+After installing Postgkyl, install Marimo in the same environment to use the
+[interactive notebooks](https://github.com/ammarhakim/postgkyl/tree/main/notebooks):
+
+```bash
+python -m pip install marimo
+```
+
+## Rendering dependencies
+
+PyVista requires an OpenGL context even for off-screen screenshots. On headless
+Ubuntu/Debian, install Mesa/EGL and select software rendering:
+
+```bash
+sudo apt install libegl1 libgl1-mesa-dri
+export VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow
+export LIBGL_ALWAYS_SOFTWARE=1
+```
+
+Video export requires an ffmpeg executable. A pip package that includes one is
+available through:
+
+```bash
+python -m pip install -U imageio-ffmpeg
+```
+
+The `ffmpeg` Python package does not supply an executable. GIF, WebP, and APNG
+require no ffmpeg installation. See [Animation](animation.rst) for encoder
+selection and [PyVista](pyvista.rst) for rendering examples.
+
 ## Updating and rebuilding
 
-Update both repositories and reinstall:
+With the environment active, update both Postgkyl and Gkeyll, rebuild, and
+reinstall:
 
 ```bash
 bash scripts/update_pgkyl.sh

@@ -15,8 +15,8 @@ interactive window. The field occupies ``[-2, 2]`` in each coordinate;
 volume example uses a linear opacity ramp to reveal the dense core.
 
 An OpenGL context is required even for off-screen screenshots. The documentation
-CI uses Mesa/EGL software rendering. On headless Linux install ``libegl1`` and
-``libgl1-mesa-dri`` and select ``VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow``.
+CI uses Mesa/EGL software rendering. See the rendering dependencies in
+:doc:`installation` for headless Linux setup.
 Failures are reported; a missing graphics backend does not silently remove
 these examples from the website.
 

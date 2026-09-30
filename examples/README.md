@@ -30,10 +30,10 @@ of truth for "does the tutorial still work," not just this README.
 | [`12_gk_load_quantity.py`](scripts/12_gk_load_quantity.py) | Load and check `vt`, `phi_norm`, and `larmor_radius` on generated electron moments, potential, and magnetic geometry |
 | [`mirror_comparison.py`](scripts/mirror_comparison.py) | A four-panel algorithm-sensitivity figure from two analytic, symmetric 1-D p1 modal-serendipity datasets, with joined linear/log axes |
 
-Run one directly:
+Follow [Developer installation](../docs/source/installation.md#developer-installation),
+then run a script directly:
 
 ```bash
-pip install --no-build-isolation -e '.[test]'
 MPLBACKEND=Agg PYTHONPATH=src python examples/scripts/01_quickstart.py
 ```
 
@@ -104,6 +104,7 @@ python examples/compare_interfaces.py
 ```
 
 Results land in `build/figure-comparison/`, with CLI versions under `cli/`.
-The PyVista examples need OpenGL; headless CI uses Mesa/EGL with
-`VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow` and `LIBGL_ALWAYS_SOFTWARE=1`.
+The PyVista examples need OpenGL; see
+[Rendering dependencies](../docs/source/installation.md#rendering-dependencies)
+for headless setup.
 The Plotly HTML examples require no browser executable to generate them.

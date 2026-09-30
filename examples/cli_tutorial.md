@@ -9,9 +9,9 @@ from the repository root) as a regression check. If the CLI's surface ever
 changes in a way that breaks one of these commands, that test fails -- this
 file cannot silently drift out of date the way a hand-maintained tutorial can.
 
-Run any line yourself from the repository root, after `pip install --no-build-isolation -e '.[test]'`
-and (for the `tests/test_data/generated/` fixtures) `python
-tests/generate_test_data.py`.
+Follow [Developer installation](../docs/source/installation.md#developer-installation),
+then run any line yourself from the repository root. For the
+`tests/test_data/generated/` fixtures, first run `python tests/generate_test_data.py`.
 
 ## 1. Inspect a file
 

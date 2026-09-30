@@ -76,9 +76,7 @@ clear error if unavailable. For example::
 
     pgkyl "frames_*.gkyl" interpolate animate --saveas movie.mp4 --nproc 10 --codec mpeg4
 
-``pip install ffmpeg`` installs a Python package, not an ffmpeg executable.
-A pip installation that includes an executable is available through
-``python -m pip install -U imageio-ffmpeg``. GIF, WebP, and APNG require no
+See :doc:`installation` for ffmpeg setup. GIF, WebP, and APNG require no
 ffmpeg installation. Video export reports the chosen executable and encoder
 if encoding fails, uses a noninteractive canvas when compiling saved frames,
 and pads odd-sized H.264/MPEG-4 frames to even dimensions.

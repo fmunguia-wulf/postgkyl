@@ -19,11 +19,11 @@ without opening windows.
 Build the documentation
 -------------------------
 
-From a Postgkyl checkout, using Python 3.12:
+Follow the documentation development setup in :doc:`installation`, then run
+from the Postgkyl checkout:
 
 .. code-block:: bash
 
-   python -m pip install -e '.[docs,test]'
    POSTGKYL_REQUIRE_GKEYLL=1 MPLBACKEND=Agg python -m pytest tests/test_examples.py tests/test_documentation.py tests/test_docs_build.py
    python scripts/build_docs.py
    python -m sphinx -W --keep-going -b html -c docs build/docs/source build/docs/html
@@ -41,9 +41,8 @@ that comparison report and both outputs. To run just the paired gallery:
 
    python examples/compare_interfaces.py
 
-The PyVista examples require OpenGL even when no window is shown. Headless
-CI installs Mesa/EGL and sets ``VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow``
-and ``LIBGL_ALWAYS_SOFTWARE=1``. See :doc:`interactive` for local setup.
+The PyVista examples require OpenGL even when no window is shown. See the
+rendering dependencies in :doc:`installation` for headless setup.
 
 Edit guides in ``docs/source/``, examples in ``examples/``, and API descriptions
 in implementing function docstrings. The command reference reads the actual

@@ -10,7 +10,7 @@ File convention: We use the `*.mo.py` extension for Marimo notebooks, which are 
 
 ### How to use Marimo notebooks
 
-1. Install Marimo: e.g. `pip install marimo`.
+1. Follow the [notebook setup instructions](../docs/source/installation.md#notebooks).
 2. Run the notebook: e.g. `marimo run <notebook_name>`.
 
 This will execute the notebook in a web browser, allowing you to interact with the code and visualize the results.

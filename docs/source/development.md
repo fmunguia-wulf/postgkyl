@@ -1,14 +1,8 @@
 # Developing Postgkyl
 
-Create and activate an environment as described in [Installation](installation.md),
-then install the checkout directly in editable mode:
-
-```bash
-python -m pip install -e '.[test]'
-```
-
-Python edits take effect immediately. After native changes, repeat the install
-command; it builds your existing Gkeyll checkout, including local edits.
+Follow [Developer installation](installation.md#developer-installation) to set
+up an editable checkout and development tools. For native changes, use the
+[rebuild instructions](installation.md#updating-and-rebuilding).
 
 ## Tests
 
@@ -38,19 +32,16 @@ Native CI requires the bridge instead of silently skipping native tests, and
 coverage CI enforces the 99% threshold configured in `pyproject.toml`.
 External renderer tests require Chrome and/or ffmpeg.
 
-For pure-Python compatibility testing, install from a fresh checkout with
-`POSTGKYL_SKIP_GKEYLL_BUILD=1 python -m pip install -e '.[test]'`, then run the
-`compatibility` subset. This switch skips compilation; it does not remove native
-artifacts from an existing editable checkout. Normal installations build the
-bridge.
+For pure-Python compatibility testing, follow the
+[installation instructions](installation.md#developer-installation), then run
+the `compatibility` subset.
 
 ## Formatting
 
-After installing the developer tools above, enable the checks that run
-before a Git commit and run them over all tracked files:
+The developer installation enables checks before each Git commit. Run them
+over all tracked files:
 
 ```bash
-pre-commit install
 pre-commit run --all-files
 ```
 
@@ -99,10 +90,10 @@ also builds an sdist and publishes the validated distributions through the
 `.github/workflows/wheels.yml`, and environment `pypi` before releasing.
 See [PyPI's trusted publisher setup](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 
-For a local portable Linux wheel build with Docker available:
+For a local portable Linux wheel build, first follow the
+[cibuildwheel setup instructions](installation.md#developer-installation), then run:
 
 ```bash
-python -m pip install cibuildwheel
 python -m cibuildwheel --platform linux
 ```
 
