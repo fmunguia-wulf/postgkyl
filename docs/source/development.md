@@ -1,8 +1,8 @@
 # Developing Postgkyl
 
-Follow [Developer installation](installation.md#developer-installation) to set
+Follow [Developer installation](developer-installation) to set
 up an editable checkout and development tools. For native changes, use the
-[rebuild instructions](installation.md#updating-and-rebuilding).
+[rebuild instructions](updating-and-rebuilding).
 
 ## Tests
 
@@ -33,7 +33,7 @@ coverage CI enforces the 99% threshold configured in `pyproject.toml`.
 External renderer tests require Chrome and/or ffmpeg.
 
 For pure-Python compatibility testing, follow the
-[installation instructions](installation.md#developer-installation), then run
+[installation instructions](developer-installation), then run
 the `compatibility` subset.
 
 ## Formatting
@@ -91,7 +91,7 @@ also builds an sdist and publishes the validated distributions through the
 See [PyPI's trusted publisher setup](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 
 For a local portable Linux wheel build, first follow the
-[cibuildwheel setup instructions](installation.md#developer-installation), then run:
+[cibuildwheel setup instructions](developer-installation), then run:
 
 ```bash
 python -m cibuildwheel --platform linux

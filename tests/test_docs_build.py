@@ -129,6 +129,15 @@ def test_gyrokinetic_quantities_page_has_python_and_cli(documentation):
       assert f"{interface} output for 12_gk_load_quantity_{quantity}.png" in page
 
 
+@pytest.mark.parametrize("anchor",
+                         ["developer-installation", "updating-and-rebuilding"])
+def test_development_links_reach_installation_sections(documentation, anchor):
+  development = (documentation / "html/development.html").read_text()
+  installation = (documentation / "html/installation.html").read_text()
+  assert f'href="installation.html#{anchor}"' in development
+  assert f'id="{anchor}"' in installation
+
+
 def test_comparison_rejects_changed_pixels(tmp_path):
   from PIL import Image
   first, second = tmp_path / "python.png", tmp_path / "cli.png"
