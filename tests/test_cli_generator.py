@@ -411,7 +411,7 @@ def test_public_inventory_is_total_unique_and_deterministic():
   assert {command_obj.name
           for command_obj in COMMANDS} >= {
               "interpolate",
-              "five_moment_pressure",
+              "mom_five_moment_pressure",
               "plot",
               "load",
           }

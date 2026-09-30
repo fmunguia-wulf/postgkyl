@@ -4,8 +4,8 @@
     "01_quickstart_lineout.png": "pgkyl tests/test_data/generated/2d_c2p_rot45_ms_p1.gkyl interpolate select --z1 0.5 plot --title 'lineout at y=0.5' --no_show --dpi 100 --saveas '{output}/01_quickstart_lineout.png'"
   },
   "03_diagnostics_five_moment.py": {
-    "03_diagnostics_density.png": "pgkyl tests/test_data/generated/shock_tube_1d_p0.gkyl interpolate five_moment_density plot --title 'density (Sod shock tube)' --no_show --dpi 100 --saveas '{output}/03_diagnostics_density.png'",
-    "03_diagnostics_pressure.png": "pgkyl tests/test_data/generated/shock_tube_1d_p0.gkyl interpolate five_moment_pressure --gas_gamma 1.6666666666666667 plot --title 'pressure (Sod shock tube)' --no_show --dpi 100 --saveas '{output}/03_diagnostics_pressure.png'"
+    "03_diagnostics_density.png": "pgkyl tests/test_data/generated/shock_tube_1d_p0.gkyl interpolate mom_five_moment_density plot --title 'density (Sod shock tube)' --no_show --dpi 100 --saveas '{output}/03_diagnostics_density.png'",
+    "03_diagnostics_pressure.png": "pgkyl tests/test_data/generated/shock_tube_1d_p0.gkyl interpolate mom_five_moment_pressure --gas_gamma 1.6666666666666667 plot --title 'pressure (Sod shock tube)' --no_show --dpi 100 --saveas '{output}/03_diagnostics_pressure.png'"
   },
   "04_gyrokinetics.py": {
     "04_gyrokinetics_M0.png": "pgkyl gk_load_quantity --quantity M0 --species ion --name rt_gk_tcv_iwl_adapt_source_1x2v_p1 --frame 250 --path tests/test_data/ plot --title 'Ion density from Hamiltonian moments' --xlabel 'Field-aligned computational coordinate' --ylabel '$M_{0i}$ (m$^{-3}$)' --no_show --dpi 100 --saveas '{output}/04_gyrokinetics_M0.png'",

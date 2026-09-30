@@ -73,11 +73,11 @@ def test_gyrokinetic_diagnostics_use_concise_python_names():
 
 
 def test_only_canonical_diagnostic_names_are_registered():
-  assert "rotations_bparrotate" in COMMAND_BY_NAME
-  assert "five_moment_pressure" in COMMAND_BY_NAME
-  assert "ten_moment_agyro" in COMMAND_BY_NAME
-  assert "multispecies_energetics" in COMMAND_BY_NAME
-  assert "kinetic_transform_frame" in COMMAND_BY_NAME
+  assert "mom_rotations_bparrotate" in COMMAND_BY_NAME
+  assert "mom_five_moment_pressure" in COMMAND_BY_NAME
+  assert "mom_ten_moment_agyro" in COMMAND_BY_NAME
+  assert "mom_multispecies_energetics" in COMMAND_BY_NAME
+  assert "vm_kinetic_transform_frame" in COMMAND_BY_NAME
   assert "pkpm_laguerre_compose" in COMMAND_BY_NAME
   for name in (
       "gk_energy_balance",
@@ -149,7 +149,7 @@ def test_bparrotate_is_compiled_directly_from_the_script_callable():
   array = _make([[1.0, 0.0, 0.0]], tag="array")
   field = _make([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]], tag="field")
 
-  space = _invoke("rotations_bparrotate", [array, field],
+  space = _invoke("mom_rotations_bparrotate", [array, field],
                   array="array",
                   field="field",
                   inplace=False,
@@ -162,7 +162,7 @@ def test_bparrotate_is_compiled_directly_from_the_script_callable():
 
 
 def test_dataset_parameters_are_tag_options_with_exact_api_names():
-  command = COMMAND_BY_NAME["rotations_bparrotate"]
+  command = COMMAND_BY_NAME["mom_rotations_bparrotate"]
   assert {option.opts[0]
           for option in command.params} == {
               "--array",
@@ -179,7 +179,7 @@ def test_generated_map_diagnostic_uses_the_callable_signature():
   energy = pressure / (gamma - 1.0) + 0.5 * rho * velocity**2
   moments = _make([[rho, rho * velocity, 0.0, 0.0, energy]])
 
-  space = _invoke("five_moment_pressure", [moments],
+  space = _invoke("mom_five_moment_pressure", [moments],
                   gas_gamma=gamma,
                   num_moms=None,
                   inplace=False,
@@ -194,7 +194,7 @@ def test_generated_map_diagnostic_uses_the_callable_signature():
 def test_missing_dataset_tag_fails_closed():
   array = _make([[1.0, 0.0, 0.0]], tag="array")
   with pytest.raises(click.UsageError, match="field"):
-    _invoke("rotations_bparrotate", [array],
+    _invoke("mom_rotations_bparrotate", [array],
             array="array",
             field="field",
             inplace=False,

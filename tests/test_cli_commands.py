@@ -49,7 +49,7 @@ def test_help_groups_the_generated_inventory():
   for section, names in COMMAND_SECTIONS.items():
     assert f"{section}:" in result.output
     assert names
-  assert "rotations_bparrotate" in result.output
+  assert "mom_rotations_bparrotate" in result.output
   assert "local_poly" in result.output
 
 
