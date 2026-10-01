@@ -18,7 +18,6 @@ from postgkyl.gpython.array import GkylArray
 # Weak algebra and coefficient linear combinations -- direct kernel calls.
 weak_mul = gpython.kernels.weak_mul
 weak_div = gpython.kernels.weak_div
-weak_inv = gpython.kernels.weak_inv
 weak_mul_conf_phase = gpython.kernels.weak_mul_conf_phase
 lincomb = gpython.kernels.lincomb
 scale = gpython.kernels.scale
@@ -60,6 +59,32 @@ def shift_mean(basis_type: str,
   for f in range(a.ncomp // nb):
     out = gpython.kernels.shiftc(out, coeff_shift, f * nb)
   return out
+
+
+def weak_inv(basis_type: str, ndim: int, poly_order: int,
+             a: GkylArray) -> GkylArray:
+  """Weak reciprocal ``1 / a``, field by field, robust to the field's scale.
+
+  ``gkyl_dg_inv_op`` is cell-local but raises the coefficients to high
+  powers (in 3-D p1 a constant field of 1e-39 or 1e40 already returns
+  inf/nan), which SI products such as ``n T^(3/2) (dT/dx)^2`` reach. Each
+  field of each cell is therefore scaled by the power of two ``2**-e`` that
+  brings its largest coefficient to order one, inverted, and scaled back:
+  ``1/f = 2**-e * inv(2**-e f)``. Power-of-two scaling is exact in floating
+  point, so results are unchanged wherever the unscaled kernel was finite.
+  """
+  nb = gpython.basis.num_basis(basis_type, ndim, poly_order)
+  if a.ncomp % nb:
+    raise ValueError(f"ncomp {a.ncomp} is not a multiple of num_basis {nb}")
+  blocks = a.view().reshape(a.size, a.ncomp // nb, nb)
+  peak = np.abs(blocks).max(axis=-1, keepdims=True)
+  exponent = np.where(np.isfinite(peak) & (peak > 0.0), np.frexp(peak)[1], 0)
+  scaled = GkylArray.from_numpy(
+      np.ldexp(blocks, -exponent).reshape(a.size, a.ncomp))
+  inverse = gpython.kernels.weak_inv(basis_type, ndim, poly_order, scaled)
+  return GkylArray.from_numpy(
+      np.ldexp(inverse.view().reshape(blocks.shape),
+               -exponent).reshape(a.size, a.ncomp))
 
 
 def shift_all(a: GkylArray, val: float) -> GkylArray:
