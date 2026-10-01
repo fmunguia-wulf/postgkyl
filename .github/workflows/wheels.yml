@@ -26,14 +26,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-15-intel, macos-14]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: pypa/cibuildwheel@v4.2.1
         env:
           # PRs exercise one interpreter on every platform; releases build all.
           CIBW_BUILD: ${{ github.event_name == 'pull_request' && 'cp312-*' || 'cp3{10,11,12,13,14}-*' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
@@ -42,16 +42,16 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: python -m pip install build twine
       - run: python -m build --sdist
       - run: python -m twine check --strict dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: source-distribution
           path: dist/*.tar.gz
@@ -65,7 +65,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
