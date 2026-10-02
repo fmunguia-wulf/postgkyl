@@ -265,3 +265,12 @@ def test_animation_plot_options_reach_saved_frames(tmp_path):
       prefix, "--no_show", "--scatter", "--color", "red", "--ylim", "-100",
       "100", "--figsize", "3", "2", "--notitle", "--dpi", "40")
   assert (tmp_path / "animation_0.png").is_file()
+
+
+def test_plotly_explicit_isosurface_cli(tmp_path):
+  output = tmp_path / "isosurface.html"
+  _ok(FIELD_3D, "plotly", "--clevels", "0.0", "--saveas", output)
+  html = output.read_text()
+  assert '"type":"isosurface"' in html
+  assert '"isomin":0.0' in html
+  assert '"isomax":0.0' in html
