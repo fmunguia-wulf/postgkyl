@@ -43,7 +43,8 @@ from postgkyl.numerics import downsample, nodal_to_cell_centered_grid
 
 from ._ffmpeg import require_ffmpeg
 from ._prep import (default_value_label, materialize_plot_data,
-                    resolve_axis_labels, squeeze_collapsed_axes, subplot_grid)
+                    parse_isosurface_levels, resolve_axis_labels,
+                    squeeze_collapsed_axes, subplot_grid)
 from .labels import latex_to_html
 from .style import DEFAULT_STYLE, apply_style
 
@@ -626,18 +627,7 @@ def plotly(data: GDataState,
   if clevels is not None:
     if surface_mode or scatter:
       raise ValueError("clevels requires 3D data without scatter mode")
-    try:
-      if ":" in clevels:
-        start, end, count = clevels.split(":")
-        levels = np.linspace(float(start), float(end), int(count))
-      else:
-        levels = np.array([float(level) for level in clevels.split(",")])
-      if not levels.size or not np.all(np.isfinite(levels)):
-        raise ValueError
-    except ValueError as error:
-      raise ValueError(
-          "clevels must contain finite values separated by commas or "
-          "start:end:count with a positive integer count") from error
+    levels = parse_isosurface_levels(clevels)
     # Follow the same logarithms as the rendered volume values.
     for logarithmic in (logz, logc):
       if logarithmic:
