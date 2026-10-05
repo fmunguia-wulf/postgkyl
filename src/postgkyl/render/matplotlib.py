@@ -542,6 +542,8 @@ def plot(
     no_legend: Suppress legends for line plots.
     legend_labels: Dataset labels in input order; CLI: --legend_labels
       '["new","old"]' (quote the whole JSON array), or repeat the option.
+      For multiple datasets, defaults to each dataset's label, falling back
+      to its source filename.
     legend_subplot: Zero-based subplot receiving the legend.
     legend_loc: Matplotlib legend location.
     forcelegend: Retained for compatibility; default curves already have labels.
@@ -905,8 +907,7 @@ def plot(
           label_prefix = legend_labels[ds_i]
           explicit_legend_label = True
         elif len(states) > 1:
-          label_prefix = (os.path.basename(data.file_name) or data.get_label()
-                          or f"dataset {ds_i}")
+          label_prefix = data.get_label() or f"dataset {ds_i}"
           explicit_legend_label = False
         else:
           label_prefix = ""
