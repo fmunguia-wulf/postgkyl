@@ -216,6 +216,24 @@ def test_generated_save_options_match_python_parameter_names(tmp_path):
   assert _run(DISTF, "save", "--out", output).exit_code != 0
 
 
+@pytest.mark.parametrize("aspect", [1.0, 1.6, 10.0])
+def test_contour_aspect_after_selection(aspect):
+  import matplotlib.pyplot as plt
+
+  plt.close("all")
+  try:
+    _ok(FIELD_3D, "sel", "--z1", "0.0", "pl", "-c", "--clevels", "0.0",
+        "--aspect", aspect, "--no_show")
+    fig = plt.gcf()
+    fig.canvas.draw()
+    ax = fig.axes[0]
+    origin, x_unit, y_unit = ax.transData.transform([(0, 0), (1, 0), (0, 1)])
+    unit_ratio = (y_unit[1] - origin[1]) / (x_unit[0] - origin[0])
+    assert unit_ratio == pytest.approx(aspect)
+  finally:
+    plt.close("all")
+
+
 def test_plot_uses_generated_render_options(tmp_path):
   output = tmp_path / "field.png"
   _ok(FIELD, "interpolate", "select", "--comp", "0", "plot", "--no_show",
