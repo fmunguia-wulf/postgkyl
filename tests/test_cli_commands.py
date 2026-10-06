@@ -172,7 +172,7 @@ def test_select_prioritizes_the_first_option_for_each_initial():
   }
   result = _ok(FIELD, "interpolate", "select", "-c", "0", "-z", "0", "-t",
                "chosen", "info")
-  assert result.output.startswith("(chosen#0)")
+  assert result.output.startswith(f"{FIELD.name} (chosen#0)")
 
 
 def test_api_underscores_are_the_only_cli_spellings():
@@ -256,6 +256,30 @@ def test_plot_legend_labels(labels):
     for ax in plt.figure(0).axes:
       assert [text.get_text() for text in ax.get_legend().get_texts()
               ] == ["new result", "old result"]
+  finally:
+    plt.close("all")
+
+
+@pytest.mark.parametrize("dims", [1, 2])
+@pytest.mark.parametrize("custom_labels", [False, True])
+def test_plot_uses_load_labels_after_interpolation(dims, custom_labels):
+  import matplotlib.pyplot as plt
+
+  plt.close("all")
+  try:
+    field = DATA / "generated" / f"{dims}d_ms_p1.gkyl"
+    args = ([field, "-l", "o", field, "-l", "n"]
+            if custom_labels else [field, field])
+    _ok(*args, "interp", "pl", "-f0", "--num_axes", "2", "--no_show")
+    expected = ["o_c0", "n_c0"] if custom_labels else [f"{field.name}_c0"] * 2
+    axes = plt.figure(0).axes
+    if dims == 1:
+      assert [
+          text.get_text() for ax in axes
+          for text in ax.get_legend().get_texts()
+      ] == expected
+    else:
+      assert [text.get_text() for ax in axes for text in ax.texts] == expected
   finally:
     plt.close("all")
 
