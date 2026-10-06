@@ -32,6 +32,6 @@ git -C "${ROOT_DIR}" pull --ff-only
 sh "${SCRIPT_DIR}/update_gkeyll.sh"
 echo "# Rebuilding Gkeyll and gpython, and reinstalling Postgkyl"
 POSTGKYL_SKIP_GKEYLL_BUILD=0 "${PYTHON}" -m pip install \
-    "${INSTALL_OPTIONS[@]}" "${ROOT_DIR}"
+    ${INSTALL_OPTIONS[@]+"${INSTALL_OPTIONS[@]}"} "${ROOT_DIR}"
 "${PYTHON}" -c 'from postgkyl import gpython; gpython.require()'
 echo "# Postgkyl update complete"
