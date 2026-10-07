@@ -204,10 +204,12 @@ class TestMultiPanel:
   @pytest.mark.parametrize("count", [1, 2])
   @pytest.mark.parametrize("components", [1, 2])
   @pytest.mark.parametrize("forcelegend", [False, True])
-  def test_default_legend_labels(self, count, components, forcelegend):
+  @pytest.mark.parametrize("label", ["", "custom"])
+  def test_default_legend_labels(self, count, components, forcelegend, label):
     datasets = [_line(offset=i) for i in range(count)]
     for i, data in enumerate(datasets):
       data._file_name = f"/results/run{i}.gkyl"
+      data.label = label
       data.values = np.repeat(data.values, components, axis=-1)
     fig = backend.plot(*datasets,
                        multiblock=True,
@@ -215,9 +217,47 @@ class TestMultiPanel:
                        forcelegend=forcelegend)
     for comp, ax in enumerate(fig.axes):
       expected = ([f"c{comp}"] if count == 1 else
-                  [f"run{i}.gkyl_c{comp}" for i in range(count)])
+                  [f"{label or f'run{i}.gkyl'}_c{comp}" for i in range(count)])
       assert [text.get_text()
               for text in ax.get_legend().get_texts()] == expected
+
+  @pytest.mark.parametrize("paths, expected", [
+      (["my_folder/my_sim/data1.gkyl", "your_folder/your_sim/data1.gkyl"
+        ], ["my_sim/data1.gkyl", "your_sim/data1.gkyl"]),
+      ([
+          "my_folder/sim/data1.gkyl", "your_folder/sim/data1.gkyl",
+          "elsewhere/data2.gkyl"
+      ], [
+          "my_folder/sim/data1.gkyl", "your_folder/sim/data1.gkyl", "data2.gkyl"
+      ]),
+      (["sim/data1.gkyl", "sim/data1.gkyl"], ["data1.gkyl", "data1.gkyl"]),
+  ])
+  def test_default_legend_uses_distinguishing_path_suffix(
+      self, paths, expected):
+    datasets = [_line() for _ in paths]
+    for data, path in zip(datasets, paths):
+      data._file_name = path
+    fig = backend.plot(*datasets, multiblock=True, no_show=True)
+    assert [text.get_text() for text in fig.axes[0].get_legend().get_texts()
+            ] == [f"{label}_c0" for label in expected]
+    assert [data.label for data in datasets
+            ] == [path.rsplit("/", 1)[-1] for path in paths]
+
+  @pytest.mark.parametrize("legend_labels, first", [(None, "custom_c0"),
+                                                    (["explicit"], "explicit")])
+  def test_path_disambiguation_preserves_supplied_labels(
+      self, legend_labels, first):
+    datasets = [_line() for _ in range(3)]
+    for i, data in enumerate(datasets):
+      data._file_name = f"run{i}/data.gkyl"
+    datasets[0]._custom_label = "custom"
+    datasets[1].label = "generated"
+    fig = backend.plot(*datasets,
+                       multiblock=True,
+                       no_show=True,
+                       legend_labels=legend_labels)
+    assert [text.get_text() for text in fig.axes[0].get_legend().get_texts()
+            ] == [first, "generated_c0", "data.gkyl_c0"]
 
   def test_partial_legend_labels_and_in_memory_fallback(self):
     datasets = [_line() for _ in range(3)]
@@ -496,11 +536,23 @@ class TestValueRange:
 
 class TestAspect:
 
-  def test_aspect_applies_to_2d_axes(self):
-    # aspect only takes effect with fixaspect=True -- --aspect on the CLI
-    # implies --fix-aspect (see cli/commands/plot.py), but the render engine
-    # itself keeps the two independent, exactly as main's output.plot did.
-    fig = backend.plot(_field_2d(), no_show=True, fixaspect=True, aspect=1.0)
+  @pytest.mark.parametrize("aspect", [1.0, 1.6, 10.0])
+  @pytest.mark.parametrize("fixaspect", [False, True])
+  @pytest.mark.parametrize("contour", [False, True])
+  def test_aspect_applies_to_2d_axes(self, aspect, fixaspect, contour):
+    fig = backend.plot(_field_2d(),
+                       no_show=True,
+                       fixaspect=fixaspect,
+                       aspect=aspect,
+                       contour=contour)
+    fig.canvas.draw()
+    ax = fig.axes[0]
+    origin, x_unit, y_unit = ax.transData.transform([(0, 0), (1, 0), (0, 1)])
+    unit_ratio = (y_unit[1] - origin[1]) / (x_unit[0] - origin[0])
+    assert unit_ratio == pytest.approx(aspect)
+
+  def test_fixaspect_alone_uses_equal_scaling(self):
+    fig = backend.plot(_field_2d(), no_show=True, fixaspect=True)
     assert fig.axes[0].get_aspect() == 1.0
 
   def test_aspect_none_leaves_default(self):

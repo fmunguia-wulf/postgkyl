@@ -9,6 +9,7 @@ available on the host, per the layer instructions.
 from __future__ import annotations
 
 import os
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -241,6 +242,65 @@ class TestPyvista:
     np.testing.assert_allclose(axes_ranges[5], (xmax + 1.0) * 4.0, atol=1e-9)
 
 
+@pytest.mark.parametrize("no_normalize", [False, True])
+def test_coordinate_normalization_and_tick_ranges(monkeypatch, no_normalize):
+  # Unequal, offset, nonuniform coordinates expose independent axis scaling.
+  grid = [
+      np.array([2., 4., 8.]),
+      np.array([-6., -2., 4.]),
+      np.array([10., 12., 16.])
+  ]
+  centers = [np.array([3., 6.]), np.array([-4., 1.]), np.array([11., 14.])]
+  x, y, z = np.meshgrid(*centers, indexing="ij")
+  data = GDataState()
+  data.push(grid, (x + y + z)[..., np.newaxis])
+  plotter = MagicMock()
+  plotter.add_volume.side_effect = lambda mesh, **kwargs: setattr(
+      plotter, "bounds", mesh.bounds)
+  monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+
+  pyvista(data,
+          volume=True,
+          no_show=True,
+          no_spin=True,
+          no_normalize=no_normalize,
+          aspect_ratio=(2, 3, 4),
+          xshift=1,
+          xscale=2)
+
+  mesh = plotter.add_volume.call_args.args[0]
+  expected_axes = centers if no_normalize else [[-2, 2], [-3, 3], [-4, 4]]
+  expected_points = np.column_stack([
+      axis.ravel(order="F")
+      for axis in np.meshgrid(*expected_axes, indexing="ij")
+  ])
+  np.testing.assert_allclose(mesh.points, expected_points, rtol=0, atol=1e-14)
+  np.testing.assert_allclose(mesh["f_raw"], (x + y + z).ravel(order="F"),
+                             rtol=0,
+                             atol=1e-14)
+  if no_normalize:
+    np.testing.assert_allclose(
+        plotter.show_bounds.call_args.kwargs["axes_ranges"],
+        [8, 14, -4, 1, 11, 14],
+        rtol=0,
+        atol=1e-14)
+
+
+def test_unnormalized_isosurface_preserves_physical_plane(monkeypatch):
+  plotter = MagicMock()
+  monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+  pyvista(_volume(),
+          clevels="1.0",
+          no_normalize=True,
+          no_show=True,
+          no_spin=True,
+          hide_axes=True)
+  mesh = plotter.add_mesh.call_args.args[0]
+  assert mesh.n_points > 0
+  # f = x + y + z, so the f=1 contour lies on this physical plane.
+  np.testing.assert_allclose(mesh.points.sum(axis=1), 1, rtol=0, atol=1e-7)
+
+
 class TestPyvistaValidation:
 
   def test_non_3d_dataset_raises(self):
@@ -252,3 +312,56 @@ class TestPyvistaValidation:
   def test_unsupported_saveas_extension_raises(self):
     with pytest.raises(ValueError, match="Unsupported"):
       pyvista(_volume(), no_show=True, saveas="out.bogus")
+
+
+class TestPyvistaIsosurfaces:
+
+  @pytest.mark.parametrize("spec, expected", [
+      ("0.0", [0.0]),
+      ("-0.5,0,0.75", [-0.5, 0.0, 0.75]),
+      ("-0.5:0.5:3", [-0.5, 0.0, 0.5]),
+  ])
+  def test_explicit_levels_extract_analytic_planes(self, monkeypatch, spec,
+                                                   expected):
+    # Keep real VTK contour extraction; only the window is replaced.
+    plotter = MagicMock()
+    monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+    data = _volume()
+    data.values[..., 0] -= 1.5
+    pyvista(data, clevels=spec, no_show=True, no_spin=True, hide_axes=True)
+    mesh = plotter.add_mesh.call_args.args[0]
+    assert mesh.n_points > 0
+    np.testing.assert_allclose(np.unique(mesh["f_plot"]),
+                               expected,
+                               rtol=0,
+                               atol=1e-7)
+    # Cell centers span [1/12, 11/12], normalized to [-1, 1].
+    # Thus f = x + y + z - 1.5 = (5/12) * sum(normalized coordinates).
+    np.testing.assert_allclose(mesh.points.sum(axis=1) * (5 / 12),
+                               mesh["f_plot"],
+                               rtol=0,
+                               atol=1e-7)
+
+  def test_log_levels_use_original_scalar_units(self, monkeypatch):
+    plotter = MagicMock()
+    monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+    pyvista(_volume(),
+            clevels="1,2",
+            is_log=True,
+            no_show=True,
+            no_spin=True,
+            hide_axes=True)
+    mesh = plotter.add_mesh.call_args.args[0]
+    np.testing.assert_allclose(np.unique(mesh["f_plot"]), [0, np.log10(2)],
+                               rtol=0,
+                               atol=1e-7)
+
+  @pytest.mark.parametrize("spec", ["", "nan", "inf", "0:1:0", "0:1:2.5"])
+  def test_invalid_levels(self, spec):
+    with pytest.raises(ValueError, match="clevels"):
+      pyvista(_volume(), clevels=spec, no_show=True)
+
+  @pytest.mark.parametrize("kwargs", [{"volume": True}, {"is_log": True}])
+  def test_incompatible_options(self, kwargs):
+    with pytest.raises(ValueError, match="clevels"):
+      pyvista(_volume(), clevels="0", no_show=True, **kwargs)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Annotated
 
 import matplotlib as mpl
@@ -45,6 +46,24 @@ _OUTPUT_EXTENSIONS = (".png", ".pdf")
 _AxisLimits = (tuple[float, float] | list[tuple[float, float]]
                | dict[int, tuple[float, float]])
 _AxisBound = Annotated[float | dict[int, float] | None, CliType(float | None)]
+
+
+def _dataset_labels(states: list[GDataState]) -> list[str]:
+  """Use the shortest distinguishing path suffix for unnamed datasets."""
+  paths = {
+      i: Path(data._file_name).parts
+      for i, data in enumerate(states)
+      if data._file_name and not (data._custom_label or data._label)
+  }
+  labels = [data.get_label() or f"dataset {i}" for i, data in enumerate(states)]
+  for i, parts in paths.items():
+    depth = 1
+    while depth < len(parts) and any(
+        other != parts and other[-depth:] == parts[-depth:]
+        for other in paths.values()):
+      depth += 1
+    labels[i] = os.path.join(*parts[-depth:])
+  return labels
 
 
 def _indexed_saveas(saveas, index: int, indexed: bool):
@@ -542,6 +561,9 @@ def plot(
     no_legend: Suppress legends for line plots.
     legend_labels: Dataset labels in input order; CLI: --legend_labels
       '["new","old"]' (quote the whole JSON array), or repeat the option.
+      For multiple datasets, defaults to each dataset's label (using the
+      shortest distinguishing path suffix for source filenames), falling back
+      to ``dataset N`` for unnamed in-memory data.
     legend_subplot: Zero-based subplot receiving the legend.
     legend_loc: Matplotlib legend location.
     forcelegend: Retained for compatibility; default curves already have labels.
@@ -569,7 +591,7 @@ def plot(
     split_log_nonpositive: Handling of nonpositive logarithmic values.
     split_seam_ticklabels: Half owning labels at the split seam.
     fixaspect: Use equal physical scaling on coordinate axes.
-    aspect: Explicit axes aspect ratio.
+    aspect: Ratio of y-unit to x-unit display size; overrides ``fixaspect``.
     edgecolors: Mesh edge color.
     no_showgrid: Suppress plot grid lines.
     hashtag: Prefix labels with a hash marker.
@@ -603,6 +625,8 @@ def plot(
   states = flatten_datasets(datasets)
   if not states:
     raise ValueError("nothing to plot")
+  if aspect is None and fixaspect:
+    aspect = 1.0
   group_call = len(datasets) == 1 and isinstance(datasets[0], GDataStateGroup)
   families = ([states] if multiblock or group_call or figure is not None else
               group_blocks(states))
@@ -645,9 +669,6 @@ def plot(
       mpl.rcParams["lines.linestyle"] = linestyle
 
     with xkcd_cm(), mpl.rc_context(rc=xkcd_rc):
-
-      if not aspect:
-        aspect = 1.0
 
       # ---- Phase 1: figure/axes layout, from the first dataset ----
       ref = states[0]
@@ -901,13 +922,13 @@ def plot(
       im = None
       cur_start_axes = start_axes
       line_color_idx = 0
+      dataset_labels = _dataset_labels(states)
       for ds_i, data in enumerate(states):
         if legend_labels is not None and ds_i < len(legend_labels):
           label_prefix = legend_labels[ds_i]
           explicit_legend_label = True
         elif len(states) > 1:
-          label_prefix = (os.path.basename(data.file_name) or data.get_label()
-                          or f"dataset {ds_i}")
+          label_prefix = dataset_labels[ds_i]
           explicit_legend_label = False
         else:
           label_prefix = ""
@@ -1334,7 +1355,7 @@ def plot(
               side_ax.set_ylim(comp_ymin, comp_ymax)
             if side_ylim is not None:
               side_ax.set_ylim(*side_ylim)
-            if fixaspect and not (surface and num_dims == 2):
+            if aspect is not None and not (surface and num_dims == 2):
               plt.setp(side_ax, aspect=aspect)
 
         if num_axes and not overlay_axes:

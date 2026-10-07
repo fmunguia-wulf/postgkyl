@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from click.testing import CliRunner
 import numpy as np
@@ -171,7 +172,7 @@ def test_select_prioritizes_the_first_option_for_each_initial():
   }
   result = _ok(FIELD, "interpolate", "select", "-c", "0", "-z", "0", "-t",
                "chosen", "info")
-  assert result.output.startswith("(chosen#0)")
+  assert result.output.startswith(f"{FIELD.name} (chosen#0)")
 
 
 def test_api_underscores_are_the_only_cli_spellings():
@@ -216,6 +217,24 @@ def test_generated_save_options_match_python_parameter_names(tmp_path):
   assert _run(DISTF, "save", "--out", output).exit_code != 0
 
 
+@pytest.mark.parametrize("aspect", [1.0, 1.6, 10.0])
+def test_contour_aspect_after_selection(aspect):
+  import matplotlib.pyplot as plt
+
+  plt.close("all")
+  try:
+    _ok(FIELD_3D, "sel", "--z1", "0.0", "pl", "-c", "--clevels", "0.0",
+        "--aspect", aspect, "--no_show")
+    fig = plt.gcf()
+    fig.canvas.draw()
+    ax = fig.axes[0]
+    origin, x_unit, y_unit = ax.transData.transform([(0, 0), (1, 0), (0, 1)])
+    unit_ratio = (y_unit[1] - origin[1]) / (x_unit[0] - origin[0])
+    assert unit_ratio == pytest.approx(aspect)
+  finally:
+    plt.close("all")
+
+
 def test_plot_uses_generated_render_options(tmp_path):
   output = tmp_path / "field.png"
   _ok(FIELD, "interpolate", "select", "--comp", "0", "plot", "--no_show",
@@ -237,6 +256,30 @@ def test_plot_legend_labels(labels):
     for ax in plt.figure(0).axes:
       assert [text.get_text() for text in ax.get_legend().get_texts()
               ] == ["new result", "old result"]
+  finally:
+    plt.close("all")
+
+
+@pytest.mark.parametrize("dims", [1, 2])
+@pytest.mark.parametrize("custom_labels", [False, True])
+def test_plot_uses_load_labels_after_interpolation(dims, custom_labels):
+  import matplotlib.pyplot as plt
+
+  plt.close("all")
+  try:
+    field = DATA / "generated" / f"{dims}d_ms_p1.gkyl"
+    args = ([field, "-l", "o", field, "-l", "n"]
+            if custom_labels else [field, field])
+    _ok(*args, "interp", "pl", "-f0", "--num_axes", "2", "--no_show")
+    expected = ["o_c0", "n_c0"] if custom_labels else [f"{field.name}_c0"] * 2
+    axes = plt.figure(0).axes
+    if dims == 1:
+      assert [
+          text.get_text() for ax in axes
+          for text in ax.get_legend().get_texts()
+      ] == expected
+    else:
+      assert [text.get_text() for ax in axes for text in ax.texts] == expected
   finally:
     plt.close("all")
 
@@ -265,3 +308,42 @@ def test_animation_plot_options_reach_saved_frames(tmp_path):
       prefix, "--no_show", "--scatter", "--color", "red", "--ylim", "-100",
       "100", "--figsize", "3", "2", "--notitle", "--dpi", "40")
   assert (tmp_path / "animation_0.png").is_file()
+
+
+def test_plotly_explicit_isosurface_cli(tmp_path):
+  output = tmp_path / "isosurface.html"
+  _ok(FIELD_3D, "plotly", "--clevels", "0.0", "--saveas", output)
+  html = output.read_text()
+  assert '"type":"isosurface"' in html
+  assert '"isomin":0.0' in html
+  assert '"isomax":0.0' in html
+
+
+@pytest.mark.parametrize("options",
+                         [[], ["--no_normalize"], ["--no_normalize", "False"]])
+def test_pyvista_explicit_isosurface_cli(monkeypatch, options):
+  import pyvista as pv
+
+  plotter = MagicMock()
+  monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+  _ok(FIELD_3D, "pyvista", "--clevels", "0.0", "--no_show", "--no_spin",
+      "--hide_axes", *options)
+  mesh = plotter.add_mesh.call_args.args[0]
+  assert mesh.n_points > 0
+  np.testing.assert_allclose(mesh["f_plot"], 0.0, rtol=0, atol=1e-7)
+
+
+@pytest.mark.parametrize("opacity, expected", [("0", 0.0), ("1", 1.0),
+                                               ("0.5", 0.5),
+                                               ("sigmoid_4", "sigmoid_4")])
+@pytest.mark.parametrize("volume", [False, True])
+def test_pyvista_opacity_cli(monkeypatch, opacity, expected, volume):
+  import pyvista as pv
+
+  plotter = MagicMock()
+  monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
+  options = ["--volume"] if volume else []
+  _ok(FIELD_3D, "pyvista", "-o", opacity, "--no_show", "--no_spin",
+      "--hide_axes", *options)
+  render = plotter.add_volume if volume else plotter.add_mesh
+  assert render.call_args.kwargs["opacity"] == expected

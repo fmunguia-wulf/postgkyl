@@ -10,10 +10,12 @@ letting a VTK error surface from deep inside the library.
 from __future__ import annotations
 
 import os
+from typing import Annotated
 
 import numpy as np
 
 from postgkyl.cli_spec import (
+    CliType,
     CommandSpec,
     Execution,
     ResultPolicy,
@@ -24,7 +26,8 @@ from postgkyl.gdatastate import GDataState
 from postgkyl.numerics import downsample, nodal_to_cell_centered_grid
 
 from ._prep import (default_value_label, materialize_plot_data,
-                    resolve_axis_labels, squeeze_collapsed_axes)
+                    parse_isosurface_levels, resolve_axis_labels,
+                    squeeze_collapsed_axes)
 from .labels import latex_to_unicode
 
 
@@ -51,6 +54,7 @@ def pyvista(data: GDataState,
             no_spin: bool = False,
             max_points_per_axis: int = -1,
             contour_levels: int = 10,
+            clevels: str | None = None,
             is_log: bool = False,
             volume: bool = False,
             is_shaded: bool = False,
@@ -61,9 +65,10 @@ def pyvista(data: GDataState,
             cmin: float | None = None,
             cmax: float | None = None,
             aspect_ratio: tuple[float, float, float] = (1, 1, 1),
+            no_normalize: bool = False,
             camera_azimuth: float = 0.0,
             camera_elevation: float = -30.0,
-            opacity: str = "sigmoid_4",
+            opacity: Annotated[str | float, CliType(str)] = "sigmoid_4",
             cmap: str = "inferno",
             xlabel: str | None = None,
             ylabel: str | None = None,
@@ -85,8 +90,9 @@ def pyvista(data: GDataState,
 
   Builds a structured grid from the (single-component) scalar values and
   renders it as a volume, contour isosurfaces, or an interactive clip/slice
-  plane. The grid is normalized to ``aspect_ratio`` because PyVista handles
-  non-integer axis extents poorly. Only the first value component is used.
+  plane. By default the grid is normalized to ``aspect_ratio``; use
+  ``no_normalize`` to preserve physical coordinates and proportions.
+  Only the first value component is used.
 
   Args:
     data: dataset to plot; must be 3-D (after squeezing any size-1 axis).
@@ -94,7 +100,11 @@ def pyvista(data: GDataState,
     no_spin: Do not auto-rotate the camera in interactive windows.
     max_points_per_axis: downsample to at most this many points per axis;
       ``-1`` disables downsampling.
-    contour_levels: Number of isosurfaces extracted unless ``volume`` is set.
+    contour_levels: Number of isosurfaces extracted unless ``volume`` is set
+      or ``clevels`` is supplied.
+    clevels: Explicit isosurfaces: a value, comma-separated values, or
+      ``start:end:count``. Uses scalar units before ``is_log``; incompatible
+      with ``volume``.
     is_log: color by log10 of the scalar (non-positive values masked).
     volume: Render a volume instead of isosurface contours.
     is_shaded: enable shading on the volume render (volume mode only).
@@ -104,11 +114,15 @@ def pyvista(data: GDataState,
     volume_clip_plane: add an interactive volume clip plane (volume mode).
     cmin: Color-limit lower bound; defaults to the data minimum.
     cmax: Color-limit upper bound; defaults to the data maximum.
-    aspect_ratio: per-axis aspect the grid is normalized to.
+    aspect_ratio: per-axis aspect the grid is normalized to; ignored when
+      ``no_normalize`` is set.
+    no_normalize: Preserve coordinates without recentering or rescaling,
+      after any cylindrical-to-Cartesian conversion.
     camera_azimuth: Initial camera azimuth in degrees.
     camera_elevation: Initial camera elevation in degrees.
     opacity: a PyVista opacity preset string, ``"diverging"`` (opaque at
-      both ends, transparent in the middle), or a scalar opacity.
+      both ends, transparent in the middle), or a number from 0 (transparent)
+      to 1 (fully opaque). Numeric strings are also accepted.
     cmap: colormap name; overridden to ``"RdBu_r"`` when ``diverging``.
     xlabel: Horizontal-axis label; auto-derived when omitted.
     ylabel: Vertical-axis label; auto-derived when omitted.
@@ -135,10 +149,26 @@ def pyvista(data: GDataState,
 
   Raises:
     ValueError: ``data`` is not 3-D, or ``saveas`` has an unsupported
-      extension.
+      extension, or ``clevels`` is invalid or incompatible with the mode.
     RuntimeError: PyVista could not obtain a working OpenGL context.
   """
   import pyvista as pv
+
+  if isinstance(opacity, str):
+    try:
+      opacity = float(opacity)
+    except ValueError:
+      pass  # Preset names are interpreted below or by PyVista.
+
+  levels = contour_levels
+  if clevels is not None:
+    if volume:
+      raise ValueError("clevels is incompatible with volume mode")
+    levels = parse_isosurface_levels(clevels)
+    if is_log:
+      if np.any(levels <= 0):
+        raise ValueError("clevels must be positive before each logarithm")
+      levels = np.log10(levels)
 
   data = materialize_plot_data(data)
   clabel = default_value_label(data, clabel)
@@ -179,13 +209,12 @@ def pyvista(data: GDataState,
   ymax, ymin = np.max(y), np.min(y)
   zmax, zmin = np.max(z), np.min(z)
   datamax, datamin = np.max(scalar), np.min(scalar)
-  x_range, y_range, z_range = xmax - xmin, ymax - ymin, zmax - zmin
-
-  # Normalize to [-aspect, aspect] per axis -- PyVista struggles with
-  # non-integer axis extents.
-  x = (x - xmin) / x_range * aspect_ratio[0] * 2 - aspect_ratio[0]
-  y = (y - ymin) / y_range * aspect_ratio[1] * 2 - aspect_ratio[1]
-  z = (z - zmin) / z_range * aspect_ratio[2] * 2 - aspect_ratio[2]
+  if not no_normalize:
+    x_range, y_range, z_range = xmax - xmin, ymax - ymin, zmax - zmin
+    # Normalize to [-aspect, aspect] per axis.
+    x = (x - xmin) / x_range * aspect_ratio[0] * 2 - aspect_ratio[0]
+    y = (y - ymin) / y_range * aspect_ratio[1] * 2 - aspect_ratio[1]
+    z = (z - zmin) / z_range * aspect_ratio[2] * 2 - aspect_ratio[2]
 
   x, y, z, scalar = downsample(x,
                                y,
@@ -237,7 +266,7 @@ def pyvista(data: GDataState,
     scalar_bar_args = {"title": latex_to_unicode(clabel), "fmt": colorbarformat}
 
     if not volume:
-      contours = grid3d.contour(isosurfaces=contour_levels, scalars="f_plot")
+      contours = grid3d.contour(isosurfaces=levels, scalars="f_plot")
       if mesh_clip_plane:
         pl.add_mesh_clip_plane(contours,
                                cmap=cmap,
@@ -298,16 +327,23 @@ def pyvista(data: GDataState,
     if hide_axes:
       pl.hide_axes()
     else:
-      # The mesh itself is normalized to +/-aspect_ratio (see above), so its
-      # own bounds carry no physical meaning; axes_ranges relabels the ticks
-      # with the true (shift/scale-adjusted) physical extent instead.
       pv_bounds = pl.bounds
-      axes_ranges = (-(xmin + xshift) * xscale * pv_bounds.x_min,
-                     (xmax + xshift) * xscale * pv_bounds.x_max,
-                     -(ymin + yshift) * yscale * pv_bounds.y_min,
-                     (ymax + yshift) * yscale * pv_bounds.y_max,
-                     -(zmin + zshift) * zscale * pv_bounds.z_min,
-                     (zmax + zshift) * zscale * pv_bounds.z_max)
+      if no_normalize:
+        # Rendered bounds are already physical; shifts/scales affect ticks only.
+        axes_ranges = ((pv_bounds.x_min + xshift) * xscale,
+                       (pv_bounds.x_max + xshift) * xscale,
+                       (pv_bounds.y_min + yshift) * yscale,
+                       (pv_bounds.y_max + yshift) * yscale,
+                       (pv_bounds.z_min + zshift) * zscale,
+                       (pv_bounds.z_max + zshift) * zscale)
+      else:
+        # Retain the existing tick relabeling for normalized meshes.
+        axes_ranges = (-(xmin + xshift) * xscale * pv_bounds.x_min,
+                       (xmax + xshift) * xscale * pv_bounds.x_max,
+                       -(ymin + yshift) * yscale * pv_bounds.y_min,
+                       (ymax + yshift) * yscale * pv_bounds.y_max,
+                       -(zmin + zshift) * zscale * pv_bounds.z_min,
+                       (zmax + zshift) * zscale * pv_bounds.z_max)
       pl.show_bounds(xtitle=latex_to_unicode(xlabel),
                      ytitle=latex_to_unicode(ylabel),
                      ztitle=latex_to_unicode(zlabel),
