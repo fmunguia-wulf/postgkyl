@@ -22,12 +22,9 @@ from __future__ import annotations
 
 import operator
 import os
-import os
 from typing import TYPE_CHECKING
 import warnings
-import warnings
 
-import numpy as np
 import numpy as np
 from scipy import constants
 
@@ -39,7 +36,6 @@ if TYPE_CHECKING:
 
 def _get_ctx_val(gdata: "GData", key: str, **kwargs):
   """A value (or one value per species) for ``key``: ``kwargs[key]``
-  (an explicit ``load_quantity`` option) wins over ``gdata.ctx[key]`` (the
   (an explicit ``load_quantity`` option) wins over ``gdata.ctx[key]`` (the
   file's own attribute), which wins over raising.
 
@@ -57,13 +53,11 @@ def _get_ctx_val(gdata: "GData", key: str, **kwargs):
     if species_idx is None:
       raise KeyError(
           f"fetch function: '{key}' was given {len(val)} values "
-          f"fetch function: '{key}' was given {len(val)} values "
           "but this quantity is not resolved per species here, so there is "
           "no way to tell which one to use. Pass a single value instead.")
     if species_idx >= len(val):
       species = kwargs.get("species")
       raise ValueError(
-          f"fetch function: '{key}' was given only {len(val)} "
           f"fetch function: '{key}' was given only {len(val)} "
           f"values but species #{species_idx}"
           f"{f' ({species})' if species else ''} was requested. Give one "
@@ -75,72 +69,11 @@ def _get_ctx_val(gdata: "GData", key: str, **kwargs):
       f"fetch function: context key '{key}' not found in the dataset; "
       f"pass the '{key}' option, either one value or one value per "
       "species in the order of the species list.")
-      f"pass the '{key}' option, either one value or one value per "
-      "species in the order of the species list.")
 
 
 def _component(d: "GData", comp: int | None) -> "GData":
   """Select a physical field while retaining its complete DG expansion."""
   return d.clone() if comp is None else operations.select(d, comp=comp)
-
-
-def _direction(kwargs, quantity: str) -> int:
-  """The vector component ``k`` (0, 1 or 2) selected with ``dir=<k>``."""
-  if "dir" not in kwargs:
-    raise KeyError(
-        f"{quantity}: select the k-th component with dir=<k> (0, 1 or 2).")
-  comp = int(kwargs["dir"])
-  if not 0 <= comp < 3:
-    raise KeyError(f"{quantity}: dir must be 0, 1 or 2, got {comp}.")
-  return comp
-
-
-# Component of the symmetric metric tensors g_ij and g^ij holding the (k, l)
-# entry, stored as 11, 12, 13, 22, 23, 33.
-_METRIC_COMP = {
-    (0, 0): 0,
-    (0, 1): 1,
-    (0, 2): 2,
-    (1, 1): 3,
-    (1, 2): 4,
-    (2, 2): 5
-}
-
-
-def _config_axis(cdim: int) -> tuple[int | None, int | None, int]:
-  """The data dimension holding each of ``x, y, z``, ``None`` where a reduced
-  simulation does not carry it: 3x holds ``(x, y, z)``, 2x ``(x, z)`` and 1x
-  only ``z``."""
-  return (0 if cdim > 1 else None, 1 if cdim > 2 else None, cdim - 1)
-
-
-def _radial_derivative(f: "GData", quantity: str) -> "GData":
-  """``df/dx`` along the radial (first) configuration-space coordinate."""
-  if f.num_dims < 2:
-    raise ValueError(f"{quantity}: a 1x simulation has no radial coordinate x.")
-  return operations.differentiate(f, direction=0)
-
-
-def _metric_contract(metric: "GData", comp: int, vec) -> "GData":
-  """``sum_j g_{comp j} V_j``: component ``comp`` of the vector ``V`` (whose
-  ``j``-th component is ``vec(j)``) with its index raised or lowered by the
-  six-component symmetric ``metric``."""
-  terms = (_component(metric, _METRIC_COMP[(min(comp, j), max(comp, j))]) *
-           vec(j) for j in range(3))
-  total = next(terms)
-  for term in terms:
-    total = total + term
-  return total
-
-
-def _vector_magnitude(cov, contra) -> "GData":
-  """``sqrt(V_i V^i)`` of a vector whose covariant and contravariant
-  components are ``cov(i)`` and ``contra(i)``. The product is of higher
-  order than the basis, so the result carries projection aliasing."""
-  total = cov(0) * contra(0)
-  for i in (1, 2):
-    total = total + cov(i) * contra(i)
-  return total**0.5
 
 
 def _direction(kwargs, quantity: str) -> int:
@@ -248,34 +181,6 @@ def fetch_M1_from_H(gdatas: list["GData"], **kwargs):
   hmom = gdatas[0]
   mass = _get_ctx_val(gdatas[0], "mass", **kwargs)
   return _component(hmom, 0) * _component(hmom, 1) / mass
-
-
-def _make_fetch_M2_from_Max(par: bool, t_comp: int):
-  """Second parallel (``par``) or perpendicular velocity moment from
-  (Bi)Maxwellian moments ``(n, u_par, T/m, ...)``, with the temperature over
-  mass in component ``t_comp``::
-
-    M2par  = n*T_par/m + n*u_par^2,
-    M2perp = 2*n*T_perp/m.
-  """
-
-  def fetch(gdatas: list["GData"], **kwargs):
-    mom = gdatas[0]
-    n = _component(mom, 0)
-    thermal = n * _component(mom, t_comp)
-    if not par:
-      return thermal * 2.0
-    upar = _component(mom, 1)
-    return thermal + (n * upar) * upar
-
-  fetch.__name__ = f"fetch_M2{'par' if par else 'perp'}_from_Max_c{t_comp}"
-  return fetch
-
-
-fetch_M2par_from_Max = _make_fetch_M2_from_Max(True, 2)
-fetch_M2perp_from_Max = _make_fetch_M2_from_Max(False, 2)
-fetch_M2par_from_BiMax = _make_fetch_M2_from_Max(True, 2)
-fetch_M2perp_from_BiMax = _make_fetch_M2_from_Max(False, 3)
 
 
 def _make_fetch_M2_from_Max(par: bool, t_comp: int):
@@ -468,13 +373,9 @@ def _split_elc_ions(gdatas, quantity: str, **kwargs):
 
   ``gdatas[i]`` is species ``i``'s resolved source list, starting with
   ``[M0, temp]`` (as
-  ``gdatas[i]`` is species ``i``'s resolved source list, starting with
-  ``[M0, temp]`` (as
   :meth:`~postgkyl.diagnostics.gk.quantity.GkQuantity.fetch_multi`
   hands it to an ``is_multi_species`` fetch function); each entry's
   ``mass``/``charge`` is resolved with ``species_idx=i`` so a per-species
-  array picks the right one. With only ion species listed (e.g. adiabatic
-  electrons) the electron entry is :func:`_adiabatic_electrons`.
   array picks the right one. With only ion species listed (e.g. adiabatic
   electrons) the electron entry is :func:`_adiabatic_electrons`.
   """
@@ -503,38 +404,7 @@ def _split_elc_ions(gdatas, quantity: str, **kwargs):
         f"species but found {len(elcs)} in {list(species_names)}.")
   if not elcs:
     return _adiabatic_electrons(ions, **kwargs), ions
-  if len(elcs) > 1:
-    raise ValueError(
-        f"{quantity}: expected at most one negatively charged (electron) "
-        f"species but found {len(elcs)} in {list(species_names)}.")
-  if not elcs:
-    return _adiabatic_electrons(ions, **kwargs), ions
   return elcs[0], ions
-
-
-def _adiabatic_electrons(ions, **kwargs) -> dict:
-  """The electron entry when only ions are listed, with sources
-  ``[n_e, T_e]``:
-
-    n_e = sum_j(n_j*Z_j)      (quasineutrality, Z_j = q_j/e),
-    T_e = T_i/ti_over_te      (T_i the first ion species' temperature),
-
-  ``ti_over_te`` defaulting to 1.
-  """
-  e = constants.elementary_charge
-  ti_over_te = float(kwargs.get("ti_over_te") or 1.0)
-  return {
-      "name":
-      "adiabatic electrons",
-      "srcs": [
-          _weighted_sum(ions, [ion["charge"] / e for ion in ions], 0),
-          ions[0]["srcs"][1] * (1.0 / ti_over_te)
-      ],
-      "mass":
-      constants.electron_mass,
-      "charge":
-      -e,
-  }
 
 
 def _adiabatic_electrons(ions, **kwargs) -> dict:
@@ -582,23 +452,12 @@ def _weighted_sum(entries, weights, comp: int) -> "GData":
 def fetch_c_s_cold_i(gdatas: list[list["GData"]], **kwargs):
   """Cold-ion (ion-acoustic) sound speed (m/s), the wave perspective of the
   Bohm criterion and sheath/presheath matching::
-# The sound speeds combine the electrons and every ion species: ``gdatas``
-# holds one ``[M0, temp]`` list per species, in the order requested, e.g.
-# ``pgkyl gk_load_quantity --quantity c_s_cold_i --species elc,ion1,ion2``.
-# Electrons and ions are told apart by the sign of each species' charge, so
-# the species may be named anything.
-
-
-def fetch_c_s_cold_i(gdatas: list[list["GData"]], **kwargs):
-  """Cold-ion (ion-acoustic) sound speed (m/s), the wave perspective of the
-  Bohm criterion and sheath/presheath matching::
 
     c_s = sqrt( T_e * sum_j(n_j*Z_j^2/m_j) / sum_j(n_j*Z_j) )
 
   summing over the ion species ``j``, with ``Z_j = q_j/e`` the ion charge
   state.
   """
-  elc, ions = _split_elc_ions(gdatas, "fetch_c_s_cold_i", **kwargs)
   elc, ions = _split_elc_ions(gdatas, "fetch_c_s_cold_i", **kwargs)
 
   e = constants.elementary_charge
@@ -615,30 +474,20 @@ def fetch_c_s_cold_i(gdatas: list[list["GData"]], **kwargs):
 def fetch_c_s_hot_i(gdatas: list[list["GData"]], **kwargs):
   """Hot-ion (thermodynamic) sound speed (m/s), the bulk-fluid perspective
   of Mach numbers and acoustic propagation in the core/SOL::
-def fetch_c_s_hot_i(gdatas: list[list["GData"]], **kwargs):
-  """Hot-ion (thermodynamic) sound speed (m/s), the bulk-fluid perspective
-  of Mach numbers and acoustic propagation in the core/SOL::
 
     c_s = sqrt( (gamma_e*n_e*T_e + sum_j(gamma_j*n_j*T_j)) / sum_j(n_j*m_j) )
 
   summing over the ion species ``j``. ``gamma_e`` and ``gamma_i`` default to
   1 and 3.
-  summing over the ion species ``j``. ``gamma_e`` and ``gamma_i`` default to
-  1 and 3.
   """
   elc, ions = _split_elc_ions(gdatas, "fetch_c_s_hot_i", **kwargs)
-  elc, ions = _split_elc_ions(gdatas, "fetch_c_s_hot_i", **kwargs)
 
   gamma_e = float(kwargs.get("gamma_e") or 1.0)
   gamma_i = float(kwargs.get("gamma_i") or 3.0)
-  gamma_e = float(kwargs.get("gamma_e") or 1.0)
-  gamma_i = float(kwargs.get("gamma_i") or 3.0)
 
-  m0_e, temp_e = elc["srcs"][:2]
   m0_e, temp_e = elc["srcs"][:2]
   numer = m0_e * temp_e * gamma_e
   for ion in ions:
-    m0_i, temp_i = ion["srcs"][:2]
     m0_i, temp_i = ion["srcs"][:2]
     numer = numer + m0_i * temp_i * gamma_i
 
@@ -704,95 +553,7 @@ def fetch_collision_freq(gdatas: list[list["GData"]], **kwargs):
   to 1. ``gdatas`` has one ``[M0, temp]`` list per species.
   """
   if len(gdatas) != 2:
-def _fetch_mach(gdatas, fetch_c_s, **kwargs):
-  """Parallel Mach number ``u_par/c_s`` of the first requested species, with
-  ``c_s`` from ``fetch_c_s`` combining every listed species. ``gdatas`` has
-  one ``[M0, temp, upar]`` list per species."""
-  c_s = fetch_c_s([srcs[:2] for srcs in gdatas], **kwargs)
-  return gdatas[0][2] * (1.0 / c_s)
-
-
-def fetch_mach_cold_i(gdatas: list[list["GData"]], **kwargs):
-  """Parallel Mach number ``u_par/c_s`` of the first requested species with
-  the cold-ion sound speed (:func:`fetch_c_s_cold_i`): ``--species ion,elc``
-  gives the ion Mach number, ``--species elc,ion`` the electron one, and
-  ``--species ion`` uses adiabatic electrons at ``T_i/ti_over_te``."""
-  return _fetch_mach(gdatas, fetch_c_s_cold_i, **kwargs)
-
-
-def fetch_mach_hot_i(gdatas: list[list["GData"]], **kwargs):
-  """Parallel Mach number ``u_par/c_s`` of the first requested species with
-  the hot-ion sound speed (:func:`fetch_c_s_hot_i`); species are listed as
-  for :func:`fetch_mach_cold_i`."""
-  return _fetch_mach(gdatas, fetch_c_s_hot_i, **kwargs)
-
-
-def _coulomb_log(ns, nr, ms, mr, Ts, Tr, qs, qr, bmag):
-  """Coulomb logarithm of species ``s`` colliding with ``r``, transcribed
-  from Gkeyll's ``coulomb_log`` (``vlasov/zero/spitzer_coll_freq.c``) so it
-  matches what a simulation used. Scalar inputs in SI units."""
-  eps0, hbar, e = constants.epsilon_0, constants.hbar, constants.elementary_charge
-  vts_sq, vtr_sq = Ts / ms, Tr / mr
-  wps_sq = ns * e * e / ms / eps0
-  wpr_sq = nr * e * e / mr / eps0
-  wcs, wcr = qs * bmag / ms, qr * bmag / mr
-  inner1 = ((wps_sq + wcs * wcs) / (Ts / ms + 3 * Ts / ms) +
-            (wpr_sq + wcr * wcr) / (Tr / mr + 3 * Ts / ms))
-  u = 3 * (vts_sq + vtr_sq)
-  msr = ms * mr / (ms + mr)
-  inner2 = max(
-      abs(qs * qr) / (4 * np.pi * eps0 * msr * u * u),
-      hbar / (2 * np.sqrt(e) * msr * u))
-  return 0.5 * np.log(1 / inner1 / inner2 / inner2 + 1)
-
-
-def fetch_collision_freq(gdatas: list[list["GData"]], **kwargs):
-  """Collision frequency (1/s) of species ``s`` with species ``r``, the two
-  requested species in order (``--species elc,ion``; ``ion,ion`` for
-  self-collisions), as the gyrokinetic app computes it for LBO/BGK
-  collisions with a normalized ``nu``::
-
-    nu_sr = norm_nu_sr * n_r / (v_ts^2 + v_tr^2)^(3/2),
-    norm_nu_sr = nu_frac * (1/m_s)*(1/m_s + 1/m_r) * q_s^2*q_r^2*log(Lambda_sr)
-                 / (3*(2*pi)^(3/2)*eps0^2),
-
-  with ``v_t^2 = T/m``. The Coulomb logarithm is symmetrized over ``(s, r)``
-  and evaluated, like Gkeyll's, at the reference values ``den_ref`` and
-  ``temp_ref`` (one per species) and ``bmag_ref``; ``nu_frac`` defaults
-  to 1. ``gdatas`` has one ``[M0, temp]`` list per species.
-  """
-  if len(gdatas) != 2:
     raise ValueError(
-        f"fetch_collision_freq: expected two species (s,r) but got "
-        f"{len(gdatas)}. Use e.g. '--species elc,ion', or '--species ion,ion' "
-        "for self-collisions.")
-
-  species_names = kwargs.get("species", [])
-  if len(species_names) != len(gdatas):
-    species_names = ["s", "r"]
-
-  attrs = []
-  for species_idx, (name, srcs) in enumerate(zip(species_names, gdatas)):
-    species_kwargs = dict(kwargs, species_idx=species_idx, species=name)
-    attrs.append({
-        key: float(_get_ctx_val(srcs[1], key, **species_kwargs))
-        for key in ("charge", "mass", "den_ref", "temp_ref", "bmag_ref")
-    })
-  s, r = attrs
-  nu_frac = float(kwargs.get("nu_frac") or 1.0)
-
-  coulomb_log = 0.5 * (_coulomb_log(
-      s["den_ref"], r["den_ref"], s["mass"], r["mass"], s["temp_ref"],
-      r["temp_ref"], s["charge"], r["charge"], s["bmag_ref"]) + _coulomb_log(
-          r["den_ref"], s["den_ref"], r["mass"], s["mass"], r["temp_ref"],
-          s["temp_ref"], r["charge"], s["charge"], s["bmag_ref"]))
-  norm_nu = (nu_frac / s["mass"] * (1.0 / s["mass"] + 1.0 / r["mass"]) *
-             (s["charge"] * r["charge"])**2 * coulomb_log /
-             (3.0 * (2.0 * np.pi)**1.5 * constants.epsilon_0**2))
-
-  (_m0_s, temp_s), (m0_r, temp_r) = gdatas
-  vt_sq_sum = temp_s * (1.0 / s["mass"]) + temp_r * (1.0 / r["mass"])
-  return vt_sq_sum**-1.5 * m0_r * norm_nu
         f"fetch_collision_freq: expected two species (s,r) but got "
         f"{len(gdatas)}. Use e.g. '--species elc,ion', or '--species ion,ion' "
         "for self-collisions.")
@@ -829,25 +590,6 @@ def fetch_beta_from_bmag_press(gdatas: list["GData"], **kwargs):
   """``beta = 2*mu_0*press / bmag**2``."""
   bmag, press = gdatas
   return press * (1.0 / bmag**2) * (2.0 * constants.mu_0)
-
-
-# --------------------------------------------------------- gradient lengths
-def _make_fetch_inv_grad_length(name: str):
-  """Radial inverse gradient length of a scalar field ``X``,
-  ``1/L_X = -(dX/dx)/X``, ``x`` the radial (first) configuration-space
-  coordinate. ``gdatas``: ``[X]`` (e.g. ``M0`` or ``temp``)."""
-
-  def fetch(gdatas: list["GData"], **kwargs):
-    field = gdatas[0]
-    grad = _radial_derivative(field, f"fetch_inv_L_{name}")
-    return grad * (1.0 / field) * -1.0
-
-  fetch.__name__ = f"fetch_inv_L_{name}"
-  return fetch
-
-
-fetch_inv_L_n = _make_fetch_inv_grad_length("n")
-fetch_inv_L_T = _make_fetch_inv_grad_length("T")
 
 
 # --------------------------------------------------------- gradient lengths
@@ -934,8 +676,6 @@ def fetch_ExB_vel(gdatas: list["GData"], **kwargs):
   jacobtot_inv, _bmag, b_i, phi = gdatas
   comp = _direction(kwargs, "fetch_ExB_vel")
   return _b_cross_grad_div_b_component(phi, jacobtot_inv, b_i, comp)
-  comp = _direction(kwargs, "fetch_ExB_vel")
-  return _b_cross_grad_div_b_component(phi, jacobtot_inv, b_i, comp)
 
 
 def fetch_gradB_vel(gdatas: list["GData"], **kwargs):
@@ -944,8 +684,6 @@ def fetch_gradB_vel(gdatas: list["GData"], **kwargs):
   ``gdatas``: ``(jacobtot_inv, bmag, b_i, Tperp)``.
   """
   jacobtot_inv, bmag, b_i, Tperp = gdatas
-  comp = _direction(kwargs, "fetch_gradB_vel")
-  out = _b_cross_grad_div_b_component(bmag, jacobtot_inv, b_i, comp)
   comp = _direction(kwargs, "fetch_gradB_vel")
   out = _b_cross_grad_div_b_component(bmag, jacobtot_inv, b_i, comp)
   charge = _get_ctx_val(Tperp, "charge", **kwargs)
@@ -958,8 +696,6 @@ def fetch_diamag_vel(gdatas: list["GData"], **kwargs):
   ``gdatas``: ``(jacobtot_inv, bmag, b_i, m0, pressperp)``.
   """
   jacobtot_inv, bmag, b_i, m0, pressperp = gdatas
-  comp = _direction(kwargs, "fetch_diamag_vel")
-  out = _b_cross_grad_div_b_component(pressperp, jacobtot_inv, b_i, comp)
   comp = _direction(kwargs, "fetch_diamag_vel")
   out = _b_cross_grad_div_b_component(pressperp, jacobtot_inv, b_i, comp)
   charge = _get_ctx_val(pressperp, "charge", **kwargs)
@@ -1259,8 +995,7 @@ def fetch_energy_flux_es(gdatas: list["GData"], **kwargs):
 #
 #   D = -Gamma/(g^xx dn/dx),  chi = -q/(n g^xx dT/dx),  q = Q - conv*T*Gamma,
 #
-# conv defaulting to 3/2. ``transport`` computes the same coefficients from
-# flux-surface and time averaged fluxes and profiles instead.
+# conv defaulting to 3/2.
 
 
 def _heat_flux(temp: "GData", part_flux: "GData", energy_flux: "GData",
