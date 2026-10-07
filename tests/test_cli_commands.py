@@ -319,13 +319,15 @@ def test_plotly_explicit_isosurface_cli(tmp_path):
   assert '"isomax":0.0' in html
 
 
-def test_pyvista_explicit_isosurface_cli(monkeypatch):
+@pytest.mark.parametrize("options",
+                         [[], ["--no_normalize"], ["--no_normalize", "False"]])
+def test_pyvista_explicit_isosurface_cli(monkeypatch, options):
   import pyvista as pv
 
   plotter = MagicMock()
   monkeypatch.setattr(pv, "Plotter", lambda **kwargs: plotter)
   _ok(FIELD_3D, "pyvista", "--clevels", "0.0", "--no_show", "--no_spin",
-      "--hide_axes")
+      "--hide_axes", *options)
   mesh = plotter.add_mesh.call_args.args[0]
   assert mesh.n_points > 0
   np.testing.assert_allclose(mesh["f_plot"], 0.0, rtol=0, atol=1e-7)
