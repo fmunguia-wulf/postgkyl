@@ -530,36 +530,33 @@ def fetch_mach_hot_i(gdatas: list[list["GData"]], **kwargs):
 
 
 def _coulomb_log(ns, nr, ms, mr, Ts, Tr, qs, qr, bmag):
-  """Coulomb logarithm of species ``s`` colliding with ``r``, transcribed
-  from Gkeyll's ``coulomb_log`` (``vlasov/zero/spitzer_coll_freq.c``) so it
-  matches what a simulation used. Scalar inputs in SI units::
+  """Coulomb logarithm of species ``s`` colliding with ``r``, as defined in
+  the Gkeyll docs. Scalar inputs in SI units::
 
     log(Lambda_sr) = (1/2) log(1 + 1/(inner1 * inner2^2)),
     inner1 = (w_ps^2 + w_cs^2)/(v_ts^2 + 3 v_ts^2)
              + (w_pr^2 + w_cr^2)/(v_tr^2 + 3 v_ts^2),
-    inner2 = max(|q_s q_r|/(4 pi eps0 m_sr u^2), hbar/(2 sqrt(e) m_sr u)),
-    u = 3 (v_ts^2 + v_tr^2),
+    inner2 = max(|q_s q_r|/(4 pi eps0 m_sr u^2), hbar/(2 exp(0.5) m_sr u)),
+    u^2 = 3 (v_ts^2 + v_tr^2),
 
-  with ``w_p^2 = n e^2/(eps0 m)``, ``w_c = q B/m``, ``v_t^2 = T/m``,
-  ``m_sr = m_s m_r/(m_s + m_r)`` and ``e`` the elementary charge: ``inner1``
-  is an inverse squared screening length, ``inner2`` the larger of the
-  classical and quantum minimum impact parameters. It is kept as Gkeyll
-  writes it, although ``u`` is a squared speed used as a speed and
-  ``sqrt(e)`` takes the elementary charge: for electron-ion collisions at
-  1e19 m^-3 and 100 eV it gives about 8, where the NRL formulary gives
-  about 14."""
-  eps0, hbar, e = constants.epsilon_0, constants.hbar, constants.elementary_charge
+  with ``w_p^2 = n q^2/(eps0 m)``, ``w_c = q B/m``, ``v_t^2 = T/m`` and
+  ``m_sr = m_s m_r/(m_s + m_r)``: ``inner1`` is an inverse squared screening
+  length, ``inner2`` the larger of the classical and quantum minimum impact
+  parameters."""
+  eps0, hbar = constants.epsilon_0, constants.hbar
+  e_sqrt = np.exp(0.5)
   vts_sq, vtr_sq = Ts / ms, Tr / mr
-  wps_sq = ns * e * e / ms / eps0
-  wpr_sq = nr * e * e / mr / eps0
+  wps_sq = ns * qs * qs / ms / eps0
+  wpr_sq = nr * qr * qr / mr / eps0
   wcs, wcr = qs * bmag / ms, qr * bmag / mr
   inner1 = ((wps_sq + wcs * wcs) / (Ts / ms + 3 * Ts / ms) +
             (wpr_sq + wcr * wcr) / (Tr / mr + 3 * Ts / ms))
-  u = 3 * (vts_sq + vtr_sq)
+  usq = 3 * (vts_sq + vtr_sq)
   msr = ms * mr / (ms + mr)
   inner2 = max(
-      abs(qs * qr) / (4 * np.pi * eps0 * msr * u * u),
-      hbar / (2 * np.sqrt(e) * msr * u))
+      abs(qs * qr) / (4 * np.pi * eps0 * msr * usq),
+      hbar / (2 * e_sqrt * msr * np.sqrt(usq))
+  )
   return 0.5 * np.log(1 / inner1 / inner2 / inner2 + 1)
 
 
