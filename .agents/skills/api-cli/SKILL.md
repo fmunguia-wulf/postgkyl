@@ -28,6 +28,10 @@ to the first parameter with each initial in signature order; reserve `-h` for
 help. Aliases/abbreviations change spelling only. Bare filenames expand to
 `load --file_name`; they do not define different loading semantics.
 
+`activate` (`Execution.ACTIVATE`) chooses the working set by tag; the other
+datasets move to `DataSpace.set_aside`, which `DatasetRef` options still
+resolve. Commands never see set-aside datasets.
+
 Use native Click chaining and callback-before-dispatch. Help groups the flat
 inventory into Verbs, Diagnostics, Render, and Utility. The console entry point
 is `postgkyl.cli.app:cli`. Version reporting is owned by `_version.py`, exported
