@@ -26,6 +26,10 @@ along field lines.
 
 ``data.map_to_phitheta(x_idx=...)`` (CLI verb ``map_to_phitheta``) samples one
 flux surface the same way over a full toroidal turn, on its (phi, theta) plane.
+For scripts using the former flux-surface API, replace
+``extract_flux_surface`` with ``map_to_phitheta`` and
+``resolve_flux_surface_grid`` with ``resolve_phitheta_projection``. Pass a
+reusable result as ``projection=`` instead of ``fs_grid=``.
 To render poloidal cuts and flux surfaces together in 3-D, see
 :doc:`toroidal-wedge`.
 
