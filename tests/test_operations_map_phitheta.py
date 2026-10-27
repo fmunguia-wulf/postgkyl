@@ -73,7 +73,9 @@ def test_inferred_geometry_reuse_and_public_spellings_agree():
                                               x_idx=93,
                                               nphi=4,
                                               nz_interp=2)
-  reused = data.map_to_torus_phitheta(projection=projection, tag="fs", label="lcfs")
+  reused = data.map_to_torus_phitheta(projection=projection,
+                                      tag="fs",
+                                      label="lcfs")
   np.testing.assert_allclose(reused.values, inferred.values)
   for actual, expected in zip(reused.grid, inferred.grid):
     np.testing.assert_allclose(actual, expected)
@@ -83,7 +85,7 @@ def test_inferred_geometry_reuse_and_public_spellings_agree():
 
   inplace = data.clone()
   assert pg.map_to_torus_phitheta(inplace, projection=projection,
-                            inplace=True) is inplace
+                                  inplace=True) is inplace
   np.testing.assert_allclose(inplace.values, inferred.values)
 
 

@@ -41,9 +41,9 @@ def test_surface_values_and_points_follow_the_analytic_field():
   # Exact p1 polynomials on a twisted geometry with R = 3 + x and Z = z.
   data = pg.load(str(GENERATED / "twisted_pos_3d_p1-field_0.gkyl"))
   torus = data.map_to_torus_3d(x_idx=(1, -1),
-                            phi_tor=(0.3, 2.0),
-                            nphi=5,
-                            nz_interp=1)
+                               phi_tor=(0.3, 2.0),
+                               nphi=5,
+                               nz_interp=1)
 
   # p1 samples two subcell centers per cell: x cells have width 1 on
   # [-1, 2] and z cells width 2 on [1, 5].
@@ -88,7 +88,8 @@ def test_caps_are_the_poloidal_projection_at_the_wedge_angles():
   last = rows.size + 4
   for angle, cap in ((0.4, torus.values[:rows.size]),
                      (2.9, torus.values[last:last + rows.size])):
-    poloidal = data.map_to_torus_rz(projection=rz, phi_tor=angle).values[rows, :, 0]
+    poloidal = data.map_to_torus_rz(projection=rz,
+                                    phi_tor=angle).values[rows, :, 0]
     if angle == 2.9:
       poloidal = poloidal[::-1]
     np.testing.assert_allclose(cap[:, :-1, 0, 0], poloidal, rtol=1e-12)
@@ -104,7 +105,9 @@ def test_inferred_geometry_reuse_and_public_spellings_agree():
                                            x_idx=(3, 93),
                                            nphi=4,
                                            nz_interp=2)
-  reused = data.map_to_torus_3d(projection=projection, tag="torus", label="wedge")
+  reused = data.map_to_torus_3d(projection=projection,
+                                tag="torus",
+                                label="wedge")
   np.testing.assert_allclose(reused.values, inferred.values)
   for actual, expected in zip(reused.grid, inferred.grid):
     np.testing.assert_allclose(actual, expected)
@@ -113,7 +116,7 @@ def test_inferred_geometry_reuse_and_public_spellings_agree():
 
   inplace = data.clone()
   assert pg.map_to_torus_3d(inplace, projection=projection,
-                         inplace=True) is inplace
+                            inplace=True) is inplace
   np.testing.assert_allclose(inplace.values, inferred.values)
 
 
@@ -168,11 +171,11 @@ def test_reusable_projection_contracts():
     pg.map_to_torus_3d(shifted, projection=projection)
   with pytest.raises(ValueError, match="radial rows exceed"):
     pg.map_to_torus_3d(data,
-                    projection=replace(projection, rows=projection.rows + 1))
+                       projection=replace(projection, rows=projection.rows + 1))
   with pytest.raises(ValueError, match="surface points and samples differ"):
     pg.map_to_torus_3d(data,
-                    projection=replace(projection,
-                                       phi_tor=projection.phi_tor[:2]))
+                       projection=replace(projection,
+                                          phi_tor=projection.phi_tor[:2]))
   with pytest.raises(ValueError, match="requires 3-D"):
     pg.map_to_torus_3d(pg.load(F2D))
   with pytest.raises(ValueError, match="un-interpolated modal DG"):
@@ -185,10 +188,10 @@ def test_cli_parses_negative_indices_and_matches_the_api():
 
   data = pg.load(F3D)
   expected = pg.map_to_torus_3d(data,
-                             x_idx=(4, -4),
-                             phi_tor=(0.0, 3.0),
-                             nphi=4,
-                             nz_interp=2)
+                                x_idx=(4, -4),
+                                phi_tor=(0.0, 3.0),
+                                nphi=4,
+                                nz_interp=2)
   command = next(c for c in COMMANDS if c.name == "map_to_torus_3d")
   space = DataSpace(datasets=[data])
   result = CliRunner().invoke(command, [

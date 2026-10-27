@@ -55,9 +55,10 @@ from .evaluate import available_operators as available_evaluate_operators, evalu
 from .map import map
 from .map_to_torus_rz import map_to_torus_rz, resolve_rz_projection, RzProjection
 from .map_to_torus_3d import (map_to_torus_3d, resolve_torus_projection,
-                           TorusProjection)
-from .map_to_torus_phitheta import (map_to_torus_phitheta, resolve_phitheta_projection,
-                              PhiThetaProjection)
+                              TorusProjection)
+from .map_to_torus_phitheta import (map_to_torus_phitheta,
+                                    resolve_phitheta_projection,
+                                    PhiThetaProjection)
 from .geometry import Geometry, resolve_geometry
 
 # Command metadata is attached at the layer that owns each operation.  This
@@ -83,8 +84,8 @@ _TERM_ALL = CommandSpec(Section.UTILITY,
                         result=ResultPolicy.VALUE)
 
 for _function in (interpolate, local_poly, select, eval_at_coord_proj, fft,
-                  magsq, grid, differentiate, map, map_to_torus_rz, map_to_torus_3d,
-                  map_to_torus_phitheta, fluctuation):
+                  magsq, grid, differentiate, map, map_to_torus_rz,
+                  map_to_torus_3d, map_to_torus_phitheta, fluctuation):
   command(_MAP)(_function)
 command(_APPEND)(val2coord)
 command(_COMBINE)(relchange)

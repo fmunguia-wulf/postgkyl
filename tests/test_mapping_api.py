@@ -104,7 +104,10 @@ def test_group_mapping_cli_and_help_section():
                use=None,
                tag="rz",
                label=None)
-  expected = pg.map_to_torus_rz(pg.load(F2D), mapc2p=F2D_GEO, nz_interp=2, tag="rz")
+  expected = pg.map_to_torus_rz(pg.load(F2D),
+                                mapc2p=F2D_GEO,
+                                nz_interp=2,
+                                tag="rz")
   np.testing.assert_allclose(space.datasets[0].values, expected.values)
 
   help_text = CliRunner().invoke(cli, ["--help"]).output
@@ -199,10 +202,10 @@ def test_geometry_node_and_modal_files_agree_on_fluid_coordinates():
 @needs_gkeyll
 @pytest.mark.parametrize(
     "module_name, builder_name, lookup_name, verb, keyword, sampling", [
-        ("map_to_torus_rz", "rz_projections", "projection_for", "map_to_torus_rz",
-         "projection", {}),
-        ("map_to_torus_3d", "torus_projections", "projection_for", "map_to_torus_3d",
-         "projection", {
+        ("map_to_torus_rz", "rz_projections", "projection_for",
+         "map_to_torus_rz", "projection", {}),
+        ("map_to_torus_3d", "torus_projections", "projection_for",
+         "map_to_torus_3d", "projection", {
              "x_idx": (0, -1)
          }),
         ("map_to_torus_phitheta", "phitheta_projections", "projection_for",

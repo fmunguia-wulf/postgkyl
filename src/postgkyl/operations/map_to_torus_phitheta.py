@@ -19,8 +19,8 @@ from ._mapping import (
     mappings_by_geometry,
     mapping_for,
 )
-from .map_to_torus_rz import (RzProjection, resolve_rz_projection, _toroidal_samples,
-                        _validate_projection)
+from .map_to_torus_rz import (RzProjection, resolve_rz_projection,
+                              _toroidal_samples, _validate_projection)
 
 _DEFAULT_NPHI = 128
 

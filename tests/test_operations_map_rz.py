@@ -46,7 +46,9 @@ def test_3d_mapping_shapes_and_angle_dependence():
   geometry = resolve_geometry(data.file_name)
   projection = mapping.resolve_rz_projection(data, geometry, nz_interp=2)
   at_zero = data.map_to_torus_rz(projection=projection, phi_tor=0.0)
-  at_quarter = mapping.map_to_torus_rz(data, projection=projection, phi_tor=np.pi / 2)
+  at_quarter = mapping.map_to_torus_rz(data,
+                                       projection=projection,
+                                       phi_tor=np.pi / 2)
   assert [axis.shape for axis in at_zero.grid] == [(97, 65), (97, 65)]
   assert at_zero.values.shape == (96, 64, 1)
   assert not np.allclose(at_zero.values, at_quarter.values)
@@ -93,14 +95,16 @@ def test_3d_mapping_locates_every_angle_along_the_binormal_coordinate(prefix):
   for angle in (0.0, 0.9, -2.3):
     expected = twisted_fields(xs, zf, angle, TWISTED_SPANS[prefix])
     for comp in (0, 1):
-      mapped = data.map_to_torus_rz(projection=projection, phi_tor=angle, comp=comp)
+      mapped = data.map_to_torus_rz(projection=projection,
+                                    phi_tor=angle,
+                                    comp=comp)
       np.testing.assert_allclose(mapped.values[..., 0],
                                  expected[comp],
                                  rtol=1e-13,
                                  atol=0)
       np.testing.assert_allclose(data.map_to_torus_rz(projection=projection,
-                                                phi_tor=angle + 2 * np.pi,
-                                                comp=comp).values,
+                                                      phi_tor=angle + 2 * np.pi,
+                                                      comp=comp).values,
                                  mapped.values,
                                  rtol=1e-13,
                                  atol=0)
@@ -247,9 +251,9 @@ def test_state_propagation_projection_reuse_and_public_surfaces():
   geometry = resolve_geometry(source.file_name)
   projection = mapping.resolve_rz_projection(source, geometry, nz_interp=2)
   first = mapping.map_to_torus_rz(source,
-                            projection=projection,
-                            tag="rz",
-                            label="mapped")
+                                  projection=projection,
+                                  tag="rz",
+                                  label="mapped")
   second = mapping.map_to_torus_rz(source.clone(), projection=projection)
   assert isinstance(first, DerivedData)
   assert first is not source
@@ -267,7 +271,10 @@ def test_state_propagation_projection_reuse_and_public_surfaces():
   assert not hasattr(pg.GData, "gk_rz")
 
   inplace = source.clone()
-  result = pg.map_to_torus_rz(inplace, mapc2p=F2D_GEO, nz_interp=2, inplace=True)
+  result = pg.map_to_torus_rz(inplace,
+                              mapc2p=F2D_GEO,
+                              nz_interp=2,
+                              inplace=True)
   assert result is inplace and result.ctx["interpolated"] is True
 
 

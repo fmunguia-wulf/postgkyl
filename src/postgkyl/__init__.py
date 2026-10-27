@@ -82,8 +82,9 @@ from postgkyl.operations import (
 )
 from postgkyl.operations import (Geometry, RzProjection, TorusProjection,
                                  PhiThetaProjection, resolve_geometry,
-                                 map_to_torus_rz, resolve_rz_projection, map_to_torus_3d,
-                                 resolve_torus_projection, map_to_torus_phitheta,
+                                 map_to_torus_rz, resolve_rz_projection,
+                                 map_to_torus_3d, resolve_torus_projection,
+                                 map_to_torus_phitheta,
                                  resolve_phitheta_projection)
 from postgkyl.render import animate, plot, plotly, plotly_animate, pyvista
 from postgkyl.gdatastate import group_blocks
@@ -103,8 +104,8 @@ __all__ = [
     "fluctuation", "eval_at_coord_proj", "fft", "magsq", "mask", "grid",
     "val2coord", "extract_input", "fit", "growth", "differentiate", "map",
     "represent", "apply", "Geometry", "RzProjection", "TorusProjection",
-    "PhiThetaProjection", "map_to_torus_rz", "resolve_rz_projection", "map_to_torus_3d",
-    "resolve_torus_projection", "map_to_torus_phitheta",
+    "PhiThetaProjection", "map_to_torus_rz", "resolve_rz_projection",
+    "map_to_torus_3d", "resolve_torus_projection", "map_to_torus_phitheta",
     "resolve_phitheta_projection", "resolve_geometry", "save", "collect",
     "evaluate", "relchange", "animate", "plotly_animate", "sort", "activate",
     "available_evaluate_operators", "plotly", "pyvista", "gk", "__version__",

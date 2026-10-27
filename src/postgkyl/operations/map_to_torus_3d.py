@@ -21,8 +21,8 @@ from ._mapping import (
     mappings_by_geometry,
     mapping_for,
 )
-from .map_to_torus_rz import (RzProjection, resolve_rz_projection, _toroidal_samples,
-                        _validate_projection)
+from .map_to_torus_rz import (RzProjection, resolve_rz_projection,
+                              _toroidal_samples, _validate_projection)
 
 _DEFAULT_X_IDX = (2, -3)
 _DEFAULT_PHI_TOR = (0.5 * np.pi, 2.0 * np.pi)

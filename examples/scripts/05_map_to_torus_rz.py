@@ -34,7 +34,9 @@ fig.savefig(OUTPUT_DIR / "05_map_to_torus_rz.png")
 geometry = pg.resolve_geometry(data.file_name)
 projection = pg.resolve_rz_projection(data, geometry, z_axis=0.0, nz_interp=2)
 at_zero = data.map_to_torus_rz(projection=projection, phi_tor=0.0)
-at_quarter_turn = pg.map_to_torus_rz(data, projection=projection, phi_tor=np.pi / 2)
+at_quarter_turn = pg.map_to_torus_rz(data,
+                                     projection=projection,
+                                     phi_tor=np.pi / 2)
 np.testing.assert_allclose(at_zero.values, mapped.values)
 assert not np.allclose(
     at_zero.values, at_quarter_turn.values, rtol=1e-12, atol=0.0)
