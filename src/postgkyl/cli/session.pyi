@@ -1432,108 +1432,20 @@ class PostgkylSession:
             count does not match the expected ``m * num_basis``.
         """
 
-  def map_to_torus_phitheta(self,
+  def map_to_torus_3d(self,
                       *,
                       mapc2p: str | None = None,
                       nodes_file: str | None = None,
-                      x_idx: int = 0,
-                      nphi: int = 128,
+                      z_axis: float = 0.0,
+                      x_idx: tuple[int, int] = (2, -3),
+                      phi_tor: tuple[float, float] = (1.5707963267948966,
+                                                      6.283185307179586),
+                      nphi: int = 64,
                       nz_interp: int = 12,
                       comp: int = 0,
                       inplace: bool = False,
                       tag: str | None = None,
                       label: str | None = None) -> PostgkylSession:
-    r"""Map a modal field component onto one flux surface's (phi, theta) plane.
-
-        Theta is the parallel coordinate z, which makes one poloidal turn. Each
-        sample evaluates the DG field as map_to_torus_rz does, so the column at angle
-        phi is row x_idx of the R-Z slice at phi. Unless the binormal domain is a
-        whole fraction of the torus, its copies meet along field lines with a
-        jump.
-
-        Args:
-          data: Un-interpolated 3-D field-aligned modal DG field.
-          projection: Reusable Python projection built with
-            resolve_phitheta_projection; its computational grid must match data.
-            Omit to load geometry.
-          mapc2p: Explicit modal geometry path, or '' for the inferred modal file.
-          nodes_file: Explicit interior-node geometry path; excludes mapc2p.
-            When both paths are omitted, infer geometry from data.file_name,
-            preferring geo_int_nodes over geo_int_mapc2p. '*' selects the block.
-          x_idx: Flux-surface index on the interpolated radial grid; negative
-            indices count back from the outer edge.
-          nphi: Number of toroidal samples over one turn.
-          nz_interp: Positive parallel-direction up-sampling factor.
-          comp: Zero-based physical field component to map.
-          inplace: Mutate and return data instead of creating a dataset.
-          tag: Optional result tag.
-          label: Optional result label.
-
-        Returns:
-          The caller's concrete data class with NumPy point values on a
-          ``(phi, theta)`` grid of sample points. Projection sampling options
-          cannot accompany a reusable projection; set them when building it.
-        """
-
-  def map_to_torus_rz(self,
-                *,
-                mapc2p: str | None = None,
-                nodes_file: str | None = None,
-                z_axis: float = 0.0,
-                phi_tor: float = 0.0,
-                nz_interp: int = 12,
-                comp: int = 0,
-                inplace: bool = False,
-                tag: str | None = None,
-                label: str | None = None) -> PostgkylSession:
-    r"""Map a modal field component onto a physical R-Z slice.
-
-        Two-dimensional input deforms the interpolated grid. Three-dimensional
-        input is sliced at toroidal angle ``phi_tor``: every sample evaluates the
-        DG field where the geometry places that angle along y. Angles that the
-        simulated binormal domain covers are exact. Elsewhere the periodic domain
-        repeats; unless it spans a whole fraction of the torus, its copies meet
-        along field lines with a jump. A geometry file's own grid defines the
-        mapping, even when written by another run on a different computational
-        range: the data's grid is placed on it cell for cell. Geometry is shared
-        by all equation systems.
-
-        Args:
-          data: Un-interpolated 2-D or 3-D modal DG field.
-          projection: Reusable Python projection built with resolve_rz_projection;
-            its computational grid must match data. Omit to load geometry.
-          mapc2p: Explicit modal geometry path, or '' for the inferred modal file.
-          nodes_file: Explicit interior-node geometry path; excludes mapc2p.
-            When both paths are omitted, infer geometry from data.file_name,
-            preferring geo_int_nodes over geo_int_mapc2p. '*' selects the block.
-          z_axis: Vertical offset in meters, added to geometry Z.
-          phi_tor: Toroidal angle in radians for a 3-D slice.
-          nz_interp: Positive parallel-direction up-sampling factor for 3-D input.
-          comp: Zero-based physical field component to map.
-          inplace: Mutate and return data instead of creating a dataset.
-          tag: Optional result tag.
-          label: Optional result label.
-
-        Returns:
-          The caller's concrete data class with NumPy point values and a 2-D grid.
-          Projection geometry and sampling options cannot accompany a reusable
-          projection; set them when building that projection instead.
-        """
-
-  def map_to_torus_3d(self,
-                   *,
-                   mapc2p: str | None = None,
-                   nodes_file: str | None = None,
-                   z_axis: float = 0.0,
-                   x_idx: tuple[int, int] = (2, -3),
-                   phi_tor: tuple[float, float] = (1.5707963267948966,
-                                                   6.283185307179586),
-                   nphi: int = 64,
-                   nz_interp: int = 12,
-                   comp: int = 0,
-                   inplace: bool = False,
-                   tag: str | None = None,
-                   label: str | None = None) -> PostgkylSession:
     r"""Map a modal field component onto the boundary of a toroidal wedge.
 
         The wedge lies between two flux surfaces and two poloidal planes. Its
@@ -1569,6 +1481,94 @@ class PostgkylSession:
           line, and the size-1 axis is the surface's zero thickness. Projection
           geometry and sampling options cannot accompany a reusable projection;
           set them when building that projection instead.
+        """
+
+  def map_to_torus_phitheta(self,
+                            *,
+                            mapc2p: str | None = None,
+                            nodes_file: str | None = None,
+                            x_idx: int = 0,
+                            nphi: int = 128,
+                            nz_interp: int = 12,
+                            comp: int = 0,
+                            inplace: bool = False,
+                            tag: str | None = None,
+                            label: str | None = None) -> PostgkylSession:
+    r"""Map a modal field component onto one flux surface's (phi, theta) plane.
+
+        Theta is the parallel coordinate z, which makes one poloidal turn. Each
+        sample evaluates the DG field as map_to_torus_rz does, so the column at angle
+        phi is row x_idx of the R-Z slice at phi. Unless the binormal domain is a
+        whole fraction of the torus, its copies meet along field lines with a
+        jump.
+
+        Args:
+          data: Un-interpolated 3-D field-aligned modal DG field.
+          projection: Reusable Python projection built with
+            resolve_phitheta_projection; its computational grid must match data.
+            Omit to load geometry.
+          mapc2p: Explicit modal geometry path, or '' for the inferred modal file.
+          nodes_file: Explicit interior-node geometry path; excludes mapc2p.
+            When both paths are omitted, infer geometry from data.file_name,
+            preferring geo_int_nodes over geo_int_mapc2p. '*' selects the block.
+          x_idx: Flux-surface index on the interpolated radial grid; negative
+            indices count back from the outer edge.
+          nphi: Number of toroidal samples over one turn.
+          nz_interp: Positive parallel-direction up-sampling factor.
+          comp: Zero-based physical field component to map.
+          inplace: Mutate and return data instead of creating a dataset.
+          tag: Optional result tag.
+          label: Optional result label.
+
+        Returns:
+          The caller's concrete data class with NumPy point values on a
+          ``(phi, theta)`` grid of sample points. Projection sampling options
+          cannot accompany a reusable projection; set them when building it.
+        """
+
+  def map_to_torus_rz(self,
+                      *,
+                      mapc2p: str | None = None,
+                      nodes_file: str | None = None,
+                      z_axis: float = 0.0,
+                      phi_tor: float = 0.0,
+                      nz_interp: int = 12,
+                      comp: int = 0,
+                      inplace: bool = False,
+                      tag: str | None = None,
+                      label: str | None = None) -> PostgkylSession:
+    r"""Map a modal field component onto a physical R-Z slice.
+
+        Two-dimensional input deforms the interpolated grid. Three-dimensional
+        input is sliced at toroidal angle ``phi_tor``: every sample evaluates the
+        DG field where the geometry places that angle along y. Angles that the
+        simulated binormal domain covers are exact. Elsewhere the periodic domain
+        repeats; unless it spans a whole fraction of the torus, its copies meet
+        along field lines with a jump. A geometry file's own grid defines the
+        mapping, even when written by another run on a different computational
+        range: the data's grid is placed on it cell for cell. Geometry is shared
+        by all equation systems.
+
+        Args:
+          data: Un-interpolated 2-D or 3-D modal DG field.
+          projection: Reusable Python projection built with resolve_rz_projection;
+            its computational grid must match data. Omit to load geometry.
+          mapc2p: Explicit modal geometry path, or '' for the inferred modal file.
+          nodes_file: Explicit interior-node geometry path; excludes mapc2p.
+            When both paths are omitted, infer geometry from data.file_name,
+            preferring geo_int_nodes over geo_int_mapc2p. '*' selects the block.
+          z_axis: Vertical offset in meters, added to geometry Z.
+          phi_tor: Toroidal angle in radians for a 3-D slice.
+          nz_interp: Positive parallel-direction up-sampling factor for 3-D input.
+          comp: Zero-based physical field component to map.
+          inplace: Mutate and return data instead of creating a dataset.
+          tag: Optional result tag.
+          label: Optional result label.
+
+        Returns:
+          The caller's concrete data class with NumPy point values and a 2-D grid.
+          Projection geometry and sampling options cannot accompany a reusable
+          projection; set them when building that projection instead.
         """
 
   def mask(self,
