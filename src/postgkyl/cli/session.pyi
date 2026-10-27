@@ -1432,7 +1432,7 @@ class PostgkylSession:
             count does not match the expected ``m * num_basis``.
         """
 
-  def map_to_phitheta(self,
+  def map_to_torus_phitheta(self,
                       *,
                       mapc2p: str | None = None,
                       nodes_file: str | None = None,
@@ -1446,7 +1446,7 @@ class PostgkylSession:
     r"""Map a modal field component onto one flux surface's (phi, theta) plane.
 
         Theta is the parallel coordinate z, which makes one poloidal turn. Each
-        sample evaluates the DG field as map_to_rz does, so the column at angle
+        sample evaluates the DG field as map_to_torus_rz does, so the column at angle
         phi is row x_idx of the R-Z slice at phi. Unless the binormal domain is a
         whole fraction of the torus, its copies meet along field lines with a
         jump.
@@ -1475,7 +1475,7 @@ class PostgkylSession:
           cannot accompany a reusable projection; set them when building it.
         """
 
-  def map_to_rz(self,
+  def map_to_torus_rz(self,
                 *,
                 mapc2p: str | None = None,
                 nodes_file: str | None = None,
@@ -1520,7 +1520,7 @@ class PostgkylSession:
           projection; set them when building that projection instead.
         """
 
-  def map_to_torus(self,
+  def map_to_torus_3d(self,
                    *,
                    mapc2p: str | None = None,
                    nodes_file: str | None = None,
@@ -1539,7 +1539,7 @@ class PostgkylSession:
         The wedge lies between two flux surfaces and two poloidal planes. Its
         boundary is one closed surface in Cartesian X, Y, Z: the poloidal cap at the
         first angle, the outer flux surface, the cap at the last angle, and the
-        inner flux surface. Every face samples the field as map_to_rz does, so the
+        inner flux surface. Every face samples the field as map_to_torus_rz does, so the
         caps are its slices and faces agree where they meet. Render it with
         pyvista's surface and no_normalize options.
 
@@ -3776,7 +3776,7 @@ class PostgkylSession:
         Args:
           data: dataset to plot; must be 3-D after squeezing size-1 axes beyond
             the third. A size-1 axis of 3-D data, such as the zero thickness of
-            a map_to_torus result, is kept and renders as a surface.
+            a map_to_torus_3d result, is kept and renders as a surface.
           no_show: Do not open an interactive render window; render off-screen.
           no_spin: Do not auto-rotate the camera in interactive windows.
           max_points_per_axis: downsample to at most this many points per axis;
