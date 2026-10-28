@@ -9,6 +9,7 @@ import postgkyl as pg
 from postgkyl import gpython, operations
 from postgkyl.gdatastate import materialize_point_values
 from postgkyl.io.gkyl_reader import GkylReader
+from postgkyl.io.surface import unpack_surface
 from generate_test_data import write_gkyl_field
 
 GEN = Path(__file__).parent / "test_data" / "generated"
@@ -135,6 +136,26 @@ def test_1d_surface_plots_physical_values_at_faces():
   assert data.ctx["value_form"] == "modal_surf0"
 
 
+def test_1d_surface_scalar_arithmetic_preserves_face_values():
+  data = pg.load(_filename(1, 0))
+  values = data.values.copy()
+  np.testing.assert_allclose((data / 2.0).interpolate().values, values / 2.0,
+                             **ROUND_OFF)
+  np.testing.assert_allclose((data - 2.0).interpolate().values, values - 2.0,
+                             **ROUND_OFF)
+  np.testing.assert_allclose((2.0 - data).interpolate().values, 2.0 - values,
+                             **ROUND_OFF)
+  np.testing.assert_allclose((data - data).interpolate().values,
+                             np.zeros_like(values), **ROUND_OFF)
+  np.testing.assert_array_equal(data.values, values)
+  with pytest.raises(ValueError, match="scalar or another surface field"):
+    data + np.ones_like(values)
+  with pytest.raises(NotImplementedError, match="products and quotients"):
+    data / data
+  with pytest.raises(NotImplementedError, match="surface nonlinear"):
+    2.0 / data
+
+
 @needs_gkeyll
 def test_surface_arithmetic_and_point_operations():
   data = pg.load(_filename(3, 1))
@@ -190,3 +211,36 @@ def test_surface_rejects_partial_read_and_bad_direction(tmp_path):
                    metadata={"value_form": "modal_surf1"})
   with pytest.raises(ValueError, match="out of range"):
     pg.load(invalid)
+
+
+@pytest.mark.parametrize("value_form",
+                         ["modal_surf", "modal_surf-1", "modal_surf1x"])
+def test_surface_rejects_malformed_direction(tmp_path, value_form):
+  invalid = tmp_path / "bad_surface.gkyl"
+  write_gkyl_field(invalid, [2], [0.], [1.],
+                   np.zeros((2, 2)),
+                   1,
+                   "serendipity",
+                   metadata={"value_form": value_form})
+  with pytest.raises(ValueError, match="invalid surface value_form"):
+    pg.load(invalid)
+
+
+@pytest.mark.parametrize("ncomp", [1, 3])
+def test_surface_rejects_invalid_component_count(tmp_path, ncomp):
+  invalid = tmp_path / "bad_surface.gkyl"
+  write_gkyl_field(invalid, [2], [0.], [1.],
+                   np.zeros((2, ncomp)),
+                   1,
+                   "serendipity",
+                   metadata={"value_form": "modal_surf0"})
+  with pytest.raises(ValueError, match="two equal halves"):
+    pg.load(invalid)
+
+
+def test_surface_rejects_payload_shape_inconsistent_with_cells():
+  grid = [np.array([0., 0.5, 1.])]
+  values = np.zeros((3, 2))
+  ctx = {"value_form": "modal_surf0", "cells": [2]}
+  with pytest.raises(ValueError, match="stored cell counts"):
+    unpack_surface(grid, values, ctx)
